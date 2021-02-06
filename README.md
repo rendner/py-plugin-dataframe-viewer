@@ -143,12 +143,12 @@ In case of chunks, a passed column or the entire table are taken from the chunk 
 leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. Because now you
 can't get this value if your custom styler gets only a small part of the `DataFrame`.
 
-> The following builtin styles are automatically handled by the plugin and can therefore be used without any changes:
-> - `Styler.highlight_min`
-> - `Styler.highlight_max`
-> - `Styler.highlight_null`
-> - `Styler.background_gradient`
-> - `Styler.set_properties`
+The following builtin styles are automatically handled by the plugin and can therefore be used without any changes:
+- `Styler.highlight_min`
+- `Styler.highlight_max`
+- `Styler.highlight_null`
+- `Styler.background_gradient`
+- `Styler.set_properties`
 
 ##### The Problem (Example)
 ```python
