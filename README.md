@@ -1,7 +1,6 @@
 # Python: Styled DataFrame Viewer
 
----
-> :warning:
+:warning:
 The **plugin is currently a beta version**, and some features might not always work as expected.
 
 ## What It Is
@@ -10,12 +9,11 @@ View styled Pandas `DataFrames` when debugging.
 Apply conditional formatting and visual styling in your python code, by using `DataFrames.style`.
 The configured style is used to render a styled output of the `DataFrame`.
 
----
 
 ## General Information
 #### I Need Your Feedback
 Before adding new features I need feedback about how the current version performs and its stability.
-If you discover a problem, please let me know by opening an issue in this repo or contact me on twitter [@rendner](https://twitter.com/rendner).
+If you discover a problem, please let me know by opening an issue in this repo or contact me on twitter ([@rendner](https://twitter.com/rendner)).
 
 #### About The Code Snippets
 All code snippets on this page are intentionally chosen very minimalistic to demonstrate the possibilities of the plugin.
@@ -25,16 +23,15 @@ with something like `my_breakpoint` and set a breakpoint via IntelliJ on that li
 
 #### Supported Styler Methods
 The following `Styler` methods are supported and should work:
->- `Styler.highlight_min`
->- `Styler.highlight_max`
->- `Styler.highlight_null`
->- `Styler.background_gradient`
->- `Styler.set_properties`
->- `Styler.apply`
->- `Styler.applymap`
->- `Styler.format`
+- `Styler.highlight_min`
+- `Styler.highlight_max`
+- `Styler.highlight_null`
+- `Styler.background_gradient`
+- `Styler.set_properties`
+- `Styler.apply`
+- `Styler.applymap`
+- `Styler.format`
 
----
 
 ## How Does It Work
 Generate a `DataFrame` and configure the `Styler` returned by `DataFrame.style`:
@@ -65,10 +62,9 @@ This opens a new window which shows the styled output of the `DataFrame` `df` us
 
 You can also right click on the `df` in the `Debugger` and select `View as Styled DataFrame`. In that case all values are displayed without applied styles.
 
-> :grey_exclamation:
-If your `DataFrame` has more than 500 rows you have to take extra care when using custom style methods. Please read section: [Working With Large DataFrames](#working-with-large-dataframes)
+> If your `DataFrame` has more than 500 rows you have to take extra care when using custom style methods.
+> Please read section: [Working With Large DataFrames](#working-with-large-dataframes)
 
----
 
 ## How To Style
 A very good overview about styling a `DataFrame` can be found on the Pandas website: [Pandas User Guide: Styling](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
@@ -108,7 +104,6 @@ Right click on styler in the `Debugger` tab to open the context menu. Select `Vi
 
 ![formatted output](./docs/example_formatted_output.png)
 
----
   
 ## Working With Large DataFrames
 
@@ -116,8 +111,7 @@ The data of large `DataFrames` is fetched in smaller parts called chunks.
 Whenever you scroll the content of the displayed `DataFrame`, the required data is loaded on demand instead of 
 fetching all the data at once.
 
-> :grey_exclamation: `DataFrames` with more than 500 rows are processed in chunks. 
-If it has fewer rows, the styled output is evaluated in one step without additional modification by the plugin.
+> `DataFrames` with more than 500 rows are processed in chunks. If it has fewer rows, the styled output is evaluated in one step without additional modification by the plugin.
 
 You can easily recognize that chunks are used, in this case the title contains an additional `(Chunked)`.
 
@@ -149,8 +143,7 @@ In case of chunks, a passed column or the entire table are taken from the chunk 
 leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. Because now you
 can't get this value if your custom styler gets only a small part of the `DataFrame`.
 
-> :grey_exclamation:
-The following builtin styles are automatically handled by the plugin and can therefore be used without any changes:
+> The following builtin styles are automatically handled by the plugin and can therefore be used without any changes:
 > - `Styler.highlight_min`
 > - `Styler.highlight_max`
 > - `Styler.highlight_null`
@@ -211,9 +204,7 @@ breakpoint()
 We use an optional argument named `chunk_parent`. The name of this argument has to be `chunk_parent`, otherwise the 
 plugin can't detect that the un-chunked data should be provided.
 
-> :grey_exclamation:
-The optional argument `chunk_parent` is only provided by the plugin if the `DataFrame` is processed in chunks.
-Therefore, we have to use `(chunk_parent or series).max()` in our example.
+> The optional argument `chunk_parent` is only provided by the plugin if the `DataFrame` is processed in chunks. Therefore, we have to use `(chunk_parent or series).max()` in our example.
 
 Right click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame`:
 
@@ -280,7 +271,6 @@ fetching max-value for column 1
 fetching max-value for column 2
 fetching max-value for column 3
 ```
----
 
 ## Where Is The Code
 I'm not sure at this point if I'm going to release the code as open source.
