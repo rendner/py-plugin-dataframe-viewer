@@ -3,6 +3,8 @@
 :warning:
 The **plugin is currently a beta version**, and some features might not always work as expected.
 
+Download from JetBrains Marketplace: [Python: Styled DataFrame Viewer](https://plugins.jetbrains.com/plugin/16050-python-styled-dataframe-viewer)
+
 ## What It Is
 View styled Pandas `DataFrames` when debugging.
 
@@ -32,6 +34,8 @@ The following `Styler` methods are supported and should work:
 - `Styler.applymap`
 - `Styler.format`
 
+#### MultiIndex DataFrames
+MultiIndex `DataFrames` are currently not supported.
 
 ## How Does It Work
 Generate a `DataFrame` and configure the `Styler` returned by `DataFrame.style`:
