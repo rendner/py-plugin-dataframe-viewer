@@ -196,7 +196,7 @@ df = pd.DataFrame(np.random.randint(1, 100, size=(2800, 4)))
 
 
 def my_highlight_max(series, chunk_parent=None):
-    max = (chunk_parent or series).max()
+    max = (series if chunk_parent is None else chunk_parent).max()
     return ['background-color: red' if cell == max else '' for cell in series]
 
 
@@ -208,7 +208,7 @@ breakpoint()
 We use an optional argument named `chunk_parent`. The name of this argument has to be `chunk_parent`, otherwise the 
 plugin can't detect that the un-chunked data should be provided.
 
-> The optional argument `chunk_parent` is only provided by the plugin if the `DataFrame` is processed in chunks. Therefore, we have to use `(chunk_parent or series).max()` in our example.
+> The optional argument `chunk_parent` is only provided by the plugin if the `DataFrame` is processed in chunks. Therefore, we have to use a conditional expression like `(series if chunk_parent is None else chunk_parent).max()` in our example.
 
 Right click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame`:
 
@@ -225,7 +225,7 @@ def my_highlight_max_using_kwargs(series, **kwargs):
 Theoretical you could also use a positional argument (**don't do this**): 
 ```python
 def my_highlight_max_not_recommended(series, chunk_parent):
-    max = (chunk_parent or series).max()
+    max = (series if chunk_parent is None else chunk_parent).max()
     return ['background-color: red' if cell == max else '' for cell in series]
 ```
 However, I would strongly advise against this, since the argument is only
@@ -251,10 +251,10 @@ np.random.seed(123456789)
 df = pd.DataFrame(np.random.randint(1, 100, size=(2800, 4)))
 
 
-def my_highlight_max(series, max_cache, chunk_parent=None):
+def my_highlight_max(series, max_cache, **kwargs):
     if series.name not in max_cache:
         print(f"fetching max-value for column {series.name}")
-        max_cache[series.name] = (chunk_parent or series).max()
+        max_cache[series.name] = kwargs.get("chunk_parent", series).max()
 
     max = max_cache.get(series.name)
     return ['background-color: red' if cell == max else '' for cell in series]
