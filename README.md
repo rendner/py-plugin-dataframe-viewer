@@ -3,6 +3,8 @@
 :warning:
 The **plugin is currently a beta version**, and some features might not always work as expected.
 
+**The plugin will be incompatible with Pandas >= 1.3:** [Compatibility Warning](./docs/notes/compatibility_warning_pandas_1.3.md)
+
 Download from JetBrains Marketplace: [Python: Styled DataFrame Viewer](https://plugins.jetbrains.com/plugin/16050-python-styled-dataframe-viewer)
 
 ## What It Is
