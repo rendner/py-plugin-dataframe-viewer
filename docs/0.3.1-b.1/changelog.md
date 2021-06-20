@@ -8,6 +8,7 @@ During the last months I started to rewrite large parts of the plugin to increas
 This is a screenshot of the branch which contains all the changes for this version:
 
 ![x](./images/changes-vcs_version-0.3.1.png)
+
 Most of the changed files, 4743 of them, are generated test resources which are used by the new added unit tests.
 
 No big features in this release.
