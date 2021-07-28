@@ -1,6 +1,6 @@
 # Version 0.3.1-b.1
 
-June, 2020
+June, 2021
 
 
 During the last months I started to rewrite large parts of the plugin to increase the maintainability and to build the foundation for faster implementation of new features.
@@ -13,7 +13,7 @@ Most of the changed files, 4743 of them, are generated test resources which are 
 
 No big features in this release.
 
-### Supported Pandas Versions
+### Supported pandas Versions
 * 1.1.x
 * 1.2.x
 
@@ -23,7 +23,7 @@ No big features in this release.
 ## What's New
 
 #### Multi Index DataFrames
-`DataFrames` with multi index column labels are now supported. Multi index labels are separated by a `\ ` when displayed.
+`DataFrames` with multi index column labels are now supported. Multi index labels are separated by a `/` when displayed.
 
 #### Reduced Initial Loading Time
 Column labels are now evaluated on demand, and not all at once. This allows to view `DataFrames` with many columns.
