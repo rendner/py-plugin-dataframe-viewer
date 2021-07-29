@@ -7,7 +7,7 @@ Download from JetBrains Marketplace: [Python: Styled DataFrame Viewer](https://p
 ## What It Is
 View styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` when debugging.
 
-Apply conditional formatting and visual styling in your python code, by using `DataFrames.style`.
+Apply conditional formatting and visual styling in your Python code, by using `DataFrames.style`.
 The configured style is used to render a styled output of the `DataFrame`.
 
 ![preview of the plugin](./docs/images/preview.png)
@@ -123,7 +123,7 @@ fetching all the data at the beginning.
 ### Why Chunks
 Fetching the HTML output for large `DataFrames` and converting it is very time-consuming. 
 In general, there are two expensive steps involved when fetching the data:
-- calling the method `style.render()` on python side to generate the HTML representation of the `DataFrame`
+- calling the method `style.render()` on Python side to generate the HTML representation of the `DataFrame`
 - parsing and converting the fetched data in the plugin
 
 Fetching the styled `DataFrame` in chunks is way faster and less memory consuming than fetching the whole content at once.

@@ -22,8 +22,8 @@ No big features in this release.
 
 ## What's New
 
-#### Multi Index DataFrames
-`DataFrames` with multi index column labels are now supported. Multi index labels are separated by a `/` when displayed.
+#### Multi-Index DataFrames
+`DataFrames` with multi-index column labels are now supported. Multi-index labels are separated by a `/` when displayed.
 
 #### Reduced Initial Loading Time
 Column labels are now evaluated on demand, and not all at once. This allows to view `DataFrames` with many columns.
