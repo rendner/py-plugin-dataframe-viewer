@@ -144,7 +144,7 @@ your `DataFrame` one-at-a-time or the entire table at once, depending on the axi
 In case of chunks, a passed column or the entire table are taken from the chunk and not from the original `DataFrame`. This
 leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. Because this value can't be evaluated if your custom styler only get a chunk.
 
-> All builtin styles listed under [supported-styler-methods](#supported-styler-methods) are automatically handled by the plugin and can therefore be used without any changes.
+> All builtin styles listed under [supported-styler-methods](#supported-styler-methods), except `apply` and `applymap`, are automatically handled by the plugin and can therefore be used without any changes.
 
 ##### The Problem (Example)
 To get a better understanding of the problem, you can run the following example in debug mode:
