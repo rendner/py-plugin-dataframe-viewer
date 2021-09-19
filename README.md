@@ -21,6 +21,8 @@ The following `Styler` methods are supported:
   |[Styler.applymap](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.applymap.html)|1.1.x - 1.3.x|
   |[Styler.background_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.background_gradient.html)|1.1.x - 1.3.x|
   |[Styler.format](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.format.html)|1.1.x - 1.3.x|
+  |[Styler.hide_columns](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide_columns.html)|1.1.x - 1.3.x|
+  |[Styler.hide_index](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide_index.html)|1.1.x - 1.3.x|
   |[Styler.highlight_between](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_between.html)|1.3.x (added in 1.3.0)|
   |[Styler.highlight_max](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_max.html)|1.1.x - 1.3.x|
   |[Styler.highlight_min](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_min.html)|1.1.x - 1.3.x|
