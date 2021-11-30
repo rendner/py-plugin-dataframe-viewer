@@ -1,0 +1,7 @@
+**/out/
+**/build/
+**/.gradle/
+**/.idea/
+**/.pytest_cache/
+/__exclude/
+/src/test/resources/generated-error-images/

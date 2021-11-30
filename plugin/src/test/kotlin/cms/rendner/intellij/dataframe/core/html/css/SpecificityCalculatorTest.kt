@@ -1,0 +1,47 @@
+package cms.rendner.intellij.dataframe.core.html.css
+
+import cms.rendner.intellij.dataframe.viewer.core.html.css.Specificity
+import cms.rendner.intellij.dataframe.viewer.core.html.css.SpecificityCalculator
+import com.google.common.collect.ImmutableList
+import com.steadystate.css.parser.CSSOMParser
+import com.steadystate.css.parser.SACParserCSS3
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+internal class SpecificityCalculatorTest {
+
+    data class TestCase(val selector: String, val expectedSpecificity: Specificity) {
+        override fun toString() = "'$selector' should have $expectedSpecificity"
+    }
+
+    @Suppress("unused")
+    private fun getTestCases() = ImmutableList.of(
+        // https://www.w3.org/TR/selectors-3/#specificity
+        TestCase("*", Specificity()),
+        TestCase("LI", Specificity(c = 1)),
+        TestCase("UL LI", Specificity(c = 2)),
+        TestCase("UL OL+LI", Specificity(c = 3)),
+        TestCase("H1 + *[REL=up]", Specificity(b = 1, c = 1)),
+        TestCase("UL OL LI.red", Specificity(b = 1, c = 3)),
+        TestCase("LI.red.level", Specificity(b = 2, c = 1)),
+        TestCase("#x34y", Specificity(a = 1)),
+        TestCase("#s12:not(FOO)", Specificity(a = 1, c = 1)),
+
+        // https://css-tricks.com/specifics-on-css-specificity/
+        TestCase("ul#nav li.active a", Specificity(a = 1, b = 1, c = 3)),
+        TestCase("body.ie7 .col_3 h2 ~ h2", Specificity(b = 2, c = 3)),
+        TestCase("#footer *:not(nav) li", Specificity(a = 1, c = 2)),
+        TestCase("ul > li ul li ol li:first-letter", Specificity(c = 7))
+    )
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("getTestCases")
+    fun testCalculate(testCase: TestCase) {
+        val cut = SpecificityCalculator(CSSOMParser(SACParserCSS3()))
+        assertThat(cut.calculate(testCase.selector))
+            .isEqualTo(testCase.expectedSpecificity)
+    }
+}

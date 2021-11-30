@@ -1,0 +1,52 @@
+<idea-plugin>
+    <id>cms.rendner.intellij.py-styled-dataframe-viewer</id>
+    <name>Python: Styled DataFrame Viewer</name>
+    <vendor>cms.rendner</vendor>
+
+    <!--
+    unload without restart
+    https://plugins.jetbrains.com/docs/intellij/dynamic-plugins.html#troubleshooting
+    -->
+
+    <description><![CDATA[
+    View styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> when debugging.
+    <br/><br/>
+    Apply conditional formatting and visual styling in your Python code, by using <i>DataFrame.style</i>.
+    The configured style is used to render a styled output of the <i>DataFrame</i>.
+    <br/><br/>
+    <a href="https://github.com/rendner/py-plugin-dataframe-viewer">How does it work</a>
+    <br/><br/>
+    For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
+    ]]></description>
+
+    <idea-version since-build="203" until-build="212.*" />
+
+    <change-notes><![CDATA[
+    <b>0.5.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.5.0/changelog.md">changelog</a>
+    <br/>
+    <b>0.4.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.4.0/changelog.md">changelog</a>
+    <br/>
+    <b>0.3.1-b.1</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.3.1-b.1/changelog.md">changelog</a>
+    <br/>
+    <b>0.3-b.1</b> - first beta release
+    ]]></change-notes>
+
+    <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.python</depends>
+    <depends>com.intellij.modules.xdebugger</depends>
+
+    <actions>
+        <group id="debugActionGroup">
+            <action id="CMSDebugger.ShowStyledDataFrameAction" class="cms.rendner.intellij.dataframe.viewer.pycharm.actions.ShowStyledDataFrameAction" text="View as Styled DataFrame"/>
+            <action id="CMSDebugger.ExportDataFrameTestDataAction" class="cms.rendner.intellij.dataframe.viewer.pycharm.actions.ExportDataFrameTestDataAction" text="Export DataFrame Test Data"/>
+            <!-- found in LangActions.xml -->
+            <add-to-group group-id="XDebugger.ValueGroup" relative-to-action="Debugger.ShowReferring" anchor="before"/>
+        </group>
+    </actions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <projectService serviceImplementation="cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService" />
+        <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON"/>
+    </extensions>
+</idea-plugin>

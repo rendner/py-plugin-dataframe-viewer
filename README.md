@@ -53,7 +53,7 @@ breakpoint()
 When you run the code in debug mode in IntelliJ, the program stops at the line with the `breakpoint()` command.
 
 Select the `Debugger` tab (as seen in the screenshot below). Now you can see all the variables of the current stackframe listed. In this case the variables
-`df` and `styler`. Right click on `styler` to open the context menu. Select `View as Styled DataFrame`.
+`df` and `styler`. Right-click on `styler` to open the context menu. Select `View as Styled DataFrame`.
 
 ![select view as action](./docs/images/select_view_as_action.png)
 
@@ -61,16 +61,16 @@ This opens a new window which shows the styled output of the `DataFrame` `df` us
 
 ![styled output](./docs/images/example_styled_output.png)
 
-You can also right click on the `df` in the `Debugger` and select `View as Styled DataFrame`. In that case all values are displayed without applied styles.
+You can also right-click on the `df` in the `Debugger` and select `View as Styled DataFrame`. In that case all values are displayed without applied styles.
 
 ### Supported CSS Properties
 The following css-properties are supported by the plugin:
 
-|css-property|mapping|
-|---|---|
-|`color`|table cell text color|
-|`background-color`|table cell background color|
-|`text-align`|align cell text (supported values are: `left`, `right` and `center`)|
+| css-property       | mapping                                                              |
+|--------------------|----------------------------------------------------------------------|
+| `color`            | table cell text color                                                |
+| `background-color` | table cell background color                                          |
+| `text-align`       | align cell text (supported values are: `left`, `right` and `center`) |
 
 All other properties are ignored.
 
@@ -78,12 +78,12 @@ All other properties are ignored.
 This may be improved if there are major problems with it.
 
 ## Version History
-|version|changelog|
-|---|---|
-|0.5.0|[link](./docs/0.5.0/changelog.md)|
-|0.4.0|[link](./docs/0.4.0/changelog.md)|
-|0.3.1-b.1|[link](./docs/0.3.1-b.1/changelog.md)|
-|0.3-b.1|initial release|
+| version   | changelog                                                  |
+|-----------|------------------------------------------------------------|
+| 0.5.0     | [link](./plugin/docs/release_notes/0.5.0/changelog.md)     |
+| 0.4.0     | [link](./plugin/docs/release_notes/0.4.0/changelog.md)     |
+| 0.3.1-b.1 | [link](./plugin/docs/release_notes/0.3.1-b.1/changelog.md) |
+| 0.3-b.1   | initial release                                            |
 
 ## Examples
 #### About The Code Snippets
@@ -110,7 +110,7 @@ styler = df.style\
 breakpoint()
 ```
 
-Right click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame`:
+Right-click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame`:
 
 ![formatted output](./docs/images/example_formatted_output.png)
 
@@ -172,7 +172,7 @@ styler = df.style.apply(my_highlight_max, axis='index')
 
 breakpoint()
 ```
-Right click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame` and scroll to the place where you can see the rows `597` and `605`:
+Right-click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame` and scroll to the place where you can see the rows `597` and `605`:
 
 ![wrong max value](./docs/images/example_chunked_wrong_max_value.png)
 
@@ -191,7 +191,7 @@ plugin can't detect that the un-chunked data should be provided.
 
 > The `chunk_parent` is only provided by the plugin. Therefore, it is a good idea to always make it optional so that the custom styler also work when used without the plugin.
 
-Right click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame` and scroll to the place where you can see the rows `597` and `605`:
+Right-click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame` and scroll to the place where you can see the rows `597` and `605`:
 
 ![right max value](./docs/images/example_chunked_right_max_value.png)
 
@@ -204,10 +204,6 @@ def my_highlight_max_using_kwargs(series, **kwargs):
     max = kwargs.get("chunk_parent", series).max()
     return ['background-color: red' if cell == max else '' for cell in series]
 ```
-
-## Where Is The Code
-I'm not sure at this point if I'm going to release the code as open source.
-The code is currently more a proof of concept.
 
 ## Used Libraries
 - AWT Color Factory (https://github.com/beryx/awt-color-factory)
