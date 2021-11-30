@@ -80,8 +80,9 @@ This may be improved if there are major problems with it.
 ## Version History
 | version   | changelog                                                  |
 |-----------|------------------------------------------------------------|
-| 0.5.0     | [link](./plugin/docs/release_notes/0.5.0/changelog.md)     |
-| 0.4.0     | [link](./plugin/docs/release_notes/0.4.0/changelog.md)     |
+| 0.5.1     | [link](./plugin/docs/release_notes/0.5.x/changelog-1.md)   |
+| 0.5.0     | [link](./plugin/docs/release_notes/0.5.x/changelog-0.md)   |
+| 0.4.0     | [link](./plugin/docs/release_notes/0.4.x/changelog-0.md)   |
 | 0.3.1-b.1 | [link](./plugin/docs/release_notes/0.3.1-b.1/changelog.md) |
 | 0.3-b.1   | initial release                                            |
 

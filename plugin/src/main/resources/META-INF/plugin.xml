@@ -19,12 +19,14 @@
     For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
     ]]></description>
 
-    <idea-version since-build="203" until-build="212.*" />
+    <idea-version since-build="203" until-build="213.*" />
 
     <change-notes><![CDATA[
-    <b>0.5.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.5.0/changelog.md">changelog</a>
+    <b>0.5.1</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.5.x/changelog-1.md">changelog</a>
     <br/>
-    <b>0.4.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.4.0/changelog.md">changelog</a>
+    <b>0.5.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.5.x/changelog-0.md">changelog</a>
+    <br/>
+    <b>0.4.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.4.x/changelog-0.md">changelog</a>
     <br/>
     <b>0.3.1-b.1</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.3.1-b.1/changelog.md">changelog</a>
     <br/>

@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "cms.rendner.intellij"
-version = "0.5.0"
+version = "0.5.1"
 
 val mockitoVersion = "4.0.0"
 

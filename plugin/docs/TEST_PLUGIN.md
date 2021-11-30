@@ -2,7 +2,19 @@
 There is no automated way, to test the plugin against a running PyCharm debugger.
 Therefore, this has to be tested by hand before every new release or pull request.
 
-## Checklist
+## Test Against New IntelliJ Release
+1. run the gradle-task `buildPlugin`, to build the plugin
+2. open the new IntelliJ/PyCharm Release
+   1. if IntelliJ is used please install the python plugin from `Jetbrains`
+3. follow the instructions from [install plugin from disk](https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk)
+   1. navigate to `<PLUGIN_DIR>/distributions/` and select version to install
+4. open one of the projects from `<PROJECTS_DIR>/html_from_styler/`
+   1. configure the required Python interpreter
+5. use the test file from the `manual_testing` directory
+   1. plugin works as expected if the debugger can load and display data of the styled DataFrame
+      1. read [the general documentation](../../README.md#how-does-it-work) for a detailed description how to interact with the debugger
+
+## Test After Code Modification
 The mentioned steps should be checked in the listed order, because they depend on each other.
 
 ### 1) Plugin Code Is UpToDate
