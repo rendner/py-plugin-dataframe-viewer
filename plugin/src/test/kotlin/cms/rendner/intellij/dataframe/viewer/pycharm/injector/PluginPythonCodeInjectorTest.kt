@@ -56,7 +56,7 @@ internal class PluginPythonCodeInjectorTest {
     fun injectsCodeForPandas_1_1() {
         assertInjectedPandasCode(
             "1.1.x",
-            cms.rendner.intellij.dataframe.viewer.pycharm.injector.snippets.major1.minor1.PandasCodeProvider()
+            PandasCodeProvider(PandasVersion(1, 1), "/pandas_1.1/plugin_code")
         )
     }
 
@@ -64,7 +64,7 @@ internal class PluginPythonCodeInjectorTest {
     fun injectsCodeForPandas_1_2() {
         assertInjectedPandasCode(
             "1.2.x",
-            cms.rendner.intellij.dataframe.viewer.pycharm.injector.snippets.major1.minor2.PandasCodeProvider()
+            PandasCodeProvider(PandasVersion(1, 2), "/pandas_1.2/plugin_code")
         )
     }
 
@@ -72,7 +72,7 @@ internal class PluginPythonCodeInjectorTest {
     fun injectsCodeForPandas_1_3() {
         assertInjectedPandasCode(
             "1.3.x",
-            cms.rendner.intellij.dataframe.viewer.pycharm.injector.snippets.major1.minor3.PandasCodeProvider()
+            PandasCodeProvider(PandasVersion(1, 3), "/pandas_1.3/plugin_code")
         )
     }
 
@@ -80,9 +80,13 @@ internal class PluginPythonCodeInjectorTest {
     fun throwsInjectionForUnsupportedPandasVersion() {
         val injector = PluginPythonCodeInjector()
 
-        Mockito.`when`(evaluator.evaluate("${injector.getBridgeExpr()}.check()"))
+        Mockito
+            .`when`(evaluator.evaluate("${injector.getBridgeExpr()}.check()"))
             .thenReturn(createPyDebugValue("False"))
-        Mockito.`when`(evaluator.evaluate(pythonGetPandasVersion)).thenReturn(createPyDebugValue("1.4.0"))
+
+        Mockito
+            .`when`(evaluator.evaluate(pythonGetPandasVersion))
+            .thenReturn(createPyDebugValue("1.4.0"))
 
         assertThatThrownBy { injector.ensurePluginCodeIsInjected(evaluator) }
             .isExactlyInstanceOf(InjectException::class.java)
@@ -90,17 +94,26 @@ internal class PluginPythonCodeInjectorTest {
     }
 
     @Test
-    private fun assertInjectedPandasCode(pandasVersion: String, expectedCodeProvider: IPandasCodeProvider) {
+    private fun assertInjectedPandasCode(pandasVersion: String, expectedCodeProvider: PandasCodeProvider) {
         val injector = PluginPythonCodeInjector()
 
-        Mockito.`when`(evaluator.evaluate("${injector.getBridgeExpr()}.check()"))
+        Mockito
+            .`when`(evaluator.evaluate("${injector.getBridgeExpr()}.check()"))
             .thenReturn(createPyDebugValue("False"))
-        Mockito.`when`(evaluator.evaluate(pythonGetPandasVersion)).thenReturn(createPyDebugValue(pandasVersion))
+
+        Mockito
+            .`when`(evaluator.evaluate(pythonGetPandasVersion))
+            .thenReturn(createPyDebugValue(pandasVersion))
 
         injector.ensurePluginCodeIsInjected(evaluator)
 
-        Mockito.verify(evaluator).execute(ArgumentMatchers.contains(expectedCodeProvider.getCode()))
-        Mockito.verify(evaluator).execute(ArgumentMatchers.contains(pythonStyledDataFrameViewerBridgeClass))
+        Mockito
+            .verify(evaluator)
+            .execute(ArgumentMatchers.contains(expectedCodeProvider.getCode()))
+
+        Mockito
+            .verify(evaluator)
+            .execute(ArgumentMatchers.contains(pythonStyledDataFrameViewerBridgeClass))
     }
 
     private fun createPyDebugValue(value: String): PyDebugValue {

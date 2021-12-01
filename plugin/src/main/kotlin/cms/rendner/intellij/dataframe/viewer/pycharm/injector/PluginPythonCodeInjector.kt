@@ -39,7 +39,7 @@ class PluginPythonCodeInjector {
             logger.info("inject code for version: $version")
             val pandasCodeProvider = createMatchingCodeProvider(version)
                 ?: throw InjectException("Unsupported $version.")
-            logger.info("use code provider for version: ${pandasCodeProvider.getMajorMinorVersion()}")
+            logger.info("use code provider for version: ${pandasCodeProvider.version}")
             injectCodeIntoNamespace(evaluator, pandasCodeProvider)
         }
     }
@@ -58,16 +58,16 @@ class PluginPythonCodeInjector {
         return isInitialized?.value == "True"
     }
 
-    private fun createMatchingCodeProvider(version: PandasVersion): IPandasCodeProvider? {
+    private fun createMatchingCodeProvider(version: PandasVersion): PandasCodeProvider? {
         if (version.major == 1) {
             if (version.minor == 1) {
-                return cms.rendner.intellij.dataframe.viewer.pycharm.injector.snippets.major1.minor1.PandasCodeProvider()
+                return PandasCodeProvider(PandasVersion(1, 1), "/pandas_1.1/plugin_code")
             }
             if (version.minor == 2) {
-                return cms.rendner.intellij.dataframe.viewer.pycharm.injector.snippets.major1.minor2.PandasCodeProvider()
+                return PandasCodeProvider(PandasVersion(1, 2), "/pandas_1.2/plugin_code")
             }
             if (version.minor == 3) {
-                return cms.rendner.intellij.dataframe.viewer.pycharm.injector.snippets.major1.minor3.PandasCodeProvider()
+                return PandasCodeProvider(PandasVersion(1, 3,), "/pandas_1.3/plugin_code")
             }
         }
 
@@ -75,7 +75,7 @@ class PluginPythonCodeInjector {
     }
 
     @Throws(InjectException::class)
-    private fun injectCodeIntoNamespace(evaluator: IValueEvaluator, pandasCodeProvider: IPandasCodeProvider) {
+    private fun injectCodeIntoNamespace(evaluator: IValueEvaluator, pandasCodeProvider: PandasCodeProvider) {
         try {
             val codeSnippets = ImmutableList.of(
                 pandasCodeProvider.getCode(),
@@ -98,19 +98,6 @@ class PluginPythonCodeInjector {
             return PandasVersion.fromString(evaluateResult.value!!)
         } catch (ex: EvaluateException) {
             throw InjectException("Inject plugin classes failed.", ex)
-        }
-    }
-
-    private data class PandasVersion(val major: Int, val minor: Int, val patch: String) {
-        companion object {
-            fun fromString(value: String): PandasVersion {
-                val parts = value.split(".")
-                return PandasVersion(
-                    parts[0].toInt(),
-                    parts[1].toInt(),
-                    value.substring(parts[0].length + parts[1].length + 2)
-                )
-            }
         }
     }
 }

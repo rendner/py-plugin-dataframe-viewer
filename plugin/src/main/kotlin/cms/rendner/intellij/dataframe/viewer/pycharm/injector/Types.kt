@@ -15,7 +15,24 @@
  */
 package cms.rendner.intellij.dataframe.viewer.pycharm.injector
 
-interface IPandasCodeProvider {
-    fun getMajorMinorVersion(): String
-    fun getCode(): String
+data class PandasVersion(val major: Int, val minor: Int, val patch: String = "") {
+    companion object {
+        fun fromString(value: String): PandasVersion {
+            val parts = value.split(".")
+            return PandasVersion(
+                parts[0].toInt(),
+                parts[1].toInt(),
+                value.substring(parts[0].length + parts[1].length + 2)
+            )
+        }
+    }
+}
+
+class PandasCodeProvider(
+    val version: PandasVersion,
+    private val codeResourcePath: String,
+) {
+    fun getCode(): String {
+        return PandasCodeProvider::class.java.getResource(codeResourcePath)!!.readText()
+    }
 }
