@@ -70,6 +70,9 @@ abstract class AbstractChunkDataLoader(
                 handleStyledValues(loadRequest, styledValues)
             } catch (e: Throwable) {
                 handleError(loadRequest, e)
+                if (e is InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
             }
         }
     }
