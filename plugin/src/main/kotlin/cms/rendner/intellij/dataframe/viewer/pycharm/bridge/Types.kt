@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.pycharm.injector
+package cms.rendner.intellij.dataframe.viewer.pycharm.bridge
 
 data class PandasVersion(val major: Int, val minor: Int, val patch: String = "") {
     companion object {
@@ -28,11 +28,11 @@ data class PandasVersion(val major: Int, val minor: Int, val patch: String = "")
     }
 }
 
-class PandasCodeProvider(
+class PythonCodeProvider(
     val version: PandasVersion,
     private val codeResourcePath: String,
 ) {
     fun getCode(): String {
-        return PandasCodeProvider::class.java.getResource(codeResourcePath)!!.readText()
+        return PythonCodeProvider::class.java.getResource(codeResourcePath)!!.readText()
     }
 }

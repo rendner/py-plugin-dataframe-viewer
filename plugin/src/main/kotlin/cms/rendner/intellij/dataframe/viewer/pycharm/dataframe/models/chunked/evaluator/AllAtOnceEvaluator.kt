@@ -18,7 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.e
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.ChunkCoordinates
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.IChunkEvaluator
-import cms.rendner.intellij.dataframe.viewer.pycharm.injector.PyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PyPatchedStylerRef
 
 class AllAtOnceEvaluator(
     private val patchedStyler: PyPatchedStylerRef,

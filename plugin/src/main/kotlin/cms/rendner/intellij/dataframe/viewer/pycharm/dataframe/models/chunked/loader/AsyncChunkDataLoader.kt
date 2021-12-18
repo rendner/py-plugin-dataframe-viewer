@@ -100,7 +100,7 @@ class AsyncChunkDataLoader(
         ApplicationManager.getApplication().invokeLater {
             activeRequest = null
 
-            if(isAlive()) {
+            if(isAliveFlag) {
                 logger.warn("Fetching data for chunk '${loadRequest.chunkCoordinates}' failed.", throwable)
 
                 if (throwable is EvaluateException && throwable.cause?.isDisconnectException() == true) {

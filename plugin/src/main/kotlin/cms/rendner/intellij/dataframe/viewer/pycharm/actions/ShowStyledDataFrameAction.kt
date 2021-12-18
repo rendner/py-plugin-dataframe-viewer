@@ -22,8 +22,8 @@ import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.TableModel
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.pycharm.extensions.isDataFrame
 import cms.rendner.intellij.dataframe.viewer.pycharm.extensions.isStyler
-import cms.rendner.intellij.dataframe.viewer.pycharm.injector.PluginPythonCodeBridge
-import cms.rendner.intellij.dataframe.viewer.pycharm.injector.PyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PythonCodeBridge
+import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -108,7 +108,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                 var patchedStyler: PyPatchedStylerRef? = null
                 var model: IDataFrameModel? = null
                 try {
-                    val pythonBridge = PluginPythonCodeBridge()
+                    val pythonBridge = PythonCodeBridge()
                     patchedStyler = pythonBridge.createPatchedStyler(frameOrStyler)
 
                     model = TableModelFactory.createChunkedModel(patchedStyler, myUserNotifier)

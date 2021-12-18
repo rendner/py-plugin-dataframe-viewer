@@ -23,5 +23,5 @@ interface IValueEvaluator {
     fun evaluate(expression: String): PyDebugValue
 
     @Throws(EvaluateException::class)
-    fun execute(expression: String): PyDebugValue
+    fun execute(statement: String): PyDebugValue
 }

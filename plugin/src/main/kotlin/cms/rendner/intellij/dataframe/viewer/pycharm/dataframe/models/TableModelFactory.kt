@@ -21,7 +21,7 @@ import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.ChunkedDataFrameModel
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.evaluator.ChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.loader.AsyncChunkDataLoader
-import cms.rendner.intellij.dataframe.viewer.pycharm.injector.PyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PyPatchedStylerRef
 
 class TableModelFactory {
 

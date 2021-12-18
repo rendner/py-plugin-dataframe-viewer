@@ -36,11 +36,11 @@ class ValueEvaluator(private val frameAccessor: PyFrameAccessor): IValueEvaluato
     }
 
     @Throws(EvaluateException::class)
-    override fun execute(expression: String): PyDebugValue {
+    override fun execute(statement: String): PyDebugValue {
         try {
-            return frameAccessor.evaluate(expression, true, false)
+            return frameAccessor.evaluate(statement, true, false)
         } catch (ex: PyDebuggerException) {
-            throw EvaluateException("Couldn't evaluate expression.", ex, expression)
+            throw EvaluateException("Couldn't execute statement.", ex, statement)
         }
     }
 }

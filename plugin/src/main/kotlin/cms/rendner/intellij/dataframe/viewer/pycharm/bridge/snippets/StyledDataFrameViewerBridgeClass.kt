@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.pycharm.injector.snippets.common
+package cms.rendner.intellij.dataframe.viewer.pycharm.bridge.snippets
 
 /*
     This bridge hides all created "patchedStyler" instances, to not pollute the debugger view,

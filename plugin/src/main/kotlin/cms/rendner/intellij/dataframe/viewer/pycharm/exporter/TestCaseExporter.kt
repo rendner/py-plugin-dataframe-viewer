@@ -20,8 +20,8 @@ import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.TableStructure
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.ChunkCoordinates
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.evaluator.AllAtOnceEvaluator
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked.evaluator.ChunkEvaluator
-import cms.rendner.intellij.dataframe.viewer.pycharm.injector.PluginPythonCodeBridge
-import cms.rendner.intellij.dataframe.viewer.pycharm.injector.PyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PythonCodeBridge
+import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PyPatchedStylerRef
 import org.jsoup.Jsoup
 import java.io.FilterOutputStream
 import java.io.IOException
@@ -33,7 +33,7 @@ import java.util.*
 class TestCaseExporter(private val baseExportDir: Path) {
 
     private var exportCounter = 0
-    private val pythonBridge = PluginPythonCodeBridge()
+    private val pythonBridge = PythonCodeBridge()
 
     fun export(testCase: TestCaseExportData) {
         val patchedStyler = pythonBridge.createPatchedStyler(testCase.styler)

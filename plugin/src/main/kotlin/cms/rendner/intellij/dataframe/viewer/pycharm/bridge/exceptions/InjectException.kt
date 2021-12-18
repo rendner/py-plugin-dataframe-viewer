@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.pycharm.injector.exceptions
+package cms.rendner.intellij.dataframe.viewer.pycharm.bridge.exceptions
 
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.exceptions.EvaluateException
 

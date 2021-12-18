@@ -10,8 +10,6 @@ plugins {
 group = "cms.rendner.intellij"
 version = "0.5.1"
 
-val mockitoVersion = "4.0.0"
-
 val exportTestDataPath = "$projectDir/src/test/resources/generated/"
 val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
 
@@ -30,9 +28,6 @@ dependencies {
     // https://github.com/junit-team/junit5-samples/blob/r5.8.1/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
     testImplementation(platform("org.junit:junit-bom:5.8.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-
-    testImplementation("org.mockito:mockito-core:$mockitoVersion")
-    testImplementation("org.mockito:mockito-junit-jupiter:$mockitoVersion")
 
     testImplementation("org.assertj:assertj-core:3.21.0")
 

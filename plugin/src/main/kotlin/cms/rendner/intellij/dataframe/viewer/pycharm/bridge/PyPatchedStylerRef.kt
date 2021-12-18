@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.pycharm.injector
+package cms.rendner.intellij.dataframe.viewer.pycharm.bridge
 
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.TableStructure
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.ValueEvaluator
