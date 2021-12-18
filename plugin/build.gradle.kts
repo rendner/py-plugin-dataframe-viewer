@@ -12,6 +12,7 @@ version = "0.5.1"
 
 val exportTestDataPath = "$projectDir/src/test/resources/generated/"
 val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
+val projectNamesOfSupportedPandasVersions = listOf("pandas_1.1", "pandas_1.2", "pandas_1.3")
 
 repositories {
     mavenCentral()
@@ -47,12 +48,49 @@ intellij {
 
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
+
+    register<Exec>("buildPythonDockerImage") {
+        description = "Builds the python docker image for the integration tests."
+        group = "build"
+
+        projectNamesOfSupportedPandasVersions.forEach { version ->
+            val pipFile = project.file("../projects/python_plugin_code/${version}_code/Pipfile")
+            val pipFileLock = project.file("../projects/python_plugin_code/${version}_code/Pipfile.lock")
+            if(pipFile.exists() && pipFileLock.exists()) {
+                copy {
+                    from(pipFile, pipFileLock)
+                    into(project.file("integration-test/dockered-python/$version"))
+                }
+            } else {
+                logger.error("Can't copy Pipfiles for version: $version")
+            }
+        }
+
+        workingDir = project.file("integration-test/dockered-python")
+        commandLine("docker", "build", ".", "-t", "plugin-docker-python")
+    }
+
     // https://stackoverflow.com/questions/56628983/how-to-give-system-property-to-my-test-via-kotlin-gradle-and-d
     test {
         systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
         systemProperty("cms.rendner.dataframe.renderer.export.test.error.image.dir", exportTestErrorImagesPath)
-        useJUnitPlatform()
+        useJUnitPlatform{
+            exclude("**/integration/**")
+        }
         failFast = true
+    }
+
+    register<Test>("integrationTest") {
+        description = "Runs integration tests."
+        group = "verification"
+        useJUnitPlatform {
+            include("**/integration/**")
+        }
+        shouldRunAfter("test")
+    }
+
+    check {
+        dependsOn("integrationTest")
     }
 
     buildSearchableOptions {
@@ -71,11 +109,11 @@ tasks {
 
     processResources {
         logger.lifecycle("copy 'plugin_code' files")
-        listOf("pandas_1.1", "pandas_1.2", "pandas_1.3").forEach { version ->
-            val from = project.file("../projects/python_plugin_code/${version}_code/generated/plugin_code")
-            if(from.exists()) {
+        projectNamesOfSupportedPandasVersions.forEach { version ->
+            val pluginCode = project.file("../projects/python_plugin_code/${version}_code/generated/plugin_code")
+            if(pluginCode.exists()) {
                 copy {
-                    from(from)
+                    from(pluginCode)
                     into(project.file("src/main/resources/$version"))
                 }
             } else {
