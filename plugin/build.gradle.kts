@@ -62,7 +62,7 @@ tasks {
                     into(project.file("integration-test/dockered-python/$version"))
                 }
             } else {
-                logger.error("Can't copy Pipfiles for version: $version")
+                logger.error("Incomplete Pipfiles, can't copy files for version: $version")
             }
         }
 
