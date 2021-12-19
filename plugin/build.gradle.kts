@@ -56,7 +56,7 @@ tasks {
         projectNamesOfSupportedPandasVersions.forEach { version ->
             val pipFile = project.file("../projects/python_plugin_code/${version}_code/Pipfile")
             val pipFileLock = project.file("../projects/python_plugin_code/${version}_code/Pipfile.lock")
-            if(pipFile.exists() && pipFileLock.exists()) {
+            if (pipFile.exists() && pipFileLock.exists()) {
                 copy {
                     from(pipFile, pipFileLock)
                     into(project.file("integration-test/dockered-python/$version"))
@@ -70,28 +70,51 @@ tasks {
         commandLine("docker", "build", ".", "-t", "plugin-docker-python")
     }
 
-    // https://stackoverflow.com/questions/56628983/how-to-give-system-property-to-my-test-via-kotlin-gradle-and-d
     test {
         systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
         systemProperty("cms.rendner.dataframe.renderer.export.test.error.image.dir", exportTestErrorImagesPath)
-        useJUnitPlatform{
+        useJUnitPlatform {
             exclude("**/integration/**")
         }
         failFast = true
     }
 
-    register<Test>("integrationTest") {
-        description = "Runs integration tests."
-        group = "verification"
-        useJUnitPlatform {
-            include("**/integration/**")
+    val integrationTests = mutableListOf<Task>()
+    projectNamesOfSupportedPandasVersions.forEach { version ->
+        register<Test>("integrationTest-$version") {
+            description = "Runs integration test with pipenv environment for $version."
+            group = "verification"
+            shouldRunAfter("test")
+
+            systemProperty("cms.rendner.dataframe.renderer.integration.test", true)
+            systemProperty("cms.rendner.dataframe.renderer.integration.test.pipenv.environment", version)
+            useJUnitPlatform {
+                include("**/integration/**")
+            }
+            integrationTests.add(this)
         }
-        shouldRunAfter("test")
     }
 
+    register<Test>("integrationTest-all") {
+        description = "Runs all integration tests."
+        group = "verification"
+        shouldRunAfter("test")
+
+        var previousTask: Task? = null
+        integrationTests.forEach {
+            dependsOn(it)
+            if (previousTask != null) {
+                it.shouldRunAfter(previousTask)
+            }
+            previousTask = it
+        }
+    }
+
+    // don't force it yet
+    /*
     check {
         dependsOn("integrationTest")
-    }
+    }*/
 
     buildSearchableOptions {
         enabled = false
@@ -111,7 +134,7 @@ tasks {
         logger.lifecycle("copy 'plugin_code' files")
         projectNamesOfSupportedPandasVersions.forEach { version ->
             val pluginCode = project.file("../projects/python_plugin_code/${version}_code/generated/plugin_code")
-            if(pluginCode.exists()) {
+            if (pluginCode.exists()) {
                 copy {
                     from(pluginCode)
                     into(project.file("src/main/resources/$version"))

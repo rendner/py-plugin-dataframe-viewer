@@ -21,14 +21,21 @@ import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 
-// todo: add a "submit-interceptor" to allow mocking of evaluated values (if needed)
-// todo: find a good way to run integration test against all virtual python envs of docker image
-
-enum class DockeredPandasVersion(val label: String) {
+enum class DockeredPipenvEnvironment(val label: String) {
     PANDAS_1_1("pandas_1.1"),
     PANDAS_1_2("pandas_1.2"),
-    PANDAS_1_3("pandas_1.3"),
-    LATEST(PANDAS_1_3.label),
+    PANDAS_1_3("pandas_1.3");
+
+    companion object {
+        fun labelOf(label: String): DockeredPipenvEnvironment {
+            for (v in values()) {
+                if (v.label == label) {
+                    return v
+                }
+            }
+            throw IllegalArgumentException("There is no value which matches the label $label")
+        }
+    }
 }
 
 class DockeredPythonEvalDebugger : PythonEvalDebugger() {
@@ -60,7 +67,7 @@ class DockeredPythonEvalDebugger : PythonEvalDebugger() {
                         containerId = firstLine
                         logger.info("container from image '$image' started with id: $containerId")
 
-                        if(lines.size > 1) {
+                        if (lines.size > 1) {
                             logger.error("container '$containerId' will be terminated because it is in an unexpected state: $lines.last()")
                             destroyContainer()
                             throw IllegalStateException("Container creation for image '$image' failed with: ${lines.last()}")
@@ -80,8 +87,8 @@ class DockeredPythonEvalDebugger : PythonEvalDebugger() {
      * to switch the interpreter into debug mode. The interpreter will stop at this line and process all submitted
      * evaluation requests.
      */
-    fun startWithSourceFile(sourceFilePath: String, pandasVersion: DockeredPandasVersion) {
-        start(sourceFilePath, pandasVersion)
+    fun startWithSourceFile(sourceFilePath: String, pipenvEnvironment: DockeredPipenvEnvironment) {
+        start(sourceFilePath, pipenvEnvironment)
     }
 
     /**
@@ -89,18 +96,18 @@ class DockeredPythonEvalDebugger : PythonEvalDebugger() {
      * The [codeSnippet] has to contain a line with "breakpoint()", usually the last line, to switch the interpreter
      * into debug mode. The interpreter will stop at this line and process all submitted evaluation requests.
      */
-    fun startWithCodeSnippet(codeSnippet: String, pandasVersion: DockeredPandasVersion) {
-        start("-c $codeSnippet", pandasVersion)
+    fun startWithCodeSnippet(codeSnippet: String, pipenvEnvironment: DockeredPipenvEnvironment) {
+        start("-c $codeSnippet", pipenvEnvironment)
     }
 
-    private fun start(commandSuffix: String, pandasVersion: DockeredPandasVersion) {
+    private fun start(commandSuffix: String, pipenvEnvironment: DockeredPipenvEnvironment) {
         if (containerId == null) {
             throw IllegalStateException("No container available.")
         }
 
         val process = PythonProcess("\n", printOutput = false, printInput = false)
 
-        val workdir = "/usr/src/app/${pandasVersion.label}"
+        val workdir = "/usr/src/app/${pipenvEnvironment.label}"
         val command = "pipenv run python $commandSuffix"
 
         process.start(

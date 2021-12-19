@@ -60,3 +60,10 @@ This test class ensures:
 
 In case the calculated CSS does not match the expected CSS, a screenshot is taken of the rendered DataFrame tables.
 The screenshots are created in a folder named by the failed test case under `src/test/resources/generated-error-images/css-validation`.
+
+## Integration Tests
+The integration tests require Docker to start and shutdown a Python Docker container.
+
+Before integration tests can be executed a Docker image has to be created by running the gradle-task `buildPythonDockerImage` (group `build`).
+
+The integration-test tasks are listed in the gradle task group `verification`.

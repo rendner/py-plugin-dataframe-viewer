@@ -15,7 +15,7 @@
  */
 package cms.rendner.integration.python.base
 
-import cms.rendner.integration.python.debugger.DockeredPandasVersion
+import cms.rendner.integration.python.debugger.DockeredPipenvEnvironment
 import cms.rendner.integration.python.debugger.DockeredPythonEvalDebugger
 import cms.rendner.integration.python.debugger.EvalOnlyFrameAccessor
 import cms.rendner.integration.python.debugger.PythonEvalDebugger
@@ -28,9 +28,11 @@ import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal open class AbstractDockeredPythonTest {
-
     private val executorService: ExecutorService = Executors.newSingleThreadExecutor()
     private val debugger = DockeredPythonEvalDebugger()
+    private val pipenvEnvironment: DockeredPipenvEnvironment = DockeredPipenvEnvironment.labelOf(
+        System.getProperty("cms.rendner.dataframe.renderer.integration.test.pipenv.environment")
+    )
 
     @BeforeAll
     protected fun initializeDebuggerContainer() {
@@ -55,12 +57,11 @@ internal open class AbstractDockeredPythonTest {
     }
 
     protected fun runWithPythonDebugger(
-        pandasVersion: DockeredPandasVersion = DockeredPandasVersion.LATEST,
         block: (debugger: DockeredPythonEvalDebugger) -> Unit,
     ) {
         executorService.submit {
-            //debugger.startWithSourceFile("/usr/src/app/enter_debugger_example.py", pandasVersion)
-            debugger.startWithCodeSnippet("breakpoint()", pandasVersion)
+            //debugger.startWithSourceFile("/usr/src/app/enter_debugger_example.py", pipenvEnvironment)
+            debugger.startWithCodeSnippet("breakpoint()", pipenvEnvironment)
         }
         block(debugger)
     }
