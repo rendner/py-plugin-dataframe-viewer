@@ -45,7 +45,7 @@ class PythonProcess(
 
     /**
      * Writes a line to the process.
-     * The line-termination character '\n' is automatically added.
+     * The line-termination character [lineSeparator] is automatically added.
      *
      * @param input the string to write, not including any line-termination characters
      */
@@ -66,7 +66,7 @@ class PythonProcess(
 
     /**
      * Reads the available output of the process. Returns immediately an empty list if no output is available.
-     * @return A list of Strings containing the lines, not including any line-termination characters.
+     * @return A list of Strings containing the lines, not including [lineSeparator] character.
      */
     fun readLinesNonBlocking(): List<String> {
         /*

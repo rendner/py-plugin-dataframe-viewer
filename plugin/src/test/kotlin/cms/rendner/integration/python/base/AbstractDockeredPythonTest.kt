@@ -57,7 +57,7 @@ internal open class AbstractDockeredPythonTest {
     }
 
     protected fun runWithPythonDebugger(
-        block: (debugger: DockeredPythonEvalDebugger) -> Unit,
+        block: (debugger: PythonEvalDebugger) -> Unit,
     ) {
         executorService.submit {
             //debugger.startWithSourceFile("/usr/src/app/enter_debugger_example.py", pipenvEnvironment)

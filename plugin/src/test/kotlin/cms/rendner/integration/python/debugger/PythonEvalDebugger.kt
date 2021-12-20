@@ -266,8 +266,16 @@ __debugger_internals__ = __DebuggerInternals__()
 
          Therefore, the "input" is always wrapped with triple quotes.
        */
-        // todo: validate if this works on windows (os specific line separator)
-        // (only relevant if executed with "LocalPythonEvalDebugger" on windows)
+
+        // Note:
+        //
+        // replace("\n", "\\n") is OK
+        //
+        // Kotlin string templates use "\n" on every OS as line separator.
+        // Using "\n" as line separator for the input is OK as long as the
+        // python process uses the OS specific line separator:
+        // - to terminate writeLine
+        // - to split lines in readLine
         return "'''" + (input
             .replace("\n", "\\n")
             .replace("'", "\\'")

@@ -12,6 +12,7 @@ version = "0.5.1"
 
 val exportTestDataPath = "$projectDir/src/test/resources/generated/"
 val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
+// order: oldest to latest
 val projectNamesOfSupportedPandasVersions = listOf("pandas_1.1", "pandas_1.2", "pandas_1.3")
 
 repositories {
@@ -101,7 +102,8 @@ tasks {
         shouldRunAfter("test")
 
         var previousTask: Task? = null
-        integrationTests.forEach {
+        // run the latest first
+        integrationTests.asReversed().forEach {
             dependsOn(it)
             if (previousTask != null) {
                 it.shouldRunAfter(previousTask)

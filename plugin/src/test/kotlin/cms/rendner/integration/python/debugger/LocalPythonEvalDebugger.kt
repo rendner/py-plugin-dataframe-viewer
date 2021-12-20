@@ -15,17 +15,32 @@
  */
 package cms.rendner.integration.python.debugger
 
-class LocalPythonEvalDebugger : PythonEvalDebugger() {
+class LocalPythonEvalDebugger(
+    private val pythonPath: String,
+) : PythonEvalDebugger() {
 
     /**
-     * Starts the specified Python interpreter.
+     * Starts the Python interpreter.
      * The file referred by [sourceFilePath] has to contain a line with "breakpoint()", usually the last line,
      * to switch the interpreter into debug mode. The interpreter will stop at this line and process all submitted
      * evaluation requests.
      */
-    fun startWithSourceFile(pythonPath: String, sourceFilePath: String) {
+    fun startWithSourceFile(sourceFilePath: String) {
+        start(listOf(pythonPath, sourceFilePath))
+    }
+
+    /**
+     * Starts the Python interpreter.
+     * The [codeSnippet] has to contain a line with "breakpoint()", usually the last line, to switch the interpreter
+     * into debug mode. The interpreter will stop at this line and process all submitted evaluation requests.
+     */
+    fun startWithCodeSnippet(codeSnippet: String) {
+        start(listOf(pythonPath, "-c", codeSnippet))
+    }
+
+    private fun start(processArgs: List<String>) {
         val process = PythonProcess(System.lineSeparator(), printOutput = false, printInput = false)
-        process.start(listOf(pythonPath, sourceFilePath))
+        process.start(processArgs)
 
         try {
             start(process)
