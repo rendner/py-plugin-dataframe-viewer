@@ -30,9 +30,9 @@ def generate_plugin_code():
         'table_structure.py',
         'patched_styler.py',
     ]
-    with open('generated/plugin_code', 'w') as outfile:
+    with open('generated/plugin_code', 'w', encoding='utf8', newline='\n') as outfile:
         for file_name in file_names:
-            with open(f"{PACKAGE_NAME}/{file_name}") as infile:
+            with open(f"{PACKAGE_NAME}/{file_name}", encoding='utf8', newline='\n') as infile:
                 copy_marker_found = False
                 for line in infile:
                     stripped_line = line.strip()
