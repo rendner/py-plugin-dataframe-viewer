@@ -16,8 +16,8 @@
 package cms.rendner.integration.python.plugin.bridge
 
 import cms.rendner.integration.python.plugin.AbstractPluginCodeTest
-import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.IValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PythonCodeBridge
+import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.IValueEvaluator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test
 internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
 
     @Test
-    fun shouldHaveInitializedPluginBridge() {
+    fun shouldBeAbleToCallMethodCheck() {
         runWithInjectedPluginCode { codeBridge: PythonCodeBridge, evaluator: IValueEvaluator ->
             val styler = evaluator.evaluate("df.style")
 
@@ -38,19 +38,29 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun shouldAddCreatedPatchedStylerToInternalCache() {
+    fun shouldBeAbleToCallMethodCreatePatchedStylerWithStyler() {
         runWithInjectedPluginCode { codeBridge: PythonCodeBridge, evaluator: IValueEvaluator ->
 
             val styler = evaluator.evaluate("df.style")
-            codeBridge.createPatchedStyler(styler)
+            val patchedStylerRef = codeBridge.createPatchedStyler(styler)
 
-            val cacheSize = evaluator.evaluate("len(${codeBridge.getBridgeExpr()}.patched_styler_refs)")
-            assertThat(cacheSize.value).isEqualTo("1")
+            assertThat(patchedStylerRef).isNotNull
         }
     }
 
     @Test
-    fun shouldRemoveDisposedPatchedStylerFromInternalCache() {
+    fun shouldBeAbleToCallMethodCreatePatchedStylerWithDataFrame() {
+        runWithInjectedPluginCode { codeBridge: PythonCodeBridge, evaluator: IValueEvaluator ->
+
+            val styler = evaluator.evaluate("df")
+            val patchedStylerRef = codeBridge.createPatchedStyler(styler)
+
+            assertThat(patchedStylerRef).isNotNull
+        }
+    }
+
+    @Test
+    fun shouldBeAbleToTriggerMethodDeletePatchedStyler() {
         runWithInjectedPluginCode { codeBridge: PythonCodeBridge, evaluator: IValueEvaluator ->
 
             val styler = evaluator.evaluate("df.style")
@@ -58,6 +68,7 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
 
             patchedStylerRef.dispose()
 
+            // can only be verified by checking the internal cache
             val cacheSize = evaluator.evaluate("len(${codeBridge.getBridgeExpr()}.patched_styler_refs)")
             assertThat(cacheSize.value).isEqualTo("0")
         }

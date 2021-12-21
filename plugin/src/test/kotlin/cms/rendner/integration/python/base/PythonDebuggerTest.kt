@@ -131,41 +131,13 @@ internal class PythonDebuggerTest : AbstractDockeredPythonTest() {
     }
 
     @Test
-    fun shouldNotGarbageCollectEvaluatedResult() {
+    fun shouldDeleteEvaluatedResult() {
         runWithPythonDebugger { debugger ->
 
             val evaluator = createValueEvaluator(debugger)
             val dict = evaluator.evaluate("{'a': 12}")
 
-            evaluator.execute(
-                """
-            import gc
-
-            gc.collect()
-        """.trimIndent()
-            )
-
-            val result = evaluator.evaluate("${dict.tempName}['a']")
-
-            assertThat(result.value).isEqualTo("12")
-        }
-    }
-
-    @Test
-    fun shouldGarbageCollectEvaluatedResult() {
-        runWithPythonDebugger { debugger ->
-
-            val evaluator = createValueEvaluator(debugger)
-            val dict = evaluator.evaluate("{'a': 12}")
-
-            evaluator.execute(
-                """
-            import gc
-
-            del ${dict.tempName}
-            gc.collect()
-        """.trimIndent()
-            )
+            evaluator.execute("del ${dict.tempName}")
 
             assertFailsWith<EvaluateException> {
                 evaluator.evaluate("${dict.tempName}['a']")
@@ -182,11 +154,7 @@ internal class PythonDebuggerTest : AbstractDockeredPythonTest() {
             val evaluator = createValueEvaluator(debugger)
             val evalDict = evaluator.evaluate("{'a': 12}")
 
-            evaluator.execute(
-                """
-            exec_dict = {'a': ${evalDict.tempName}['a'] + 1}
-        """.trimIndent()
-            )
+            evaluator.execute("exec_dict = {'a': ${evalDict.tempName}['a'] + 1}")
 
             val execDict = evaluator.evaluate("exec_dict['a']")
 

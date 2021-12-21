@@ -16,10 +16,10 @@
 package cms.rendner.integration.python.plugin.bridge
 
 import cms.rendner.integration.python.plugin.AbstractPluginCodeTest
+import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PythonCodeBridge
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.TableStructure
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.IValueEvaluator
-import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PythonCodeBridge
-import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PyPatchedStylerRef
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test
 internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
-    fun shouldFetchTableStructure() {
+    fun shouldBeAbleToCallMethodGetTableStructure() {
         runWithPatchedStyler {
             assertThat(it.evaluateTableStructure()).isEqualTo(
                 TableStructure(
@@ -46,7 +46,7 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun shouldFetchChunk() {
+    fun shouldBeAbleToCallMethodRenderChunk() {
         runWithPatchedStyler {
             assertThat(
                 it.evaluateRenderChunk(
@@ -62,7 +62,7 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun shouldFetchUnpatched() {
+    fun shouldBeAbleToCallMethodRenderUnpatched() {
         runWithPatchedStyler {
             assertThat(
                 it.evaluateRenderUnpatched()

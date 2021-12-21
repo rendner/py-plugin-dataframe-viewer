@@ -22,6 +22,13 @@ import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.exceptions.Evalua
 import com.intellij.openapi.Disposable
 import com.jetbrains.python.debugger.PyDebugValue
 
+/**
+ * Wraps an instance of the "PatchedStyler" Python class.
+ * All calls are forwarded to the passed instance. Therefore, the method signatures of
+ * the Python class "PatchedStyler" have to match with the ones used by this class.
+ *
+ * @param pythonValueRef has to be a "PatchedStyler" Python instance.
+ */
 class PyPatchedStylerRef(
     pythonValueRef: PyDebugValue,
     private val disposeCallback: (ValueEvaluator, String) -> Unit
@@ -67,7 +74,8 @@ class PyPatchedStylerRef(
 
     @Throws(EvaluateException::class)
     fun evaluateRenderUnpatched(): String {
-        // Note: each time this method is called on the same instance style-properties are re-created without
+        // Note:
+        // Each time this method is called on the same instance style-properties are re-created without
         // clearing previous ones. Calling this method n-times results in n-times duplicated properties.
         // At least this is the behaviour in pandas 1.2.0 and looks like a bug in pandas.
         return evaluator.evaluate("${pythonValueRefExpr}.render_unpatched()").value!!

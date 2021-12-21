@@ -22,9 +22,8 @@ import cms.rendner.integration.python.debugger.PythonEvalDebugger
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.IValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.ValueEvaluator
 import org.junit.jupiter.api.*
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
+
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal open class AbstractDockeredPythonTest {
