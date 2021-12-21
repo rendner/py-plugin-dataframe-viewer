@@ -2,7 +2,7 @@
 
 Download from JetBrains Marketplace: [Python: Styled DataFrame Viewer](https://plugins.jetbrains.com/plugin/16050-python-styled-dataframe-viewer)
 
-**pandas 1.3:** Is now supported.
+**latest supported pandas version:**  1.3.5 (min required plugin version `0.5.0`)
 
 ## What It Is
 View styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` when debugging.
