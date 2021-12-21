@@ -423,3 +423,28 @@ class PatchedStyler:
 
                     if source_key in source_styler._display_funcs:
                         chunk_styler._display_funcs[target_key] = source_styler._display_funcs[source_key]
+
+import pandas as pd
+
+
+class StyledDataFrameViewerBridge:
+    patched_styler_refs = []
+
+    @classmethod
+    def create_patched_styler(cls, frame_or_styler) -> PatchedStyler:
+        p = PatchedStyler(frame_or_styler.style) if isinstance(frame_or_styler, pd.DataFrame) else PatchedStyler(
+            frame_or_styler)
+        cls.patched_styler_refs.append(p)
+        return p
+
+    @classmethod
+    def delete_patched_styler(cls, patched_styler: PatchedStyler):
+        cls.patched_styler_refs.remove(patched_styler)
+
+    @classmethod
+    def delete_all(cls):
+        cls.patched_styler_refs.clear()
+
+    @staticmethod
+    def check() -> bool:
+        return True

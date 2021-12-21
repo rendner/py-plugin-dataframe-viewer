@@ -28,6 +28,7 @@ def generate_plugin_code():
         'exported_style.py',
         'table_structure.py',
         'patched_styler.py',
+        'styled_data_frame_viewer_bridge.py',
     ]
     with open('generated/plugin_code', 'w', encoding='utf8', newline='\n') as outfile:
         for file_name in file_names:

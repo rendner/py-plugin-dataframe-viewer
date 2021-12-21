@@ -448,3 +448,28 @@ class PatchedStyler:
 
                 if len(target_row_cell_data_content) > 0:
                     target_cell_data_content[r_index_in_chunk] = target_row_cell_data_content
+
+import pandas as pd
+
+
+class StyledDataFrameViewerBridge:
+    patched_styler_refs = []
+
+    @classmethod
+    def create_patched_styler(cls, frame_or_styler) -> PatchedStyler:
+        p = PatchedStyler(frame_or_styler.style) if isinstance(frame_or_styler, pd.DataFrame) else PatchedStyler(
+            frame_or_styler)
+        cls.patched_styler_refs.append(p)
+        return p
+
+    @classmethod
+    def delete_patched_styler(cls, patched_styler: PatchedStyler):
+        cls.patched_styler_refs.remove(patched_styler)
+
+    @classmethod
+    def delete_all(cls):
+        cls.patched_styler_refs.clear()
+
+    @staticmethod
+    def check() -> bool:
+        return True

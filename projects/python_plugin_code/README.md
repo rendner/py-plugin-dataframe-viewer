@@ -43,6 +43,7 @@ The structure below lists only the important folders/files.
 ├── main.py
 ├── plugin_code
 │   └── patched_styler.py
+│   └── styled_data_frame_viewer_bridge.py
 └── tests
 ```
 
@@ -76,7 +77,8 @@ prevents you from using the debugger.
  
 
 #### PatchedStyler.py
-This is the only class which is used directly by the plugin to retrieve data.
+This class is used by the plugin (Kotlin part) to extract information from a pandas `Styler`.
+Therefore, it is mandatory that the method signatures of this class match those used by the `PyPatchedStylerRef` counterpart of the plugin project.
 
 Short overview about the public methods of the class:
 
@@ -87,6 +89,18 @@ Short overview about the public methods of the class:
 | get_table_structure |         X          | To extract initial information about a DataFrame.                                    |
 
 If you want to support a new pandas builtin style, you have to add it to this class.
+
+#### StyledDataFrameViewerBridge.py
+This class is used by the plugin (Kotlin part) to create and maintain `PatchedStyler` instances.
+Therefore, it is mandatory that the method signatures of this class match those used by the `PythonCodeBridge` counterpart of the plugin project.
+
+Short overview about the public methods of the class:
+
+| Method                | used by the plugin | purpose                                                              |
+|:----------------------|:------------------:|:---------------------------------------------------------------------|
+| create_patched_styler |         X          | To create a `PatchedStyler` instance.                                |
+| delete_patched_styler |         X          | To delete an obsolete `PatchedStyler` instance.                      |
+| check                 |         X          | To check if the Python-specific plugin code was already initialized. |
 
 ### Directory: test
 The directory `tests` contains unit tests to guarantee that the combined HTML chunks give the same result as the original output taken from pandas `Styler.render()`.
