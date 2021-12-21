@@ -84,16 +84,20 @@ abstract class PythonEvalDebugger {
         try {
             if (findEntryPointAndInjectDebuggerInternals(pythonProcess)) {
                 processOpenTasks(pythonProcess)
-            } else {
-                throw Exception("Couldn't find entry point 'breakpoint()'.")
             }
+        } catch (ex: Throwable) {
+            openTasks.forEach { it.result.completeExceptionally(ex) }
+            if (ex is InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+            throw ex
         } finally {
             isRunning = false
         }
     }
 
     private fun findEntryPointAndInjectDebuggerInternals(pythonProcess: PythonProcess): Boolean {
-        var checkCounter = 20
+        var checkCounter = 30
 
         while (checkCounter-- > 0) {
             if (pythonProcess.canRead()) {
@@ -104,57 +108,63 @@ abstract class PythonEvalDebugger {
                     return true
                 }
             } else {
-                Thread.sleep(200)
+                Thread.sleep(100)
             }
         }
 
-        return false
+        throw IllegalStateException("Couldn't find entry point 'breakpoint()'.")
     }
 
     private fun processOpenTasks(pythonProcess: PythonProcess) {
 
-        var pendingTask: OpenTask? = null
+        var activeTask: OpenTask? = null
         var lines: List<String> = emptyList()
         var stoppedAtInputPrompt = false
         var checkForInputPrompt = true
 
-        while (!shutdownRequested && !Thread.currentThread().isInterrupted) {
+        try {
+            while (!shutdownRequested && !Thread.currentThread().isInterrupted) {
 
-            if (checkForInputPrompt && pythonProcess.canRead()) {
-                lines = pythonProcess.readLinesNonBlocking()
-                stoppedAtInputPrompt = lastLineIsPrompt(lines)
-            }
-
-            if (stoppedAtInputPrompt) {
-                checkForInputPrompt = false
-
-                var nextDebugCommand: String? = null
-
-                if (pendingTask != null) {
-                    pendingTask.result.complete(
-                        createEvaluateResponse(getEvaluationResult(lines), pendingTask.request.execute)
-                    )
-                    pendingTask = null
+                if (checkForInputPrompt && pythonProcess.canRead()) {
+                    lines = pythonProcess.readLinesNonBlocking()
+                    stoppedAtInputPrompt = lastLineIsPrompt(lines)
                 }
 
-                if (openTasks.isNotEmpty()) {
-                    pendingTask = openTasks.take()
-                    val expression = sanitizeDebuggerInput(pendingTask.request.expression)
-                    nextDebugCommand = if (pendingTask.request.execute) {
-                        "!exec($expression)"
-                    } else {
-                        "!__debugger_internals__.eval_with_type_info($expression)"
+                if (stoppedAtInputPrompt) {
+                    checkForInputPrompt = false
+
+                    var nextDebugCommand: String? = null
+
+                    if (activeTask != null) {
+                        activeTask.result.complete(
+                            createEvaluateResponse(getEvaluationResult(lines), activeTask.request.execute)
+                        )
+                        activeTask = null
+                    }
+
+                    if (openTasks.isNotEmpty()) {
+                        activeTask = openTasks.take()
+                        val expression = sanitizeDebuggerInput(activeTask.request.expression)
+                        nextDebugCommand = if (activeTask.request.execute) {
+                            "!exec($expression)"
+                        } else {
+                            "!__debugger_internals__.eval_with_type_info($expression)"
+                        }
+                    }
+
+                    if (nextDebugCommand != null) {
+                        pythonProcess.writeLine("$nextDebugCommand")
+                        stoppedAtInputPrompt = false
+                        checkForInputPrompt = true
                     }
                 }
-
-                if (nextDebugCommand != null) {
-                    pythonProcess.writeLine("$nextDebugCommand")
-                    stoppedAtInputPrompt = false
-                    checkForInputPrompt = true
-                }
-            } else {
-                Thread.sleep(200)
             }
+        } catch (e: Throwable) {
+            activeTask?.result?.completeExceptionally(e)
+            if (e is InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+            throw e
         }
     }
 
