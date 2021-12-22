@@ -107,7 +107,7 @@ class DockeredPythonEvalDebugger : PythonEvalDebugger() {
 
         val process = PythonProcess("\n", printOutput = false, printInput = false)
 
-        val workdir = "/usr/src/app/${pipenvEnvironment.label}"
+        val workdir = "/usr/src/app/pipenv_environments/${pipenvEnvironment.label}"
         val command = "pipenv run python $commandSuffix"
 
         process.start(

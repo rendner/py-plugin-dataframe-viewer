@@ -4,4 +4,5 @@
 **/.idea/
 **/.pytest_cache/
 /__exclude/
-/src/test/resources/generated-error-images/
+/plugin/src/test/resources/generated-error-images/
+/plugin/integration-test/dockered-python/pipenv_environments/
