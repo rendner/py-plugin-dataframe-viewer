@@ -32,17 +32,17 @@ def collect_test_cases_from_dir(module_dir: str):
     test_cases = []
     py_suffix_length = len(".py")
     module_path_start_offset = module_dir.index("export_data")
-    export_dir_name_offset = module_path_start_offset + len("export_data")
+    export_dir_name_offset = module_path_start_offset + len("export_data.")
 
     for f in Path(module_dir).glob("*.py"):
         module_name = f.stem
         if not module_name.startswith('_'):
             path = str(f)
-            module_import_name = path[module_path_start_offset:-py_suffix_length].replace(os.sep, '.')
+            module_import_name = path[export_dir_name_offset:-py_suffix_length].replace(os.sep, '.')
             module = import_module(module_import_name)
             if hasattr(module, 'test_case'):
                 test_case = getattr(module, 'test_case')
-                test_case_export_dir = path[export_dir_name_offset + 1:-py_suffix_length]
+                test_case_export_dir = path[export_dir_name_offset:-py_suffix_length]
                 test_cases.append({**test_case, 'export_dir': test_case_export_dir})
 
     return test_cases
