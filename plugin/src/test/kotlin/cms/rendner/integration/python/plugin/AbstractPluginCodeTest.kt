@@ -15,11 +15,11 @@
  */
 package cms.rendner.integration.python.plugin
 
-import cms.rendner.integration.python.base.AbstractDockeredPythonTest
+import cms.rendner.integration.python.base.AbstractPipEnvEnvironmentTest
 import cms.rendner.intellij.dataframe.viewer.pycharm.bridge.PythonCodeBridge
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.IValueEvaluator
 
-internal open class AbstractPluginCodeTest : AbstractDockeredPythonTest() {
+internal open class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest() {
 
     protected fun runWithInjectedPluginCode(
         pythonCodeToRun: String?,

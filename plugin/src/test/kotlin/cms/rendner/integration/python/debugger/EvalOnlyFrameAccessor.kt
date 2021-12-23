@@ -26,12 +26,16 @@ class EvalOnlyFrameAccessor(private val pythonDebugger: PythonEvalDebugger) : Py
     private var counter = 0
 
     override fun evaluate(expression: String, execute: Boolean, doTrunc: Boolean): PyDebugValue {
-        return createPyDebugValue(
-            pythonDebugger.submit(EvaluateRequest(expression, execute)).get()
-        ).also {
-            if (it.isErrorOnEval && execute) {
-                throw PyDebuggerException(it.value)
+        return try {
+            createPyDebugValue(
+                pythonDebugger.submit(EvaluateRequest(expression, execute, doTrunc)).get()
+            ).also {
+                if (it.isErrorOnEval && execute) {
+                    throw PyDebuggerException(it.value)
+                }
             }
+        }catch (ex: Exception) {
+            throw PyDebuggerException(ex.message, ex)
         }
     }
 

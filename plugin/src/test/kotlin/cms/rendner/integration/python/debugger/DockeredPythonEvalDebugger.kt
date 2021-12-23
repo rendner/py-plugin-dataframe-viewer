@@ -15,28 +15,12 @@
  */
 package cms.rendner.integration.python.debugger
 
+import PipenvEnvironment
 import com.intellij.openapi.diagnostic.Logger
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
-
-enum class DockeredPipenvEnvironment(val label: String) {
-    PANDAS_1_1("pandas_1.1"),
-    PANDAS_1_2("pandas_1.2"),
-    PANDAS_1_3("pandas_1.3");
-
-    companion object {
-        fun labelOf(label: String): DockeredPipenvEnvironment {
-            for (v in values()) {
-                if (v.label == label) {
-                    return v
-                }
-            }
-            throw IllegalArgumentException("There is no value which matches the label $label")
-        }
-    }
-}
 
 class DockeredPythonEvalDebugger : PythonEvalDebugger() {
 
@@ -82,31 +66,33 @@ class DockeredPythonEvalDebugger : PythonEvalDebugger() {
     }
 
     /**
-     * Starts the Python interpreter of the specified pandas version.
+     * Starts the Python interpreter of the specified pipenv environment.
      * The file referred by [sourceFilePath] has to contain a line with "breakpoint()", usually the last line,
      * to switch the interpreter into debug mode. The interpreter will stop at this line and process all submitted
      * evaluation requests.
      */
-    fun startWithSourceFile(sourceFilePath: String, pipenvEnvironment: DockeredPipenvEnvironment) {
+    fun startWithSourceFile(sourceFilePath: String, pipenvEnvironment: PipenvEnvironment) {
         start(sourceFilePath, pipenvEnvironment)
     }
 
     /**
-     * Starts the Python interpreter of the specified pandas version.
+     * Starts the Python interpreter of the specified pipenv environment.
      * The [codeSnippet] has to contain a line with "breakpoint()", usually the last line, to switch the interpreter
      * into debug mode. The interpreter will stop at this line and process all submitted evaluation requests.
      */
-    fun startWithCodeSnippet(codeSnippet: String, pipenvEnvironment: DockeredPipenvEnvironment) {
+    fun startWithCodeSnippet(codeSnippet: String, pipenvEnvironment: PipenvEnvironment) {
         start("-c $codeSnippet", pipenvEnvironment)
     }
 
-    private fun start(commandSuffix: String, pipenvEnvironment: DockeredPipenvEnvironment) {
+    private fun start(commandSuffix: String, pipenvEnvironment: PipenvEnvironment) {
         if (containerId == null) {
             throw IllegalStateException("No container available.")
         }
 
         val process = PythonProcess("\n", printOutput = false, printInput = false)
 
+        // "workdir" has to be one of the already existing pipenv environments
+        // otherwise "pipenv run" creates a new pipenv environment in the specified workdir
         val workdir = "/usr/src/app/pipenv_environments/${pipenvEnvironment.label}"
         val command = "pipenv run python $commandSuffix"
 

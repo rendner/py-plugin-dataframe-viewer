@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.models.chunked
 
+import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
 import cms.rendner.intellij.dataframe.viewer.core.component.models.IDataFrameModel
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.pycharm.dataframe.TableStructure
@@ -40,10 +41,9 @@ import java.util.*
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal abstract class BaseResourceValidationTest(errorImageSubDirName: String) {
-
-    private val testCaseDir = Paths.get(System.getProperty("cms.rendner.dataframe.renderer.export.test.data.dir"))
+    private val testCaseDir = Paths.get(System.getProperty(SystemPropertyEnum.EXPORT_TEST_DATA_DIR.key))
     private val testErrorImageDir = Paths.get(
-        System.getProperty("cms.rendner.dataframe.renderer.export.test.error.image.dir"),
+        System.getProperty(SystemPropertyEnum.EXPORT_TEST_ERROR_IMAGE_DIR.key),
         errorImageSubDirName,
     )
 

@@ -5,4 +5,4 @@
 **/.pytest_cache/
 /__exclude/
 /plugin/src/test/resources/generated-error-images/
-/plugin/integration-test/dockered-python/pipenv_environments/
+/plugin/dockered-python/content/

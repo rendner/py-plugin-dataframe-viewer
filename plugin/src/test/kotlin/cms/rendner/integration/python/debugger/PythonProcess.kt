@@ -82,7 +82,9 @@ class PythonProcess(
         if (printOutput && stringBuilder.isNotEmpty()) {
             println("PythonProcess::readLinesNonBlocking:$lineSeparator$stringBuilder$lineSeparator")
         }
-        return stringBuilder.toString().split(lineSeparator)
+        return stringBuilder.toString()
+            .split(lineSeparator)
+            .filterNot { it.isEmpty() }
     }
 
     /**

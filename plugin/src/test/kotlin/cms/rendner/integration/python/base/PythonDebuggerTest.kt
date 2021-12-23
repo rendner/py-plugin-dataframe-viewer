@@ -25,14 +25,66 @@ import kotlin.test.assertFailsWith
 
 /**
  * Tests the base functionality of the Python debugger used in the integration tests.
- * This tests should always run first to guarantee that the debugger works as expected,
- * before running the other integration tets.
+ * These tests should always run first to guarantee that the debugger works as expected,
+ * before running the other integration tests.
  *
  * This ordering is achieved by using the @Order annotation and setting "junit.jupiter.testclass.order.default"
  * to "org.junit.jupiter.api.ClassOrderer$OrderAnnotation" in "src/test/resources/junit-platform.properties".
  */
 @Order(0)
-internal class PythonDebuggerTest : AbstractDockeredPythonTest() {
+internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
+
+    @Test
+    fun shouldFailIfLinebreakIsInSingleLineString() {
+        runWithPythonDebugger { debugger ->
+
+            val evaluator = createValueEvaluator(debugger)
+
+            assertFailsWith<EvaluateException> {
+                evaluator.execute("multi = 'line_1\nline_2'")
+            }.also {
+                assertThat(it).hasCauseInstanceOf(PyDebuggerException::class.java)
+                assertThat(it.cause).hasMessage("*** SyntaxError: EOL while scanning string literal")
+            }
+
+            assertFailsWith<EvaluateException> {
+                evaluator.evaluate("'line_1\nline_2'")
+            }.also {
+                assertThat(it).hasMessage("*** SyntaxError: EOL while scanning string literal")
+            }
+        }
+    }
+
+    @Test
+    fun shouldNotFailIfLinebreakIsInTripleQuotes() {
+        runWithPythonDebugger { debugger ->
+
+            val evaluator = createValueEvaluator(debugger)
+
+            evaluator.execute("multi = '''line_1\nline_2'''")
+            val multi = evaluator.evaluate("multi")
+            assertThat(multi.value).isEqualTo("line_1\nline_2")
+
+            val multi2 = evaluator.evaluate("'''line_1\nline_2'''")
+            assertThat(multi2.value).isEqualTo("line_1\nline_2")
+        }
+    }
+
+    @Test
+    fun shouldNotFailIfLinebreakIsInMultilineString() {
+        runWithPythonDebugger { debugger ->
+
+            val evaluator = createValueEvaluator(debugger)
+
+            evaluator.execute("""multi = 'line_1\nline_2'""")
+            val multi = evaluator.evaluate("multi")
+            assertThat(multi.value).isEqualTo("line_1\nline_2")
+
+            val multi2 = evaluator.evaluate("""'line_1\nline_2'""")
+            assertThat(multi2.value).isEqualTo("line_1\nline_2")
+        }
+    }
+
 
     @Test
     fun shouldEvaluateExpression() {

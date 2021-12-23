@@ -15,22 +15,24 @@
  */
 package cms.rendner.integration.python.base
 
-import cms.rendner.integration.python.debugger.DockeredPipenvEnvironment
 import cms.rendner.integration.python.debugger.DockeredPythonEvalDebugger
 import cms.rendner.integration.python.debugger.EvalOnlyFrameAccessor
 import cms.rendner.integration.python.debugger.PythonEvalDebugger
+import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.IValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.ValueEvaluator
 import org.junit.jupiter.api.*
-import java.util.concurrent.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-internal open class AbstractDockeredPythonTest {
+internal open class AbstractPipEnvEnvironmentTest {
     private val executorService: ExecutorService = Executors.newSingleThreadExecutor()
     private val debugger = DockeredPythonEvalDebugger()
-    private val pipenvEnvironment: DockeredPipenvEnvironment = DockeredPipenvEnvironment.labelOf(
-        System.getProperty("cms.rendner.dataframe.renderer.integration.test.pipenv.environment")
+    protected val pipenvEnvironment = PipenvEnvironment.labelOf(
+        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_PIPENV_ENVIRONMENT.key)
     )
 
     @BeforeAll
@@ -59,8 +61,17 @@ internal open class AbstractDockeredPythonTest {
         block: (debugger: PythonEvalDebugger) -> Unit,
     ) {
         executorService.submit {
-            //debugger.startWithSourceFile("/usr/src/app/enter_debugger_example.py", pipenvEnvironment)
             debugger.startWithCodeSnippet("breakpoint()", pipenvEnvironment)
+        }
+        block(debugger)
+    }
+
+    protected fun runWithPythonDebugger(
+        sourceFile: String,
+        block: (debugger: PythonEvalDebugger) -> Unit,
+    ) {
+        executorService.submit {
+            debugger.startWithSourceFile(sourceFile, pipenvEnvironment)
         }
         block(debugger)
     }

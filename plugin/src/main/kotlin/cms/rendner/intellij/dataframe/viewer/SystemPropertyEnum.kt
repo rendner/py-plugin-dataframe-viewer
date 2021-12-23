@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.pycharm.evaluator
+package cms.rendner.intellij.dataframe.viewer
 
-import cms.rendner.intellij.dataframe.viewer.pycharm.evaluator.exceptions.EvaluateException
-import com.jetbrains.python.debugger.PyDebugValue
-
-interface IValueEvaluator {
-    @Throws(EvaluateException::class)
-    fun evaluate(expression: String, trimResult: Boolean = false): PyDebugValue
-
-    @Throws(EvaluateException::class)
-    fun execute(statement: String): PyDebugValue
+enum class SystemPropertyEnum(val key: String) {
+    DOCKERED_TEST_PIPENV_ENVIRONMENT("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment"),
+    ENABLE_TEST_DATA_EXPORT_ACTION("cms.rendner.dataframe.renderer.enable.test.data.export.action"),
+    EXPORT_TEST_DATA_DIR("cms.rendner.dataframe.renderer.export.test.data.dir"),
+    EXPORT_TEST_ERROR_IMAGE_DIR("cms.rendner.dataframe.renderer.export.test.error.image.dir")
 }

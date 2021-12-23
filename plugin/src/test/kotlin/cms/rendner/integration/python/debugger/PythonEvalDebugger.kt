@@ -21,6 +21,9 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
+// adapted from PyCharm: https://github.com/JetBrains/intellij-community/search?q=%40_%40NEW_LINE_CHAR%40_%40
+private const val NEW_LINE_CHAR = "@_@NEW_LINE_CHAR@_@"
+
 abstract class PythonEvalDebugger {
 
     private data class OpenTask(val request: EvaluateRequest, val result: CompletableFuture<EvaluateResponse>)
@@ -101,11 +104,16 @@ abstract class PythonEvalDebugger {
 
         while (checkCounter-- > 0) {
             if (pythonProcess.canRead()) {
-                if (lastLineIsPrompt(pythonProcess.readLinesNonBlocking())) {
+                val lines = sanitizeDebuggerOutput(pythonProcess.readLinesNonBlocking())
+                if (lastLineIsPrompt(lines)) {
                     pythonProcess.writeLine(
-                        "!exec(${sanitizeDebuggerInput(createDebuggerInternalsInstanceSnippet())})"
+                        "!exec(${sanitizeDebuggerInput(createDebuggerInternalsInstanceSnippet(), "\\n")})"
                     )
                     return true
+                } else {
+                    if (lines.isNotEmpty()) {
+                        throw IllegalStateException(lines.joinToString(System.lineSeparator()))
+                    }
                 }
             } else {
                 Thread.sleep(100)
@@ -126,7 +134,7 @@ abstract class PythonEvalDebugger {
             while (!shutdownRequested && !Thread.currentThread().isInterrupted) {
 
                 if (checkForInputPrompt && pythonProcess.canRead()) {
-                    lines = pythonProcess.readLinesNonBlocking()
+                    lines = sanitizeDebuggerOutput(pythonProcess.readLinesNonBlocking())
                     stoppedAtInputPrompt = lastLineIsPrompt(lines)
                 }
 
@@ -137,7 +145,7 @@ abstract class PythonEvalDebugger {
 
                     if (activeTask != null) {
                         activeTask.result.complete(
-                            createEvaluateResponse(getEvaluationResult(lines), activeTask.request.execute)
+                            createEvaluateResponse(getEvaluationResult(lines), activeTask.request)
                         )
                         activeTask = null
                     }
@@ -146,7 +154,7 @@ abstract class PythonEvalDebugger {
                         activeTask = openTasks.take()
                         val expression = sanitizeDebuggerInput(activeTask.request.expression)
                         nextDebugCommand = if (activeTask.request.execute) {
-                            "!exec($expression)"
+                            "!__debugger_internals__.exec($expression)"
                         } else {
                             "!__debugger_internals__.eval_with_type_info($expression)"
                         }
@@ -178,12 +186,13 @@ abstract class PythonEvalDebugger {
     }
 
     private fun getEvaluationResult(lines: List<String>): String? {
-        if (lines.isNotEmpty()) {
+        return if (lines.isNotEmpty()) {
             if (lines.last() == LinePrefixes.DEBUGGER_PROMPT.label && lines.size > 1) {
-                return lines[lines.size - 2]
+                lines[lines.size - 2]
+            } else {
+                lines.joinToString(System.lineSeparator())
             }
-        }
-        return null
+        } else null
     }
 
     /*
@@ -194,10 +203,28 @@ abstract class PythonEvalDebugger {
     Visible means, an evaluator could also evaluate something like this:
 
     evaluator.evaluate("__debugger_internals__.eval_with_type_info('1')")
+
+    Note:
+        Linebreaks in strings passed to "eval"/"exec" have to be escaped.
+
+        Examples:
+
+        default string behavior:
+            "a\nb".split("\n")              => ['a', 'b']
+            "a\\nb".split("\n")             => ['a\\nb']
+
+        eval:
+            eval("'a\nb'").split("\n")      => {SyntaxError}EOL while scanning string literal (<string>, line 1)
+            eval("'a\\nb'").split("\n")     => ['a', 'b']
+
+        exec:
+            exec("a = 'a\nb'")              => {SyntaxError}EOL while scanning string literal (<string>, line 1)
+            exec("a = 'a\\nb'")             => a = ['a', 'b']
      */
     private fun createDebuggerInternalsInstanceSnippet(): String {
         return """
 import inspect
+import os
 
 
 class __DebuggerInternals__:
@@ -214,9 +241,17 @@ class __DebuggerInternals__:
         return f'{module}.{qname}'
 
     def eval_with_type_info(self, expression) -> str:
+        if isinstance(expression, str):
+            expression = expression.replace("\\$NEW_LINE_CHAR", "\\\\n")
+            expression = expression.replace("$NEW_LINE_CHAR", "\\n")
+            
         # get the caller's frame
         previous_frame = inspect.currentframe().f_back
         result = eval(expression, previous_frame.f_globals, previous_frame.f_locals)
+
+        if isinstance(result, str):
+            result = result.replace("\\\\n", "\\$NEW_LINE_CHAR")
+            result = result.replace("\\n", "$NEW_LINE_CHAR")
 
         ref_key = None
         if result is not None and not isinstance(result, self.excluded_result_types):
@@ -224,8 +259,16 @@ class __DebuggerInternals__:
             ref_key = f'__dbg_ref_id_{self.id_counter}'
             previous_frame.f_locals[ref_key] = result
             self.id_counter += 1
-
         return f'{self.__full_type(result)} {ref_key} {result}'
+
+    @staticmethod
+    def exec(value) -> None:
+        if isinstance(value, str):
+            value = value.replace("\\$NEW_LINE_CHAR", "\\\\n")
+            value = value.replace("$NEW_LINE_CHAR", "\\n")
+        # get the caller's frame
+        previous_frame = inspect.currentframe().f_back
+        exec(value, previous_frame.f_globals, previous_frame.f_locals)
 
 
 __debugger_internals__ = __DebuggerInternals__()
@@ -236,10 +279,10 @@ __debugger_internals__ = __DebuggerInternals__()
         return Pair(this.substring(0, index), this.substring(index + 1))
     }
 
-    private fun createEvaluateResponse(result: String?, wasExecute: Boolean): EvaluateResponse {
+    private fun createEvaluateResponse(result: String?, request: EvaluateRequest): EvaluateResponse {
         return if (result != null && pythonErrorRegex.matches(result)) {
             return EvaluateResponse(value = result, isError = true)
-        } else if (wasExecute || result == null) {
+        } else if (request.execute || result == null) {
             EvaluateResponse()
         } else {
             val unquotedResult = if (result.startsWith("'")) {
@@ -255,7 +298,11 @@ __debugger_internals__ = __DebuggerInternals__()
             val qualifiedType =
                 unquotedResult.substring(0, separatorAfterTypeInfo).let { it.splitAtIndex(it.lastIndexOf(".")) }
             val refId = unquotedResult.substring(separatorAfterTypeInfo + 1, separatorAfterRefId)
-            val value = unquotedResult.substring(separatorAfterRefId + 1)
+            var value = unquotedResult.substring(separatorAfterRefId + 1)
+
+            if (request.trimResult && value.length > 100) {
+                value = "${value.substring(0, 100)}..."
+            }
 
             EvaluateResponse(
                 value = value,
@@ -266,7 +313,15 @@ __debugger_internals__ = __DebuggerInternals__()
         }
     }
 
-    private fun sanitizeDebuggerInput(input: String): String {
+    private fun sanitizeDebuggerOutput(output: List<String>): List<String> {
+        return output.map {
+            it
+                .replace("\\$NEW_LINE_CHAR", "\\n")
+                .replace(NEW_LINE_CHAR, "\n")
+        }
+    }
+
+    private fun sanitizeDebuggerInput(input: String, lineSeparatorReplacement: String = NEW_LINE_CHAR): String {
         /*
          The "input" has to be sanitized to not break the debugger.
          For example calling the helper method "eval_with_type_info(x = 2)"
@@ -277,18 +332,15 @@ __debugger_internals__ = __DebuggerInternals__()
          Therefore, the "input" is always wrapped with triple quotes.
        */
 
-        // Note:
-        //
-        // replace("\n", "\\n") is OK
-        //
-        // Kotlin string templates use "\n" on every OS as line separator.
-        // Using "\n" as line separator for the input is OK as long as the
-        // python process uses the OS specific line separator:
-        // - to terminate writeLine
-        // - to split lines in readLine
-        return "'''" + (input
-            .replace("\n", "\\n")
+        var sanitizedInput = input
+            .replace("\n", lineSeparatorReplacement)
             .replace("'", "\\'")
-            .replace("\"", "\\\"")) + "'''"
+            .replace("\"", "\\\"")
+
+        if (lineSeparatorReplacement != "\\n") {
+            sanitizedInput = sanitizedInput.replace("\\n", "\\$lineSeparatorReplacement")
+        }
+
+        return "'''$sanitizedInput'''"
     }
 }

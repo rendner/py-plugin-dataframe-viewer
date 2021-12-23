@@ -20,6 +20,8 @@ import com.jetbrains.python.debugger.PyDebugValue
 import java.nio.file.Files
 import java.nio.file.Path
 
+data class ExportData(val testCases: PyDebugValue, val pandasMajorMinorVersion: String)
+
 data class TestCaseExportData(
     val styler: PyDebugValue,
     val exportChunkSize: ChunkSize,

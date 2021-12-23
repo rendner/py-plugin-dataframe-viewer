@@ -23,9 +23,9 @@ import com.jetbrains.python.debugger.PyFrameAccessor
 class ValueEvaluator(private val frameAccessor: PyFrameAccessor): IValueEvaluator {
 
     @Throws(EvaluateException::class)
-    override fun evaluate(expression: String): PyDebugValue {
+    override fun evaluate(expression: String, trimResult: Boolean): PyDebugValue {
         val result = try {
-            frameAccessor.evaluate(expression, false, false)
+            frameAccessor.evaluate(expression, false, trimResult)
         } catch (ex: PyDebuggerException) {
             throw EvaluateException("Couldn't evaluate expression.", ex, expression)
         }

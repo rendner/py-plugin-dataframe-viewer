@@ -15,21 +15,20 @@
  */
 package cms.rendner.junit
 
-import cms.rendner.integration.python.debugger.DockeredPipenvEnvironment
+import cms.rendner.integration.python.base.AbstractPipEnvEnvironmentTest
+import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
 import org.junit.jupiter.api.DisplayNameGenerator
 
 class PipEnvDisplayNameGenerator : DisplayNameGenerator.Standard() {
 
-    private val isIntegrationTest = System.getProperty("cms.rendner.dataframe.renderer.integration.test") == "true"
-    private val pipenvEnvironment: String = if (isIntegrationTest) {
-        val configuredEnvironment =
-            System.getProperty("cms.rendner.dataframe.renderer.integration.test.pipenv.environment")
-        DockeredPipenvEnvironment.labelOf(configuredEnvironment).label
-    } else ""
+    private val pipEnvTestSuperClass = AbstractPipEnvEnvironmentTest::class.java
+    private val pipenvEnvironment = PipenvEnvironment.labelOf(
+        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_PIPENV_ENVIRONMENT.key)
+    )
 
     override fun generateDisplayNameForClass(testClass: Class<*>?): String {
-        if (isIntegrationTest) {
-            return "[pipenv env: ${pipenvEnvironment}] ${super.generateDisplayNameForClass(testClass)}"
+        if (testClass != null && pipEnvTestSuperClass.isAssignableFrom(testClass)) {
+            return "[pipenv env: ${pipenvEnvironment.label}] ${super.generateDisplayNameForClass(testClass)}"
         }
         return super.generateDisplayNameForClass(testClass)
     }
