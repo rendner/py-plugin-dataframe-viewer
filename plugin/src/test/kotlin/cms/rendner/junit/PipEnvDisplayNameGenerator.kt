@@ -15,7 +15,8 @@
  */
 package cms.rendner.junit
 
-import cms.rendner.integration.python.base.AbstractPipEnvEnvironmentTest
+import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
+import cms.rendner.debugger.impl.PipenvEnvironment
 import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
 import org.junit.jupiter.api.DisplayNameGenerator
 

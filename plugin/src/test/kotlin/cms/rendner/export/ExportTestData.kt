@@ -15,9 +15,9 @@
  */
 package cms.rendner.export
 
-import cms.rendner.integration.python.base.AbstractPipEnvEnvironmentTest
+import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
-import cms.rendner.intellij.dataframe.viewer.pycharm.exporter.ExportTask
+import cms.rendner.intellij.dataframe.viewer.python.exporter.ExportTask
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
@@ -32,12 +32,11 @@ internal class ExportTestData : AbstractPipEnvEnvironmentTest() {
     @Test
     fun exportTestDataForUnitTests() {
         assertThat(exportDir).isNotNull
-        runWithPythonDebugger("export_data/main.py") { debugger ->
+        runWithPythonDebugger("export_data/main.py") { valueEvaluator, _ ->
 
-            val evaluator = createValueEvaluator(debugger)
-            val exportTestDataValue = evaluator.evaluate("export_test_data")
+            val exportTestDataValue = valueEvaluator.evaluate("export_test_data")
 
-            ExportTask(exportDir!!, exportTestDataValue, evaluator).run()
+            ExportTask(exportDir!!, exportTestDataValue).run()
         }
     }
 }

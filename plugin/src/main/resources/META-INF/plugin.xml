@@ -19,7 +19,7 @@
     For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
     ]]></description>
 
-    <idea-version since-build="203" until-build="213.*" />
+    <idea-version since-build="203" until-build="213.*"/>
 
     <change-notes><![CDATA[
     <b>0.5.1</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.5.x/changelog-1.md">changelog</a>
@@ -40,15 +40,19 @@
 
     <actions>
         <group id="debugActionGroup">
-            <action id="CMSDebugger.ShowStyledDataFrameAction" class="cms.rendner.intellij.dataframe.viewer.pycharm.actions.ShowStyledDataFrameAction" text="View as Styled DataFrame"/>
-            <action id="CMSDebugger.ExportDataFrameTestDataAction" class="cms.rendner.intellij.dataframe.viewer.pycharm.actions.ExportDataFrameTestDataAction" text="Export DataFrame Test Data"/>
+            <action id="cms.rendner.ShowStyledDataFrameAction"
+                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowStyledDataFrameAction"
+                    text="View as Styled DataFrame"/>
+            <action id="cms.rendner.ExportDataFrameTestDataAction"
+                    class="cms.rendner.intellij.dataframe.viewer.actions.ExportDataFrameTestDataAction"
+                    text="Export DataFrame Test Data"/>
             <!-- found in LangActions.xml -->
             <add-to-group group-id="XDebugger.ValueGroup" relative-to-action="Debugger.ShowReferring" anchor="before"/>
         </group>
     </actions>
 
     <extensions defaultExtensionNs="com.intellij">
-        <projectService serviceImplementation="cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService" />
+        <projectService serviceImplementation="cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService"/>
         <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON"/>
     </extensions>
 </idea-plugin>
