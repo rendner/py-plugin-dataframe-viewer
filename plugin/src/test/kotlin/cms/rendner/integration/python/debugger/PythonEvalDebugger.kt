@@ -168,6 +168,8 @@ abstract class PythonEvalDebugger {
                     }
                 }
             }
+            // cancel active task if interrupted or shutdown
+            activeTask?.result?.cancel(false)
         } catch (e: Throwable) {
             activeTask?.result?.completeExceptionally(e)
             if (e is InterruptedException) {
