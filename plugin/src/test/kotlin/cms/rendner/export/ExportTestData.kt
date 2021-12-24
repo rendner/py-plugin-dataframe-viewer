@@ -23,10 +23,9 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
 /**
- * This class is not a test.
  * The class exports the test-data used by the unit test [ChunkValidationTest].
  */
-internal class ExportTestDataTest : AbstractPipEnvEnvironmentTest() {
+internal class ExportTestData : AbstractPipEnvEnvironmentTest() {
 
     private val exportDir = System.getProperty(SystemPropertyEnum.EXPORT_TEST_DATA_DIR.key)?.let { Paths.get(it) }
 

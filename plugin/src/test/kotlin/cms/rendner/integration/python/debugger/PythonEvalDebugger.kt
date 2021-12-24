@@ -88,6 +88,7 @@ abstract class PythonEvalDebugger {
             if (findEntryPointAndInjectDebuggerInternals(pythonProcess)) {
                 processOpenTasks(pythonProcess)
             }
+            openTasks.forEach { it.result.cancel(false) }
         } catch (ex: Throwable) {
             openTasks.forEach { it.result.completeExceptionally(ex) }
             if (ex is InterruptedException) {
@@ -328,8 +329,6 @@ __debugger_internals__ = __DebuggerInternals__()
          with "x = 2" (without quotes) as input, would lead to a:
 
          *** TypeError: eval_with_type_info() got an unexpected keyword argument 'x'
-
-         Therefore, the "input" is always wrapped with triple quotes.
        */
 
         var sanitizedInput = input
@@ -341,6 +340,6 @@ __debugger_internals__ = __DebuggerInternals__()
             sanitizedInput = sanitizedInput.replace("\\n", "\\$lineSeparatorReplacement")
         }
 
-        return "'''$sanitizedInput'''"
+        return "'$sanitizedInput'"
     }
 }
