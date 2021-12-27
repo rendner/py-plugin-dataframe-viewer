@@ -42,14 +42,29 @@ intellij {
     updateSinceUntilBuild.set(false)
 }
 
+
+sourceSets {
+    register("test-dockered") {
+        compileClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output
+    }
+}
+
+configurations {
+    "test-dockered".let {
+        getByName("${it}Implementation") { extendsFrom(testImplementation.get()) }
+        getByName("${it}RuntimeOnly") { extendsFrom(testRuntimeOnly.get()) }
+    }
+}
+
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
 
     val exportTestDataPath = "$projectDir/src/test/resources/generated/"
     val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
     val dockeredPythonPath = "$projectDir/dockered-python"
-    // order: oldest to latest
-    val projectNamesOfSupportedPandasVersions = listOf("pandas_1.1", "pandas_1.2", "pandas_1.3")
+    // order: latest to oldest
+    val projectNamesOfSupportedPandasVersions = listOf("pandas_1.3", "pandas_1.2", "pandas_1.1")
 
     register<Exec>("buildPythonDockerImage") {
         description = "Builds the python docker image."
@@ -62,7 +77,6 @@ tasks {
         // the pipenv environments are re-build whenever a source file has changed.
         val dockerContentMergeIntoPipenvEnvironmentsPath = "$dockeredPythonPath/content/merge_into_pipenv_environments"
 
-        logger.lifecycle("copy 'pipenv environments' files")
         projectNamesOfSupportedPandasVersions.forEach { version ->
             val pythonProjectPath = "../projects/html_from_styler/${version}_styler"
 
@@ -88,7 +102,6 @@ tasks {
             }
         }
 
-        logger.lifecycle("starting docker build")
         workingDir = project.file(dockeredPythonPath)
         commandLine("docker", "build", ".", "-t", "plugin-docker-python")
     }
@@ -98,31 +111,26 @@ tasks {
         register<Test>("integrationTest-$version") {
             description = "Runs integration test on pipenv environment: $version."
             group = "verification"
-            shouldRunAfter("test")
+
+            sourceSets.named("test-dockered").get().let {
+                testClassesDirs = it.output.classesDirs
+                classpath = it.runtimeClasspath
+            }
 
             systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", version)
             useJUnitPlatform {
                 include("**/integration/**")
             }
+
+            shouldRunAfter(test)
+            if (integrationTests.isNotEmpty()) {
+                shouldRunAfter(integrationTests.last())
+            }
             integrationTests.add(this)
         }
     }
 
-    register<Test>("integrationTest-all") {
-        description = "Runs all integration-test tasks."
-        group = "verification"
-        shouldRunAfter("test")
-
-        var previousTask: Task? = null
-        // run the latest first
-        integrationTests.asReversed().forEach {
-            dependsOn(it)
-            if (previousTask != null) {
-                it.shouldRunAfter(previousTask)
-            }
-            previousTask = it
-        }
-    }
+    check { dependsOn(integrationTests) }
 
     val exportTestDataTests = mutableListOf<Task>()
     projectNamesOfSupportedPandasVersions.forEach { version ->
@@ -130,11 +138,20 @@ tasks {
             description = "Runs export-test-data on pipenv environment: $version."
             group = "generate"
 
+            sourceSets.named("test-dockered").get().let {
+                testClassesDirs = it.output.classesDirs
+                classpath = it.runtimeClasspath
+            }
+
             // todo: delete old data (implement after the "export-expected-css" is also automated)
             systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
             systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", version)
             useJUnitPlatform {
                 include("**/export/**")
+            }
+
+            if (exportTestDataTests.isNotEmpty()) {
+                shouldRunAfter(exportTestDataTests.last())
             }
             exportTestDataTests.add(this)
 
@@ -142,28 +159,16 @@ tasks {
         }
     }
 
-    register<Test>("exportTestData-all") {
+    register<DefaultTask>("exportTestData-all") {
         description = "Runs all export-test-data tasks."
         group = "generate"
-
-        var previousTask: Task? = null
-        // run the latest first
-        exportTestDataTests.asReversed().forEach {
-            dependsOn(it)
-            if (previousTask != null) {
-                it.shouldRunAfter(previousTask)
-            }
-            previousTask = it
-        }
+        dependsOn(exportTestDataTests)
     }
 
     test {
         systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
         systemProperty("cms.rendner.dataframe.renderer.export.test.error.image.dir", exportTestErrorImagesPath)
-        useJUnitPlatform {
-            exclude("**/integration/**")
-            exclude("**/export/**")
-        }
+        useJUnitPlatform()
         failFast = true
     }
 
@@ -182,7 +187,6 @@ tasks {
     }
 
     processResources {
-        logger.lifecycle("copy 'plugin_code' files")
         projectNamesOfSupportedPandasVersions.forEach { version ->
             val pluginCode = project.file("../projects/python_plugin_code/${version}_code/generated/plugin_code")
             if (pluginCode.exists()) {
