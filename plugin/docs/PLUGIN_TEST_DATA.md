@@ -23,11 +23,11 @@ This helps to get rid of generated test data for deleted or restructured test ca
 In case you are unsure which data should be deleted, here are some examples:
 
 - if you modified `<PROJECTS_DIR>/python_plugin_code/pandas_1.1_code` 
-  - delete the folder `src/test/resources/generated/pandas1.1` of the plugin project
+  - delete the folder `src/test/resources/generated/pandas_1.1` of the plugin project
   
 
 - if you modified `<PROJECTS_DIR>/html_from_styler/pandas_1.1_styler`
-  - delete the folder `src/test/resources/generated/pandas1.1` of the plugin project
+  - delete the folder `src/test/resources/generated/pandas_1.1` of the plugin project
 
 
 - if you modified how the generated python plugin code is injected

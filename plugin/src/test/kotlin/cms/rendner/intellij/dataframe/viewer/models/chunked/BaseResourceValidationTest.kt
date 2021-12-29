@@ -35,7 +35,7 @@ import java.util.*
 /**
  * Requires:
  * Generated test data in the folder "test/resources/generated".
- * Please read the instruction about how to generate test resources (docs/plugin-test-data.md).
+ * Please read the instruction about how to generate test resources (docs/PLUGIN_TEST_DATA.md).
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal abstract class BaseResourceValidationTest(errorImageSubDirName: String) {
@@ -62,8 +62,8 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
 
     @Suppress("unused")
     private fun getTestCases() = TestCaseCollector().collect(testCaseDir)
-    //.filter { it.name.startsWith("pandas1.1/") }
-    //.filter { it.name.startsWith("pandas1.3/hide_columns/columns") }
+    //.filter { it.name.startsWith("pandas_1.1/") }
+    //.filter { it.name.startsWith("pandas_1.3/hide_columns/columns") }
 
     @ParameterizedTest(name = "case: {0}")
     @MethodSource("getTestCases")

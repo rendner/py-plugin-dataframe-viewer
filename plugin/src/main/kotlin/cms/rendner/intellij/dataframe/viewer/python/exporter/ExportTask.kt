@@ -25,7 +25,7 @@ open class ExportTask(
 ) {
     fun run() {
         val exportData = convertExportValue(exportDataValue)
-        val exportDir = baseExportDir.resolve("pandas${exportData.pandasMajorMinorVersion}")
+        val exportDir = baseExportDir.resolve("pandas_${exportData.pandasMajorMinorVersion}")
         println("exportDir: $exportDir")
         val testCaseExporter = TestCaseExporter(exportDir)
         val testCaseIterator = EvaluateElementWiseListIterator(exportData.testCases)
