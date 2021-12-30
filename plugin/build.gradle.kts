@@ -35,7 +35,7 @@ dependencies {
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 // https://intellij-support.jetbrains.com/hc/en-us/community/posts/206590865-Creating-PyCharm-plugins
 intellij {
-    plugins.add("python-ce") // is required even if we specify a pyCharm ide
+    plugins.add("python-ce") // is required even if we specify a PyCharm IDE
     version.set("2020.3")
     type.set("PC")
     downloadSources.set(false)
@@ -62,7 +62,6 @@ tasks {
 
     val exportTestDataPath = "$projectDir/src/test/resources/generated/"
     val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
-    val dockeredPythonPath = "$projectDir/dockered-python"
     // order: latest to oldest
     val projectNamesOfSupportedPandasVersions = listOf("pandas_1.3", "pandas_1.2", "pandas_1.1")
 
@@ -70,40 +69,45 @@ tasks {
         description = "Builds the python docker image."
         group = "build"
 
-        // Contains all pipenv environments
-        val dockerContentPipenvEnvironmentsPath = "$dockeredPythonPath/content/pipenv_environments"
-        // Contains the additional content of the pipenv environments (like Python source code, etc.)
-        // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
-        // the pipenv environments are re-build whenever a source file has changed.
-        val dockerContentMergeIntoPipenvEnvironmentsPath = "$dockeredPythonPath/content/merge_into_pipenv_environments"
+        val dockeredPythonPath = "$projectDir/dockered-python"
+        doFirst {
+            // Contains all pipenv environments
+            val dockerContentPipenvEnvironmentsPath = "$dockeredPythonPath/content/pipenv_environments"
+            // Contains the additional content of the pipenv environments (like Python source code, etc.)
+            // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
+            // the pipenv environments are re-build whenever a source file has changed.
+            val dockerContentMergeIntoPipenvEnvironmentsPath =
+                "$dockeredPythonPath/content/merge_into_pipenv_environments"
 
-        projectNamesOfSupportedPandasVersions.forEach { version ->
-            val pythonProjectPath = "../projects/html_from_styler/${version}_styler"
+            projectNamesOfSupportedPandasVersions.forEach { version ->
+                val pythonProjectPath = "../projects/html_from_styler/${version}_styler"
 
-            val pipFile = project.file("$pythonProjectPath/Pipfile")
-            val pipFileLock = project.file("$pythonProjectPath/Pipfile.lock")
-            if (pipFile.exists() && pipFileLock.exists()) {
-                copy {
-                    from(pipFile, pipFileLock)
-                    into(project.file("$dockerContentPipenvEnvironmentsPath/$version"))
+                val pipFile = project.file("$pythonProjectPath/Pipfile")
+                val pipFileLock = project.file("$pythonProjectPath/Pipfile.lock")
+                if (pipFile.exists() && pipFileLock.exists()) {
+                    copy {
+                        from(pipFile, pipFileLock)
+                        into(project.file("$dockerContentPipenvEnvironmentsPath/$version"))
+                    }
+                } else {
+                    throw GradleException("Incomplete Pipfiles, can't copy files for version: $version")
                 }
-            } else {
-                throw GradleException("Incomplete Pipfiles, can't copy files for version: $version")
-            }
 
-            val exportData = project.file("$pythonProjectPath/export_data")
-            if (exportData.exists() && exportData.isDirectory) {
-                copy {
-                    from(exportData)
-                    into(project.file("$dockerContentMergeIntoPipenvEnvironmentsPath/$version/export_data/"))
+                val exportData = project.file("$pythonProjectPath/export_data")
+                if (exportData.exists() && exportData.isDirectory) {
+                    copy {
+                        from(exportData)
+                        into(project.file("$dockerContentMergeIntoPipenvEnvironmentsPath/$version/export_data/"))
+                    }
+                } else {
+                    throw GradleException("No data to export, can't copy files for version: $version")
                 }
-            } else {
-                throw GradleException("No data to export, can't copy files for version: $version")
             }
         }
 
         workingDir = project.file(dockeredPythonPath)
-        commandLine("docker", "build", ".", "-t", "plugin-docker-python")
+        executable = "docker"
+        args("build", ".", "-t", "plugin-docker-python")
     }
 
     val integrationTests = mutableListOf<Task>()
@@ -187,15 +191,18 @@ tasks {
     }
 
     processResources {
-        projectNamesOfSupportedPandasVersions.forEach { version ->
-            val pluginCode = project.file("../projects/python_plugin_code/${version}_code/generated/plugin_code")
-            if (pluginCode.exists()) {
-                copy {
-                    from(pluginCode)
-                    into(project.file("src/main/resources/$version"))
+        doLast {
+            logger.lifecycle("copy 'plugin_code' files")
+            projectNamesOfSupportedPandasVersions.forEach { version ->
+                val pluginCode = project.file("../projects/python_plugin_code/${version}_code/generated/plugin_code")
+                if (pluginCode.exists()) {
+                    copy {
+                        from(pluginCode)
+                        into(project.file("src/main/resources/$version"))
+                    }
+                } else {
+                    throw GradleException("Missing file 'plugin_code' for version: $version")
                 }
-            } else {
-                throw GradleException("Missing file 'plugin_code' for version: $version")
             }
         }
     }
