@@ -1,15 +1,20 @@
-# Plugin Test Data
-It seems not so easy to run unit tests against a PyCharm debugger, at least I couldn't find a way. Therefore, some tests use pre-generated data.
+# Generate Test Data Manually
+The data to be created will be extracted by using the PyCharm debugger.
 
-The pre-generated data is extracted from the PyCharm debugger in the same way as the plugin does.
+If docker is installed, please read [GENERATE_TEST_DATA_AUTOMATED.md](GENERATE_TEST_DATA_AUTOMATED.md).
 
-## Re-Generate Plugin Test Data
+Most unit-tests are executed against prefetched HTML files.
+At the moment there is no way to use the PyCharm debugger directly in the unit-tests to fetch the data.
+And if it should be possible, the test time would be much longer if the required data has to be fetched from the PyCharm debugger each time.
+
+## When To Re-Generate
 Whenever plugin related code has changed, which could affect one of the following parts:
 
-- communication between Python and the PyCharm debugger
-- the structure of the returned html string
+- injecting the Python plugin code (Kotlin)
+- pandas related plugin code (Python)
+- the structure of the returned html string (Python)
 
-All files of the affected pandas versions supported by the plugin have to be re-generated. 
+All files of the affected pandas versions, supported by the plugin, have to be re-generated. 
 
 ## Generate Test Data
 The test data has to be generated in separate steps.
@@ -53,3 +58,9 @@ For each pandas version from which the generated test files were deleted in **[S
     - this will compile and run the tool
     - a window with the embedded browser is temporary displayed
     - the tool exits automatically afterwards
+
+### [Step 4] - Add Created Files To Git
+Since the generated data was deleted in [Step 1], the re-generated data has to be re-added to git.
+1. add all new files from `src/test/resources/generated/` under version control
+2. verify if the changes are expected
+3. commit changes

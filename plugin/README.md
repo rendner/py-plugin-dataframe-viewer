@@ -3,7 +3,7 @@ The plugin extracts HTML from a styled pandas `DataFrame` by using the PyCharm d
 
 ## How Does It Work
 The plugin uses the PyCharm debugger to evaluate values, as you can do during debugging.
-Since it takes more than one line of code to do what it does, it uses thy PyCharm debugger to inject the required code.
+Since it takes more than one line of code to do what it does, it uses the PyCharm debugger to inject the required code.
 The code is only injected when you try to view a pandas `Styler` variable from the debugger.
 
 Whenever the plugin is used to visualize a pandas `Styler` variable which belongs to a `DataFrame`, it uses the 

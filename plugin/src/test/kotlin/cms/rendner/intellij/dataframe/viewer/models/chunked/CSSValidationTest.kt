@@ -33,7 +33,7 @@ private val DEFAULT_COMPUTED_TEXT_COLOR: Color = Color.BLACK
  * Compares the calculated CSS values with CSS values calculated by a browser.
  *
  * These tests ensure:
- * - that the computed CSS values match with the ones computed by a web browser
+ * - computed CSS values match with the ones computed by a web browser
  */
 internal class CSSValidationTest : BaseResourceValidationTest("css-validation") {
 

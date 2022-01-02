@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
     id("idea")
@@ -115,7 +116,7 @@ tasks {
 
     val integrationTestTasks = mutableListOf<Task>()
     projectNamesOfSupportedPandasVersions.forEach { version ->
-        register<Test>("integrationTest-$version") {
+        register<Test>("integrationTest_$version") {
             description = "Runs integration test on pipenv environment: $version."
             group = "verification"
 
@@ -140,45 +141,83 @@ tasks {
         }
     }
 
-    val allIntegrationTestTask by register<DefaultTask>("integrationTest-all") {
+    val allIntegrationTestsTask by register<DefaultTask>("integrationTest_all") {
         description = "Runs all integrationTest tasks."
         group = "verification"
         dependsOn(integrationTestTasks)
     }
 
-    check { dependsOn(allIntegrationTestTask) }
+    check { dependsOn(allIntegrationTestsTask) }
 
-    val exportTestDataTests = mutableListOf<Task>()
+    val generateTestDataTasks = mutableListOf<Task>()
     projectNamesOfSupportedPandasVersions.forEach { version ->
-        register<Test>("exportTestData-$version") {
-            description = "Runs export-test-data on pipenv environment: $version."
-            group = "generate"
 
-            sourceSets.named("test-dockered").get().let {
-                testClassesDirs = it.output.classesDirs
-                classpath = it.runtimeClasspath
-            }
+        val deleteTestData by register<Delete>("deleteTestData_$version") {
+            delete("$exportTestDataPath$version")
+        }
 
-            // todo: delete old data (implement after the "export-expected-css" is also automated)
+        val exportTestData by register<Test>("exportTestData_$version") {
+            testClassesDirs = testDockeredSourceSet.output.classesDirs
+            classpath = testDockeredSourceSet.runtimeClasspath
+
             systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
             systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", version)
             useJUnitPlatform {
                 include("**/export/**")
             }
+            shouldRunAfter(deleteTestData)
+        }
 
-            if (exportTestDataTests.isNotEmpty()) {
-                shouldRunAfter(exportTestDataTests.last())
+        val extractComputedCSS by register<Exec>("extractComputedCSS_$version") {
+            workingDir = project.file("../projects/extract_computed_css")
+            System.getenv("JCEF_11_JDK")?.let {
+                environment["JAVA_HOME"] = it
             }
-            exportTestDataTests.add(this)
+            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                commandLine(
+                    "cmd",
+                    "/c",
+                    "gradlew.bat",
+                    "-PinputDir=$projectDir/src/test/resources/generated/$version",
+                    "extractComputedCSSForPlugin"
+                )
+            } else {
+                commandLine(
+                    "./gradlew",
+                    "-PinputDir=$projectDir/src/test/resources/generated/$version",
+                    "extractComputedCSSForPlugin"
+                )
+            }
+            shouldRunAfter(exportTestData)
+        }
 
-            // todo: run "export-expected-css" in "doLast" to create expected css for re-generated html
+        val addFilesToGit by register<Exec>("addExportTestDataToGit_$version") {
+            workingDir = project.file("src/test/resources/generated/$version")
+            executable = "git"
+            args("add", "--all")
+            shouldRunAfter(extractComputedCSS)
+        }
+
+        register<DefaultTask>("generateTestData_$version") {
+            description = "Generates test-data from pipenv environment: $version."
+            group = "generate"
+            dependsOn(
+                deleteTestData,
+                exportTestData,
+                extractComputedCSS,
+                addFilesToGit,
+            )
+            if (generateTestDataTasks.isNotEmpty()) {
+                shouldRunAfter(generateTestDataTasks.last())
+            }
+            generateTestDataTasks.add(this)
         }
     }
 
-    register<DefaultTask>("exportTestData-all") {
-        description = "Runs all export-test-data tasks."
+    register<DefaultTask>("generateTestData_all") {
+        description = "Runs all generate-test-data tasks."
         group = "generate"
-        dependsOn(exportTestDataTests)
+        dependsOn(generateTestDataTasks)
     }
 
     test {
@@ -217,6 +256,13 @@ tasks {
                 }
             }
         }
+        outputs.upToDateWhen { false }
+    }
+
+    runPluginVerifier {
+        // See https://github.com/JetBrains/gradle-intellij-plugin#plugin-verifier-dsl
+        // See https://data.services.jetbrains.com/products?fields=code,name,releases.version,releases.build,releases.type&code=PCC
+        //ideVersions.addAll(listOf("PCC-2020.3.3", "PCC-2021.3"))
     }
 }
 

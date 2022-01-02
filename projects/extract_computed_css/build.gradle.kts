@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     implementation("org.jsoup:jsoup:1.14.3")
-    implementation("commons-cli:commons-cli:1.4")
+    implementation("commons-cli:commons-cli:1.5.0")
 }
 
 application {
@@ -23,11 +23,12 @@ tasks.register("extractComputedCSSForPlugin") {
     group = "application"
     dependsOn(tasks.build)
     doLast {
+        val inputDir = project.properties["inputDir"] ?: "$projectDir/../../plugin/src/test/resources/generated/"
         tasks.run.get().setArgs(
             listOf(
                 "extract",
                 "-d",
-                "$projectDir/../../plugin/src/test/resources/generated/",
+                inputDir,
                 "-i",
                 "expected.html",
                 "-o",

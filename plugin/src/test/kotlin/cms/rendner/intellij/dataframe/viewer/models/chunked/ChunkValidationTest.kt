@@ -29,10 +29,10 @@ import java.util.*
  * an unchunked HTML.
  *
  * These tests ensure:
- * - that the combined chunks result in the same visual output as using the unchunked HTML
+ * - combined chunks result in the same visual output as using the unchunked HTML
  *      - correctness of computed CSS values can't be verified by this test
- * - that the HTML parser can parse the generated html
- * - the chunks are combined in the correct order
+ * - HTML parser can parse the generated html
+ * - chunks are combined in the correct order
  */
 internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validation") {
 

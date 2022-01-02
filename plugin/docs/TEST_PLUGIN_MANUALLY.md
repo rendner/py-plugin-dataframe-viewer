@@ -1,6 +1,5 @@
-# Test Plugin
-There is no automated way, to test the plugin against a running PyCharm debugger.
-Therefore, this has to be tested by hand before every new release or pull request.
+# Test Plugin Manually
+If docker is installed, please read [TEST_PLUGIN_AUTOMATED.md](TEST_PLUGIN_AUTOMATED.md).
 
 ## Test Against New IntelliJ Release
 1. run the gradle-task `buildPlugin`, to build the plugin
@@ -27,7 +26,7 @@ This will automatically copy over the re-generated `plugin_code` files to the pl
 The `<PROJECTS_DIR>/html_from_styler` provide prepared pandas Styler. 
 The plugin has a builtin action named `ExportDataFrameTestDataAction` which fetches the HTML representation of styled DataFrames using the PyCharm debugger.
 
-Please do **all** mentioned steps from [PLUGIN_TEST_DATA.md](PLUGIN_TEST_DATA.md)
+Please do **all** mentioned steps from [GENERATE_TEST_DATA_MANUALLY.md](GENERATE_TEST_DATA_MANUALLY.md)
 
 After the HTML was successfully exported, it is already verified that:
 - the version of the installed pandas was correct detected by the plugin
@@ -43,11 +42,11 @@ These are the most important ones of the plugin project.
 #### ChunkValidationTest
 Loads for all supported pandas versions the generated data from the `src/test/resources/generated/` folder.
 
-This test class ensures:
-- that the combined chunks result in the same visual output as using the unchunked HTML
+ensures:
+- combined chunks result in the same visual output as using the unchunked HTML
   - correctness of computed CSS values can't be verified by this test
-- that the HTML parser can parse the generated html
-- the chunks are combined in the correct order
+- HTML parser can parse the generated html
+- chunks are combined in the correct order
 
 In case the combined chunked HTML does not match the expected HTML, a screenshot is taken of the rendered DataFrame tables.
 The screenshots are created in a folder named by the failed test case under `src/test/resources/generated-error-images/chunk-validation`.
@@ -55,15 +54,8 @@ The screenshots are created in a folder named by the failed test case under `src
 #### CSSValidationTest
 Loads for all supported pandas versions the generated data from the `src/test/resources/generated/` folder.
 
-This test class ensures:
-- that the by the plugin computed CSS values match with the ones computed by a web browser
+ensures:
+- computed CSS values match with the ones computed by a web browser
 
 In case the calculated CSS does not match the expected CSS, a screenshot is taken of the rendered DataFrame tables.
 The screenshots are created in a folder named by the failed test case under `src/test/resources/generated-error-images/css-validation`.
-
-## Integration Tests
-The integration tests require Docker to start and shutdown a Python Docker container.
-
-Before integration tests can be executed a Docker image has to be created by running the gradle-task `buildPythonDockerImage` (group `build`).
-
-The integration-test tasks are listed in the gradle task group `verification`.
