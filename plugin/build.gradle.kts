@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
+    id("idea")
     id("org.jetbrains.intellij") version "1.0"
     // https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library
     kotlin("jvm") version "1.4.0" // provided by 2020.3
@@ -42,18 +43,20 @@ intellij {
     updateSinceUntilBuild.set(false)
 }
 
-
-sourceSets {
-    register("test-dockered") {
-        compileClasspath += sourceSets.main.get().output
-        runtimeClasspath += sourceSets.main.get().output
-    }
+val testDockeredSourceSet by sourceSets.register("test-dockered") {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
 }
 
 configurations {
-    "test-dockered".let {
-        getByName("${it}Implementation") { extendsFrom(testImplementation.get()) }
-        getByName("${it}RuntimeOnly") { extendsFrom(testRuntimeOnly.get()) }
+    getByName(testDockeredSourceSet.implementationConfigurationName) { extendsFrom(testImplementation.get()) }
+    getByName(testDockeredSourceSet.runtimeOnlyConfigurationName) { extendsFrom(testRuntimeOnly.get()) }
+}
+
+idea {
+    module {
+        testSourceDirs = testSourceDirs.plus(testDockeredSourceSet.allJava.srcDirs)
+        testResourceDirs = testResourceDirs.plus(testDockeredSourceSet.resources.srcDirs)
     }
 }
 
@@ -110,16 +113,14 @@ tasks {
         args("build", ".", "-t", "plugin-docker-python")
     }
 
-    val integrationTests = mutableListOf<Task>()
+    val integrationTestTasks = mutableListOf<Task>()
     projectNamesOfSupportedPandasVersions.forEach { version ->
         register<Test>("integrationTest-$version") {
             description = "Runs integration test on pipenv environment: $version."
             group = "verification"
 
-            sourceSets.named("test-dockered").get().let {
-                testClassesDirs = it.output.classesDirs
-                classpath = it.runtimeClasspath
-            }
+            testClassesDirs = testDockeredSourceSet.output.classesDirs
+            classpath = testDockeredSourceSet.runtimeClasspath
 
             systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", version)
             useJUnitPlatform {
@@ -127,14 +128,25 @@ tasks {
             }
 
             shouldRunAfter(test)
-            if (integrationTests.isNotEmpty()) {
-                shouldRunAfter(integrationTests.last())
+            if (integrationTestTasks.isNotEmpty()) {
+                shouldRunAfter(integrationTestTasks.last())
             }
-            integrationTests.add(this)
+            integrationTestTasks.add(this)
+
+            afterTest(KotlinClosure2<TestDescriptor, TestResult, Any>({ descriptor, result ->
+                val clsName = descriptor.parent?.displayName ?: descriptor.className
+                println("\t$clsName > ${descriptor.name}: ${result.resultType}")
+            }))
         }
     }
 
-    check { dependsOn(integrationTests) }
+    val allIntegrationTestTask by register<DefaultTask>("integrationTest-all") {
+        description = "Runs all integrationTest tasks."
+        group = "verification"
+        dependsOn(integrationTestTasks)
+    }
+
+    check { dependsOn(allIntegrationTestTask) }
 
     val exportTestDataTests = mutableListOf<Task>()
     projectNamesOfSupportedPandasVersions.forEach { version ->
