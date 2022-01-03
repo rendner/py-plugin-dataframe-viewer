@@ -36,7 +36,7 @@ The mentioned steps should be done in the listed order, because they depend on e
 Please double-check that, for every modified project under `<PROJECTS_DIR>/python_plugin_code` the `main.py` was executed to generate an updated `generated/plugin_code` file for these projects.
 
 ### 2) Rebuild Docker Image
-Run the gradle-task `buildPythonDockerImage` (group `build`).
+Run the gradle-task `buildPythonDockerImage` (group `docker`).
 
 ### 3) Run Integration Tests
 Run gradle-task `integrationTest_all` (group `verification`).

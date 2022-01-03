@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.io.ByteArrayOutputStream
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
@@ -64,6 +65,7 @@ idea {
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
 
+    val pythonDockerImageName = "plugin-docker-python"
     val exportTestDataPath = "$projectDir/src/test/resources/generated/"
     val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
     // order: latest to oldest
@@ -71,7 +73,7 @@ tasks {
 
     register<Exec>("buildPythonDockerImage") {
         description = "Builds the python docker image."
-        group = "build"
+        group = "docker"
 
         val dockeredPythonPath = "$projectDir/dockered-python"
         doFirst {
@@ -111,7 +113,35 @@ tasks {
 
         workingDir = project.file(dockeredPythonPath)
         executable = "docker"
-        args("build", ".", "-t", "plugin-docker-python")
+        args("build", ".", "-t", pythonDockerImageName)
+    }
+
+    register<DefaultTask>("killAllPythonContainers") {
+        description = "Kills all python docker containers (cleanup task)."
+        group = "docker"
+
+        doLast {
+            val containerIdsResult = ByteArrayOutputStream().use { outputStream ->
+                exec {
+                    executable = "docker"
+                    args("ps", "-aq", "--filter", "ancestor=$pythonDockerImageName")
+                    standardOutput = outputStream
+                }
+                outputStream.toString().trim()
+            }
+
+            if (containerIdsResult.isNotEmpty()) {
+                containerIdsResult.split(System.lineSeparator()).let { ids ->
+                    logger.lifecycle("killing containers: $ids")
+                    exec {
+                        executable = "docker"
+                        args(mutableListOf("rm", "-f").apply { addAll(ids) })
+                    }
+                }
+            } else {
+                logger.lifecycle("no running containers found for image $pythonDockerImageName")
+            }
+        }
     }
 
     val integrationTestTasks = mutableListOf<Task>()

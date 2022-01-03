@@ -13,7 +13,7 @@ Docker has to be installed and `docker` commands can be run directly from a term
 
 See: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
 
-The gradle-task `buildPythonDockerImage` (group `build`) must have been run at least once.
+The gradle-task `buildPythonDockerImage` (group `docker`) must have been executed at least once.
 
 ### JDK
 A [JBR 11 with JCEF](https://confluence.jetbrains.com/pages/viewpage.action?pageId=221478946) has to be installed and one of the following environment variable has to be set:
@@ -25,7 +25,7 @@ A [JBR 11 with JCEF](https://confluence.jetbrains.com/pages/viewpage.action?page
 ## Rebuild Docker Image
 If files from the projects under `<PROJECTS_DIR>/html_from_styler` have been modified, the Docker image must be recreated.
 
-Run the gradle-task `buildPythonDockerImage` (group `build`).
+Run the gradle-task `buildPythonDockerImage` (group `docker`).
 
 ## When To Re-Generate
 Whenever plugin related code has changed, which could affect one of the following parts:
