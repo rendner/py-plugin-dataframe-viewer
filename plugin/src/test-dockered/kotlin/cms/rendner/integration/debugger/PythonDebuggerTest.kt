@@ -196,7 +196,6 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
         }
     }
 
-
     private fun getPythonSnippet(): String {
         return """
             from urllib.parse import urlparse

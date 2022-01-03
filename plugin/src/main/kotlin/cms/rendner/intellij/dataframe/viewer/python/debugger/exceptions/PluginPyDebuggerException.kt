@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions
 
-class PluginPyDebuggerException(message: String) : Exception(message) {
+class PluginPyDebuggerException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     fun isDisconnectException(): Boolean {
         // In PyCharm a "PyDebuggerException" with the message "Disconnected"
         // is thrown in case the debugger was disconnected.

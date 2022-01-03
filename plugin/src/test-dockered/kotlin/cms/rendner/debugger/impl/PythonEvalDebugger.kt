@@ -15,6 +15,7 @@
  */
 package cms.rendner.debugger.impl
 
+import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
@@ -22,7 +23,6 @@ import java.util.concurrent.Future
 // linebreak substitution adapted from PyCharm: https://github.com/JetBrains/intellij-community/search?q=%40_%40NEW_LINE_CHAR%40_%40
 private const val NEW_LINE_CHAR = "@_@NEW_LINE_CHAR@_@"
 
-// todo: throw PluginPyDebuggerException
 abstract class PythonEvalDebugger {
 
     private data class OpenTask(val request: EvaluateRequest, val result: CompletableFuture<EvaluateResponse>)
@@ -60,11 +60,11 @@ abstract class PythonEvalDebugger {
 
     /**
      * Clears all submitted open tasks and resets the shutdownRequested flag.
-     * Throws an IllegalStateException if called on a running debugger.
+     * Throws a PluginPyDebuggerException if called on a running debugger.
      */
     fun reset() {
         if (isRunning) {
-            throw IllegalStateException("Can't reset a running debugger.")
+            throw PluginPyDebuggerException("Can't reset a running debugger.")
         }
         openTasks.clear()
         shutdownRequested = false
@@ -78,10 +78,12 @@ abstract class PythonEvalDebugger {
      *
      * [pythonProcess] must be a started python interpreter and not the Python Debugger (Pdb).
      * Starting directly in debug mode isn't supported.
+     *
+     * Throws a PluginPyDebuggerException if called on an already started debugger.
      */
     protected fun start(pythonProcess: PythonProcess) {
         if (isRunning) {
-            throw IllegalStateException("Can't re-start an already running debugger")
+            throw PluginPyDebuggerException("Can't re-start an already running debugger")
         }
         try {
             if (findEntryPointAndInjectDebuggerInternals(pythonProcess)) {
@@ -93,7 +95,11 @@ abstract class PythonEvalDebugger {
             if (ex is InterruptedException) {
                 Thread.currentThread().interrupt()
             }
-            throw ex
+            if (ex is PluginPyDebuggerException) {
+                throw ex
+            } else {
+                throw PluginPyDebuggerException("Unknown error occurred.", ex)
+            }
         } finally {
             isRunning = false
         }
@@ -103,6 +109,7 @@ abstract class PythonEvalDebugger {
         var checkCounter = 30
 
         while (checkCounter-- > 0) {
+            checkProcessIsAlive(pythonProcess)
             if (pythonProcess.canRead()) {
                 val lines = sanitizeDebuggerOutput(pythonProcess.readLinesNonBlocking())
                 if (lastLineIsPrompt(lines)) {
@@ -112,7 +119,7 @@ abstract class PythonEvalDebugger {
                     return true
                 } else {
                     if (lines.isNotEmpty()) {
-                        throw IllegalStateException(lines.joinToString(System.lineSeparator()))
+                        throw PluginPyDebuggerException(lines.joinToString(System.lineSeparator()))
                     }
                 }
             } else {
@@ -120,7 +127,7 @@ abstract class PythonEvalDebugger {
             }
         }
 
-        throw IllegalStateException("Couldn't find entry point 'breakpoint()'.")
+        throw PluginPyDebuggerException("Couldn't find entry point 'breakpoint()'.")
     }
 
     private fun processOpenTasks(pythonProcess: PythonProcess) {
@@ -133,6 +140,8 @@ abstract class PythonEvalDebugger {
         try {
             while (!shutdownRequested && !Thread.currentThread().isInterrupted) {
 
+                checkProcessIsAlive(pythonProcess)
+
                 if (checkForInputPrompt && pythonProcess.canRead()) {
                     lines = sanitizeDebuggerOutput(pythonProcess.readLinesNonBlocking())
                     stoppedAtInputPrompt = lastLineIsPrompt(lines)
@@ -144,9 +153,7 @@ abstract class PythonEvalDebugger {
                     var nextDebugCommand: String? = null
 
                     if (activeTask != null) {
-                        activeTask.result.complete(
-                            createEvaluateResponse(getEvaluationResult(lines), activeTask.request)
-                        )
+                        completeTaskWithProcessOutput(activeTask, lines)
                         activeTask = null
                     }
 
@@ -167,14 +174,43 @@ abstract class PythonEvalDebugger {
                     }
                 }
             }
-            // cancel active task if interrupted or shutdown
-            activeTask?.result?.cancel(false)
+
+            activeTask?.let {
+                completeTaskWithError(it, PluginPyDebuggerException("Evaluation was canceled."))
+            }
         } catch (e: Throwable) {
-            activeTask?.result?.completeExceptionally(e)
+            activeTask?.let {
+                completeTaskWithError(it, e)
+            }
             if (e is InterruptedException) {
                 Thread.currentThread().interrupt()
             }
             throw e
+        }
+    }
+
+    private fun completeTaskWithProcessOutput(task: OpenTask, processOutput: List<String>) {
+        val result = createEvaluateResponse(getEvaluationResult(processOutput), task.request)
+        if (result.isError && task.request.execute) {
+            completeTaskWithError(task, PluginPyDebuggerException(result.value ?: "Error occurred during exec." ))
+        } else {
+            task.result.complete(result)
+        }
+    }
+
+    private fun completeTaskWithError(task: OpenTask, throwable: Throwable) {
+        if (throwable is PluginPyDebuggerException) {
+            task.result.completeExceptionally(throwable)
+        } else {
+            task.result.completeExceptionally(PluginPyDebuggerException("Unknown error occurred.", throwable))
+        }
+    }
+
+    private fun checkProcessIsAlive(pythonProcess: PythonProcess) {
+        if (!pythonProcess.isAlive()) {
+            // In PyCharm a "PyDebuggerException" with the message "Disconnected"
+            // is thrown in case the debugger was disconnected.
+            throw PluginPyDebuggerException("Disconnected")
         }
     }
 

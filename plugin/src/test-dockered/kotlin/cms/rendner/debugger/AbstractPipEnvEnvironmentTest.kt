@@ -22,6 +22,7 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
 import org.junit.jupiter.api.*
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -66,7 +67,7 @@ internal open class AbstractPipEnvEnvironmentTest {
         executorService.submit {
             debugger.startWithCodeSnippet("breakpoint()", pipenvEnvironment)
         }
-        block(createValueEvaluator(debugger), debugger)
+        block(MyValueEvaluator(debugger), debugger)
     }
 
     protected fun runWithPythonDebugger(
@@ -77,18 +78,14 @@ internal open class AbstractPipEnvEnvironmentTest {
         executorService.submit {
             debugger.startWithSourceFile(sourceFile, pipenvEnvironment)
         }
-        block(createValueEvaluator(debugger), debugger)
+        block(MyValueEvaluator(debugger), debugger)
     }
 
     private fun checkAndSetDebuggerStarted() {
-        if(debuggerStarted) {
+        if (debuggerStarted) {
             throw IllegalStateException("Only one debugger instance allowed per testcase.")
         }
         debuggerStarted = true
-    }
-
-    private fun createValueEvaluator(debugger: PythonEvalDebugger): IPluginPyValueEvaluator {
-        return MyValueEvaluator(debugger)
     }
 
     private class MyValueEvaluator(private val pythonDebugger: PythonEvalDebugger) : IPluginPyValueEvaluator {
@@ -96,7 +93,7 @@ internal open class AbstractPipEnvEnvironmentTest {
             val result = try {
                 evalOrExec(expression, execute = false, doTrunc = trimResult)
             } catch (ex: PluginPyDebuggerException) {
-                throw EvaluateException("Couldn't evaluate expression.", ex, expression)
+                throw EvaluateException("Couldn't evaluate expression.", expression, ex)
             }
             if (result.isErrorOnEval) {
                 throw EvaluateException(result.value ?: "Couldn't evaluate expression.", expression)
@@ -109,16 +106,20 @@ internal open class AbstractPipEnvEnvironmentTest {
             try {
                 evalOrExec(statement, execute = true, doTrunc = false)
             } catch (ex: PluginPyDebuggerException) {
-                throw EvaluateException("Couldn't execute statement.", ex, statement)
+                throw EvaluateException("Couldn't execute statement.", statement, ex)
             }
         }
 
         fun evalOrExec(code: String, execute: Boolean, doTrunc: Boolean): PluginPyValue {
-            val response = pythonDebugger.submit(EvaluateRequest(code, execute, doTrunc)).get()
-            if (execute && response.isError) {
-                throw PluginPyDebuggerException(response.value ?: "Couldn't execute statement.")
+            try {
+                val result = pythonDebugger.submit(EvaluateRequest(code, execute, doTrunc)).get()
+                return createPluginPyValue(result)
+            } catch (ex: ExecutionException) {
+                ex.cause?.let {
+                    throw it
+                }
+                throw EvaluateException(ex.message ?: "Unknown error occurred.", code)
             }
-            return createPluginPyValue(response)
         }
 
         private fun createPluginPyValue(response: EvaluateResponse): PluginPyValue {

@@ -19,5 +19,5 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPy
 import com.jetbrains.python.debugger.PyDebuggerException
 
 fun PyDebuggerException.toPluginType(): PluginPyDebuggerException {
-    return PluginPyDebuggerException(message ?: "Unknown debugger exception occurred.")
+    return PluginPyDebuggerException(message ?: "Unknown debugger exception occurred.", cause)
 }

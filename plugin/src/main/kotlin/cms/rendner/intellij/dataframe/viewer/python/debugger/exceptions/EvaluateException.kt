@@ -15,20 +15,14 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions
 
-class EvaluateException : Exception {
-
-    private val expression: String
-
-    constructor(message: String, cause: PluginPyDebuggerException, expression: String) : super(message, cause) {
-        this.expression = expression
-    }
+class EvaluateException(
+    message: String,
+    private val expression: String,
+    cause: PluginPyDebuggerException? = null,
+) : Exception(message, cause) {
 
     override val cause: PluginPyDebuggerException?
         get() = super.cause as PluginPyDebuggerException?
-
-    constructor(message: String, expression: String) : super(message) {
-        this.expression = expression
-    }
 
     override fun getLocalizedMessage(): String {
         val msg = super.getLocalizedMessage()

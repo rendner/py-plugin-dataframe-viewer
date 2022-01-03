@@ -96,6 +96,15 @@ class PythonProcess(
         process.destroy()
     }
 
+    /**
+     * Tests whether the process represented by this [Process] is alive.
+     *
+     * @return `true` if the process represented by this [Process] object has not yet terminated.
+     */
+    fun isAlive(): Boolean {
+        return process.isAlive
+    }
+
     private fun closeSilently(c: Closeable) {
         try {
             c.close()
