@@ -35,7 +35,7 @@ class PatchedStyler:
     def __init__(self, styler: Styler):
         self.__styler = styler
         self.__visible_df = self.__get_visible_df(styler)
-        self.__patched_styles = self.__patch_styles(styler.export())
+        self.__patched_styles = self.__patch_styles(styler.export().get("apply"))
 
     def render_chunk(
             self,
