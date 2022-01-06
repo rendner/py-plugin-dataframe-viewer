@@ -171,13 +171,11 @@ tasks {
         }
     }
 
-    val allIntegrationTestsTask by register<DefaultTask>("integrationTest_all") {
+    register<DefaultTask>("integrationTest_all") {
         description = "Runs all integrationTest tasks."
         group = "verification"
         dependsOn(integrationTestTasks)
     }
-
-    check { dependsOn(allIntegrationTestsTask) }
 
     val generateTestDataTasks = mutableListOf<Task>()
     projectNamesOfSupportedPandasVersions.forEach { version ->
