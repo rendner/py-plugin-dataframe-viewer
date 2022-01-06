@@ -65,7 +65,7 @@ def ids_for_styler(styler_func: Callable[..., Styler]) -> str:
 def test_raise_non_unique_key_error(styler_func: Callable[..., Styler]):
     msg = "`Styler.apply` and `.applymap` are not compatible with non-unique index or columns."
     with pytest.raises(KeyError, match=msg):
-        styler_func(lambda x: x).render()
+        styler_func(lambda x: x).to_html()
 
 
 @pytest.mark.parametrize(

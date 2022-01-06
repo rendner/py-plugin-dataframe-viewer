@@ -58,8 +58,8 @@ class PatchedStyler:
             p.apply_to_styler(chunk_styler)
         return self.__create_html(chunk_styler, first_row, first_column)
 
-    def __create_html(self, chunk_styler, first_row: int, first_column: int) -> str:
-        body = f'<body>{chunk_styler.render(encoding="utf-8")}</body>'
+    def __create_html(self, chunk_styler: Styler, first_row: int, first_column: int) -> str:
+        body = f'<body>{chunk_styler.to_html(encoding="utf-8")}</body>'
         chunk_df = chunk_styler.data
         if len(self.__styler.hidden_rows) == 0:
             meta_ri = f'<meta name="row_indexer" content="{first_row}" />'
@@ -76,7 +76,7 @@ class PatchedStyler:
         # this method is only used in unit tests or to create test data for the plugin
         # therefore it is save to change potential configured values
         self.__prevent_unnecessary_html(self.__styler)
-        return self.__styler.render(encoding="utf-8")
+        return self.__styler.to_html(encoding="utf-8")
 
     def __patch_styles(self, styles: List[Tuple[Callable, tuple, dict]]) -> List[Union[BaseApplyPatcher, BaseApplyMapPatcher]]:
         patched_styles = []
@@ -177,20 +177,12 @@ class PatchedStyler:
     @staticmethod
     def __is_builtin_highlight_max(func_qname: str, func: Callable) -> bool:
         if isinstance(func, partial):
-            # pandas >= 1.3.2
             return func_qname == '_highlight_value' and func.keywords.get('op', '') == 'max'
-        else:
-            # pandas < 1.3.2
-            return func_qname.startswith('Styler.highlight_max')
 
     @staticmethod
     def __is_builtin_highlight_min(func_qname: str, func: Callable) -> bool:
         if isinstance(func, partial):
-            # pandas >= 1.3.2
             return func_qname == '_highlight_value' and func.keywords.get('op', '') == 'min'
-        else:
-            # pandas < 1.3.2
-            return func_qname.startswith('Styler.highlight_min')
 
     @staticmethod
     def __is_builtin_highlight_null(func_qname: str) -> bool:
