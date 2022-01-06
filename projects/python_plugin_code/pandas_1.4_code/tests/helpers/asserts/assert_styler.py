@@ -22,18 +22,17 @@ from plugin_code.patched_styler import PatchedStyler
 from tests.helpers.asserts.table_extractor import StyledTable, TableExtractor
 
 
-def create_and_assert_patched_styler(df: DataFrame, init_styler_func: Callable[[Styler], None], rows_per_chunk: int,
+def create_and_assert_patched_styler(df: DataFrame, configure_styler_func: Callable[[Styler], None], rows_per_chunk: int,
                                      cols_per_chunk: int):
     # Create two independent styler objects - to guarantee that changes on one don't affect the other one
     #
-    # There is no way to copy an already initialized styler. "styler.use(other_styler.export())" doesn't duplicate
-    # the full internal state of a styler (the export behavior was improved in 1.3, but it is better to create
-    # two separated instances).
+    # "styler.use(other_styler.export())" doesn't duplicate the full internal state of a styler
+    # therefore two separate stylers are created and configured
     styler = df.style
-    init_styler_func(styler)
+    configure_styler_func(styler)
 
     patched_styler_styler = df.style
-    init_styler_func(patched_styler_styler)
+    configure_styler_func(patched_styler_styler)
     patched_styler = PatchedStyler(patched_styler_styler)
 
     _assert_render(styler, patched_styler, rows_per_chunk, cols_per_chunk)
@@ -49,11 +48,6 @@ def _assert_render(styler: Styler, patched_styler: PatchedStyler, rows_per_chunk
         assert table_structure.visible_columns_count == 0 or table_structure.visible_rows_count == 0
         assert _count_cell_values(expected_table) == 0
         return
-
-    # Currently style.render() doesn't exclude id based css-style rules for hidden_rows/hidden_cols which are not
-    # present in the generated HTML. Will be fixed in pandas 1.4 (see: https://github.com/pandas-dev/pandas/pull/43673)
-    # Since they are not used anyway, it is safe to remove them from the expected result.
-    _delete_unused_css_rules_with_id_selector(expected_table)
 
     actual_table.styles = OrderedDict(sorted(actual_table.styles.items()))
     expected_table.styles = OrderedDict(sorted(expected_table.styles.items()))
@@ -137,24 +131,3 @@ def _count_cell_values(styled_table: StyledTable) -> int:
         result += len(row.find('td'))
     return result
 
-
-def _delete_unused_css_rules_with_id_selector(styled_table: StyledTable):
-    elements_to_check = [styled_table.table]
-    current_element = elements_to_check.pop()
-    visited_id_selectors = set()
-    while current_element is not None:
-        elements_to_check.extend(current_element.children)
-        for key, value in current_element.attrs.items():
-            if value is None:
-                continue
-            if key == "id":
-                visited_id_selectors.add(f'#{value}')
-
-        if len(elements_to_check) > 0:
-            current_element = elements_to_check.pop()
-        else:
-            current_element = None
-
-    for k in list(styled_table.styles.keys()):
-        if k not in visited_id_selectors:
-            del styled_table.styles[k]
