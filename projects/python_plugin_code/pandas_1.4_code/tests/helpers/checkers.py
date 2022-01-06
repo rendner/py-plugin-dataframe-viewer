@@ -14,7 +14,20 @@
 import pandas as pd
 from semantic_version import SimpleSpec, Version
 
-pandas_sem_version = Version(pd.__version__)
+
+def get_pandas_sem_version():
+    version_string = pd.__version__
+    try:
+        return Version(version_string)
+    except ValueError:
+        # handle invalid SemVer like '1.4.0.dev0+1574.g46ddb8ef88'
+        parts = version_string.split(".")
+        mmp = ".".join(parts[0:3])
+        pre_release = ".".join(parts[3:])
+        return Version(f'{mmp}-{pre_release}')
+
+
+pandas_sem_version = get_pandas_sem_version()
 
 
 def not_required_pandas_version(semver: str):
