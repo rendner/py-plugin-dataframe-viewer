@@ -32,20 +32,3 @@ data class EvaluateResponse(
     // a unique id to refer to the evaluated var on python side
     val refId: String? = null,
 )
-
-enum class PipenvEnvironment(val label: String) {
-    PANDAS_1_1("pandas_1.1"),
-    PANDAS_1_2("pandas_1.2"),
-    PANDAS_1_3("pandas_1.3");
-
-    companion object {
-        fun labelOf(label: String): PipenvEnvironment {
-            for (v in values()) {
-                if (v.label == label) {
-                    return v
-                }
-            }
-            throw IllegalArgumentException("There is no value which matches the label $label")
-        }
-    }
-}

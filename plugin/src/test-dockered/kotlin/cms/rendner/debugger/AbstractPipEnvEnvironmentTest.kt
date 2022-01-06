@@ -31,10 +31,10 @@ import java.util.concurrent.TimeUnit
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal open class AbstractPipEnvEnvironmentTest {
     private val executorService: ExecutorService = Executors.newSingleThreadExecutor()
-    private val debugger = DockeredPythonEvalDebugger()
     private var debuggerStarted = false
-    protected val pipenvEnvironment = PipenvEnvironment.labelOf(
-        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_PIPENV_ENVIRONMENT.key)
+    private val debugger = DockeredPythonEvalDebugger(
+        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_IMAGE.key),
+        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_PIPENV_ENVIRONMENT.key),
     )
 
     @BeforeAll
@@ -65,7 +65,7 @@ internal open class AbstractPipEnvEnvironmentTest {
     ) {
         checkAndSetDebuggerStarted()
         executorService.submit {
-            debugger.startWithCodeSnippet("breakpoint()", pipenvEnvironment)
+            debugger.startWithCodeSnippet("breakpoint()")
         }
         block(MyValueEvaluator(debugger), debugger)
     }
@@ -76,7 +76,7 @@ internal open class AbstractPipEnvEnvironmentTest {
     ) {
         checkAndSetDebuggerStarted()
         executorService.submit {
-            debugger.startWithSourceFile(sourceFile, pipenvEnvironment)
+            debugger.startWithSourceFile(sourceFile)
         }
         block(MyValueEvaluator(debugger), debugger)
     }

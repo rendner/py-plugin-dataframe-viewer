@@ -16,20 +16,17 @@
 package cms.rendner.junit
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
-import cms.rendner.debugger.impl.PipenvEnvironment
 import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
 import org.junit.jupiter.api.DisplayNameGenerator
 
 class PipEnvDisplayNameGenerator : DisplayNameGenerator.Standard() {
 
     private val pipEnvTestSuperClass = AbstractPipEnvEnvironmentTest::class.java
-    private val pipenvEnvironment = PipenvEnvironment.labelOf(
-        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_PIPENV_ENVIRONMENT.key)
-    )
+    private val pipenvEnvironment = System.getProperty(SystemPropertyEnum.DOCKERED_TEST_PIPENV_ENVIRONMENT.key)
 
     override fun generateDisplayNameForClass(testClass: Class<*>?): String {
         if (testClass != null && pipEnvTestSuperClass.isAssignableFrom(testClass)) {
-            return "[pipenv env: ${pipenvEnvironment.label}] ${super.generateDisplayNameForClass(testClass)}"
+            return "[pipenv env: ${pipenvEnvironment}] ${super.generateDisplayNameForClass(testClass)}"
         }
         return super.generateDisplayNameForClass(testClass)
     }
