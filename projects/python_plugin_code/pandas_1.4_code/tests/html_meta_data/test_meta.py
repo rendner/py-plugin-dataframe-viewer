@@ -29,10 +29,10 @@ df = pd.DataFrame.from_dict({
 @pytest.mark.parametrize(
     "styler, expected_row_indexer_class, expected_col_indexer_class", [
         (df.style, OffsetIndexTranslator, OffsetIndexTranslator),
-        (df.style.hide_index().hide_columns(), OffsetIndexTranslator, OffsetIndexTranslator),
-        (df.style.hide_columns(subset=['col_1']), OffsetIndexTranslator, SequenceIndexTranslator),
-        (df.style.hide_index(subset=[0, 1]), SequenceIndexTranslator, OffsetIndexTranslator),
-        (df.style.hide_index(subset=[0, 1]).hide_columns(subset=['col_1']), SequenceIndexTranslator, SequenceIndexTranslator)
+        (df.style.hide(axis="index").hide(axis="columns"), OffsetIndexTranslator, OffsetIndexTranslator),
+        (df.style.hide(axis="columns", subset=['col_1']), OffsetIndexTranslator, SequenceIndexTranslator),
+        (df.style.hide(axis="index", subset=[0, 1]), SequenceIndexTranslator, OffsetIndexTranslator),
+        (df.style.hide(axis="index", subset=[0, 1]).hide(axis="columns", subset=['col_1']), SequenceIndexTranslator, SequenceIndexTranslator)
     ])
 def test_correct_indexer(styler, expected_row_indexer_class, expected_col_indexer_class):
     table_extractor = TableExtractor()

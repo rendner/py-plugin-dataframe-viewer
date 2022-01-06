@@ -51,9 +51,9 @@ class PatchedStyler:
         self.__apply_styler_configurations(self.__styler, chunk_styler)
         self.__prevent_unnecessary_html(chunk_styler)
         if exclude_row_header:
-            chunk_styler.hide_index()
+            chunk_styler.hide(axis="index")
         if exclude_column_header:
-            chunk_styler.hide_columns()
+            chunk_styler.hide(axis="columns")
         for p in self.__patched_styles:
             p.apply_to_styler(chunk_styler)
         return self.__create_html(chunk_styler, first_row, first_column)
