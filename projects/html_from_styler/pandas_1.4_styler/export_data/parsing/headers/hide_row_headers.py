@@ -18,6 +18,6 @@ np.random.seed(6182018)
 df = pd.DataFrame(np.random.randn(5, 5))
 
 test_case = {
-    "styler": df.style.hide_index(),
+    "styler": df.style.hide(axis="index"),
     "chunk_size": (2, 2),
 }

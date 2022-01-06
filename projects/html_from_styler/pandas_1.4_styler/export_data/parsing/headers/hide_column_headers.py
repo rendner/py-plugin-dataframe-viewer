@@ -21,6 +21,6 @@ idx = pd.Index([f'i_{i}' for i in range(5)], name="idx_name")
 df = pd.DataFrame(np.random.randn(5, 5), index=idx, columns=cols)
 
 test_case = {
-    "styler": df.style.hide_columns(),
+    "styler": df.style.hide(axis="columns"),
     "chunk_size": (2, 2),
 }

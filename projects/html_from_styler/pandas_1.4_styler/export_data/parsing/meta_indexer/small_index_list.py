@@ -24,6 +24,6 @@ hidden_indices = df.index.delete(visible_items)
 hidden_columns = df.columns.delete(visible_items)
 
 test_case = {
-    "styler": df.style.hide_index(hidden_indices).hide_columns(hidden_columns),
+    "styler": df.style.hide(axis="index", subset=hidden_indices).hide(axis="columns", subset=hidden_columns),
     "chunk_size": df.shape
 }
