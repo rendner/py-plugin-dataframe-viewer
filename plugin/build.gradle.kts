@@ -74,13 +74,8 @@ tasks {
         PythonDockerImage("python_3.8", listOf("pandas_1.4")),
         PythonDockerImage("python_3.7", listOf("pandas_1.3", "pandas_1.2", "pandas_1.1")),
     )
-    // todo: use imageNames from "pythonDockerImages"
-    val pythonDockerImageName = "plugin-docker-python"
     val exportTestDataPath = "$projectDir/src/test/resources/generated/"
     val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
-    // order: latest to oldest
-    // todo: use "pythonDockerImages"
-    val projectNamesOfSupportedPandasVersions = listOf("pandas_1.4", "pandas_1.3", "pandas_1.2", "pandas_1.1")
 
     register<DefaultTask>("buildPythonDockerImages") {
         description = "Builds the python docker images."
@@ -138,53 +133,58 @@ tasks {
         group = "docker"
 
         doLast {
-            val containerIdsResult = ByteArrayOutputStream().use { outputStream ->
-                exec {
-                    executable = "docker"
-                    args("ps", "-aq", "--filter", "ancestor=$pythonDockerImageName")
-                    standardOutput = outputStream
-                }
-                outputStream.toString().trim()
-            }
-
-            if (containerIdsResult.isNotEmpty()) {
-                containerIdsResult.split(System.lineSeparator()).let { ids ->
-                    logger.lifecycle("killing containers: $ids")
+            pythonDockerImages.forEach { entry ->
+                val containerIdsResult = ByteArrayOutputStream().use { outputStream ->
                     exec {
                         executable = "docker"
-                        args(mutableListOf("rm", "-f").apply { addAll(ids) })
+                        args("ps", "-aq", "--filter", "ancestor=${entry.dockerImageName}")
+                        standardOutput = outputStream
                     }
+                    outputStream.toString().trim()
                 }
-            } else {
-                logger.lifecycle("no running containers found for image $pythonDockerImageName")
+
+                if (containerIdsResult.isNotEmpty()) {
+                    containerIdsResult.split(System.lineSeparator()).let { ids ->
+                        logger.lifecycle("killing containers $ids for image ${entry.dockerImageName}")
+                        exec {
+                            executable = "docker"
+                            args(mutableListOf("rm", "-f").apply { addAll(ids) })
+                        }
+                    }
+                } else {
+                    logger.lifecycle("no running containers found for image ${entry.dockerImageName}")
+                }
             }
         }
     }
 
     val integrationTestTasks = mutableListOf<Task>()
-    projectNamesOfSupportedPandasVersions.forEach { version ->
-        register<Test>("integrationTest_$version") {
-            description = "Runs integration test on pipenv environment: $version."
-            group = "verification"
+    pythonDockerImages.forEach { entry ->
+        entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
+            register<Test>("integrationTest_$pipEnvEnvironment") {
+                description = "Runs integration test on pipenv environment: $pipEnvEnvironment."
+                group = "verification"
 
-            testClassesDirs = testDockeredSourceSet.output.classesDirs
-            classpath = testDockeredSourceSet.runtimeClasspath
+                testClassesDirs = testDockeredSourceSet.output.classesDirs
+                classpath = testDockeredSourceSet.runtimeClasspath
 
-            systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", version)
-            useJUnitPlatform {
-                include("**/integration/**")
+                systemProperty("cms.rendner.dataframe.renderer.dockered.test.image", entry.dockerImageName)
+                systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", pipEnvEnvironment)
+                useJUnitPlatform {
+                    include("**/integration/**")
+                }
+
+                shouldRunAfter(test)
+                if (integrationTestTasks.isNotEmpty()) {
+                    shouldRunAfter(integrationTestTasks.last())
+                }
+                integrationTestTasks.add(this)
+
+                afterTest(KotlinClosure2<TestDescriptor, TestResult, Any>({ descriptor, result ->
+                    val clsName = descriptor.parent?.displayName ?: descriptor.className
+                    println("\t$clsName > ${descriptor.name}: ${result.resultType}")
+                }))
             }
-
-            shouldRunAfter(test)
-            if (integrationTestTasks.isNotEmpty()) {
-                shouldRunAfter(integrationTestTasks.last())
-            }
-            integrationTestTasks.add(this)
-
-            afterTest(KotlinClosure2<TestDescriptor, TestResult, Any>({ descriptor, result ->
-                val clsName = descriptor.parent?.displayName ?: descriptor.className
-                println("\t$clsName > ${descriptor.name}: ${result.resultType}")
-            }))
         }
     }
 
@@ -195,67 +195,70 @@ tasks {
     }
 
     val generateTestDataTasks = mutableListOf<Task>()
-    projectNamesOfSupportedPandasVersions.forEach { version ->
+    pythonDockerImages.forEach { entry ->
+        entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
 
-        val deleteTestData by register<Delete>("deleteTestData_$version") {
-            delete("$exportTestDataPath$version")
-        }
-
-        val exportTestData by register<Test>("exportTestData_$version") {
-            testClassesDirs = testDockeredSourceSet.output.classesDirs
-            classpath = testDockeredSourceSet.runtimeClasspath
-
-            systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
-            systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", version)
-            useJUnitPlatform {
-                include("**/export/**")
+            val deleteTestData by register<Delete>("deleteTestData_$pipEnvEnvironment") {
+                delete("$exportTestDataPath$pipEnvEnvironment")
             }
-            shouldRunAfter(deleteTestData)
-        }
 
-        val extractComputedCSS by register<Exec>("extractComputedCSS_$version") {
-            workingDir = project.file("../projects/extract_computed_css")
-            System.getenv("JCEF_11_JDK")?.let {
-                environment["JAVA_HOME"] = it
+            val exportTestData by register<Test>("exportTestData_$pipEnvEnvironment") {
+                testClassesDirs = testDockeredSourceSet.output.classesDirs
+                classpath = testDockeredSourceSet.runtimeClasspath
+
+                systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
+                systemProperty("cms.rendner.dataframe.renderer.dockered.test.image", entry.dockerImageName)
+                systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", pipEnvEnvironment)
+                useJUnitPlatform {
+                    include("**/export/**")
+                }
+                shouldRunAfter(deleteTestData)
             }
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                commandLine(
-                    "cmd",
-                    "/c",
-                    "gradlew.bat",
-                    "-PinputDir=$projectDir/src/test/resources/generated/$version",
-                    "extractComputedCSSForPlugin"
+
+            val extractComputedCSS by register<Exec>("extractComputedCSS_$pipEnvEnvironment") {
+                workingDir = project.file("../projects/extract_computed_css")
+                System.getenv("JCEF_11_JDK")?.let {
+                    environment["JAVA_HOME"] = it
+                }
+                if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                    commandLine(
+                        "cmd",
+                        "/c",
+                        "gradlew.bat",
+                        "-PinputDir=$projectDir/src/test/resources/generated/$pipEnvEnvironment",
+                        "extractComputedCSSForPlugin"
+                    )
+                } else {
+                    commandLine(
+                        "./gradlew",
+                        "-PinputDir=$projectDir/src/test/resources/generated/$pipEnvEnvironment",
+                        "extractComputedCSSForPlugin"
+                    )
+                }
+                shouldRunAfter(exportTestData)
+            }
+
+            val addFilesToGit by register<Exec>("addTestDataToGit_$pipEnvEnvironment") {
+                workingDir = project.file("src/test/resources/generated/$pipEnvEnvironment")
+                executable = "git"
+                args("add", "--all")
+                shouldRunAfter(extractComputedCSS)
+            }
+
+            register<DefaultTask>("generateTestData_$pipEnvEnvironment") {
+                description = "Generates test-data from pipenv environment: $pipEnvEnvironment."
+                group = "generate"
+                dependsOn(
+                    deleteTestData,
+                    exportTestData,
+                    extractComputedCSS,
+                    addFilesToGit,
                 )
-            } else {
-                commandLine(
-                    "./gradlew",
-                    "-PinputDir=$projectDir/src/test/resources/generated/$version",
-                    "extractComputedCSSForPlugin"
-                )
+                if (generateTestDataTasks.isNotEmpty()) {
+                    shouldRunAfter(generateTestDataTasks.last())
+                }
+                generateTestDataTasks.add(this)
             }
-            shouldRunAfter(exportTestData)
-        }
-
-        val addFilesToGit by register<Exec>("addExportTestDataToGit_$version") {
-            workingDir = project.file("src/test/resources/generated/$version")
-            executable = "git"
-            args("add", "--all")
-            shouldRunAfter(extractComputedCSS)
-        }
-
-        register<DefaultTask>("generateTestData_$version") {
-            description = "Generates test-data from pipenv environment: $version."
-            group = "generate"
-            dependsOn(
-                deleteTestData,
-                exportTestData,
-                extractComputedCSS,
-                addFilesToGit,
-            )
-            if (generateTestDataTasks.isNotEmpty()) {
-                shouldRunAfter(generateTestDataTasks.last())
-            }
-            generateTestDataTasks.add(this)
         }
     }
 
@@ -289,15 +292,18 @@ tasks {
     processResources {
         doLast {
             logger.lifecycle("copy 'plugin_code' files")
-            projectNamesOfSupportedPandasVersions.forEach { version ->
-                val pluginCode = project.file("../projects/python_plugin_code/${version}_code/generated/plugin_code")
-                if (pluginCode.exists()) {
-                    copy {
-                        from(pluginCode)
-                        into(project.file("src/main/resources/$version"))
+            pythonDockerImages.forEach { entry ->
+                entry.pipenvEnvironments.forEach { pipenvEnvironment ->
+                    val pluginCode =
+                        project.file("../projects/python_plugin_code/${pipenvEnvironment}_code/generated/plugin_code")
+                    if (pluginCode.exists()) {
+                        copy {
+                            from(pluginCode)
+                            into(project.file("src/main/resources/$pipenvEnvironment"))
+                        }
+                    } else {
+                        throw GradleException("Missing file 'plugin_code' for version: $pipenvEnvironment")
                     }
-                } else {
-                    throw GradleException("Missing file 'plugin_code' for version: $version")
                 }
             }
         }
