@@ -20,16 +20,17 @@ from plugin_code.base_apply_patcher import BaseApplyPatcher
 
 # == copy after here ==
 import numpy as np
-import pandas as pd
+from typing import Union
+from pandas import DataFrame, Series
 from pandas.io.formats.style import _validate_apply_axis_arg
 
 
 class HighlightBetweenPatch(BaseApplyPatcher):
 
-    def __init__(self, data: pd.DataFrame, apply_args: ApplyArgs, func_kwargs: dict):
+    def __init__(self, data: DataFrame, apply_args: ApplyArgs, func_kwargs: dict):
         BaseApplyPatcher.__init__(self, data, apply_args, func_kwargs)
 
-    def _exec_patched_func(self, chunk: pd.DataFrame):
+    def _exec_patched_func(self, chunk: Union[DataFrame, Series]):
 
         left = self._func_kwargs.get("left", None)
         right = self._func_kwargs.get("right", None)
@@ -58,9 +59,9 @@ class HighlightBetweenPatch(BaseApplyPatcher):
             chunk,
             chunk_parent,
     ):
-        if isinstance(chunk, pd.Series):
+        if isinstance(chunk, Series):
             return part[chunk_parent.index.get_indexer_for(chunk.index)]
-        elif isinstance(chunk, pd.DataFrame) and self._apply_args.axis() is None:
+        elif isinstance(chunk, DataFrame) and self._apply_args.axis() is None:
             ri = chunk_parent.index.get_indexer_for(chunk.index)
             ci = chunk_parent.columns.get_indexer_for(chunk.columns)
             ri_slice = slice(ri[0], ri[-1] + 1)

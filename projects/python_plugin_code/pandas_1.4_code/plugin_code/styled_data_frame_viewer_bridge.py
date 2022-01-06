@@ -14,7 +14,9 @@
 from plugin_code.patched_styler import PatchedStyler
 
 # == copy after here ==
-import pandas as pd
+from pandas import DataFrame
+from pandas.io.formats.style import Styler
+from typing import Union
 
 
 # This bridge hides all created "patchedStyler" instances, to not pollute the PyCharm
@@ -23,8 +25,8 @@ class StyledDataFrameViewerBridge:
     patched_styler_refs = []
 
     @classmethod
-    def create_patched_styler(cls, frame_or_styler) -> PatchedStyler:
-        p = PatchedStyler(frame_or_styler.style) if isinstance(frame_or_styler, pd.DataFrame) else PatchedStyler(
+    def create_patched_styler(cls, frame_or_styler: Union[DataFrame, Styler]) -> PatchedStyler:
+        p = PatchedStyler(frame_or_styler.style) if isinstance(frame_or_styler, DataFrame) else PatchedStyler(
             frame_or_styler)
         cls.patched_styler_refs.append(p)
         return p

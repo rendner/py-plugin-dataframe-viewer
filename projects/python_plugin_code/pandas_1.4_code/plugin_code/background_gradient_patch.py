@@ -19,22 +19,23 @@ from plugin_code.base_apply_patcher import BaseApplyPatcher
 
 # == copy after here ==
 import numpy as np
-import pandas as pd
+from typing import Union
+from pandas import DataFrame, Series
 from pandas.io.formats.style import _validate_apply_axis_arg
 
 
 class BackgroundGradientPatch(BaseApplyPatcher):
 
-    def __init__(self, data: pd.DataFrame, apply_args: ApplyArgs, func_kwargs: dict):
+    def __init__(self, data: DataFrame, apply_args: ApplyArgs, func_kwargs: dict):
         BaseApplyPatcher.__init__(self, data, apply_args, func_kwargs)
 
-    def _exec_patched_func(self, chunk: pd.DataFrame):
+    def _exec_patched_func(self, chunk: Union[DataFrame, Series]):
 
         # "gmap":
         #
         # Gradient map for determining the background colors.
         # If not supplied will use the underlying data from rows, columns or frame.
-        # If given as an ndarray or list-like must be an identical shape to the underlying data considering
+        # If given as a ndarray or list-like must be an identical shape to the underlying data considering
         # axis and subset. If given as DataFrame or Series must have same index and column labels considering
         # axis and subset. If supplied, vmin and vmax should be given relative to this gradient map.
 
@@ -68,15 +69,15 @@ class BackgroundGradientPatch(BaseApplyPatcher):
         # will not work, because a user could have specified a subset. The coordinates of the subset
         # have to be taken into account to adjust the gmap correctly. This is all done automatically
         # by using "get_indexer_for" without the need to access the "first_row, first_column, last_row, last_column".
-        elif isinstance(chunk, pd.Series):
+        elif isinstance(chunk, Series):
             gmap = gmap[chunk_parent.index.get_indexer_for(chunk.index)]
-        elif isinstance(chunk, pd.DataFrame) and self._apply_args.axis() is None:
+        elif isinstance(chunk, DataFrame) and self._apply_args.axis() is None:
             ri = chunk_parent.index.get_indexer_for(chunk.index)
             ci = chunk_parent.columns.get_indexer_for(chunk.columns)
-            if isinstance(gmap, pd.DataFrame):
+            if isinstance(gmap, DataFrame):
                 gmap = gmap.iloc[(ri, ci)]
             elif isinstance(gmap, np.ndarray):
-                gmap = pd.DataFrame(data=gmap, index=chunk_parent.index, columns=chunk_parent.columns)
+                gmap = DataFrame(data=gmap, index=chunk_parent.index, columns=chunk_parent.columns)
                 gmap = gmap.iloc[(ri, ci)]
 
         return self._apply_args.func()(chunk, **dict(self._func_kwargs, vmin=vmin, vmax=vmax, gmap=gmap))

@@ -15,7 +15,8 @@ from plugin_code.apply_args import ApplyArgs
 from plugin_code.base_apply_patcher import BaseApplyPatcher
 
 # == copy after here ==
-from pandas import DataFrame
+from typing import Union
+from pandas import DataFrame, Series
 import inspect
 
 
@@ -25,7 +26,7 @@ class ApplyFallbackPatch(BaseApplyPatcher):
         BaseApplyPatcher.__init__(self, data, apply_args, func_kwargs)
         self.__provide_chunk_parent = self._should_provide_chunk_parent()
 
-    def _exec_patched_func(self, chunk: DataFrame):
+    def _exec_patched_func(self, chunk: Union[DataFrame, Series]):
         if self.__provide_chunk_parent:
             return self._apply_args.func()(chunk, **dict(self._func_kwargs, chunk_parent=self._get_parent(chunk)))
         else:
