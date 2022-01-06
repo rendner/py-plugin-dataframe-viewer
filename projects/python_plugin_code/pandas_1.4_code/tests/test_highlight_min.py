@@ -16,7 +16,6 @@ import numpy as np
 import pytest
 
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
-from tests.helpers.checkers import not_required_pandas_version
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -69,7 +68,6 @@ def test_frame_can_handle_reducing_subset(subset):
     )
 
 
-@pytest.mark.skipif(not_required_pandas_version(">=1.3.2"), reason="at least pandas-1.3.2 required")
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_highlight_min_nulls(axis):
     # GH 42750
