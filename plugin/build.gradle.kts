@@ -69,7 +69,7 @@ tasks {
     val exportTestDataPath = "$projectDir/src/test/resources/generated/"
     val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
     // order: latest to oldest
-    val projectNamesOfSupportedPandasVersions = listOf("pandas_1.3", "pandas_1.2", "pandas_1.1")
+    val projectNamesOfSupportedPandasVersions = listOf("pandas_1.4", "pandas_1.3", "pandas_1.2", "pandas_1.1")
 
     register<Exec>("buildPythonDockerImage") {
         description = "Builds the python docker image."
