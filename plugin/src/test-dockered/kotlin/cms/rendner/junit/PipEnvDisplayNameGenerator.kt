@@ -22,11 +22,12 @@ import org.junit.jupiter.api.DisplayNameGenerator
 class PipEnvDisplayNameGenerator : DisplayNameGenerator.Standard() {
 
     private val pipEnvTestSuperClass = AbstractPipEnvEnvironmentTest::class.java
-    private val pipenvEnvironment = System.getProperty(SystemPropertyEnum.DOCKERED_TEST_PIPENV_ENVIRONMENT.key)
+    private val workdirFolderName =
+        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_WORKDIR.key).substringAfterLast("/")
 
     override fun generateDisplayNameForClass(testClass: Class<*>?): String {
         if (testClass != null && pipEnvTestSuperClass.isAssignableFrom(testClass)) {
-            return "[pipenv env: ${pipenvEnvironment}] ${super.generateDisplayNameForClass(testClass)}"
+            return "[pipenv env: ${workdirFolderName}] ${super.generateDisplayNameForClass(testClass)}"
         }
         return super.generateDisplayNameForClass(testClass)
     }

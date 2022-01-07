@@ -34,7 +34,7 @@ internal open class AbstractPipEnvEnvironmentTest {
     private var debuggerStarted = false
     private val debugger = DockeredPythonEvalDebugger(
         System.getProperty(SystemPropertyEnum.DOCKERED_TEST_IMAGE.key),
-        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_PIPENV_ENVIRONMENT.key),
+        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_WORKDIR.key),
     )
 
     @BeforeAll

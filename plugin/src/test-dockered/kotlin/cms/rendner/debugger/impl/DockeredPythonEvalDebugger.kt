@@ -25,14 +25,17 @@ import java.util.concurrent.TimeUnit
  * Allows to use a dockered Python interpreter during tests.
  *
  * The [dockerImage] has to exist.
- * All pipenv environments in the docker image have to be located under "/usr/src/app/pipenv_environments/" to work properly.
  *
- * @param dockerImage the docker image to start.
- * @param pipenvEnvironment the pipenv environment to use, located under "/usr/src/app/pipenv_environments/".
+ * @param dockerImage the docker image to start. The docker image has to exist.
+ * @param workdir the pipenv environment workdir to use.
+ * The workdir has to be an already existing pipenv environment.
+ * Otherwise, the command to start the Python interpreter will
+ * create a new pipenv environment instead of starting the Python interpreter.
+ * Therefore, a debugger can't be started.
  */
 class DockeredPythonEvalDebugger(
     private val dockerImage: String,
-    private val pipenvEnvironment: String,
+    private val workdir: String,
 ) : PythonEvalDebugger() {
 
     companion object {
@@ -79,7 +82,7 @@ class DockeredPythonEvalDebugger(
     }
 
     /**
-     * Starts a Python interpreter by using the specified [pipenvEnvironment].
+     * Starts a Python interpreter by using the specified [workdir].
      * The file referred by [sourceFilePath] has to contain a line with "breakpoint()", usually the last line,
      * to switch the interpreter into debug mode. The interpreter will stop at this line and process all submitted
      * evaluation requests.
@@ -89,7 +92,7 @@ class DockeredPythonEvalDebugger(
     }
 
     /**
-     * Starts a Python interpreter by using the specified [pipenvEnvironment].
+     * Starts a Python interpreter by using the specified [workdir].
      * The [codeSnippet] has to contain a line with "breakpoint()", usually the last line, to switch the interpreter
      * into debug mode. The interpreter will stop at this line and process all submitted evaluation requests.
      */
@@ -106,7 +109,6 @@ class DockeredPythonEvalDebugger(
 
         // "workdir" has to be one of the already existing pipenv environments
         // otherwise "pipenv run" creates a new pipenv environment in the specified "workdir"
-        val workdir = "/usr/src/app/pipenv_environments/${pipenvEnvironment}"
         val command = "pipenv run python $commandSuffix"
 
         process.start(

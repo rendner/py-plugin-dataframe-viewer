@@ -67,6 +67,7 @@ tasks {
 
     data class PythonDockerImage(val pythonVersion: String, val pipenvEnvironments: List<String>) {
         val dockerImageName = "plugin-docker-$pythonVersion"
+        fun getWorkdir(pipenvEnvironment: String) = "/usr/src/app/pipenv_environments/$pipenvEnvironment"
     }
     val pythonDockerImages = listOf(
         // order of python versions: latest to oldest
@@ -169,7 +170,7 @@ tasks {
                 classpath = testDockeredSourceSet.runtimeClasspath
 
                 systemProperty("cms.rendner.dataframe.renderer.dockered.test.image", entry.dockerImageName)
-                systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", pipEnvEnvironment)
+                systemProperty("cms.rendner.dataframe.renderer.dockered.test.workdir", entry.getWorkdir(pipEnvEnvironment))
                 useJUnitPlatform {
                     include("**/integration/**")
                 }
@@ -208,7 +209,7 @@ tasks {
 
                 systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
                 systemProperty("cms.rendner.dataframe.renderer.dockered.test.image", entry.dockerImageName)
-                systemProperty("cms.rendner.dataframe.renderer.dockered.test.pipenv.environment", pipEnvEnvironment)
+                systemProperty("cms.rendner.dataframe.renderer.dockered.test.workdir", entry.getWorkdir(pipEnvEnvironment))
                 useJUnitPlatform {
                     include("**/export/**")
                 }
