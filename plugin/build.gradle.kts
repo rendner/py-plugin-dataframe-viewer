@@ -1,6 +1,6 @@
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
-import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
     id("idea")
@@ -65,68 +65,86 @@ idea {
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
 
-    data class PythonDockerImage(val pythonVersion: String, val pipenvEnvironments: List<String>) {
-        val dockerImageName = "plugin-docker-$pythonVersion"
+    data class PythonDockerImage(val path: String, val pythonVersion: String, val pipenvEnvironments: List<String>) {
+        val dockerImageName = "sdfv-plugin-dockered-python_$pythonVersion"
+        val contentPath = "$path/content/"
         fun getWorkdir(pipenvEnvironment: String) = "/usr/src/app/pipenv_environments/$pipenvEnvironment"
     }
+
+    val pythonDockerBaseDir = "$projectDir/dockered-python"
     val pythonDockerImages = listOf(
         // order of python versions: latest to oldest
         // order of pipenv environments: latest to oldest
-        PythonDockerImage("python_3.8", listOf("pandas_1.4")),
-        PythonDockerImage("python_3.7", listOf("pandas_1.3", "pandas_1.2", "pandas_1.1")),
+        PythonDockerImage(
+            "$pythonDockerBaseDir/python_3.8",
+            "3.8",
+            listOf("pandas_1.4"),
+        ),
+        PythonDockerImage(
+            "$pythonDockerBaseDir/python_3.7",
+            "3.7",
+            listOf("pandas_1.3", "pandas_1.2", "pandas_1.1"),
+        ),
     )
     val exportTestDataPath = "$projectDir/src/test/resources/generated/"
     val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
 
-    register<DefaultTask>("buildPythonDockerImages") {
-        description = "Builds the python docker images."
-        group = "docker"
+    val buildPythonDockerImagesTasks = mutableListOf<Task>()
+    pythonDockerImages.forEach { entry ->
 
-        val dockeredPythonPath = "$projectDir/dockered-python"
-        doLast {
-            pythonDockerImages.forEach { entry ->
+        register<DefaultTask>("buildPythonDockerImage_${entry.pythonVersion}") {
+            description = "Builds the python ${entry.pythonVersion} docker image."
+            group = "docker"
 
-                val pythonContentPath = "$dockeredPythonPath/${entry.pythonVersion}/content/"
-                // Folder for all pipenv environments
-                val dockerContentPipenvEnvironmentsPath = "$pythonContentPath/pipenv_environments"
-                // Folder for the additional content of the pipenv environments (like Python source code, etc.)
-                // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
-                // the pipenv environments are re-build whenever a source file has changed.
-                val dockerContentMergeIntoPipenvEnvironmentsPath = "$pythonContentPath/merge_into_pipenv_environments"
+            if (buildPythonDockerImagesTasks.isNotEmpty()) {
+                shouldRunAfter(buildPythonDockerImagesTasks.last())
+            }
+            buildPythonDockerImagesTasks.add(this)
+
+            doLast {
+                delete(entry.contentPath)
 
                 entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
+                    val pythonSourceProjectPath = "../projects/html_from_styler/${pipEnvEnvironment}_styler"
 
-                    val pythonProjectPath = "../projects/html_from_styler/${pipEnvEnvironment}_styler"
-                    val pipFile = project.file("$pythonProjectPath/Pipfile")
-                    val pipFileLock = project.file("$pythonProjectPath/Pipfile.lock")
-
+                    val pipFile = project.file("$pythonSourceProjectPath/Pipfile")
+                    val pipFileLock = project.file("$pythonSourceProjectPath/Pipfile.lock")
                     if (pipFile.exists() && pipFileLock.exists()) {
                         copy {
                             from(pipFile, pipFileLock)
-                            into(project.file("$dockerContentPipenvEnvironmentsPath/$pipEnvEnvironment"))
+                            into("${entry.contentPath}/pipenv_environments/$pipEnvEnvironment/")
                         }
                     } else {
-                        throw GradleException("Incomplete Pipfiles, can't copy files for environment: $pipEnvEnvironment")
+                        throw GradleException("Incomplete Pipfiles for environment: $pipEnvEnvironment")
                     }
 
-                    val exportData = project.file("$pythonProjectPath/export_data")
+                    val exportData = project.file("$pythonSourceProjectPath/export_data")
                     if (exportData.exists() && exportData.isDirectory) {
+                        // The additional content of the pipenv environments (like Python source code, etc.)
+                        // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
+                        // the pipenv environments are re-build whenever a source file has changed.
                         copy {
                             from(exportData)
-                            into(project.file("$dockerContentMergeIntoPipenvEnvironmentsPath/$pipEnvEnvironment/export_data/"))
+                            into("${entry.contentPath}/merge_into_pipenv_environments/$pipEnvEnvironment/export_data")
                         }
                     } else {
-                        throw GradleException("No data to export, can't copy files for environment: $pipEnvEnvironment")
+                        throw GradleException("No export-data found for environment: $pipEnvEnvironment")
                     }
                 }
 
                 exec {
-                    workingDir = file("$dockeredPythonPath/${entry.pythonVersion}")
+                    workingDir = file(entry.path)
                     executable = "docker"
                     args("build", ".", "-t", entry.dockerImageName)
                 }
             }
         }
+    }
+
+    register<DefaultTask>("buildPythonDockerImages") {
+        description = "Builds all python docker images."
+        group = "docker"
+        dependsOn(buildPythonDockerImagesTasks)
     }
 
     register<DefaultTask>("killAllPythonContainers") {
@@ -169,8 +187,14 @@ tasks {
                 testClassesDirs = testDockeredSourceSet.output.classesDirs
                 classpath = testDockeredSourceSet.runtimeClasspath
 
-                systemProperty("cms.rendner.dataframe.renderer.dockered.test.image", entry.dockerImageName)
-                systemProperty("cms.rendner.dataframe.renderer.dockered.test.workdir", entry.getWorkdir(pipEnvEnvironment))
+                systemProperty(
+                    "cms.rendner.dataframe.renderer.dockered.test.image",
+                    entry.dockerImageName,
+                )
+                systemProperty(
+                    "cms.rendner.dataframe.renderer.dockered.test.workdir",
+                    entry.getWorkdir(pipEnvEnvironment),
+                )
                 useJUnitPlatform {
                     include("**/integration/**")
                 }
@@ -207,9 +231,18 @@ tasks {
                 testClassesDirs = testDockeredSourceSet.output.classesDirs
                 classpath = testDockeredSourceSet.runtimeClasspath
 
-                systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
-                systemProperty("cms.rendner.dataframe.renderer.dockered.test.image", entry.dockerImageName)
-                systemProperty("cms.rendner.dataframe.renderer.dockered.test.workdir", entry.getWorkdir(pipEnvEnvironment))
+                systemProperty(
+                    "cms.rendner.dataframe.renderer.export.test.data.dir",
+                    exportTestDataPath,
+                )
+                systemProperty(
+                    "cms.rendner.dataframe.renderer.dockered.test.image",
+                    entry.dockerImageName,
+                )
+                systemProperty(
+                    "cms.rendner.dataframe.renderer.dockered.test.workdir",
+                    entry.getWorkdir(pipEnvEnvironment),
+                )
                 useJUnitPlatform {
                     include("**/export/**")
                 }
@@ -270,8 +303,14 @@ tasks {
     }
 
     test {
-        systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
-        systemProperty("cms.rendner.dataframe.renderer.export.test.error.image.dir", exportTestErrorImagesPath)
+        systemProperty(
+            "cms.rendner.dataframe.renderer.export.test.data.dir",
+            exportTestDataPath,
+        )
+        systemProperty(
+            "cms.rendner.dataframe.renderer.export.test.error.image.dir",
+            exportTestErrorImagesPath,
+        )
         useJUnitPlatform()
         failFast = true
     }
@@ -285,8 +324,14 @@ tasks {
     }
 
     runIde {
-        systemProperty("cms.rendner.dataframe.renderer.enable.test.data.export.action", true)
-        systemProperty("cms.rendner.dataframe.renderer.export.test.data.dir", exportTestDataPath)
+        systemProperty(
+            "cms.rendner.dataframe.renderer.enable.test.data.export.action",
+            true,
+        )
+        systemProperty(
+            "cms.rendner.dataframe.renderer.export.test.data.dir",
+            exportTestDataPath,
+        )
         // ideDir.set(File("/snap/intellij-idea-community/current"))
     }
 
