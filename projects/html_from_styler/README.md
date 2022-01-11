@@ -4,7 +4,12 @@ This directory contains projects, separated by the supported pandas version, for
 These projects can also be used to verify that the plugin can interact with the PyCharm debugger.
 
 ## Pre-Requirements
-All projects are set up via [pipenv](https://pypi.org/project/pipenv/) and require Python 3.7, the minimum version required by the supported pandas versions. 
+All projects are set up via [pipenv](https://pypi.org/project/pipenv/) and use the minimum Python version required by pandas.
+
+| pandas    | min required Python version |
+|:----------|:---------------------------:|
+| 1.1 - 1.3 |             3.7             |
+| >= 1.4    |             3.8             |
 
 - [ho to install Python 3.7 on Ubuntu](https://stackoverflow.com/questions/61430166/python-3-7-on-ubuntu-20-04)
 
@@ -15,7 +20,7 @@ A more detailed description can be found in [PLUGIN_TEST_DATA.md](../../plugin/d
 ## Configure Python Interpreter (PyCharm)
 After importing one of the Python projects, open the `Add Python Interpreter` dialog:
 - select `PipEnv Environment`
-- set `Base Interpreter` to your installed Python 3.7 (min required version of the pandas versions)
+- set `Base Interpreter` to the min required Python version (see table from `Pre-Requirements`)
 
 A more detailed description can be found in thy official PyCharm documentation - [Configure pipenv for an existing Python project](https://www.jetbrains.com/help/pycharm/pipenv.html#pipenv-existing-project).
 

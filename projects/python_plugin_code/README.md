@@ -6,15 +6,22 @@ The generated plugin-code files are automatically copied to the `<PLUGIN_DIR>src
 Thus, these files do not have to be copied by hand.
 
 ## Pre-Requirements
-All projects are set up via [pipenv](https://pypi.org/project/pipenv/) and require Python 3.7, the minimum version required by the supported pandas versions.
+All projects are set up via [pipenv](https://pypi.org/project/pipenv/) and use the minimum Python version required by pandas.
+
+| pandas    | min required Python version |
+|:----------|:---------------------------:|
+| 1.1 - 1.3 |             3.7             |
+| >= 1.4    |             3.8             |
 
 - [ho to install Python 3.7 on Ubuntu](https://stackoverflow.com/questions/61430166/python-3-7-on-ubuntu-20-04)
+
+It is important to use the minimum required version to guarantee that the plugin code is also compatible with the specified Python version.
 
 ## Running These Projects (preferred way)
 The easiest way is to open these projects from a PyCharm instance started by the `runIde` gradle-task (no need for an additional PyCharm installation).
 To do this, open the plugin project (located in the root folder) and run the `runIde` gradle-task. This will bring up a new PyCharm instance.
 
-Then open one of these projects, if it is the first time, you have to configure a Python interpreter.
+Then open one of these projects, if it is the first time, you have to configure a Python interpreter (use the correct Python version). 
 
 >**Note:** The project can be executed with any PyCharm instance, therefore it doesn't need to be started by the `runIde` gradle-task of the plugin project.
 >But using the PyCharm instance, started by the plugin project, allows you to use the latest state of the plugin in case you want to do a quick tests
@@ -23,7 +30,7 @@ Then open one of these projects, if it is the first time, you have to configure 
 ## Configure Python Interpreter (PyCharm)
 After importing one of the Python projects, open the `Add Python Interpreter` dialog:
 - select `PipEnv Environment`
-- set `Base Interpreter` to your installed Python 3.7 (min required version of the pandas versions)
+- set `Base Interpreter` to the min required Python version (see table from `Pre-Requirements`)
 
 A more detailed description can be found in thy official PyCharm documentation - [Configure pipenv for an existing Python project](https://www.jetbrains.com/help/pycharm/pipenv.html#pipenv-existing-project).
 
