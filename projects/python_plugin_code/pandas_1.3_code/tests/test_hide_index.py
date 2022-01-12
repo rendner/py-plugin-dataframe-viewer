@@ -25,7 +25,7 @@ df = pd.DataFrame.from_dict({
 })
 
 
-@pytest.mark.parametrize("subset", [None, df.index.tolist(), pd.IndexSlice[2:3]])
+@pytest.mark.parametrize("subset", [None, df.index.tolist(), pd.IndexSlice[3:4]])
 @pytest.mark.parametrize(
     "rows_per_chunk, cols_per_chunk", [
         (1, 2),
@@ -34,7 +34,7 @@ df = pd.DataFrame.from_dict({
 def test_with_subsets(subset, rows_per_chunk, cols_per_chunk):
     create_and_assert_patched_styler(
         df,
-        # the max value is in hidden "col_4"
+        # the max value (located in "col_4") is hidden if subset is != None
         # so the chunked table should also not include the highlighted value
         lambda styler: styler.hide_index(subset),
         rows_per_chunk,
