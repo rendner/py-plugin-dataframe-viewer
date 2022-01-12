@@ -14,9 +14,9 @@
 from plugin_code.apply_args import ApplyArgs
 
 # == copy after here ==
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from pandas.io.formats.style import Styler
-from typing import Any
+from typing import Any, Union
 from pandas.core.indexing import (
     _non_reducing_slice,
 )
@@ -31,7 +31,13 @@ class BaseApplyPatcher:
 
     def apply_to_styler(self, chunk_styler: Styler):
         chunk_subset = self._evaluate_chunk_subset(chunk_styler.data)
-        chunk_styler.apply(self._exec_patched_func, axis=self._apply_args.axis(), subset=chunk_subset)
+        chunk_styler.apply(self.__exec_patched_func_guard, axis=self._apply_args.axis(), subset=chunk_subset)
+
+    def __exec_patched_func_guard(self, chunk: Union[DataFrame, Series]) -> Any:
+        if chunk.empty:
+            return chunk
+        else:
+            return self._exec_patched_func(chunk)
 
     def _exec_patched_func(self, chunk: DataFrame) -> Any:
         pass

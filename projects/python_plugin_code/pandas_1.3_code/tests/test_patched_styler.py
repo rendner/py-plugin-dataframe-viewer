@@ -23,7 +23,7 @@ from plugin_code.highlight_between_patch import HighlightBetweenPatch
 from plugin_code.highlight_extrema_patch import HighlightExtremaPatch
 from plugin_code.patched_styler import PatchedStyler
 
-df = pd.DataFrame.from_dict({"col_0": [0, 1, 2, 3, np.nan]})
+df = pd.DataFrame.from_dict({("A", "col_0"): [0, 1, 2, 3, np.nan]})
 
 
 @pytest.mark.parametrize(
@@ -44,3 +44,51 @@ def test_should_handle_builtin_styler(styler, mapped_class):
 def assert_patch(patched_styler: PatchedStyler, classinfo):
     assert len(patched_styler._PatchedStyler__patched_styles) == 1
     assert isinstance(patched_styler._PatchedStyler__patched_styles[0], classinfo)
+
+
+def test_table_structure_hide_row_header():
+    styler = df.style.hide_index()
+    ts = PatchedStyler(styler).get_table_structure()
+    assert ts.hide_row_header is True
+    assert ts.hide_column_header is False
+
+
+def test_table_structure_hide_column_header():
+    styler = df.style.hide_columns()
+    ts = PatchedStyler(styler).get_table_structure()
+    assert ts.hide_column_header is True
+    assert ts.hide_row_header is False
+
+
+def test_table_structure_columns_count():
+    ts = PatchedStyler(df.style).get_table_structure()
+    assert ts.columns_count == 1
+
+
+def test_table_structure_rows_count():
+    ts = PatchedStyler(df.style).get_table_structure()
+    assert ts.rows_count == 5
+
+
+def test_table_structure_visible_columns_count():
+    styler = df.style.hide_columns(subset=df.columns)
+    ts = PatchedStyler(styler).get_table_structure()
+    assert ts.visible_columns_count == 0
+    assert ts.columns_count == 1
+
+
+def test_table_structure_visible_rows_count():
+    styler = df.style.hide_index(subset=df.index)
+    ts = PatchedStyler(styler).get_table_structure()
+    assert ts.visible_rows_count == 0
+    assert ts.rows_count == 5
+
+
+def test_table_structure_column_level_count():
+    ts = PatchedStyler(df.style).get_table_structure()
+    assert ts.column_levels_count == 2
+
+
+def test_table_structure_row_level_count():
+    ts = PatchedStyler(df.style).get_table_structure()
+    assert ts.row_levels_count == 1
