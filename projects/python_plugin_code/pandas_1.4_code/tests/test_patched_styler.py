@@ -92,3 +92,19 @@ def test_table_structure_column_level_count():
 def test_table_structure_row_level_count():
     ts = PatchedStyler(df.style).get_table_structure()
     assert ts.row_levels_count == 1
+
+
+def test_table_structure_index_hidding_one_level():
+    styler = df.style.hide(axis="index", level=1)
+    ts = PatchedStyler(styler).get_table_structure()
+    assert ts.hide_row_header is False
+    assert ts.row_levels_count == 1
+    assert ts.visible_rows_count == 5
+
+
+def test_table_structure_index_hidding_names():
+    styler = df.style.hide(axis="index", names=False)
+    ts = PatchedStyler(styler).get_table_structure()
+    assert ts.hide_row_header is True
+    assert ts.row_levels_count == 1
+    assert ts.visible_rows_count == 5

@@ -135,9 +135,9 @@ class PatchedStyler:
             row_levels_count=self.__visible_df.index.nlevels,
             column_levels_count=self.__visible_df.columns.nlevels,
             # todo: think about how to support it (added in 1.4.0)
-            # currently if at least one level is hidden we hide all
-            hide_row_header=any(self.__styler.hide_index_),
-            hide_column_header=any(self.__styler.hide_columns_)
+            # currently, if all levels are hidden we hide the headers
+            hide_row_header=all(self.__styler.hide_index_),
+            hide_column_header=all(self.__styler.hide_columns_)
         )
 
     @staticmethod
