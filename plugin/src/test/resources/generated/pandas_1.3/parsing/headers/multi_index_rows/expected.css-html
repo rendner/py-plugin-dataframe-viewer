@@ -33,6 +33,7 @@
      <td class="data row0 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">24</td>
     </tr>
     <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <th class="row_heading level0 row1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">X</th>
      <th class="row_heading level1 row1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">purple</th>
      <td class="data row1 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">1</td>
      <td class="data row1 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">7</td>
@@ -50,6 +51,7 @@
      <td class="data row2 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">26</td>
     </tr>
     <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <th class="row_heading level0 row3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">Y</th>
      <th class="row_heading level1 row3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">purple</th>
      <td class="data row3 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">3</td>
      <td class="data row3 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">9</td>
@@ -67,6 +69,7 @@
      <td class="data row4 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">28</td>
     </tr>
     <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <th class="row_heading level0 row5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">Z</th>
      <th class="row_heading level1 row5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">purple</th>
      <td class="data row5 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">5</td>
      <td class="data row5 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">11</td>
