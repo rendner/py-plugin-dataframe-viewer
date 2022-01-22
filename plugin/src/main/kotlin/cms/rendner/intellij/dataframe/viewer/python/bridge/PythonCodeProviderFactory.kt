@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,9 @@ class PythonCodeProviderFactory {
                 if (version.minor == 3) {
                     return PythonCodeProvider(PandasVersion(1, 3), "/pandas_1.3/plugin_code")
                 }
-                if (version.minor == 4) {
+                /*if (version.minor == 4) {
                     return PythonCodeProvider(PandasVersion(1, 4), "/pandas_1.4/plugin_code")
-                }
+                }*/
             }
 
             return null
