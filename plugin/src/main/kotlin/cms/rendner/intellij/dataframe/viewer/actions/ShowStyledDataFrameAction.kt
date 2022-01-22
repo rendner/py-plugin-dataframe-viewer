@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AsyncChunkDat
 import cms.rendner.intellij.dataframe.viewer.notifications.UserNotifier
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
-import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.isDataFrame
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.isStyler
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
@@ -42,7 +41,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.xdebugger.impl.ui.tree.XDebuggerTree
 import com.intellij.xdebugger.impl.ui.tree.actions.XDebuggerTreeActionBase
 import com.jetbrains.python.debugger.PyDebugValue
-import com.jetbrains.python.debugger.PyDebuggerException
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.*
@@ -99,7 +97,6 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             setOKButtonMnemonic('C'.toInt())
 
             setCrossClosesWindow(true)
-            //setupChangeListener()
 
             myDataFrameTable = DataFrameTable()
             myDataFrameTable.preferredSize = Dimension(700, 500)
@@ -131,14 +128,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                     }
                 } catch (ex: Exception) {
                     logger.error("Creating DataFrame model failed", ex)
-
-                    val reason = "Reason: " + when (ex) {
-                        is EvaluateException -> ex.userFriendlyMessage()
-                        is PyDebuggerException -> ex.tracebackError
-                        else -> ex.localizedMessage
-                    }
-
-                    myUserNotifier.error("Creating DataFrame model failed. $reason")
+                    myUserNotifier.error("Can't display content from Styler", "Creating model failed", ex)
 
                     patchedStyler?.dispose()
                     model?.dispose()

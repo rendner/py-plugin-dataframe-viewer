@@ -54,10 +54,10 @@ private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFram
         val result: PyDebugValue? = try {
             frameAccessor.evaluate(expression, false, trimResult)
         } catch (ex: PyDebuggerException) {
-            throw EvaluateException("Couldn't evaluate expression.", expression, ex.toPluginType())
+            throw EvaluateException("Couldn't evaluate expression.", ex.toPluginType())
         }
         if (result == null || result.isErrorOnEval) {
-            throw EvaluateException(result?.value ?: "Couldn't evaluate expression.", expression)
+            throw EvaluateException(result?.value ?: "Couldn't evaluate expression.")
         }
         return result.toPluginType()
     }
@@ -68,10 +68,10 @@ private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFram
             // in case of a debugger timeout null is returned
             val result: PyDebugValue? = frameAccessor.evaluate(statement, true, false)
             if (result == null || result.isErrorOnEval) {
-                throw EvaluateException(result?.value ?: "Couldn't evaluate statement.", "")
+                throw EvaluateException(result?.value ?: "Couldn't evaluate statement.")
             }
         } catch (ex: PyDebuggerException) {
-            throw EvaluateException("Couldn't execute statement.", statement, ex.toPluginType())
+            throw EvaluateException("Couldn't execute statement.", ex.toPluginType())
         }
     }
 }

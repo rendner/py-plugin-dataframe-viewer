@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,26 +17,5 @@ package cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions
 
 class EvaluateException(
     message: String,
-    private val expression: String,
-    cause: PluginPyDebuggerException? = null,
-) : Exception(message, cause) {
-
-    override val cause: PluginPyDebuggerException?
-        get() = super.cause as PluginPyDebuggerException?
-
-    override fun getLocalizedMessage(): String {
-        val msg = super.getLocalizedMessage()
-        return cause?.let {
-            return "$msg ${it.localizedMessage}"
-        } ?: msg
-    }
-
-    fun userFriendlyMessage(): String {
-        return this.message ?: "Couldn't evaluate expression."
-    }
-
-    fun logMessage() = StringBuilder()
-        .appendLine(message)
-        .appendLine("\texpression: '${expression}'")
-        .toString()
-}
+    override val cause: PluginPyDebuggerException? = null,
+) : Exception(message, cause)

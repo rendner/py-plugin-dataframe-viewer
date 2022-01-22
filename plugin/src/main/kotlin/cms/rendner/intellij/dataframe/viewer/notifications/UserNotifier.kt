@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,33 +15,43 @@
  */
 package cms.rendner.intellij.dataframe.viewer.notifications
 
+import com.intellij.notification.NotificationGroup
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
+import java.io.PrintWriter
+import java.io.StringWriter
 
 /**
- * Is safe to be called from any thread. [Notification::notify] takes care that the message is dispatched in ed-thread.
+ * Is safe to be called from any thread.
  */
 class UserNotifier(private val project: Project?) {
 
-    fun error(message: String) {
-        showNotification(message, NotificationType.ERROR)
+    // NotificationGroup is registered in plugin.xml
+    // https://plugins.jetbrains.com/docs/intellij/notifications.html#notificationgroup-20203-and-later
+    companion object {
+        val NOTIFICATION_GROUP: NotificationGroup = NotificationGroupManager
+            .getInstance()
+            .getNotificationGroup("cms.rendner.StyledDataFrameViewer")
     }
 
-    fun warning(message: String) {
-        showNotification(message, NotificationType.WARNING)
-    }
-
-    fun info(message: String) {
-        showNotification(message, NotificationType.INFORMATION)
-    }
-
-    private fun showNotification(content: String, type: NotificationType) {
-        // NotificationGroup is registered in plugin.xml
-        // https://github.com/JetBrains/intellij-community/blob/ff6cdad938004e24be720f0a1bef1255f2a17b0c/platform/platform-api/src/com/intellij/notification/NotificationGroup.kt#L26
-        // https://plugins.jetbrains.com/docs/intellij/notifications.html#notificationgroup-20203-and-later
-        NotificationGroupManager.getInstance().getNotificationGroup("cms.rendner.StyledDataFrameViewer")
-            .createNotification(content, type)
+    fun error(title: String, reason: String, throwable: Throwable?) {
+        NOTIFICATION_GROUP
+            .createNotification(NotificationType.ERROR)
+            .setTitle(title)
+            .setContent(createContentFromError(reason, throwable))
             .notify(project)
+    }
+
+    private fun createContentFromError(reason: String, throwable: Throwable?): String {
+        if (throwable == null) return reason
+        return "$reason:${System.lineSeparator()}${stringifyExceptionWithFullStacktrace(throwable)}"
+            .replace(System.lineSeparator(), "<br/>")
+    }
+
+    private fun stringifyExceptionWithFullStacktrace(throwable: Throwable): String {
+        val target = StringWriter()
+        throwable.printStackTrace(PrintWriter(target))
+        return target.toString()
     }
 }

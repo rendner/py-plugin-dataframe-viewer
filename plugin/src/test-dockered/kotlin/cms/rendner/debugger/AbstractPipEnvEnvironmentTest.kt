@@ -93,10 +93,10 @@ internal open class AbstractPipEnvEnvironmentTest {
             val result = try {
                 evalOrExec(expression, execute = false, doTrunc = trimResult)
             } catch (ex: PluginPyDebuggerException) {
-                throw EvaluateException("Couldn't evaluate expression.", expression, ex)
+                throw EvaluateException("Couldn't evaluate expression.", ex)
             }
             if (result.isErrorOnEval) {
-                throw EvaluateException(result.value ?: "Couldn't evaluate expression.", expression)
+                throw EvaluateException(result.value ?: "Couldn't evaluate expression.")
             }
 
             return result
@@ -106,7 +106,7 @@ internal open class AbstractPipEnvEnvironmentTest {
             try {
                 evalOrExec(statement, execute = true, doTrunc = false)
             } catch (ex: PluginPyDebuggerException) {
-                throw EvaluateException("Couldn't execute statement.", statement, ex)
+                throw EvaluateException("Couldn't execute statement.", ex)
             }
         }
 
@@ -118,7 +118,7 @@ internal open class AbstractPipEnvEnvironmentTest {
                 ex.cause?.let {
                     throw it
                 }
-                throw EvaluateException(ex.message ?: "Unknown error occurred.", code)
+                throw EvaluateException(ex.message ?: "Unknown error occurred.")
             }
         }
 

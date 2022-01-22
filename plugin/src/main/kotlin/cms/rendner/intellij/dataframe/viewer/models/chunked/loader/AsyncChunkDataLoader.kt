@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,7 +108,11 @@ class AsyncChunkDataLoader(
                     logger.info("Debugger disconnected, setting 'isAlive' to false.")
                 }
 
-                notifier?.error("Loading chunk failed: ${throwable.localizedMessage}")
+                notifier?.error(
+                    "Can't load data for chunk ${loadRequest.chunkCoordinates}",
+                    "Loading chunk failed",
+                    throwable,
+                )
                 myResultHandler?.onError(loadRequest, throwable)
                 fetchNextChunk()
             }
