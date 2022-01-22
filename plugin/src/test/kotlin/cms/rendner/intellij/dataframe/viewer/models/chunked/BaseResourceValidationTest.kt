@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import java.util.*
 /**
  * Requires:
  * Generated test data in the folder "test/resources/generated".
- * Please read the instruction about how to generate test resources (docs/PLUGIN_TEST_DATA.md).
+ * Please read the instruction about how to generate test resources (docs/GENERATE_PLUGIN_TEST_DATA_AUTOMATED.md).
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal abstract class BaseResourceValidationTest(errorImageSubDirName: String) {
