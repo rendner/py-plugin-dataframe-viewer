@@ -30,7 +30,7 @@ def highlight_min_values(data, chunk_parent=None, **kwargs):
 def highlight_extrema(data, extrema, color, chunk_parent=None):
     d = data if chunk_parent is None else chunk_parent
     attr = f'background-color: {color};'
-    if extrema is "min":
+    if extrema == "min":
         return np.where(data == np.nanmin(d.to_numpy()), attr, None)
     else:
         return np.where(data == np.nanmax(d.to_numpy()), attr, None)

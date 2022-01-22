@@ -1,186 +1,239 @@
 
-from typing import Callable, Tuple, Optional
+from typing import Tuple, Callable, Optional, Union
 from pandas._typing import Axis
-from pandas.io.formats.style_render import Subset
-
-
-class ApplyArgs:
-
-    def __init__(self, args: Tuple[Callable, Optional[Axis], Optional[Subset]]):
-        self.__args = args
-
-    def func(self) -> Callable:
-        return self.__args[0]
-
-    def axis(self) -> Optional[Axis]:
-        return self.__args[1]
-
-    def subset(self) -> Optional[Subset]:
-        return self.__args[2]
-
-from pandas import DataFrame, Series
-from pandas.io.formats.style import Styler
-from typing import Any, Optional, Union
-from pandas.io.formats.style_render import non_reducing_slice, Subset
-
-
-class BaseApplyPatcher:
-
-    def __init__(self, data: DataFrame, apply_args: ApplyArgs, func_kwargs: dict):
-        self._apply_args = apply_args
-        self._func_kwargs = func_kwargs
-        self._subset_data = self._evaluate_subset_data(data, apply_args.subset())
-
-    def apply_to_styler(self, chunk_styler: Styler):
-        chunk_subset = self._evaluate_chunk_subset(chunk_styler.data)
-        chunk_styler.apply(self.__exec_patched_func_guard, axis=self._apply_args.axis(), subset=chunk_subset)
-
-    def __exec_patched_func_guard(self, chunk: Union[DataFrame, Series]) -> Any:
-        if chunk.empty:
-            return chunk
-        else:
-            return self._exec_patched_func(chunk)
-
-    def _exec_patched_func(self, chunk: Union[DataFrame, Series]) -> Any:
-        pass
-
-    @staticmethod
-    def _evaluate_subset_data(data: DataFrame, subset: Optional[Subset]) -> DataFrame:
-        subset = slice(None) if subset is None else subset
-        subset = non_reducing_slice(subset)
-        return data.loc[subset]
-
-    def _evaluate_chunk_subset(self, chunk: DataFrame) -> Optional[Subset]:
-        chunk_subset = None
-        if self._apply_args.subset() is not None:
-            chunk_subset = (
-                chunk.index.intersection(self._subset_data.index),
-                chunk.columns.intersection(self._subset_data.columns))
-        return chunk_subset
-
-    def _get_parent(self, chunk: DataFrame):
-        axis = self._apply_args.axis()
-        if axis == 0 or axis == "index":
-            return self._subset_data[chunk.name]
-        elif axis == 1 or axis == "columns":
-            return self._subset_data.loc[chunk.name]
-        else:
-            return self._subset_data
-
-    def _get_key(self, chunk: DataFrame) -> str:
-        axis = self._apply_args.axis()
-        if axis == 0 or axis == "index":
-            return chunk.name
-        elif axis == 1 or axis == "columns":
-            return chunk.name
-        else:
-            return "______df"
-
-from pandas import DataFrame
-import inspect
-
-
-class ApplyFallbackPatch(BaseApplyPatcher):
-
-    def __init__(self, data: DataFrame, apply_args: ApplyArgs, func_kwargs: dict):
-        BaseApplyPatcher.__init__(self, data, apply_args, func_kwargs)
-        self.__provide_chunk_parent = self._should_provide_chunk_parent()
-
-    def _exec_patched_func(self, chunk: DataFrame):
-        if self.__provide_chunk_parent:
-            return self._apply_args.func()(chunk, **dict(self._func_kwargs, chunk_parent=self._get_parent(chunk)))
-        else:
-            return self._apply_args.func()(chunk, **self._func_kwargs)
-
-    def _should_provide_chunk_parent(self):
-        sig = inspect.signature(self._apply_args.func())
-        for param in sig.parameters.values():
-            if param.name == "chunk_parent" or param.kind == inspect.Parameter.VAR_KEYWORD:
-                return True
-        return False
-
-from typing import Callable, Tuple, Optional
 from pandas.io.formats.style_render import Subset
 
 
 class ApplyMapArgs:
 
-    def __init__(self, args: Tuple[Callable, Optional[Subset]]):
-        self.__args = args
+    def __init__(self, style_func: Callable, subset: Optional[Subset]):
+        self._style_func: Callable = style_func
+        self._subset: Optional[Subset] = subset
 
-    def func(self) -> Callable:
-        return self.__args[0]
+    @property
+    def style_func(self):
+        return self._style_func
 
-    def subset(self) -> Optional[Subset]:
-        return self.__args[1]
+    @property
+    def subset(self):
+        return self._subset
 
-import pandas as pd
-from typing import Optional
-from pandas.io.formats.style import Styler
-from pandas import DataFrame
-from pandas.io.formats.style_render import (
-    non_reducing_slice, Subset,
-)
+    @classmethod
+    def from_tuple(cls, args: Tuple[Callable, Optional[Subset]]):
+        return cls(args[0], args[1])
+
+    def copy_with(self, style_func: Optional[Callable] = None, subset: Optional[Subset] = None):
+        return ApplyMapArgs(
+            self.style_func if style_func is None else style_func,
+            self.subset if subset is None else subset,
+        )
+
+    def to_tuple(self) -> Tuple[Callable, Optional[Subset]]:
+        return self.style_func, self.subset
 
 
-class BaseApplyMapPatcher:
+class ApplyArgs:
 
-    def __init__(self, data: DataFrame, _apply_args: ApplyMapArgs, func_kwargs: dict):
-        self._apply_args = _apply_args
-        self._func_kwargs = func_kwargs
-        self._subset_data = self._evaluate_subset_data(data, _apply_args.subset())
+    def __init__(self, style_func: Callable, axis: Optional[Axis], subset: Optional[Subset]):
+        self._style_func: Callable = style_func
+        self._axis: Optional[Axis] = axis
+        self._subset: Optional[Subset] = subset
 
-    def apply_to_styler(self, chunk_styler: Styler):
-        chunk_subset = self._evaluate_chunk_subset(chunk_styler.data)
-        chunk_styler.applymap(self._exec_patched_func, subset=chunk_subset)
+    @property
+    def style_func(self):
+        return self._style_func
+
+    @property
+    def axis(self):
+        return self._axis
+
+    @property
+    def subset(self):
+        return self._subset
+
+    @classmethod
+    def from_tuple(cls, args: Tuple[Callable, Optional[Axis], Optional[Subset]]):
+        return cls(args[0], args[1], args[2])
+
+    def copy_with(self, style_func: Optional[Callable] = None, subset: Optional[Subset] = None):
+        return ApplyArgs(
+            self.style_func if style_func is None else style_func,
+            self.axis,
+            self.subset if subset is None else subset,
+        )
+
+    def to_tuple(self) -> Tuple[Callable, Optional[Axis], Optional[Subset]]:
+        return self.style_func, self.axis, self.subset
+
+
+class StylerTodo:
+    def __init__(self, apply_func: Callable, apply_args: Union[ApplyArgs, ApplyMapArgs], style_func_kwargs: dict):
+        self._apply_func: Callable = apply_func
+        self._apply_args: Union[ApplyArgs, ApplyMapArgs] = apply_args
+        self._style_func_kwargs: dict = style_func_kwargs
+
+    @property
+    def apply_func(self):
+        return self._apply_func
+
+    @property
+    def apply_args(self):
+        return self._apply_args
+
+    @property
+    def style_func_kwargs(self):
+        return self._style_func_kwargs
+
+    @classmethod
+    def from_tuple(cls, todo: Tuple[Callable, tuple, dict]):
+        return cls(todo[0], cls._to_apply_args(todo), todo[2])
+
+    def copy_with(self,
+                  apply_args_subset: Optional[Subset] = None,
+                  style_func: Optional[Callable] = None,
+                  style_func_kwargs: Optional[dict] = None,
+                  ):
+        return StylerTodo(
+            self.apply_func,
+            self.apply_args.copy_with(style_func=style_func, subset=apply_args_subset),
+            dict(**self.style_func_kwargs) if style_func_kwargs is None else style_func_kwargs,
+        )
 
     @staticmethod
-    def _evaluate_subset_data(data: DataFrame, subset: Optional[Subset]) -> DataFrame:
-        if subset is None:
-            subset = pd.IndexSlice[:]
-        subset = non_reducing_slice(subset)
-        return data.loc[subset]
+    def _to_apply_args(todo: Tuple[Callable, tuple, dict]):
+        if getattr(todo[0], '__qualname__', '').startswith('Styler.applymap'):
+            return ApplyMapArgs.from_tuple(todo[1])
+        else:
+            return ApplyArgs.from_tuple(todo[1])
 
-    def _evaluate_chunk_subset(self, chunk: DataFrame) -> Optional[Subset]:
-        chunk_subset = None
-        if self._apply_args.subset() is not None:
-            chunk_subset = (
-                chunk.index.intersection(self._subset_data.index),
-                chunk.columns.intersection(self._subset_data.columns))
-        return chunk_subset
+    def is_applymap_call(self) -> bool:
+        return isinstance(self.apply_args, ApplyMapArgs)
 
-    def _exec_patched_func(self, scalar):
+    def is_apply_call(self) -> bool:
+        return not self.is_applymap_call()
+
+    def to_tuple(self) -> Tuple[Callable, tuple, dict]:
+        return self.apply_func, self.apply_args.to_tuple(), self.style_func_kwargs
+
+from abc import ABC, abstractmethod
+from typing import Optional
+
+from pandas import DataFrame
+from pandas.io.formats.style_render import Subset, non_reducing_slice
+
+
+class TodoPatcher(ABC):
+
+    def __init__(self, df: DataFrame, todo: StylerTodo):
+        self._todo: StylerTodo = todo
+        self._subset_data: DataFrame = self._get_subset_data(df, todo.apply_args.subset)
+
+    @abstractmethod
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
         pass
 
+    def _calculate_chunk_subset(self, chunk: DataFrame) -> Subset:
+        index_intersection = chunk.index.intersection(self._subset_data.index)
+        column_intersection = chunk.columns.intersection(self._subset_data.columns)
+        return index_intersection, column_intersection
+
+    @staticmethod
+    def _get_subset_data(df: DataFrame, subset: Optional[Subset]) -> DataFrame:
+        subset = slice(None) if subset is None else subset
+        subset = non_reducing_slice(subset)
+        return df.loc[subset]
+
+from typing import Optional
 from pandas import DataFrame
 
 
-class ApplyMapFallbackPatch(BaseApplyMapPatcher):
+class ApplyMapPatcher(TodoPatcher):
 
-    def __init__(self, data: DataFrame, apply_args: ApplyMapArgs, func_kwargs: dict):
-        BaseApplyMapPatcher.__init__(self, data, apply_args, func_kwargs)
+    def __init__(self, df: DataFrame, todo: StylerTodo):
+        super().__init__(df, todo)
 
-    def _exec_patched_func(self, scalar):
-        return self._apply_args.func()(scalar, **self._func_kwargs)
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo.copy_with(
+            apply_args_subset=self._calculate_chunk_subset(chunk),
+        )
+
+import inspect
+from typing import Optional, Union
+
+from pandas import DataFrame, Series
+
+
+class ApplyPatcher(TodoPatcher):
+
+    def __init__(self, df: DataFrame, todo: StylerTodo):
+        super().__init__(df, todo)
+
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        if self._should_provide_chunk_parent():
+            return self._todo.copy_with(
+                apply_args_subset=self._calculate_chunk_subset(chunk),
+                style_func=ChunkParentProvider(
+                    self._styling_func,
+                    self._todo.apply_args.axis,
+                    self._subset_data,
+                )
+            )
+        else:
+            return self._todo.copy_with(
+                apply_args_subset=self._calculate_chunk_subset(chunk),
+                style_func=self._styling_func,
+            )
+
+    def _styling_func(self,
+                      chunk_or_series_from_chunk: Union[DataFrame, Series],
+                      **kwargs,
+                      ):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
+
+        return self._todo.apply_args.style_func(chunk_or_series_from_chunk, **kwargs)
+
+    def _should_provide_chunk_parent(self):
+        sig = inspect.signature(self._todo.apply_args.style_func)
+        for param in sig.parameters.values():
+            if param.name == "chunk_parent" or param.kind == inspect.Parameter.VAR_KEYWORD:
+                return True
+        return False
+
+from typing import Optional, Union
 
 import numpy as np
-import pandas as pd
+from pandas import DataFrame, Series
 from pandas.io.formats.style import _validate_apply_axis_arg
 
 
-class BackgroundGradientPatch(BaseApplyPatcher):
+class BackgroundGradientPatcher(TodoPatcher):
 
-    def __init__(self, data: pd.DataFrame, apply_args: ApplyArgs, func_kwargs: dict):
-        BaseApplyPatcher.__init__(self, data, apply_args, func_kwargs)
+    def __init__(self, df: DataFrame, todo: StylerTodo):
+        super().__init__(df, todo)
 
-    def _exec_patched_func(self, chunk: pd.DataFrame):
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo.copy_with(
+            apply_args_subset=self._calculate_chunk_subset(chunk),
+            style_func=ChunkParentProvider(
+                self._styling_func,
+                self._todo.apply_args.axis,
+                self._subset_data,
+            )
+        )
+
+    def _styling_func(self,
+                      chunk_or_series_from_chunk: Union[DataFrame, Series],
+                      chunk_parent: Union[DataFrame, Series],
+                      **kwargs,
+                      ):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
 
 
-        vmin = self._func_kwargs.get("vmin", None)
-        vmax = self._func_kwargs.get("vmax", None)
-        gmap = self._func_kwargs.get("gmap", None)
-
-        chunk_parent = self._get_parent(chunk)
+        vmin = kwargs.get("vmin", None)
+        vmax = kwargs.get("vmax", None)
+        gmap = kwargs.get("gmap", None)
 
         if gmap is None:
             gmap = chunk_parent.to_numpy(dtype=float)
@@ -193,124 +246,156 @@ class BackgroundGradientPatch(BaseApplyPatcher):
             if vmax is None:
                 vmax = np.nanmax(gmap)
 
-        if chunk.empty:
-            gmap = chunk
-        elif isinstance(chunk, pd.Series):
-            gmap = gmap[chunk_parent.index.get_indexer_for(chunk.index)]
-        elif isinstance(chunk, pd.DataFrame) and self._apply_args.axis() is None:
-            ri = chunk_parent.index.get_indexer_for(chunk.index)
-            ci = chunk_parent.columns.get_indexer_for(chunk.columns)
-            if isinstance(gmap, pd.DataFrame):
-                gmap = gmap.iloc[(ri, ci)]
+        gmap = self._adjust_gmap_shape_to_chunk_shape(gmap, chunk_or_series_from_chunk, chunk_parent)
+
+        return self._todo.apply_args.style_func(
+            chunk_or_series_from_chunk,
+            **dict(kwargs, vmin=vmin, vmax=vmax, gmap=gmap),
+        )
+
+    def _adjust_gmap_shape_to_chunk_shape(self,
+                                          gmap: np.ndarray,
+                                          chunk_or_series_from_chunk: Union[DataFrame, Series],
+                                          chunk_parent: Union[DataFrame, Series],
+                                          ) -> np.ndarray:
+        if isinstance(chunk_or_series_from_chunk, Series):
+            return gmap[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
+        elif isinstance(chunk_or_series_from_chunk, DataFrame) and self._todo.apply_args.axis is None:
+            ri = chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)
+            ci = chunk_parent.columns.get_indexer_for(chunk_or_series_from_chunk.columns)
+            if isinstance(gmap, DataFrame):
+                return gmap.iloc[(ri, ci)]
             elif isinstance(gmap, np.ndarray):
-                gmap = pd.DataFrame(data=gmap, index=chunk_parent.index, columns=chunk_parent.columns)
-                gmap = gmap.iloc[(ri, ci)]
+                return DataFrame(data=gmap, index=chunk_parent.index, columns=chunk_parent.columns).iloc[(ri, ci)]
+        return gmap
 
-        return self._apply_args.func()(chunk, **dict(self._func_kwargs, vmin=vmin, vmax=vmax, gmap=gmap))
+from typing import Callable, Optional, Union
 
-import numpy as np
-from typing import Optional
-from pandas import DataFrame
-from pandas.io.formats.style_render import (
-    non_reducing_slice, Subset,
-)
+from pandas import DataFrame, Series
+from pandas._typing import Axis
 
 
-class HighlightExtremaPatch(BaseApplyPatcher):
+class ChunkParentProvider:
+    def __init__(self, style_func: Callable, axis: Optional[Axis], subset_data: DataFrame):
+        self._style_func = style_func
+        self._axis = axis
+        self._subset_data = subset_data
 
-    def __init__(self, data: DataFrame, apply_args: ApplyArgs, func_kwargs: dict, is_max: bool):
-        BaseApplyPatcher.__init__(self, data, apply_args, func_kwargs)
-        self.__attribute = func_kwargs.get('props', 'background-color: yellow')
-        self.__is_max = is_max
+    def __call__(self, chunk_or_series_from_chunk: Union[DataFrame, Series], *args, **kwargs):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
 
-    def _exec_patched_func(self, chunk: DataFrame):
-        chunk_parent = self._get_parent(chunk)
-        op = 'max' if self.__is_max else 'min'
-        value = getattr(chunk_parent, op)(skipna=True)
-        if isinstance(chunk, DataFrame):  # min/max must be done twice to return scalar
-            value = getattr(value, op)(skipna=True)
-        return np.where(chunk == value, self.__attribute, "")
+        kwargs['chunk_parent'] = self._get_parent(chunk_or_series_from_chunk)
+        return self._style_func(chunk_or_series_from_chunk, *args, **kwargs)
 
-    @staticmethod
-    def _evaluate_subset_data(data: DataFrame, subset: Optional[Subset]) -> DataFrame:
-        if subset is None:
-            return data
+    def _get_parent(self, chunk_or_series_from_chunk: Union[DataFrame, Series]):
+        if self._axis == 0 or self._axis == "index":
+            return self._subset_data[chunk_or_series_from_chunk.name]
+        elif self._axis == 1 or self._axis == "columns":
+            return self._subset_data.loc[chunk_or_series_from_chunk.name]
         else:
-            subset = non_reducing_slice(subset)
-        return data.loc[subset]
+            return self._subset_data
+
+from typing import Optional, Union
 
 import numpy as np
-import pandas as pd
+from pandas import DataFrame, Series
 from pandas.io.formats.style import _validate_apply_axis_arg
 
 
-class HighlightBetweenPatch(BaseApplyPatcher):
+class HighlightBetweenPatcher(TodoPatcher):
 
-    def __init__(self, data: pd.DataFrame, apply_args: ApplyArgs, func_kwargs: dict):
-        BaseApplyPatcher.__init__(self, data, apply_args, func_kwargs)
+    def __init__(self, df: DataFrame, todo: StylerTodo):
+        super().__init__(df, todo)
 
-    def _exec_patched_func(self, chunk: pd.DataFrame):
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo.copy_with(
+            apply_args_subset=self._calculate_chunk_subset(chunk),
+            style_func=ChunkParentProvider(
+                self._styling_func,
+                self._todo.apply_args.axis,
+                self._subset_data,
+            )
+        )
 
-        left = self._func_kwargs.get("left", None)
-        right = self._func_kwargs.get("right", None)
+    def _styling_func(self,
+                      chunk_or_series_from_chunk: Union[DataFrame, Series],
+                      chunk_parent: Union[DataFrame, Series],
+                      **kwargs,
+                      ):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
 
-        chunk_parent = self._get_parent(chunk)
+        left = kwargs.get("left", None)
+        right = kwargs.get("right", None)
 
         if np.iterable(left) and not isinstance(left, str):
             left = _validate_apply_axis_arg(
                 left, "left", None, chunk_parent
             )
-            left = self.__adjust_range_part(left, chunk, chunk_parent)
+            left = self._adjust_range_part(left, chunk_or_series_from_chunk, chunk_parent)
 
         if np.iterable(right) and not isinstance(right, str):
             right = _validate_apply_axis_arg(
                 right, "right", None, chunk_parent
             )
-            right = self.__adjust_range_part(right, chunk, chunk_parent)
+            right = self._adjust_range_part(right, chunk_or_series_from_chunk, chunk_parent)
 
-        return self._apply_args.func()(chunk, **dict(self._func_kwargs, left=left, right=right))
+        return self._todo.apply_args.style_func(
+            chunk_or_series_from_chunk,
+            **dict(kwargs, left=left, right=right),
+        )
 
-    def __adjust_range_part(
+    def _adjust_range_part(
             self,
             part,
             chunk,
             chunk_parent,
     ):
-        if isinstance(chunk, pd.Series):
+        if isinstance(chunk, Series):
             return part[chunk_parent.index.get_indexer_for(chunk.index)]
-        elif isinstance(chunk, pd.DataFrame) and self._apply_args.axis() is None:
+        elif isinstance(chunk, DataFrame) and self._todo.apply_args.axis is None:
             ri = chunk_parent.index.get_indexer_for(chunk.index)
             ci = chunk_parent.columns.get_indexer_for(chunk.columns)
             ri_slice = slice(ri[0], ri[-1] + 1)
             ci_slice = slice(ci[0], ci[-1] + 1)
             return part[ri_slice, ci_slice]
 
-from typing import Tuple, Callable, cast, Optional
-from pandas._typing import Axis
-from pandas.io.formats.style_render import Subset
+import numpy as np
+from pandas import DataFrame, Series
+from typing import Optional, Union
 
 
-class ExportedStyle:
-    def __init__(self, args: Tuple[Callable, tuple, dict]):
-        self.__args = args
+class HighlightExtremaPatcher(TodoPatcher):
 
-    def apply_func(self) -> Callable:
-        return self.__args[0]
+    def __init__(self, df: DataFrame, todo: StylerTodo, op: str):
+        super().__init__(df, todo)
+        self._op: str = op
+        self._attribute: str = todo.style_func_kwargs.get('props', 'background-color: yellow')
 
-    def apply_args(self) -> tuple:
-        return self.__args[1]
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo.copy_with(
+            apply_args_subset=self._calculate_chunk_subset(chunk),
+            style_func_kwargs={},
+            style_func=ChunkParentProvider(
+                self._styling_func,
+                self._todo.apply_args.axis,
+                self._subset_data,
+            )
+        )
 
-    def apply_args_func(self) -> Callable:
-        return self.__args[1][0]
+    def _styling_func(self,
+                      chunk_or_series_from_chunk: Union[DataFrame, Series],
+                      chunk_parent: Union[DataFrame, Series],
+                      ):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
 
-    def create_apply_args(self) -> ApplyArgs:
-        return ApplyArgs(cast(Tuple[Callable, Optional[Axis], Optional[Subset]], self.__args[1]))
+        value = getattr(chunk_parent, self._op)(skipna=True)
 
-    def create_apply_map_args(self) -> ApplyMapArgs:
-        return ApplyMapArgs(cast(Tuple[Callable, Optional[Subset]], self.__args[1]))
-
-    def apply_kwargs(self) -> dict:
-        return self.__args[2]
+        if isinstance(chunk_or_series_from_chunk, DataFrame):  # min/max must be done twice to return scalar
+            value = getattr(value, self._op)(skipna=True)
+        return np.where(chunk_or_series_from_chunk == value, self._attribute, "")
 
 class TableStructure:
     def __init__(self,
@@ -332,19 +417,201 @@ class TableStructure:
         self.hide_column_header = hide_column_header
 
 import inspect
+from functools import partial
+from typing import Callable, List, Tuple, Optional, Union
+
+from pandas import DataFrame
+from pandas.io.formats.style import Styler
+
+
+class TodosPatcher:
+
+    def patch_todos_for_chunk(self, source: Styler, chunk: DataFrame) -> List[Tuple[Callable, tuple, dict]]:
+        result: List[Tuple[Callable, tuple, dict]] = []
+
+        for t in source._todo:
+            todo = StylerTodo.from_tuple(t)
+
+            if self.__is_builtin_style(todo.apply_args.style_func):
+                patcher = self.__get_patcher_for_builtin_style(source.data, todo)
+            else:
+                if todo.is_applymap_call():
+                    patcher = ApplyMapPatcher(source.data, todo)
+                else:
+                    patcher = ApplyPatcher(source.data, todo)
+
+            if patcher is not None:
+                result.append(patcher.create_patched_todo(chunk).to_tuple())
+
+        return result
+
+    def __get_patcher_for_builtin_style(self, df: DataFrame, todo: StylerTodo) -> Optional[TodoPatcher]:
+        style_func_qname = self.__get_qname(todo.apply_args.style_func)
+        if self.__is_builtin_background_gradient(style_func_qname):
+            return BackgroundGradientPatcher(df, todo)
+        elif self.__is_builtin_highlight_max(style_func_qname, todo.apply_args.style_func):
+            return HighlightExtremaPatcher(df, todo, 'max')
+        elif self.__is_builtin_highlight_min(style_func_qname, todo.apply_args.style_func):
+            return HighlightExtremaPatcher(df, todo, 'min')
+        elif self.__is_builtin_highlight_null(style_func_qname):
+            return ApplyPatcher(df, todo)
+        elif self.__is_builtin_highlight_between(style_func_qname):
+            return HighlightBetweenPatcher(df, todo)
+        elif self.__is_builtin_set_properties(style_func_qname):
+            return ApplyMapPatcher(df, todo)
+        return None
+
+    @staticmethod
+    def __get_qname(func: Callable) -> str:
+        if isinstance(func, partial):
+            func = func.func
+        return getattr(func, '__qualname__', '')
+
+    @staticmethod
+    def __is_builtin_style(style_func_qname: Callable) -> bool:
+        if isinstance(style_func_qname, partial):
+            style_func_qname = style_func_qname.func
+        inspect_result = inspect.getmodule(style_func_qname)
+        return False if inspect_result is None else inspect.getmodule(
+            style_func_qname).__name__ == 'pandas.io.formats.style'
+
+    @staticmethod
+    def __is_builtin_background_gradient(style_func_qname: str) -> bool:
+        return style_func_qname == '_background_gradient'
+
+    @staticmethod
+    def __is_builtin_highlight_max(style_func_qname: str, style_func: Union[Callable, partial]) -> bool:
+        if isinstance(style_func, partial):
+            return style_func_qname == '_highlight_value' and style_func.keywords.get('op', '') == 'max'
+        else:
+            return style_func_qname.startswith('Styler.highlight_max')
+
+    @staticmethod
+    def __is_builtin_highlight_min(style_func_qname: str, style_func: Union[Callable, partial]) -> bool:
+        if isinstance(style_func, partial):
+            return style_func_qname == '_highlight_value' and style_func.keywords.get('op', '') == 'min'
+        else:
+            return style_func_qname.startswith('Styler.highlight_min')
+
+    @staticmethod
+    def __is_builtin_highlight_null(style_func_qname: str) -> bool:
+        return style_func_qname.startswith('Styler.highlight_null')
+
+    @staticmethod
+    def __is_builtin_highlight_between(style_func_qname: str) -> bool:
+        return style_func_qname == '_highlight_between'
+
+    @staticmethod
+    def __is_builtin_set_properties(style_func_qname: str) -> bool:
+        return style_func_qname.startswith('Styler.set_properties')
+
 import numpy as np
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
-from typing import Callable, List, Tuple, Union
-from functools import partial
+from typing import List, Tuple, Callable
+from collections.abc import Mapping
+from abc import abstractmethod, ABC
+
+
+class _IndexTranslator(ABC):
+    @abstractmethod
+    def translate(self, index):
+        pass
+
+
+class _SequenceIndexTranslator(_IndexTranslator):
+    def __init__(self, seq):
+        super().__init__()
+        self.__seq = seq
+
+    def translate(self, index):
+        return self.__seq[index]
+
+
+class _OffsetIndexTranslator(_IndexTranslator):
+    def __init__(self, offset: int):
+        super().__init__()
+        self.__offset = offset
+
+    def translate(self, index):
+        return index + self.__offset
+
+
+class _TranslateKeysDict(Mapping):
+
+    def __init__(self, org_dict: dict, translate_key: Callable):
+        self._org_dict = org_dict
+        self._translate_key = translate_key
+
+    def get(self, key, default=None):
+        t_key = self._translate_key(key)
+        if t_key not in self._org_dict:
+            return default
+        return self._org_dict.get(t_key)
+
+    def __contains__(self, key):
+        return self._translate_key(key) in self._org_dict
+
+    def __getitem__(self, key):
+        return self._org_dict[self._translate_key(key)]
+
+    def values(self):
+        return super().values()
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def keys(self):
+        raise NotImplementedError
+
+    def items(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        return len(self._org_dict)
+
+
+class _CSSRowColIndexAdjuster:
+
+    def __init__(self, ri_translator: _IndexTranslator, ci_translator: _IndexTranslator):
+        self.ri_translator = ri_translator
+        self.ci_translator = ci_translator
+
+    def adjust(self, d: dict):
+        for head in d.get('head', []):
+            for col in head:
+                if 'id' in col:
+                    col['id'] = '_'.join(self._adjust_indices(col['id'].split('_')))
+                if 'class' in col:
+                    col['class'] = ' '.join(self._adjust_indices(col['class'].strip().split(' ')))
+
+        for row in d.get('body', []):
+            for entry in row:
+                if 'id' in entry:
+                    entry['id'] = '_'.join(self._adjust_indices(entry['id'].split('_')))
+                if 'class' in entry:
+                    entry['class'] = ' '.join(self._adjust_indices(entry['class'].strip().split(' ')))
+
+        for style in d.get('cellstyle', []):
+            if 'selectors' in style:
+                style['selectors'] = ['_'.join(self._adjust_indices(s.split('_'))) for s in style['selectors']]
+
+    def _adjust_indices(self, indices: List[str]) -> List[str]:
+        return [self._adjust_index(x) for x in indices]
+
+    def _adjust_index(self, index: str) -> str:
+        if index.startswith("row") and index[3:].isdigit():
+            return f'row{self.ri_translator.translate(int(index[3:]))}'
+        if index.startswith("col") and index[3:].isdigit():
+            return f'col{self.ci_translator.translate(int(index[3:]))}'
+        return index
 
 
 class PatchedStyler:
 
     def __init__(self, styler: Styler):
-        self.__styler = styler
-        self.__visible_df = self.__get_visible_df(styler)
-        self.__patched_styles = self.__patch_styles(styler.export())
+        self.__styler: Styler = styler
+        self.__visible_data: DataFrame = self.__get_visible_data(styler)
 
     def render_chunk(
             self,
@@ -355,98 +622,107 @@ class PatchedStyler:
             exclude_row_header: bool = False,
             exclude_column_header: bool = False
     ) -> str:
-        chunk: DataFrame = self.__visible_df.iloc[first_row:last_row, first_column:last_column]
-        chunk_styler = chunk.style
-        self.__apply_styler_configurations(self.__styler, chunk_styler)
-        self.__prevent_unnecessary_html(chunk_styler)
-        if exclude_row_header:
-            chunk_styler.hide_index()
-        if exclude_column_header:
-            chunk_styler.hide_columns()
-        for p in self.__patched_styles:
-            p.apply_to_styler(chunk_styler)
-        return self.__create_html(chunk_styler, first_row, first_column)
+        chunk = self.__visible_data.iloc[first_row:last_row, first_column:last_column]
 
-    def __create_html(self, chunk_styler, first_row: int, first_column: int) -> str:
-        body = f'<body>{chunk_styler.render(encoding="utf-8")}</body>'
-        chunk_df = chunk_styler.data
+        patched_todos = TodosPatcher().patch_todos_for_chunk(self.__styler, chunk)
+
+        computed_styler = self.__compute_styles(
+            patched_todos=patched_todos,
+            exclude_row_header=exclude_row_header,
+            exclude_column_header=exclude_column_header,
+        )
+        html_props = self.__generate_html_props_for_chunk(
+            chunk=chunk,
+            first_row=first_row,
+            first_column=first_column,
+            computed_styler=computed_styler,
+        )
+
+        return self.__styler.template_html.render(
+            **html_props,
+            encoding="utf-8",
+            sparse_columns=False,
+            sparse_index=False,
+            doctype_html=True,
+            html_table_tpl=self.__styler.template_html_table,
+            html_style_tpl=self.__styler.template_html_style,
+        )
+
+    def __compute_styles(self,
+                         patched_todos: List[Tuple[Callable, tuple, dict]],
+                         exclude_row_header: bool = False,
+                         exclude_column_header: bool = False,
+                         ) -> Styler:
+        copy = self.__styler.data.style
+        self.__copy_styler_state(source=self.__styler, target=copy)
+
+        copy._todo = patched_todos
+
+        if exclude_row_header:
+            copy.hide_index()
+        if exclude_column_header:
+            copy.hide_columns()
+
+        copy._compute()
+        return copy
+
+    def __generate_html_props_for_chunk(self,
+                                        chunk: DataFrame,
+                                        first_row: int,
+                                        first_column: int,
+                                        computed_styler: Styler,
+                                        ):
         if len(self.__styler.hidden_rows) == 0:
-            meta_ri = f'<meta name="row_indexer" content="{first_row}" />'
+            rit = _OffsetIndexTranslator(first_row)
         else:
-            meta_ri = f'<meta name="row_indexer" content="{self.__styler.index.get_indexer_for(chunk_df.index)}" />'
+            rit = _SequenceIndexTranslator(self.__styler.index.get_indexer_for(chunk.index))
+
         if len(self.__styler.hidden_columns) == 0:
-            meta_ci = f'<meta name="col_indexer" content="{first_column}" />'
+            cit = _OffsetIndexTranslator(first_column)
         else:
-            meta_ci = f'<meta name="col_indexer" content="{self.__styler.columns.get_indexer_for(chunk_df.columns)}" />'
-        head = f"<head>{meta_ri}{meta_ci}</head>"
-        return f'<html>{head}{body}</html>'
+            cit = _SequenceIndexTranslator(self.__styler.columns.get_indexer_for(chunk.columns))
+
+        chunk_styler = chunk.style
+        self.__copy_styler_state(source=computed_styler, target=chunk_styler)
+
+        def translate_key(k):
+            return rit.translate(k[0]), cit.translate(k[1])
+
+        chunk_styler.ctx = _TranslateKeysDict(computed_styler.ctx, translate_key)
+        chunk_styler.cell_context = _TranslateKeysDict(computed_styler.cell_context, translate_key)
+        chunk_styler._display_funcs = _TranslateKeysDict(computed_styler._display_funcs, translate_key)
+
+        result = chunk_styler._translate(sparse_index=False, sparse_cols=False)
+
+        _CSSRowColIndexAdjuster(rit, cit).adjust(result)
+
+        return result
 
     def render_unpatched(self) -> str:
-        self.__prevent_unnecessary_html(self.__styler)
-        return self.__styler.render(encoding="utf-8")
-
-    def __patch_styles(self, styles: List[Tuple[Callable, tuple, dict]]) -> List[Union[BaseApplyPatcher, BaseApplyMapPatcher]]:
-        patched_styles = []
-        frame = self.__styler.data
-        for t in styles:
-
-            exported_style = ExportedStyle(t)
-            apply_func = exported_style.apply_func()
-            apply_kwargs = exported_style.apply_kwargs()
-            apply_args_func = exported_style.apply_args_func()
-
-            if self.__is_builtin_style(apply_args_func):
-                qname = self.__get_qname(apply_args_func)
-                if self.__is_builtin_background_gradient(qname):
-                    patched_styles.append(
-                        BackgroundGradientPatch(frame, exported_style.create_apply_args(), apply_kwargs)
-                    )
-                elif self.__is_builtin_highlight_max(qname, apply_args_func):
-                    patched_styles.append(
-                        HighlightExtremaPatch(frame, exported_style.create_apply_args(), apply_kwargs, True)
-                    )
-                elif self.__is_builtin_highlight_min(qname, apply_args_func):
-                    patched_styles.append(
-                        HighlightExtremaPatch(frame, exported_style.create_apply_args(), apply_kwargs, False)
-                    )
-                elif self.__is_builtin_highlight_null(qname):
-                    patched_styles.append(
-                        ApplyFallbackPatch(frame, exported_style.create_apply_args(), apply_kwargs)
-                    )
-                elif self.__is_builtin_highlight_between(qname):
-                    patched_styles.append(
-                        HighlightBetweenPatch(frame, exported_style.create_apply_args(), apply_kwargs)
-                    )
-                elif self.__is_builtin_set_properties(qname):
-                    patched_styles.append(
-                        ApplyMapFallbackPatch(frame, exported_style.create_apply_map_args(), apply_kwargs)
-                    )
-                continue
-            elif self.__is_builtin_applymap(self.__get_qname(apply_func)):
-                patched_styles.append(
-                    ApplyMapFallbackPatch(frame, exported_style.create_apply_map_args(), apply_kwargs)
-                )
-            else:
-                patched_styles.append(
-                    ApplyFallbackPatch(frame, exported_style.create_apply_args(), apply_kwargs)
-                )
-
-        return patched_styles
+        self.__styler.uuid = ''
+        self.__styler.uuid_len = 0
+        self.__styler.cell_ids = False
+        return self.__styler.render(
+            encoding="utf-8",
+            doctype_html=True,
+            sparse_columns=False,
+            sparse_index=False,
+        )
 
     def get_table_structure(self) -> TableStructure:
         return TableStructure(
             rows_count=len(self.__styler.data.index),
             columns_count=len(self.__styler.data.columns),
-            visible_rows_count=len(self.__visible_df.index),
-            visible_columns_count=len(self.__visible_df.columns),
-            row_levels_count=self.__visible_df.index.nlevels,
-            column_levels_count=self.__visible_df.columns.nlevels,
+            visible_rows_count=len(self.__visible_data.index),
+            visible_columns_count=len(self.__visible_data.columns),
+            row_levels_count=self.__visible_data.index.nlevels,
+            column_levels_count=self.__visible_data.columns.nlevels,
             hide_row_header=self.__styler.hide_index_,
             hide_column_header=self.__styler.hide_columns_
         )
 
     @staticmethod
-    def __get_visible_df(styler: Styler) -> DataFrame:
+    def __get_visible_data(styler: Styler) -> DataFrame:
         if len(styler.hidden_rows) == 0 and len(styler.hidden_columns) == 0:
             return styler.data
         else:
@@ -455,90 +731,36 @@ class PatchedStyler:
             return styler.data.iloc[visible_indices, visible_columns]
 
     @staticmethod
-    def __prevent_unnecessary_html(styler: Styler):
-        styler.set_uuid("")
-        styler.cell_ids = False
+    def __copy_styler_state(
+            source: Styler,
+            target: Styler,
+    ):
+        target.uuid = ''
+        target.uuid_len = 0
+        target.cell_ids = False
 
-    @staticmethod
-    def __is_builtin_style(func: Callable) -> bool:
-        if isinstance(func, partial):
-            func = func.func
-        inspect_result = inspect.getmodule(func)
-        return False if inspect_result is None else inspect.getmodule(func).__name__ == 'pandas.io.formats.style'
+        target.table_styles = source.table_styles
+        target.table_attributes = source.table_attributes
+        target.hide_columns_ = source.hide_columns_
+        target.hide_index_ = source.hide_index_
+        target.ctx = source.ctx
+        target.cell_context = source.cell_context
+        target._display_funcs = source._display_funcs
 
-    @staticmethod
-    def __get_qname(func: Callable) -> str:
-        if isinstance(func, partial):
-            func = func.func
-        return getattr(func, '__qualname__', '')
+from typing import Union
 
-    @staticmethod
-    def __is_builtin_background_gradient(func_qname: str) -> bool:
-        return func_qname == '_background_gradient'
+from pandas import DataFrame
+from pandas.io.formats.style import Styler
 
-    @staticmethod
-    def __is_builtin_highlight_max(func_qname: str, func: Callable) -> bool:
-        if isinstance(func, partial):
-            return func_qname == '_highlight_value' and func.keywords.get('op', '') == 'max'
-        else:
-            return func_qname.startswith('Styler.highlight_max')
 
-    @staticmethod
-    def __is_builtin_highlight_min(func_qname: str, func: Callable) -> bool:
-        if isinstance(func, partial):
-            return func_qname == '_highlight_value' and func.keywords.get('op', '') == 'min'
-        else:
-            return func_qname.startswith('Styler.highlight_min')
-
-    @staticmethod
-    def __is_builtin_highlight_null(func_qname: str) -> bool:
-        return func_qname.startswith('Styler.highlight_null')
-
-    @staticmethod
-    def __is_builtin_highlight_between(func_qname: str) -> bool:
-        return func_qname == '_highlight_between'
-
-    @staticmethod
-    def __is_builtin_set_properties(func_qname: str) -> bool:
-        return func_qname.startswith('Styler.set_properties')
-
-    @staticmethod
-    def __is_builtin_applymap(func_qname: str) -> bool:
-        return func_qname.startswith('Styler.applymap')
-
-    @staticmethod
-    def __apply_styler_configurations(source_styler: Styler, chunk_styler: Styler):
-        chunk_styler.hide_index_ = source_styler.hide_index_
-        chunk_styler.hide_columns_ = source_styler.hide_columns_
-
-        has_display_funcs = source_styler._display_funcs is not None and len(source_styler._display_funcs) > 0
-        has_cell_content = source_styler.cell_context is not None and len(source_styler.cell_context) > 0
-
-        should_copy = has_display_funcs or has_cell_content
-
-        if should_copy:
-            ri = source_styler.index.get_indexer_for(chunk_styler.index)
-            ci = source_styler.columns.get_indexer_for(chunk_styler.columns)
-            for c_index_in_chunk, c_index_in_source in enumerate(ci):
-                for r_index_in_chunk, r_index_in_source in enumerate(ri):
-                    target_key = (r_index_in_chunk, c_index_in_chunk)
-                    source_key = (r_index_in_source, c_index_in_source)
-
-                    if has_display_funcs and source_key in source_styler._display_funcs:
-                        chunk_styler._display_funcs[target_key] = source_styler._display_funcs[source_key]
-
-                    if has_cell_content and source_key in source_styler.cell_context:
-                        chunk_styler.cell_context[target_key] = source_styler.cell_context[source_key]
-
-import pandas as pd
 
 
 class StyledDataFrameViewerBridge:
     patched_styler_refs = []
 
     @classmethod
-    def create_patched_styler(cls, frame_or_styler) -> PatchedStyler:
-        p = PatchedStyler(frame_or_styler.style) if isinstance(frame_or_styler, pd.DataFrame) else PatchedStyler(
+    def create_patched_styler(cls, frame_or_styler: Union[DataFrame, Styler]) -> PatchedStyler:
+        p = PatchedStyler(frame_or_styler.style) if isinstance(frame_or_styler, DataFrame) else PatchedStyler(
             frame_or_styler)
         cls.patched_styler_refs.append(p)
         return p

@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ df = pd.DataFrame.from_dict({
 def test_chunked(subset, formatter, rows_per_chunk, cols_per_chunk):
     create_and_assert_patched_styler(
         df,
-        lambda styler:  styler.format(formatter, subset=subset),
+        lambda styler: styler.format(formatter, subset=subset),
         rows_per_chunk,
         cols_per_chunk
     )
@@ -50,7 +50,8 @@ def test_chunked(subset, formatter, rows_per_chunk, cols_per_chunk):
 def test_parameters(na_rep, precision, decimal, rows_per_chunk, cols_per_chunk):
     create_and_assert_patched_styler(
         df,
-        lambda styler:  styler.format(formatter='{:+.2f}', na_rep=na_rep, precision=precision, decimal=decimal),
+        lambda styler: styler.format(formatter='{:+.2f}', na_rep=na_rep, precision=precision, decimal=decimal),
         rows_per_chunk,
         cols_per_chunk
     )
+

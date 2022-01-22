@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -22,8 +22,12 @@ from plugin_code.patched_styler import PatchedStyler
 from tests.helpers.asserts.table_extractor import StyledTable, TableExtractor
 
 
-def create_and_assert_patched_styler(df: DataFrame, init_styler_func: Callable[[Styler], None], rows_per_chunk: int,
-                                     cols_per_chunk: int):
+def create_and_assert_patched_styler(
+        df: DataFrame,
+        init_styler_func: Callable[[Styler], None],
+        rows_per_chunk: int,
+        cols_per_chunk: int,
+):
     # Create two independent styler objects - to guarantee that changes on one don't affect the other one
     #
     # There is no way to copy an already initialized styler. "styler.use(other_styler.export())" doesn't duplicate

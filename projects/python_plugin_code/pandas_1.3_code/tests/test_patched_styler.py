@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,39 +11,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
 
-from plugin_code.apply_fallback_patch import ApplyFallbackPatch
-from plugin_code.apply_map_fallback_patch import ApplyMapFallbackPatch
-from plugin_code.background_gradient_patch import BackgroundGradientPatch
-from plugin_code.highlight_between_patch import HighlightBetweenPatch
-
-from plugin_code.highlight_extrema_patch import HighlightExtremaPatch
 from plugin_code.patched_styler import PatchedStyler
+from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
 df = pd.DataFrame.from_dict({("A", "col_0"): [0, 1, 2, 3, np.nan]})
-
-
-@pytest.mark.parametrize(
-    "styler, mapped_class", [
-        (df.style.background_gradient(), BackgroundGradientPatch),
-        (df.style.highlight_between(), HighlightBetweenPatch),
-        (df.style.highlight_min(), HighlightExtremaPatch),
-        (df.style.highlight_max(), HighlightExtremaPatch),
-        (df.style.highlight_null(), ApplyFallbackPatch),
-        (df.style.highlight_quantile(), HighlightBetweenPatch),
-        (df.style.set_properties(), ApplyMapFallbackPatch),
-        (df.style.text_gradient(), BackgroundGradientPatch),
-    ])
-def test_should_handle_builtin_styler(styler, mapped_class):
-    assert_patch(PatchedStyler(styler), mapped_class)
-
-
-def assert_patch(patched_styler: PatchedStyler, classinfo):
-    assert len(patched_styler._PatchedStyler__patched_styles) == 1
-    assert isinstance(patched_styler._PatchedStyler__patched_styles[0], classinfo)
 
 
 def test_table_structure_hide_row_header():
@@ -92,3 +67,43 @@ def test_table_structure_column_level_count():
 def test_table_structure_row_level_count():
     ts = PatchedStyler(df.style).get_table_structure()
     assert ts.row_levels_count == 1
+
+
+other_df = pd.DataFrame.from_dict({
+    "col_0": [0, 1, 2, 3, 4],
+    "col_1": [5, 6, 7, 8, 9],
+    "col_2": [10, 11, 12, 13, 14],
+    "col_3": [15, 16, 17, 18, 19],
+    "col_4": [20, 21, 22, 23, 24],
+})
+
+
+class FakeFormatterDict(dict):
+    def get(self, key):
+        return self.formatter
+
+    @staticmethod
+    def formatter(x):
+        return x
+
+
+@pytest.mark.parametrize("formatter", [FakeFormatterDict(), lambda x: x])
+@pytest.mark.parametrize(
+    "rows_per_chunk, cols_per_chunk", [
+        (1, 2),
+        (len(df.index), len(df.columns))  # single chunk
+    ])
+def test_render_chunk_translates_display_funcs_correct_also_with_hidden_rows_cols(
+        formatter,
+        rows_per_chunk,
+        cols_per_chunk,
+):
+    create_and_assert_patched_styler(
+        other_df,
+        lambda styler: styler
+            .hide_index(pd.IndexSlice[1:3])
+            .hide_columns(["col_1", "col_3"])
+            .format(formatter=formatter),
+        rows_per_chunk,
+        cols_per_chunk
+    )
