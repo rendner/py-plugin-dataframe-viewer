@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,11 +47,6 @@ open class ChunkConverter(
     }
 
     private val tableElementProvider = createTableElementProvider(document)
-    private val rowColumnTranslator: RowColTranslator
-
-    init {
-        rowColumnTranslator = createIndexTranslator(document)
-    }
 
     override fun convertText(excludeRowHeader: Boolean, excludeColumnHeader: Boolean): ChunkData {
         return tableElementProvider.let { elementProvider ->
@@ -117,47 +112,7 @@ open class ChunkConverter(
         }
     }
 
-    private fun createIndexTranslator(document: Document): RowColTranslator {
-        val metaTags = document.selectFirst("head").select("meta")
-
-        var rowTranslator: IndexTranslator? = null
-        var columnTranslator: IndexTranslator? = null
-        for (metaTag in metaTags) {
-            val name = metaTag.attr("name")
-
-            if (name == "row_indexer") {
-                rowTranslator = convertToIndexTranslator(metaTag.attr("content"))
-            } else if (name == "col_indexer") {
-                columnTranslator = convertToIndexTranslator(metaTag.attr("content"))
-            }
-        }
-
-        return RowColTranslator(rowTranslator ?: NOOPTranslator(), columnTranslator ?: NOOPTranslator())
-    }
-
-    private fun convertToIndexTranslator(content: String): IndexTranslator {
-        return if (content.startsWith("[")) {
-            val strings = content.subSequence(1, content.length - 1)
-                .split(" ")
-                .filter { it.isNotEmpty() }
-                .map { it.trim() } // to remove newlines
-            SequenceIndex(IntArray(strings.size) { strings[it].toInt() })
-        } else {
-            OffsetIndex(content.toInt())
-        }
-    }
-
     protected open fun createTableStyleComputer(document: Document): IStyleComputer {
-        // todo: __prio_2__ fix row/col indices (recalculate indices - offset or indexOffsetProvider are stored in the meta-html tags)
-        /*
-
-        todo: first add visual tests (export data) which demonstrate the problem
-
-        The user can define custom css styles for a cell by using 'class="col_heading level0 col1"'
-        At the moment we don't adjust these indexes when we fetch chunks - therefore the calculated css should not match
-         with the expected result.
-        -> Adjust the indices as we do on python side.
-         */
         val parser = CSSOMParser(SACParserCSS3())
 
         @Suppress("UNNECESSARY_SAFE_CALL")

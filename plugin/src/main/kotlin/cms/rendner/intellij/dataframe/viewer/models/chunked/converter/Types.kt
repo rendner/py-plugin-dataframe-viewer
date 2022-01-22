@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,20 +25,3 @@ enum class HeaderCssClasses(val value: String) {
     BLANK_CLASS("blank"),
     // don't use the def of "BLANK_VALUE" because it has changed between 1.2.x and 1.3.x
 }
-
-interface IndexTranslator {
-    fun translate(index: Int): Int
-}
-class SequenceIndex(private val sequence: IntArray): IndexTranslator {
-    override fun translate(index: Int) = sequence[index]
-}
-class OffsetIndex(private val offset: Int): IndexTranslator {
-    override fun translate(index: Int) = offset + index
-}
-class NOOPTranslator: IndexTranslator {
-    override fun translate(index: Int) = index
-}
-class RowColTranslator(
-    val row: IndexTranslator,
-    val column: IndexTranslator
-)
