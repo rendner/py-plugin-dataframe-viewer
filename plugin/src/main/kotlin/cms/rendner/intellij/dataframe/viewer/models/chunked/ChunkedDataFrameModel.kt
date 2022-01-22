@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,21 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
+import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.events.ChunkTableModelEvent
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataResultHandler
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
-import cms.rendner.intellij.dataframe.viewer.models.*
 import com.intellij.openapi.diagnostic.Logger
 import javax.swing.table.AbstractTableModel
 
-
+/**
+ * Fetches thd model data chunkwise via the specified [chunkDataLoader].
+ *
+ * @param tableStructure describes the structure of the model.
+ * @param chunkDataLoader used for lazy data loading.
+ * The [IChunkDataLoader.dispose] method of the [chunkDataLoader] is automatically called when the model is disposed.
+ */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
     private val chunkDataLoader: IChunkDataLoader
@@ -65,6 +71,8 @@ class ChunkedDataFrameModel(
     private val myNotYetLoadedValue = StringValue("")
     private val myNotYetLoadedChunkValues = ChunkValuesPlaceholder(myNotYetLoadedValue)
 
+    private var disposed: Boolean = false
+
     init {
         chunkDataLoader.setResultHandler(this)
 
@@ -75,10 +83,14 @@ class ChunkedDataFrameModel(
     }
 
     override fun dispose() {
-        myFailedChunks.clear()
-        myFetchedChunkValues.clear()
-        myFetchedChunkRowHeaderLabels.clear()
-        myFetchedChunkColumnHeaderLabels.clear()
+        if (!disposed) {
+            disposed = true
+            chunkDataLoader.dispose()
+            myFailedChunks.clear()
+            myFetchedChunkValues.clear()
+            myFetchedChunkRowHeaderLabels.clear()
+            myFetchedChunkColumnHeaderLabels.clear()
+        }
     }
 
     override fun getValueDataModel(): ITableValueDataModel {
@@ -166,7 +178,7 @@ class ChunkedDataFrameModel(
             return values
         }
 
-        if (chunkDataLoader.isAlive() && !myFailedChunks.contains(chunkCoordinates)) {
+        if (!disposed && chunkDataLoader.isAlive() && !myFailedChunks.contains(chunkCoordinates)) {
             chunkDataLoader.addToLoadingQueue(
                 LoadRequest(
                     chunkCoordinates,
@@ -180,6 +192,7 @@ class ChunkedDataFrameModel(
     }
 
     override fun onChunkLoaded(request: LoadRequest, chunkData: ChunkData) {
+        if (disposed) return
         val chunkStartIndices = request.chunkCoordinates
 
         if (myFetchedLegendHeaders == null) {
@@ -211,10 +224,12 @@ class ChunkedDataFrameModel(
     }
 
     override fun onStyledValues(request: LoadRequest, chunkValues: ChunkValues) {
+        if (disposed) return
         setChunkValues(request.chunkCoordinates, chunkValues)
     }
 
     override fun onError(request: LoadRequest, throwable: Throwable) {
+        if (disposed) return
         logger.error("Failed to load chunk '${request}':", throwable)
         myFailedChunks.add(request.chunkCoordinates)
     }

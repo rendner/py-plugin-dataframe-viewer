@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
 
-internal class ChunkFetchLogicTests {
+internal class ChunkedDataFrameModelTest {
 
     private val chunkSize = ChunkSize(2, 2)
 
@@ -34,9 +34,19 @@ internal class ChunkFetchLogicTests {
     private lateinit var dataProvider: ChunkDataProvider
 
 
-    private fun setup(tableStructure: TableStructure) {
+    private fun setup(tableStructure: TableStructure, loaderDisposeCallback: (() -> Unit)? = null) {
         dataProvider = ChunkDataProvider(chunkSize, ChunkDataAnswerBuilder())
-        model = ChunkedDataFrameModel(tableStructure, FakeChunkLoader(dataProvider))
+        model = ChunkedDataFrameModel(tableStructure, FakeChunkLoader(dataProvider, loaderDisposeCallback))
+    }
+
+    @Test
+    fun doesCallDisposeOnLoader() {
+        var loaderDisposed = false
+        setup(createTableStructure()) { loaderDisposed = true }
+
+        model.dispose()
+
+        assertThat(loaderDisposed).isEqualTo(true)
     }
 
     @Test
@@ -234,7 +244,8 @@ internal class ChunkFetchLogicTests {
     }
 
     private class FakeChunkLoader(
-        val chunkDataProvider: ChunkDataProvider
+        val chunkDataProvider: ChunkDataProvider,
+        val disposeCallback: (() -> Unit)?
     ) : IChunkDataLoader {
         private var resultHandler: IChunkDataResultHandler? = null
 
@@ -250,7 +261,9 @@ internal class ChunkFetchLogicTests {
 
         override fun isAlive() = true
         override val chunkSize = chunkDataProvider.chunkSize
-        override fun dispose() {}
+        override fun dispose() {
+            disposeCallback?.let { it() }
+        }
     }
 
     private class ChunkDataProvider(
