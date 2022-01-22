@@ -336,7 +336,20 @@ tasks {
     }
 
     processResources {
-        doLast {
+        // Note:
+        // Copying the resources has to happen in "doFirst" instead of "doLast".
+        //
+        // Problem:
+        // When using "doLast" and running the gradle-task "runIde", the ide is started with the old
+        // resources. The resources are copied, but it seems the ide is started to early?
+        //
+        // Traceability:
+        // - switch to "doLast"
+        // - delete all "src/resources/pandas_x.y" folders
+        // - run gradle-task "runIde"
+        // - try to use the plugin code (by inspecting a DataFrame.style)
+        // - plugin crashes because the resources are not available
+        doFirst {
             logger.lifecycle("copy 'plugin_code' files")
             pythonDockerImages.forEach { entry ->
                 entry.pipenvEnvironments.forEach { pipenvEnvironment ->
