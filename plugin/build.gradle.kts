@@ -275,7 +275,7 @@ tasks {
             val addFilesToGit by register<Exec>("addTestDataToGit_$pipEnvEnvironment") {
                 workingDir = project.file("src/test/resources/generated/$pipEnvEnvironment")
                 executable = "git"
-                args("add", "--all")
+                args("add", ".")
                 shouldRunAfter(extractComputedCSS)
             }
 
