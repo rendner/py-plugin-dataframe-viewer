@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ def highlight_min_values(data, chunk_parent=None, **kwargs):
 def highlight_extrema(data, extrema, color, chunk_parent=None):
     d = data if chunk_parent is None else chunk_parent
     attr = f'background-color: {color};'
-    if extrema is "min":
+    if extrema == "min":
         return np.where(data == np.nanmin(d.to_numpy()), attr, None)
     else:
         return np.where(data == np.nanmax(d.to_numpy()), attr, None)

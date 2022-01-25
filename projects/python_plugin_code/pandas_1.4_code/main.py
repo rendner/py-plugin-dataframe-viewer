@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -16,18 +16,18 @@ COPY_MARKER = "# == copy after here =="
 
 
 def generate_plugin_code():
+    # the order of the files matters (Python does not allow calling of a function/class before declaring it)
     file_names = [
-        'apply_args.py',
-        'base_apply_patcher.py',
-        'apply_fallback_patch.py',
-        'apply_map_args.py',
-        'base_apply_map_patcher.py',
-        'apply_map_fallback_patch.py',
-        'background_gradient_patch.py',
-        'highlight_extrema_patch.py',
-        'highlight_between_patch.py',
-        'exported_style.py',
+        'styler_todo.py',
+        'todo_patcher.py',
+        'apply_map_patcher.py',
+        'apply_patcher.py',
+        'background_gradient_patcher.py',
+        'chunk_parent_provider.py',
+        'highlight_between_patcher.py',
+        'highlight_extrema_patcher.py',
         'table_structure.py',
+        'todos_patcher.py',
         'patched_styler.py',
         'styled_data_frame_viewer_bridge.py',
     ]
