@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,13 +17,14 @@ class TableStructure:
     def __init__(self,
                  rows_count: int,
                  columns_count: int,
+                 visible_rows_count: int,
                  visible_columns_count: int,
                  row_levels_count: int,
                  column_levels_count: int,
                  hide_row_header: bool):
         self.rows_count = rows_count
         self.columns_count = columns_count
-        self.visible_rows_count = rows_count
+        self.visible_rows_count = visible_rows_count
         self.visible_columns_count = visible_columns_count
         self.row_levels_count = row_levels_count
         self.column_levels_count = column_levels_count
