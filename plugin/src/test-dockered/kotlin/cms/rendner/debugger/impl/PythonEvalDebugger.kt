@@ -216,7 +216,11 @@ abstract class PythonEvalDebugger {
 
     private fun lastLineIsPrompt(lines: List<String>): Boolean {
         if (lines.isNotEmpty()) {
-            if (lines.last() == LinePrefixes.DEBUGGER_PROMPT.label) {
+            // mostly the last line, if prompt, only contains "(Pdb) "
+            // but it could also contain additional info like:
+            // "(Pdb) <string>:658: FutureWarning: ..."
+            // therefore use "startsWith" to check for prompt
+            if (lines.last().startsWith(LinePrefixes.DEBUGGER_PROMPT.label)) {
                 return true
             }
         }
