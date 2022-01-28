@@ -50,7 +50,7 @@ def _assert_render(styler: Styler, patched_styler: PatchedStyler, rows_per_chunk
     if actual_table is None:
         table_structure = patched_styler.get_table_structure()
         # special case table has no columns/rows and therefore no cell values
-        assert table_structure.visible_columns_count == 0 or table_structure.visible_rows_count == 0
+        assert table_structure.columns_count == 0 or table_structure.rows_count == 0
         assert _count_cell_values(expected_table) == 0
         return
 
@@ -75,8 +75,8 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
     table_extractor = TableExtractor()
     table_structure = patched_styler.get_table_structure()
 
-    for ri in range(0, table_structure.visible_rows_count, rows_per_chunk):
-        for ci in range(0, table_structure.visible_columns_count, cols_per_chunk):
+    for ri in range(0, table_structure.rows_count, rows_per_chunk):
+        for ci in range(0, table_structure.columns_count, cols_per_chunk):
             # fetch column header only for whole first row (all other rows have the same)
             exclude_col_header = ri > 0
             # fetch row header only for first col-block (all others have the same row header)

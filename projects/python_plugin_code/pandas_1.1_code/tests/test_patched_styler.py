@@ -38,17 +38,15 @@ def test_table_structure_rows_count():
     assert ts.rows_count == 5
 
 
-def test_table_structure_visible_columns_count():
+def test_table_structure_columns_count():
     styler = df.style.hide_columns(subset=df.columns)
     ts = PatchedStyler(styler).get_table_structure()
-    assert ts.visible_columns_count == 0
-    assert ts.columns_count == 1
+    assert ts.columns_count == 0
 
 
-def test_table_structure_visible_rows_count():
+def test_table_structure_rows_count():
     styler = df.style.hide_index()
     ts = PatchedStyler(styler).get_table_structure()
-    assert ts.visible_rows_count == 5
     assert ts.rows_count == 5
 
 

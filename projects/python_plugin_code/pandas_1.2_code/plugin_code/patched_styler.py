@@ -254,10 +254,8 @@ class PatchedStyler:
 
     def get_table_structure(self) -> TableStructure:
         return TableStructure(
-            rows_count=len(self.__styler.data.index),
-            columns_count=len(self.__styler.data.columns),
-            visible_rows_count=len(self.__visible_data.index),
-            visible_columns_count=len(self.__visible_data.columns),
+            rows_count=len(self.__visible_data.index),
+            columns_count=len(self.__visible_data.columns),
             row_levels_count=self.__visible_data.index.nlevels,
             column_levels_count=self.__visible_data.columns.nlevels,
             hide_row_header=self.__styler.hidden_index,

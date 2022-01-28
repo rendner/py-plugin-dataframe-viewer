@@ -401,16 +401,12 @@ class TableStructure:
     def __init__(self,
                  rows_count: int,
                  columns_count: int,
-                 visible_rows_count: int,
-                 visible_columns_count: int,
                  row_levels_count: int,
                  column_levels_count: int,
                  hide_row_header: bool,
                  hide_column_header: bool):
         self.rows_count = rows_count
         self.columns_count = columns_count
-        self.visible_rows_count = visible_rows_count
-        self.visible_columns_count = visible_columns_count
         self.row_levels_count = row_levels_count
         self.column_levels_count = column_levels_count
         self.hide_row_header = hide_row_header
@@ -705,10 +701,8 @@ class PatchedStyler:
 
     def get_table_structure(self) -> TableStructure:
         return TableStructure(
-            rows_count=len(self.__styler.data.index),
-            columns_count=len(self.__styler.data.columns),
-            visible_rows_count=len(self.__visible_data.index),
-            visible_columns_count=len(self.__visible_data.columns),
+            rows_count=len(self.__visible_data.index),
+            columns_count=len(self.__visible_data.columns),
             row_levels_count=self.__visible_data.index.nlevels - self.__styler.hide_index_.count(True),
             column_levels_count=self.__visible_data.columns.nlevels - self.__styler.hide_columns_.count(True),
             hide_row_header=all(self.__styler.hide_index_),

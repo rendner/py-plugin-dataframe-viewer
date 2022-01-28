@@ -88,11 +88,11 @@ def test_frame_can_handle_reducing_subset(subset):
 
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.background_gradient.html
 pandas_api_example_df = pd.DataFrame(
-        columns=["City", "Temp (c)", "Rain (mm)", "Wind (m/s)"],
-        data=[["Stockholm", 21.6, 5.0, 3.2],
-              ["Oslo", 22.4, 13.3, 3.1],
-              ["Copenhagen", 24.5, 0.0, 6.7]]
-    )
+    columns=["City", "Temp (c)", "Rain (mm)", "Wind (m/s)"],
+    data=[["Stockholm", 21.6, 5.0, 3.2],
+          ["Oslo", 22.4, 13.3, 3.1],
+          ["Copenhagen", 24.5, 0.0, 6.7]]
+)
 
 
 def test_pandas_api_example_1():

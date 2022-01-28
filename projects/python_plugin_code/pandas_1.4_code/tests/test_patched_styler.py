@@ -48,18 +48,16 @@ def test_table_structure_rows_count():
     assert ts.rows_count == 6
 
 
-def test_table_structure_visible_columns_count():
+def test_table_structure_columns_count():
     styler = df.style.hide(axis="columns", subset=df.columns)
     ts = PatchedStyler(styler).get_table_structure()
-    assert ts.visible_columns_count == 0
-    assert ts.columns_count == 6
+    assert ts.columns_count == 0
 
 
-def test_table_structure_visible_rows_count():
+def test_table_structure_rows_count():
     styler = df.style.hide(axis="index", subset=df.index)
     ts = PatchedStyler(styler).get_table_structure()
-    assert ts.visible_rows_count == 0
-    assert ts.rows_count == 6
+    assert ts.rows_count == 0
 
 
 def test_table_structure_column_level_count():
@@ -77,7 +75,7 @@ def test_table_structure_index_hide_one_level():
     ts = PatchedStyler(styler).get_table_structure()
     assert ts.hide_row_header is False
     assert ts.row_levels_count == 1
-    assert ts.visible_rows_count == 6
+    assert ts.rows_count == 6
 
 
 def test_table_structure_index_hide_names():
@@ -85,7 +83,7 @@ def test_table_structure_index_hide_names():
     ts = PatchedStyler(styler).get_table_structure()
     assert ts.hide_row_header is True
     assert ts.row_levels_count == 0
-    assert ts.visible_rows_count == 6
+    assert ts.rows_count == 6
 
 
 other_df = pd.DataFrame.from_dict({
