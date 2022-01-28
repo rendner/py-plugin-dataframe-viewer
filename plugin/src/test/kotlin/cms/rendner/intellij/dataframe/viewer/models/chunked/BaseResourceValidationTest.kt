@@ -103,8 +103,6 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
         return TableStructure(
             rowsCount = properties.getProperty("rowsCount").toInt(),
             columnsCount = properties.getProperty("columnsCount").toInt(),
-            visibleRowsCount = properties.getProperty("visibleRowsCount").toInt(),
-            visibleColumnsCount = properties.getProperty("visibleColumnsCount").toInt(),
             rowLevelsCount = properties.getProperty("rowLevelsCount").toInt(),
             columnLevelsCount = properties.getProperty("columnLevelsCount").toInt(),
             hideRowHeader = properties.getProperty("hideRowHeader")!!.toBoolean(),
@@ -142,8 +140,8 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
     ) {
         val valueModel = dateFrameModel.getValueDataModel()
         if (valueModel.columnCount == 0 && valueModel.rowCount == 0) return
-        for (row in 0 until tableStructure.visibleRowsCount step chunkSize.rows) {
-            for (column in 0 until tableStructure.visibleColumnsCount step chunkSize.columns) {
+        for (row in 0 until tableStructure.rowsCount step chunkSize.rows) {
+            for (column in 0 until tableStructure.columnsCount step chunkSize.columns) {
                 valueModel.getValueAt(row, column)
             }
         }

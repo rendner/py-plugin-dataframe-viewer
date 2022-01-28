@@ -137,14 +137,12 @@ class PythonCodeBridge {
                 pythonValue.evaluator.evaluate("str(${pythonValue.pythonRefEvalExpr}.get_table_structure().__dict__)")
             val propsMap = convertStringifiedDictionary(evalResult.value)
 
-            val visibleRowsCount = propsMap["visible_rows_count"]?.toInt() ?: 0
+            val rowsCount = propsMap["rows_count"]?.toInt() ?: 0
 
             return TableStructure(
-                rowsCount = propsMap["rows_count"]?.toInt() ?: 0,
-                columnsCount = propsMap["columns_count"]?.toInt() ?: 0,
-                visibleRowsCount = visibleRowsCount,
+                rowsCount = rowsCount,
                 // if we have no rows we interpret the DataFrame as empty - therefore no columns
-                visibleColumnsCount = if (visibleRowsCount > 0) propsMap["visible_columns_count"]?.toInt() ?: 0 else 0,
+                columnsCount = if (rowsCount > 0) propsMap["columns_count"]?.toInt() ?: 0 else 0,
                 rowLevelsCount = propsMap["row_levels_count"]?.toInt() ?: 0,
                 columnLevelsCount = propsMap["column_levels_count"]?.toInt() ?: 0,
                 hideRowHeader = propsMap["hide_row_header"] == "True",

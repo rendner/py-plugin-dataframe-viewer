@@ -142,7 +142,7 @@ internal class CSSValidationTest : BaseResourceValidationTest("css-validation") 
             BlockingChunkDataLoader(
                 createHTMLFileEvaluator(
                     TestCasePath.resolveExpectedResultFile(testCaseDir),
-                    ChunkSize(tableStructure.visibleRowsCount, tableStructure.visibleColumnsCount)
+                    ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount)
                 )
             )
         )
@@ -157,7 +157,7 @@ internal class CSSValidationTest : BaseResourceValidationTest("css-validation") 
             BlockingChunkDataLoader(
                 createHTMLFileEvaluator(
                     TestCasePath.resolveComputedCSSFile(testCaseDir),
-                    ChunkSize(tableStructure.visibleRowsCount, tableStructure.visibleColumnsCount)
+                    ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount)
                 )
             ) { document -> ComputedCSSChunkConverter(document) }
         )

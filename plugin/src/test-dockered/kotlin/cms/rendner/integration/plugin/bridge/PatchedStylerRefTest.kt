@@ -34,8 +34,6 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
                 TableStructure(
                     rowsCount = 2,
                     columnsCount = 2,
-                    visibleRowsCount = 2,
-                    visibleColumnsCount = 2,
                     rowLevelsCount = 1,
                     columnLevelsCount = 1,
                     hideRowHeader = false,

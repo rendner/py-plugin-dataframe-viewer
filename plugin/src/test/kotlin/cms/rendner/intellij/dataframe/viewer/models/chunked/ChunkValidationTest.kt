@@ -149,7 +149,7 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
             BlockingChunkDataLoader(
                 createHTMLFileEvaluator(
                     TestCasePath.resolveExpectedResultFile(testCaseDir),
-                    ChunkSize(tableStructure.visibleRowsCount, tableStructure.visibleColumnsCount)
+                    ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount)
                 )
             )
         )

@@ -102,8 +102,8 @@ class ChunkedDataFrameModel(
     }
 
     private fun getValueAt(rowIndex: Int, columnIndex: Int): Value {
-        checkIndex("RowIndex", rowIndex, tableStructure.visibleRowsCount)
-        checkIndex("ColumnIndex", columnIndex, tableStructure.visibleColumnsCount)
+        checkIndex("RowIndex", rowIndex, tableStructure.rowsCount)
+        checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
         val chunkStartIndices = createChunkCoordinates(rowIndex, columnIndex)
         return getOrFetchChunk(chunkStartIndices)
             .value(
@@ -113,7 +113,7 @@ class ChunkedDataFrameModel(
     }
 
     private fun getRowHeaderLabelAt(rowIndex: Int): IHeaderLabel {
-        checkIndex("RowIndex", rowIndex, tableStructure.visibleRowsCount)
+        checkIndex("RowIndex", rowIndex, tableStructure.rowsCount)
         val firstIndex = getIndexOfFirstRowInChunk(rowIndex)
         val chunkHeaders = myFetchedChunkRowHeaderLabels[firstIndex]
             ?: return getNotYetLoadedHeaderLabel(tableStructure.rowLevelsCount)
@@ -137,7 +137,7 @@ class ChunkedDataFrameModel(
     }
 
     private fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel {
-        checkIndex("ColumnIndex", columnIndex, tableStructure.visibleColumnsCount)
+        checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
         if (tableStructure.hideColumnHeader) {
             return getNotYetLoadedHeaderLabel(tableStructure.columnLevelsCount)
         }
@@ -270,8 +270,8 @@ class ChunkedDataFrameModel(
     }
 
     private class ValueModel(private val source: ChunkedDataFrameModel) : AbstractTableModel(), ITableValueDataModel {
-        override fun getRowCount() = source.tableStructure.visibleRowsCount
-        override fun getColumnCount() = source.tableStructure.visibleColumnsCount
+        override fun getRowCount() = source.tableStructure.rowsCount
+        override fun getColumnCount() = source.tableStructure.columnsCount
         override fun getValueAt(rowIndex: Int, columnIndex: Int) = source.getValueAt(rowIndex, columnIndex)
         override fun getColumnHeaderAt(columnIndex: Int) = source.getColumnHeaderAt(columnIndex)
         override fun getColumnName(columnIndex: Int) = getColumnHeaderAt(columnIndex).text()
@@ -282,7 +282,7 @@ class ChunkedDataFrameModel(
     }
 
     private class IndexModel(private val source: ChunkedDataFrameModel) : AbstractTableModel(), ITableIndexDataModel {
-        override fun getRowCount() = source.tableStructure.visibleRowsCount
+        override fun getRowCount() = source.tableStructure.rowsCount
         override fun getColumnCount() = if (source.tableStructure.hideRowHeader) 0 else 1
         override fun getColumnName(columnIndex: Int) = getColumnName()
         override fun getValueAt(rowIndex: Int) = source.getRowHeaderLabelAt(rowIndex)

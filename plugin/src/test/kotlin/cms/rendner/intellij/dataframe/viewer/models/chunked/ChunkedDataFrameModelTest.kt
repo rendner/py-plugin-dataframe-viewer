@@ -138,8 +138,8 @@ internal class ChunkedDataFrameModelTest {
             createTableStructure(
                 hideRowHeader = false,
                 hideColumnHeader = false,
-                visibleRowCount = 0,
-                visibleColumnCount = 0,
+                rowCount = 0,
+                columnCount = 0,
             )
         )
 
@@ -162,8 +162,8 @@ internal class ChunkedDataFrameModelTest {
 
         // fetch all values
         val valueModel = model.getValueDataModel()
-        for (r in 0 until tableStructure.visibleRowsCount) {
-            for (c in 0 until tableStructure.visibleColumnsCount) {
+        for (r in 0 until tableStructure.rowsCount) {
+            for (c in 0 until tableStructure.columnsCount) {
                 valueModel.getValueAt(r, c)
             }
         }
@@ -194,8 +194,8 @@ internal class ChunkedDataFrameModelTest {
 
         // load only the last chunk
         model.getValueDataModel().getValueAt(
-            tableStructure.visibleRowsCount - 1,
-            tableStructure.visibleColumnsCount - 1
+            tableStructure.rowsCount - 1,
+            tableStructure.columnsCount - 1
         )
 
         assertThat(dataProvider.recordedRequests).hasSize(1)
@@ -212,8 +212,8 @@ internal class ChunkedDataFrameModelTest {
 
         // fetch all values
         val valueModel = model.getValueDataModel()
-        for (r in 0 until tableStructure.visibleRowsCount) {
-            for (c in 0 until tableStructure.visibleColumnsCount) {
+        for (r in 0 until tableStructure.rowsCount) {
+            for (c in 0 until tableStructure.columnsCount) {
                 valueModel.getValueAt(r, c)
             }
         }
@@ -228,14 +228,12 @@ internal class ChunkedDataFrameModelTest {
     private fun createTableStructure(
         hideRowHeader: Boolean = false,
         hideColumnHeader: Boolean = false,
-        visibleRowCount: Int = chunkSize.rows * 2,
-        visibleColumnCount: Int = chunkSize.columns * 2,
+        rowCount: Int = chunkSize.rows * 4,
+        columnCount: Int = chunkSize.columns * 4,
     ): TableStructure {
         return TableStructure(
-            visibleRowCount * 2,
-            visibleColumnCount * 2,
-            visibleRowCount,
-            visibleColumnCount,
+            rowCount,
+            columnCount,
             1,
             1,
             hideRowHeader,

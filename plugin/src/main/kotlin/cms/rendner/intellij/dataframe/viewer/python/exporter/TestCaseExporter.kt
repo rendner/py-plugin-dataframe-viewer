@@ -39,8 +39,8 @@ class TestCaseExporter(private val baseExportDir: Path) {
         val patchedStyler = pythonBridge.createPatchedStyler(testCase.styler)
         try {
             val tableStructure = patchedStyler.evaluateTableStructure()
-            if (tableStructure.visibleRowsCount > 200) {
-                throw IllegalArgumentException("DataFrame has to many rows (${tableStructure.visibleRowsCount}), can't generate test data from it. Please use a DataFrame with max 200 rows.")
+            if (tableStructure.rowsCount > 200) {
+                throw IllegalArgumentException("DataFrame has to many rows (${tableStructure.rowsCount}), can't generate test data from it. Please use a DataFrame with max 200 rows.")
             }
 
             println("export test case ${++exportCounter}: ${testCase.exportDirectoryPath}")
@@ -64,7 +64,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
         val evaluator =
             AllAtOnceEvaluator(
                 patchedStyler,
-                ChunkSize(tableStructure.visibleRowsCount, tableStructure.visibleColumnsCount)
+                ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount)
             )
         val result = evaluator.evaluate()
         Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir)).use {
@@ -80,8 +80,8 @@ class TestCaseExporter(private val baseExportDir: Path) {
     ) {
         val chunkSize = exportData.exportChunkSize
         val evaluator = ChunkEvaluator(patchedStyler, chunkSize)
-        for (row in 0 until tableStructure.visibleRowsCount step chunkSize.rows) {
-            for (column in 0 until tableStructure.visibleColumnsCount step chunkSize.columns) {
+        for (row in 0 until tableStructure.rowsCount step chunkSize.rows) {
+            for (column in 0 until tableStructure.columnsCount step chunkSize.columns) {
                 val result = evaluator.evaluate(ChunkCoordinates(row, column), column > 0, row > 0)
                 Files.newBufferedWriter(TestCasePath.resolveChunkResultFile(exportDir, row, column)).use {
                     it.write(prettifyHtmlAndReplaceRandomTableId(result))
@@ -112,8 +112,6 @@ class TestCaseExporter(private val baseExportDir: Path) {
             Properties().apply {
                 setProperty("rowsCount", tableStructure.rowsCount.toString())
                 setProperty("columnsCount", tableStructure.columnsCount.toString())
-                setProperty("visibleRowsCount", tableStructure.visibleRowsCount.toString())
-                setProperty("visibleColumnsCount", tableStructure.visibleColumnsCount.toString())
                 setProperty("rowLevelsCount", tableStructure.rowLevelsCount.toString())
                 setProperty("columnLevelsCount", tableStructure.columnLevelsCount.toString())
                 setProperty("hideRowHeader", tableStructure.hideRowHeader.toString())
