@@ -653,9 +653,9 @@ class PatchedStyler:
         copy._todo = patched_todos
 
         if exclude_row_header:
-            copy.hide_index()
+            copy.hide(axis="index")
         if exclude_column_header:
-            copy.hide_columns()
+            copy.hide(axis="columns")
 
         copy._compute()
         return copy
@@ -709,8 +709,8 @@ class PatchedStyler:
             columns_count=len(self.__styler.data.columns),
             visible_rows_count=len(self.__visible_data.index),
             visible_columns_count=len(self.__visible_data.columns),
-            row_levels_count=self.__visible_data.index.nlevels,
-            column_levels_count=self.__visible_data.columns.nlevels,
+            row_levels_count=self.__visible_data.index.nlevels - self.__styler.hide_index_.count(True),
+            column_levels_count=self.__visible_data.columns.nlevels - self.__styler.hide_columns_.count(True),
             hide_row_header=all(self.__styler.hide_index_),
             hide_column_header=all(self.__styler.hide_columns_)
         )
@@ -736,7 +736,9 @@ class PatchedStyler:
         target.table_styles = source.table_styles
         target.table_attributes = source.table_attributes
         target.hide_columns_ = source.hide_columns_
+        target.hide_column_names = source.hide_column_names
         target.hide_index_ = source.hide_index_
+        target.hide_index_names = source.hide_index_names
         target.ctx = source.ctx
         target.cell_context = source.cell_context
         target._display_funcs = source._display_funcs
@@ -745,8 +747,6 @@ from typing import Union
 
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
-
-
 
 
 class StyledDataFrameViewerBridge:

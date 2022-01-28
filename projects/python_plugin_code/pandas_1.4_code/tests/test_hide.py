@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -23,6 +24,9 @@ df = pd.DataFrame.from_dict({
     "col_3": [15, 16, 17, 18, 19],
     "col_4": [20, 21, 22, 23, 24],
 })
+
+midx = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]])
+multi_df = pd.DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
 
 
 @pytest.mark.parametrize("subset", [None, df.columns.tolist(), ["col_1", "col_4"]])
@@ -95,4 +99,76 @@ def test_hide_index_and_columns_chunked():
         lambda styler: styler.hide(axis="columns").hide(axis="index"),
         2,
         2
+    )
+
+
+@pytest.mark.parametrize(
+    "rows_per_chunk, cols_per_chunk", [
+        (1, 2),
+        (len(df.index), len(df.columns))  # single chunk
+    ])
+def test_multi_hide_index_retain_values(rows_per_chunk, cols_per_chunk):
+    create_and_assert_patched_styler(
+        multi_df,
+        lambda styler: styler.hide(),
+        rows_per_chunk,
+        cols_per_chunk
+    )
+
+
+@pytest.mark.parametrize(
+    "rows_per_chunk, cols_per_chunk", [
+        (1, 2),
+        (len(df.index), len(df.columns))  # single chunk
+    ])
+def test_multi_hide_specific_rows_retain_index(rows_per_chunk, cols_per_chunk):
+    create_and_assert_patched_styler(
+        multi_df,
+        lambda styler: styler.hide(subset=(slice(None), ["a", "c"])),
+        rows_per_chunk,
+        cols_per_chunk
+    )
+
+
+@pytest.mark.parametrize(
+    "rows_per_chunk, cols_per_chunk", [
+        (1, 2),
+        (len(df.index), len(df.columns))  # single chunk
+    ])
+def test_multi_hide_specific_rows_and_index_through_chaining(rows_per_chunk, cols_per_chunk):
+    create_and_assert_patched_styler(
+        multi_df,
+        lambda styler: styler.hide(subset=(slice(None), ["a", "c"])).hide(),
+        rows_per_chunk,
+        cols_per_chunk
+    )
+
+
+@pytest.mark.parametrize(
+    "rows_per_chunk, cols_per_chunk", [
+        (1, 2),
+        (len(df.index), len(df.columns))  # single chunk
+    ])
+def test_multi_hide_specific_level(rows_per_chunk, cols_per_chunk):
+    create_and_assert_patched_styler(
+        multi_df,
+        lambda styler: styler.hide(level=1),
+        rows_per_chunk,
+        cols_per_chunk
+    )
+
+
+@pytest.mark.parametrize(
+    "rows_per_chunk, cols_per_chunk", [
+        (1, 2),
+        (len(df.index), len(df.columns))  # single chunk
+    ])
+def test_multi_hide_index_level_names(rows_per_chunk, cols_per_chunk):
+    my_multi_df = multi_df.copy()
+    my_multi_df.index.names = ["lev0", "lev1"]
+    create_and_assert_patched_styler(
+        my_multi_df,
+        lambda styler: styler.hide(names=True),
+        rows_per_chunk,
+        cols_per_chunk
     )

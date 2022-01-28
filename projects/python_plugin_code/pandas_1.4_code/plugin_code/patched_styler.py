@@ -240,10 +240,8 @@ class PatchedStyler:
             columns_count=len(self.__styler.data.columns),
             visible_rows_count=len(self.__visible_data.index),
             visible_columns_count=len(self.__visible_data.columns),
-            row_levels_count=self.__visible_data.index.nlevels,
-            column_levels_count=self.__visible_data.columns.nlevels,
-            # todo: think about how to support it (added in 1.4.0)
-            # currently, if all levels are hidden we hide the headers
+            row_levels_count=self.__visible_data.index.nlevels - self.__styler.hide_index_.count(True),
+            column_levels_count=self.__visible_data.columns.nlevels - self.__styler.hide_columns_.count(True),
             hide_row_header=all(self.__styler.hide_index_),
             hide_column_header=all(self.__styler.hide_columns_)
         )
@@ -271,10 +269,12 @@ class PatchedStyler:
         target.table_styles = source.table_styles
         target.table_attributes = source.table_attributes
         target.hide_columns_ = source.hide_columns_
+        target.hide_column_names = source.hide_column_names
         target.hide_index_ = source.hide_index_
+        target.hide_index_names = source.hide_index_names
         target.ctx = source.ctx
         target.cell_context = source.cell_context
         target._display_funcs = source._display_funcs
         # don't copy "_todo"
         # don't copy "hidden_columns" and "self.hidden_rows"
-        #   - these values are already used to calculate "self.__visible_df"
+        #   - these values are already used to calculate "self.__visible_data"

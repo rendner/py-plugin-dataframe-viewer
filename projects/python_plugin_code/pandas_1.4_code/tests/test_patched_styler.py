@@ -14,11 +14,14 @@
 import pandas as pd
 import numpy as np
 import pytest
+from pandas import MultiIndex, DataFrame
 
 from plugin_code.patched_styler import PatchedStyler
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
-df = pd.DataFrame.from_dict({("A", "col_0"): [0, 1, 2, 3, np.nan]})
+midx = MultiIndex.from_product([["x", "y"], ["a", "b", "c"]])
+df = DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
+df.index.names = ["lev0", "lev1"]
 
 
 def test_table_structure_hide_row_header():
@@ -37,26 +40,26 @@ def test_table_structure_hide_column_header():
 
 def test_table_structure_columns_count():
     ts = PatchedStyler(df.style).get_table_structure()
-    assert ts.columns_count == 1
+    assert ts.columns_count == 6
 
 
 def test_table_structure_rows_count():
     ts = PatchedStyler(df.style).get_table_structure()
-    assert ts.rows_count == 5
+    assert ts.rows_count == 6
 
 
 def test_table_structure_visible_columns_count():
     styler = df.style.hide(axis="columns", subset=df.columns)
     ts = PatchedStyler(styler).get_table_structure()
     assert ts.visible_columns_count == 0
-    assert ts.columns_count == 1
+    assert ts.columns_count == 6
 
 
 def test_table_structure_visible_rows_count():
     styler = df.style.hide(axis="index", subset=df.index)
     ts = PatchedStyler(styler).get_table_structure()
     assert ts.visible_rows_count == 0
-    assert ts.rows_count == 5
+    assert ts.rows_count == 6
 
 
 def test_table_structure_column_level_count():
@@ -66,23 +69,23 @@ def test_table_structure_column_level_count():
 
 def test_table_structure_row_level_count():
     ts = PatchedStyler(df.style).get_table_structure()
-    assert ts.row_levels_count == 1
+    assert ts.row_levels_count == 2
 
 
-def test_table_structure_index_hidding_one_level():
-    styler = df.style.hide(axis="index", level=1)
+def test_table_structure_index_hide_one_level():
+    styler = df.style.hide(axis="index", level=0)
     ts = PatchedStyler(styler).get_table_structure()
     assert ts.hide_row_header is False
     assert ts.row_levels_count == 1
-    assert ts.visible_rows_count == 5
+    assert ts.visible_rows_count == 6
 
 
-def test_table_structure_index_hidding_names():
+def test_table_structure_index_hide_names():
     styler = df.style.hide(axis="index", names=False)
     ts = PatchedStyler(styler).get_table_structure()
     assert ts.hide_row_header is True
-    assert ts.row_levels_count == 1
-    assert ts.visible_rows_count == 5
+    assert ts.row_levels_count == 0
+    assert ts.visible_rows_count == 6
 
 
 other_df = pd.DataFrame.from_dict({
