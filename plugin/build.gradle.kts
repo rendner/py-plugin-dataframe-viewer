@@ -312,7 +312,6 @@ tasks {
             exportTestErrorImagesPath,
         )
         useJUnitPlatform()
-        failFast = true
     }
 
     buildSearchableOptions {
