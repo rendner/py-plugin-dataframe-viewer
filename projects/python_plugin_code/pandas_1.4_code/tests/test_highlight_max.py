@@ -74,7 +74,7 @@ def test_highlight_max_nulls(axis):
     create_and_assert_patched_styler(
         pd.DataFrame({"a": [pd.NA, 1, None], "b": [np.nan, 1, -1]}),
         # replace pd.NA values with '' otherwise the are rendered as <NA> and interpreted as html tag
-        lambda styler: styler.format(na_rep='').highlight_min(axis=axis),
+        lambda styler: styler.format(na_rep='').highlight_max(axis=axis),
         2,
         2
     )
