@@ -170,7 +170,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                 AsyncChunkDataLoader(
                     ChunkEvaluator(
                         patchedStyler,
-                        ChunkSize(60, 20)
+                        ChunkSize(30, 20)
                     ),
                     8,
                     notifier
