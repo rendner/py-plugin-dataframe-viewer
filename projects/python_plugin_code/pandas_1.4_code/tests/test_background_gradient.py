@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from tests.helpers.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
 df = pd.DataFrame.from_dict({
@@ -153,3 +154,10 @@ def test_pandas_test_example_background_gradient_gmap_array_raises(axis, gmap):
             2,
             2
         )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.background_gradient,
+        ['axis', 'subset', 'cmap', 'low', 'high', 'text_color_threshold', 'vmin', 'vmax', 'gmap']
+    )

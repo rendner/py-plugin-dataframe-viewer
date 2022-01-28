@@ -14,6 +14,7 @@
 import pandas as pd
 import pytest
 
+from tests.helpers.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
 df = pd.DataFrame.from_dict({
@@ -52,4 +53,11 @@ def test_frame_can_handle_reducing_subset(subset):
         lambda styler: styler.highlight_null(subset=subset),
         2,
         2
+    )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.highlight_null,
+        ['subset', 'null_color', 'props']
     )

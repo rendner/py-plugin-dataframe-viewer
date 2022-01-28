@@ -15,6 +15,7 @@ import pandas as pd
 import numpy as np
 import pytest
 
+from tests.helpers.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
 df = pd.DataFrame.from_dict({
@@ -77,4 +78,11 @@ def test_highlight_min_nulls(axis):
         lambda styler: styler.format(na_rep='').highlight_min(axis=axis),
         2,
         2
+    )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.highlight_min,
+        ['axis', 'subset', 'color', 'props']
     )

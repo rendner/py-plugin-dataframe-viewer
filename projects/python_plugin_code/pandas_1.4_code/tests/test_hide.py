@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from tests.helpers.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
 df = pd.DataFrame.from_dict({
@@ -171,4 +172,11 @@ def test_multi_hide_index_level_names(rows_per_chunk, cols_per_chunk):
         lambda styler: styler.hide(names=True),
         rows_per_chunk,
         cols_per_chunk
+    )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.hide,
+        ['axis', 'subset', 'level', 'names']
     )
