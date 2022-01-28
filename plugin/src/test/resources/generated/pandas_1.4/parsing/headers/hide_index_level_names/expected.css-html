@@ -1,0 +1,75 @@
+<html>
+ <head></head>
+ <body>
+  <table style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+   <thead style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+    <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <th class="col_heading level0 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">x</th>
+     <th class="col_heading level0 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">x</th>
+     <th class="col_heading level0 col2" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">x</th>
+     <th class="col_heading level0 col3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">y</th>
+     <th class="col_heading level0 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">y</th>
+     <th class="col_heading level0 col5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">y</th>
+    </tr>
+    <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <th class="col_heading level1 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">a</th>
+     <th class="col_heading level1 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">b</th>
+     <th class="col_heading level1 col2" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">c</th>
+     <th class="col_heading level1 col3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">a</th>
+     <th class="col_heading level1 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">b</th>
+     <th class="col_heading level1 col5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">c</th>
+    </tr>
+   </thead>
+   <tbody style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+    <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <td class="data row0 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.740965</td>
+     <td class="data row0 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.797465</td>
+     <td class="data row0 col2" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-1.326276</td>
+     <td class="data row0 col3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.155552</td>
+     <td class="data row0 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-1.393671</td>
+     <td class="data row0 col5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.600093</td>
+    </tr>
+    <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <td class="data row1 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.791769</td>
+     <td class="data row1 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">2.293910</td>
+     <td class="data row1 col2" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.955883</td>
+     <td class="data row1 col3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">1.407188</td>
+     <td class="data row1 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.404968</td>
+     <td class="data row1 col5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.612490</td>
+    </tr>
+    <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <td class="data row2 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-1.834164</td>
+     <td class="data row2 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.996069</td>
+     <td class="data row2 col2" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.109849</td>
+     <td class="data row2 col3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.171012</td>
+     <td class="data row2 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.786932</td>
+     <td class="data row2 col5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.450226</td>
+    </tr>
+    <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <td class="data row3 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-1.196894</td>
+     <td class="data row3 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.250495</td>
+     <td class="data row3 col2" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.262525</td>
+     <td class="data row3 col3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-1.374760</td>
+     <td class="data row3 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.583413</td>
+     <td class="data row3 col5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">1.348334</td>
+    </tr>
+    <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <td class="data row4 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.071335</td>
+     <td class="data row4 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.577163</td>
+     <td class="data row4 col2" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">0.221358</td>
+     <td class="data row4 col3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">1.878459</td>
+     <td class="data row4 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.410327</td>
+     <td class="data row4 col5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">1.223650</td>
+    </tr>
+    <tr style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
+     <td class="data row5 col0" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.343751</td>
+     <td class="data row5 col1" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.552828</td>
+     <td class="data row5 col2" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-2.548949</td>
+     <td class="data row5 col3" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-2.679150</td>
+     <td class="data row5 col4" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-0.166251</td>
+     <td class="data row5 col5" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">-1.345365</td>
+    </tr>
+   </tbody>
+  </table>
+ </body>
+</html>
