@@ -106,7 +106,7 @@ abstract class PythonEvalDebugger {
     }
 
     private fun findEntryPointAndInjectDebuggerInternals(pythonProcess: PythonProcess): Boolean {
-        var checkCounter = 30
+        var checkCounter = 60
 
         while (checkCounter-- > 0) {
             checkProcessIsAlive(pythonProcess)
@@ -261,6 +261,10 @@ abstract class PythonEvalDebugger {
                 unquotedResult.substring(0, separatorAfterTypeInfo).let { it.splitAtIndex(it.lastIndexOf(".")) }
             val refId = unquotedResult.substring(separatorAfterTypeInfo + 1, separatorAfterRefId)
             var value = unquotedResult.substring(separatorAfterRefId + 1)
+
+            if (value.contains(LinePrefixes.DEBUGGER_PROMPT.label)) {
+                throw PluginPyDebuggerException("Something went wrong, debugger prompt found in value: $value")
+            }
 
             if (request.trimResult && value.length > 100) {
                 value = "${value.substring(0, 100)}..."
