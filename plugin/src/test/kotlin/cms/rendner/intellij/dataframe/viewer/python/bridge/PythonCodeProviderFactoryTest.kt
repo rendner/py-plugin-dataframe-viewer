@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,17 @@ internal class PythonCodeProviderFactoryTest {
         codeProvider?.let {
             assertThat(it.version.major).isEqualTo(1)
             assertThat(it.version.minor).isEqualTo(3)
+        }
+    }
+
+    @Test
+    fun shouldReturnCodeForPandas_1_4() {
+        val codeProvider = PythonCodeProviderFactory.createProviderFor(PandasVersion.fromString("1.4.x"))
+
+        assertThat(codeProvider).isNotNull
+        codeProvider?.let {
+            assertThat(it.version.major).isEqualTo(1)
+            assertThat(it.version.minor).isEqualTo(4)
         }
     }
 

@@ -29,9 +29,9 @@ class PythonCodeProviderFactory {
                 if (version.minor == 3) {
                     return PythonCodeProvider(PandasVersion(1, 3), "/pandas_1.3/plugin_code")
                 }
-                /*if (version.minor == 4) {
+                if (version.minor == 4) {
                     return PythonCodeProvider(PandasVersion(1, 4), "/pandas_1.4/plugin_code")
-                }*/
+                }
             }
 
             return null
