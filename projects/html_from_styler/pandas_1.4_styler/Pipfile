@@ -9,11 +9,9 @@ matplotlib = "==3.4.2"
 numpy = "==1.21.0"
 semantic-version = "==2.8.5"
 pytz = "==2020.1"
+pandas = "==1.4.0"
 
 [dev-packages]
 
 [requires]
 python_version = "3.8"
-
-[packages.pandas]
-file = "https://anaconda.org/scipy-wheels-nightly/pandas/1.4.0.dev0%2B1574.g46ddb8ef88/download/pandas-1.4.0.dev0%2B1574.g46ddb8ef88-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
