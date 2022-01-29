@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css
+package cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css
 
-import com.google.common.collect.ImmutableList
 import com.steadystate.css.parser.CSSOMParser
 import com.steadystate.css.parser.SACParserCSS3
 import org.assertj.core.api.Assertions.assertThat
@@ -31,7 +30,7 @@ internal class SpecificityCalculatorTest {
     }
 
     @Suppress("unused")
-    private fun getTestCases() = ImmutableList.of(
+    private fun getTestCases() = listOf(
         // https://www.w3.org/TR/selectors-3/#specificity
         TestCase("*", Specificity()),
         TestCase("LI", Specificity(c = 1)),

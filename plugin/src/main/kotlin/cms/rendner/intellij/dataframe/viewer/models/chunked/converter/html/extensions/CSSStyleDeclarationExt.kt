@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.extensions
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css.StyleDeclaration
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css.StyleDeclarationBlock
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.StyleDeclaration
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.StyleDeclarationBlock
 import org.w3c.dom.css.CSSStyleDeclaration
 
 fun CSSStyleDeclaration.toStyleDeclarationBlock(): StyleDeclarationBlock = convertDeclarationBlock(this)

@@ -25,9 +25,9 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.exceptions
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.HtmlTableElementProvider
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.RowsOwnerNodeFilter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.TableBodyRow
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css.IStyleComputer
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css.RulesExtractor
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css.StyleComputer
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.IStyleComputer
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.RulesExtractor
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.StyleComputer
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.SmartList
 import com.steadystate.css.parser.CSSOMParser

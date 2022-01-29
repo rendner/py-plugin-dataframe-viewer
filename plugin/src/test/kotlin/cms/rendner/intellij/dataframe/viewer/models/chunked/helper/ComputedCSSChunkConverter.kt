@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 
 import cms.rendner.intellij.dataframe.viewer.models.StyleProperties
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.ChunkConverter
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css.CSSValueConverter
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css.IStyleComputer
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.css.MutableStyleDeclarationBlock
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.CSSValueConverter
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.IStyleComputer
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.MutableStyleDeclarationBlock
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.extensions.toStyleDeclarationBlock
 import com.steadystate.css.parser.CSSOMParser
 import com.steadystate.css.parser.SACParserCSS3
