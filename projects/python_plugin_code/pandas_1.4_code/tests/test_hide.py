@@ -103,6 +103,24 @@ def test_hide_index_and_columns_chunked():
     )
 
 
+def test_deprecated_hide_index():
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.hide_index(),
+        2,
+        2
+    )
+
+
+def test_deprecated_hide_columns():
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.hide_columns(),
+        2,
+        2
+    )
+
+
 @pytest.mark.parametrize(
     "rows_per_chunk, cols_per_chunk", [
         (1, 2),
