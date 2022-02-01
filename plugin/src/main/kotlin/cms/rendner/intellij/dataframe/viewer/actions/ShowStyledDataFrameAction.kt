@@ -80,8 +80,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         return null
     }
 
-    private class MyDialog(project: Project) :
-        DialogWrapper(project, false) {
+    private class MyDialog(project: Project): DialogWrapper(project, false) {
         private val myDataFrameTable: DataFrameTable
         private val myStatusLabel = JLabel()
         private val myParentDisposable = project.service<ParentDisposableService>()
@@ -117,7 +116,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                     model = createChunkedModel(patchedStyler, myUserNotifier)
 
                     ApplicationManager.getApplication().invokeLater {
-                        if (!Disposer.isDisposed(disposable)) {
+                        if (!isDisposed) {
                             Disposer.register(disposable, model)
                             Disposer.register(disposable, patchedStyler)
                             myDataFrameTable.setDataFrameModel(model)
