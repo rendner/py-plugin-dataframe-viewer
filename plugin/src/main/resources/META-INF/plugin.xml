@@ -19,7 +19,7 @@
     For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
     ]]></description>
 
-    <idea-version since-build="203" until-build="213.*"/>
+    <idea-version since-build="203" until-build="223.*"/>
 
     <change-notes><![CDATA[
     <b>0.5.1</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/plugin/docs/release_notes/0.5.x/changelog-1.md">changelog</a>
