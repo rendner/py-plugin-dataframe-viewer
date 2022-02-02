@@ -4,10 +4,11 @@ import java.io.ByteArrayOutputStream
 
 plugins {
     id("idea")
-    id("org.jetbrains.intellij") version "1.0"
+    // Gradle IntelliJ Plugin
+    id("org.jetbrains.intellij") version "1.4.0"
+    // Kotlin JVM plugin to add support for Kotlin
     // https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library
     kotlin("jvm") version "1.4.0" // provided by 2020.3
-    kotlin("plugin.serialization") version "1.4.0"
 }
 
 group = "cms.rendner.intellij"
@@ -29,10 +30,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.8.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
-    testImplementation("org.assertj:assertj-core:3.21.0")
-
-    // latest usable version for kotlin version 1.4.0
-    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.0.1")
+    testImplementation("org.assertj:assertj-core:3.22.0")
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
@@ -331,6 +329,12 @@ tasks {
             "cms.rendner.dataframe.renderer.export.test.data.dir",
             exportTestDataPath,
         )
+        // enable debug log for plugin
+        // -> https://github.com/JetBrains/gradle-intellij-plugin/issues/708#issuecomment-870442081
+        systemProperty(
+            "idea.log.debug.categories",
+            "#cms.rendner",
+        )
         // ideDir.set(File("/snap/intellij-idea-community/current"))
     }
 
@@ -370,8 +374,14 @@ tasks {
 
     runPluginVerifier {
         // See https://github.com/JetBrains/gradle-intellij-plugin#plugin-verifier-dsl
-        // See https://data.services.jetbrains.com/products?fields=code,name,releases.version,releases.build,releases.type&code=PCC
-        //ideVersions.addAll(listOf("PCC-2020.3.3", "PCC-2021.3"))
+        // See https://data.services.jetbrains.com/products?fields=code,name,releases.version,releases.build,releases.type&code=PC
+        //ideVersions.addAll(listOf("PC-2020.3.3", "PC-2021.3.2", "PC-2022.1"))
+    }
+
+    listProductsReleases {
+        sinceVersion.set("2020.3")
+        untilVersion.set("221.4165.171") // 2022.1 EAP
+        //untilVersion.set("2022.1")
     }
 }
 
