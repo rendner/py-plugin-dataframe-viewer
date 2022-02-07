@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
@@ -155,7 +154,7 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
             return finder.testCases.sortedWith(naturalOrder())
         }
 
-        private class MyTestCaseVisitor(baseDir: Path) : FileVisitor<Path> {
+        private class MyTestCaseVisitor(baseDir: Path) : SimpleFileVisitor<Path>() {
             val testCases = mutableListOf<TestCase>()
             val baseDirNameCount = baseDir.nameCount
             override fun preVisitDirectory(dir: Path?, attrs: BasicFileAttributes?): FileVisitResult {
@@ -168,18 +167,6 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
                     )
                     return FileVisitResult.SKIP_SUBTREE
                 }
-                return FileVisitResult.CONTINUE
-            }
-
-            override fun visitFile(file: Path?, attrs: BasicFileAttributes?): FileVisitResult {
-                return FileVisitResult.CONTINUE
-            }
-
-            override fun visitFileFailed(file: Path?, exc: IOException?): FileVisitResult {
-                return FileVisitResult.CONTINUE
-            }
-
-            override fun postVisitDirectory(dir: Path?, exc: IOException?): FileVisitResult {
                 return FileVisitResult.CONTINUE
             }
         }
