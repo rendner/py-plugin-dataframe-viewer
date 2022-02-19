@@ -18,62 +18,32 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css
 import cms.rendner.intellij.dataframe.viewer.models.StyleProperties
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.extensions.toStyleDeclarationBlock
 import com.steadystate.css.parser.CSSOMParser
+import com.steadystate.css.parser.SACParserCSS3
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import org.jsoup.select.QueryParser
 import org.w3c.css.sac.InputSource
-import org.w3c.css.sac.Selector
 import java.io.StringReader
 
-// not thread safe - we don't synchronize on parser to compute styles as fast as possible
 class StyleComputer(
-    private val parser: CSSOMParser,
-    private val rules: List<RuleSet>,
-    private val root: Element
+    private val document: Document
 ) : IStyleComputer {
     private val valueConverter = CSSValueConverter()
+    private val parser = CSSOMParser(SACParserCSS3())
+    private val rulesets: List<ParsedRuleset>
+
+    init {
+        @Suppress("UNNECESSARY_SAFE_CALL")
+        rulesets = document.selectFirst("style")?.let {
+            RulesetExtractor(parser).extract(it)
+        } ?: emptyList()
+    }
 
     // todo: we currently don't evaluate the whole parent chain (styles are inherited)
     override fun computeStyle(element: Element): StyleProperties {
-        val idName = element.id()
-        val classNames = element.classNames()
-        val matchingSelectors = mutableSetOf<SelectorMatch>()
-        rules.forEach { rule ->
-            rule.selectors.simpleIdSelectors[idName]?.let {
-                matchingSelectors.add(SelectorMatch(it, rule))
-            }
-            if (rule.selectors.simpleClassSelectors.isNotEmpty() && classNames.isNotEmpty()) {
-                val className = classNames.firstOrNull { rule.selectors.simpleClassSelectors.containsKey(it) }
-                className?.let {
-                    matchingSelectors.add(SelectorMatch(rule.selectors.simpleClassSelectors[it]!!, rule))
-                }
-            }
-            if (rule.selectors.otherSelectors.isNotEmpty()) {
-                rule.selectors.otherSelectors.forEach {
-                    val evaluator = QueryParser.parse(it.toString())
-                    if (evaluator.matches(root, element)) {
-                        matchingSelectors.add(SelectorMatch(it, rule))
-                    }
-                }
-            }
+        val matchingRulesets = getMatchingRulesets(element).let {
+            if(it.size > 1) it.sortedWith(::sortMatchesBySpecificityComparator) else it
         }
-
-        val sortedDeclarationBlocks = if (matchingSelectors.size > 1) {
-            val specificityCalculator = SpecificityCalculator(parser)
-            sortBySpecificity(matchingSelectors, specificityCalculator)
-        } else {
-            matchingSelectors.map { it.ruleSet.declarationBlock }
-        }
-
-        val declarationBlock = MutableStyleDeclarationBlock()
-        sortedDeclarationBlocks.forEach { declarationBlock.merge(it) }
-
-        val inlineStyle = element.attr("style")
-        if (inlineStyle.isNotEmpty()) {
-            val style = StringReader(inlineStyle).use {
-                parser.parseStyleDeclaration(InputSource(it))
-            }
-            declarationBlock.merge(style.toStyleDeclarationBlock())
-        }
+        val declarationBlock = createMergedDeclarationBlock(element, matchingRulesets)
 
         return StyleProperties(
             valueConverter.convertColorValue(declarationBlock.textColor.value),
@@ -82,29 +52,37 @@ class StyleComputer(
         )
     }
 
-    // todo make this code accessible for unit tests
-    // -> test: Equal specificity: the latest rule counts (https://www.w3schools.com/css/css_specificity.asp)
-    private fun sortBySpecificity(
-        matchingSelectors: Set<SelectorMatch>,
-        specificityCalculator: SpecificityCalculator
-    ): List<StyleDeclarationBlock> {
-        return matchingSelectors
-            .map {
-                SelectorMatchWithSpecificity(it, specificityCalculator.calculate(it.selector))
+    private fun createMergedDeclarationBlock(
+        element: Element,
+        rulesets: List<MatchingRuleset>
+    ): MutableStyleDeclarationBlock {
+        val result = MutableStyleDeclarationBlock()
+        rulesets.forEach { result.merge(it.ruleset.declarationBlock) }
+
+        val inlineStyle = element.attr("style")
+        if (inlineStyle.isNotEmpty()) {
+            val style = StringReader(inlineStyle).use {
+                parser.parseStyleDeclaration(InputSource(it))
             }
-            .sortedWith { o1, o2 ->
-                val s = o1.specificity.compareTo(o2.specificity)
-                if (s == 0) o1.match.ruleSet.ordinalIndex - o2.match.ruleSet.ordinalIndex else s
-            }.map { it.match.ruleSet.declarationBlock }
+            result.merge(style.toStyleDeclarationBlock())
+        }
+
+        return result
     }
 
-    private data class SelectorMatchWithSpecificity(
-        val match: SelectorMatch,
-        val specificity: Specificity
-    )
+    private fun getMatchingRulesets(element: Element): List<MatchingRuleset> {
+        return rulesets.flatMap { ruleset ->
+            ruleset.getMatchingSelectors(document, element).map { MatchingRuleset(it, ruleset) }
+        }
+    }
 
-    private data class SelectorMatch(
-        val selector: Selector,
-        val ruleSet: RuleSet
-    )
+    private fun sortMatchesBySpecificityComparator(o1: MatchingRuleset, o2: MatchingRuleset): Int {
+        val s = o1.matchingSelector.specificity.compareTo(o2.matchingSelector.specificity)
+        return if (s == 0) o1.ruleset.ordinalIndex - o2.ruleset.ordinalIndex else s
+    }
 }
+
+private data class MatchingRuleset(
+    val matchingSelector: ParsedSelector,
+    val ruleset: ParsedRuleset,
+)

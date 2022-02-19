@@ -15,7 +15,15 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css
 
+import cms.rendner.intellij.dataframe.viewer.models.StyleProperties
+import org.jsoup.nodes.Element
+import org.jsoup.select.Evaluator
+import org.jsoup.select.QueryParser
 import org.w3c.css.sac.Selector
+
+interface IStyleComputer {
+    fun computeStyle(element: Element): StyleProperties
+}
 
 data class StyleDeclarationBlock(
     val textColor: StyleDeclaration? = null,
@@ -25,7 +33,7 @@ data class StyleDeclarationBlock(
 
 data class StyleDeclaration(
     val value: String,
-    val important:Boolean = false
+    val important: Boolean = false
 )
 
 data class MutableStyleDeclarationBlock(
@@ -42,16 +50,16 @@ data class MutableStyleDeclarationBlock(
 
 data class MutableStyleDeclaration(
     var value: String? = null,
-    var important:Boolean = false
-){
+    var important: Boolean = false
+) {
 
-    fun merge(source: StyleDeclaration?){
+    fun merge(source: StyleDeclaration?) {
         source?.let {
             merge(it.value, it.important)
         }
     }
 
-    private fun merge(newValue: String, valueIsImportant: Boolean){
+    private fun merge(newValue: String, valueIsImportant: Boolean) {
         if (valueIsImportant || !important) {
             value = newValue
             important = valueIsImportant
@@ -59,14 +67,82 @@ data class MutableStyleDeclaration(
     }
 }
 
-data class RuleSet(
-    val selectors: GroupedSelectors = GroupedSelectors(),
-    val declarationBlock: StyleDeclarationBlock = StyleDeclarationBlock(),
-    val ordinalIndex:Int
-)
+data class ParsedRuleset(
+    val declarationBlock: StyleDeclarationBlock,
+    val ordinalIndex: Int,
+    private val selectors: GroupedSelectors,
+) {
+    /**
+     * Returns all selectors of the rule which match the element.
+     *
+     * @param root    Root of the matching subtree
+     * @param element tested element
+     * @return Returns a list of matching selectors.
+     */
+    fun getMatchingSelectors(root: Element, element: Element): List<ParsedSelector> =
+        selectors.getMatchingSelectors(root, element)
+}
 
 data class GroupedSelectors(
-    val simpleIdSelectors: Map<String, Selector> = emptyMap(),
-    val simpleClassSelectors: Map<String, Selector> = emptyMap(),
-    val otherSelectors: List<Selector> = emptyList()
-)
+    private val simpleIdSelectors: Map<String, ParsedSelector>,
+    private val simpleClassSelectors: Map<String, ParsedSelector>,
+    private val otherSelectors: List<ParsedSelector>,
+) {
+    /**
+     * Returns all selectors of the rule which match the element.
+     *
+     * @param root    Root of the matching subtree
+     * @param element tested element
+     * @return Returns a list of matching selectors.
+     */
+    fun getMatchingSelectors(root: Element, element: Element): List<ParsedSelector> {
+        val idName = element.id()
+        val classNames = element.classNames()
+        val matchingSelectors = mutableListOf<ParsedSelector>()
+
+        simpleIdSelectors[idName]?.let {
+            matchingSelectors.add(it)
+        }
+        if (simpleClassSelectors.isNotEmpty() && classNames.isNotEmpty()) {
+            classNames.forEach { className ->
+                simpleClassSelectors[className]?.let {
+                    matchingSelectors.add(it)
+                }
+            }
+        }
+        otherSelectors.forEach {
+            if (it.matches(root, element)) {
+                matchingSelectors.add(it)
+            }
+        }
+        return matchingSelectors
+    }
+}
+
+data class ParsedSelector(val selector: Selector, val specificity: Specificity) {
+    private val evaluator: Evaluator by lazy { QueryParser.parse(selector.toString()) }
+
+    /**
+     * Test if the element meets the evaluator's requirements.
+     *
+     * @param root    Root of the matching subtree
+     * @param element tested element
+     * @return Returns true if the requirements are met or false otherwise
+     */
+    fun matches(root: Element, element: Element): Boolean = evaluator.matches(root, element)
+}
+
+data class Specificity(val a: Int = 0, val b: Int = 0, val c: Int = 0) : Comparable<Specificity> {
+    // ascending: low to high
+    override fun compareTo(other: Specificity): Int {
+        val a = a - other.a
+        if (a == 0) {
+            val b = b - other.b
+            if (b == 0) {
+                return this.c - other.c
+            }
+            return b
+        }
+        return a
+    }
+}

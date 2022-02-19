@@ -21,17 +21,14 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkHeaderLabels
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValuesRow
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.IStyleComputer
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.StyleComputer
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.exceptions.ConvertException
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.HtmlTableElementProvider
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.RowsOwnerNodeFilter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.TableBodyRow
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.IStyleComputer
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.RulesExtractor
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.StyleComputer
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.SmartList
-import com.steadystate.css.parser.CSSOMParser
-import com.steadystate.css.parser.SACParserCSS3
 import org.jsoup.nodes.Document
 import org.jsoup.select.NodeTraversor
 
@@ -113,13 +110,6 @@ open class ChunkConverter(
     }
 
     protected open fun createTableStyleComputer(document: Document): IStyleComputer {
-        val parser = CSSOMParser(SACParserCSS3())
-
-        @Suppress("UNNECESSARY_SAFE_CALL")
-        val ruleSets = document.selectFirst("style")?.let {
-            RulesExtractor(parser).extract(it)
-        } ?: emptyList()
-
-        return StyleComputer(parser, ruleSets, document)
+        return StyleComputer(document)
     }
 }

@@ -24,7 +24,7 @@ import org.jsoup.nodes.Element
 import org.w3c.css.sac.*
 import java.io.StringReader
 
-class RulesExtractor(private val parser: CSSOMParser) {
+class RulesetExtractor(private val parser: CSSOMParser) {
 
     /*
     Multiple cells can have the same css-declaration-block:
@@ -59,46 +59,39 @@ class RulesExtractor(private val parser: CSSOMParser) {
     The <uuid> can be specified by the user and therefore also an empty string.
      */
 
-    fun extract(stylesElement: Element): List<RuleSet> {
-        val uniqueDeclarationBlocks = HashSet<StyleDeclarationBlock>()
-        val getCachedOneIfExist = { element: StyleDeclarationBlock ->
-            val index = uniqueDeclarationBlocks.indexOf(element)
-            if (index == -1) {
-                uniqueDeclarationBlocks.add(element)
-                element
-            } else {
-                uniqueDeclarationBlocks.elementAt(index)
-            }
-        }
+    fun extract(stylesElement: Element): List<ParsedRuleset> {
         return getCSSStyleRules(stylesElement).mapIndexed { index, rule ->
-            RuleSet(
-                group((rule.selectors as SelectorListImpl).selectors),
-                getCachedOneIfExist(rule.style.toStyleDeclarationBlock()),
-                index
+            ParsedRuleset(
+                rule.style.toStyleDeclarationBlock(),
+                index,
+                convertToGroupedSelectors((rule.selectors as SelectorListImpl).selectors),
             )
         }
     }
 
-    private fun group(selectors: List<Selector>): GroupedSelectors {
-        val simpleIdSelectors = mutableMapOf<String, Selector>()
-        val simpleClassSelectors = mutableMapOf<String, Selector>()
-        val otherSelectors = mutableListOf<Selector>()
+    private fun convertToGroupedSelectors(selectors: List<Selector>): GroupedSelectors {
+        val simpleIdSelectors = mutableMapOf<String, ParsedSelector>()
+        val simpleClassSelectors = mutableMapOf<String, ParsedSelector>()
+        val otherSelectors = mutableListOf<ParsedSelector>()
+        val specificityCalculator = SpecificityCalculator(parser)
         selectors.forEach {
             var added = false
             if (it is ConditionalSelector) {
                 val condition = it.condition
                 if (condition is AttributeCondition) {
                     if (condition.conditionType == Condition.SAC_ID_CONDITION) {
-                        simpleIdSelectors[condition.value] = it
+                        // selectors like "#demo" (only single id)
+                        simpleIdSelectors[condition.value] = ParsedSelector(it, SIMPLE_ID_SPECIFICITY)
                         added = true
                     } else if (condition.conditionType == Condition.SAC_CLASS_CONDITION) {
-                        simpleClassSelectors[condition.value] = it
+                        // selectors like ".demo" (only single class)
+                        simpleClassSelectors[condition.value] = ParsedSelector(it, SIMPLE_CLASS_SPECIFICITY)
                         added = true
                     }
                 }
             }
             if (!added) {
-                otherSelectors.add(it)
+                otherSelectors.add(ParsedSelector(it, specificityCalculator.calculate(it)))
             }
         }
         return GroupedSelectors(
@@ -113,5 +106,10 @@ class RulesExtractor(private val parser: CSSOMParser) {
             synchronized(parser) { parser.parseStyleSheet(InputSource(it), null, null).cssRules }
         }
         return (cssRuleList as CSSRuleListImpl).rules.filterIsInstance<CSSStyleRuleImpl>()
+    }
+
+    companion object {
+        private val SIMPLE_ID_SPECIFICITY = Specificity(1, 0, 0)
+        private val SIMPLE_CLASS_SPECIFICITY = Specificity(0, 1, 0)
     }
 }
