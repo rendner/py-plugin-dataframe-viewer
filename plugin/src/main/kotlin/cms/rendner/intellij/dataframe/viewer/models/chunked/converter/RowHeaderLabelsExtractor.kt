@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ class RowHeaderLabelsExtractor {
     fun extract(bodyRows: List<TableBodyRow>): List<IHeaderLabel> {
         // the cache is used to reduce the amount of used lists
         val levelsCache = mutableMapOf<List<String>, List<String>>()
-        return bodyRows.mapNotNull { row ->
+        return SmartList(bodyRows.mapNotNull { row ->
             val headerRows = row.headers.filter { header -> header.hasClass(HeaderCssClasses.ROW_HEADING_CLASS.value) }
             when (headerRows.isEmpty()) {
                 true -> null
@@ -47,7 +47,7 @@ class RowHeaderLabelsExtractor {
                     convertToHeaderLabel(lastHeader?.text() ?: "", levelsCache)
                 }
             }
-        }
+        })
     }
 
     private fun addParent(name: String, rowSpan: Int) {

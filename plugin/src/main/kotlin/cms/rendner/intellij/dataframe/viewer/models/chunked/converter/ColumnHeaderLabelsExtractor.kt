@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ class ColumnHeaderLabelsExtractor {
 
     companion object {
         val EMPTY_RESULT = Result(LegendHeaders(), emptyList())
+        val EMPTY_HEADER_LABEL = HeaderLabel()
     }
 
     fun extract(headerRows: List<TableHeaderRow>): Result {
@@ -42,7 +43,7 @@ class ColumnHeaderLabelsExtractor {
                 rowHeaderLabels.indexColumn,
                 columnHeaderLabels.indexColumn,
             ),
-            columnHeaderLabels.columns
+            SmartList(columnHeaderLabels.columns)
         )
     }
 
@@ -78,7 +79,7 @@ class ColumnHeaderLabelsExtractor {
 
         return HeaderLabels(
             if (indexColumn.isEmpty()) null else convertToHeaderLabel(indexColumn, levelsCache),
-            columns.map { convertToHeaderLabel(it, levelsCache) }
+            SmartList(columns.map { convertToHeaderLabel(it, levelsCache) })
         )
     }
 
@@ -88,7 +89,7 @@ class ColumnHeaderLabelsExtractor {
     ): IHeaderLabel {
         return when {
             labels.isEmpty() -> {
-                HeaderLabel()
+                EMPTY_HEADER_LABEL
             }
             labels.size == 1 -> {
                 HeaderLabel(labels.first())
