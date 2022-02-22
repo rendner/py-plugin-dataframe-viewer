@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.converter
 import cms.rendner.intellij.dataframe.viewer.models.HeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
 import cms.rendner.intellij.dataframe.viewer.models.LeveledHeaderLabel
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.HtmlTableElementProvider
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.TableRowsProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.jsoup.Jsoup
 import org.junit.jupiter.api.Test
@@ -200,9 +200,9 @@ internal class ColumnHeaderLabelsExtractorTest {
 
     private fun extract(thead: String): ColumnHeaderLabelsExtractor.Result {
         return ColumnHeaderLabelsExtractor().extract(
-            HtmlTableElementProvider(
-                headerRowsOwner = Jsoup.parse("<table>$thead</table>").selectFirst("thead")
-            ).headerRows()
+            TableRowsProvider(
+                Jsoup.parse("<table>$thead</table>").selectFirst("table")
+            ).headerRows
         )
     }
 }

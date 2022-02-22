@@ -17,18 +17,17 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html
 
 import org.assertj.core.api.Assertions.assertThat
 import org.jsoup.Jsoup
-import org.jsoup.select.NodeTraversor
 import org.junit.jupiter.api.Test
 import utils.measureIt
 
-internal class TableElementProviderTest {
+internal class TableRowsProviderTest {
 
     @Test
     fun testProviderWithEmptyTable() {
         test("empty_table.html") { provider ->
             assertThat(provider).isNotNull
-            assertThat(provider.headerRows()).isEmpty()
-            assertThat(provider.bodyRows()).isEmpty()
+            assertThat(provider.headerRows).isEmpty()
+            assertThat(provider.bodyRows).isEmpty()
         }
     }
 
@@ -36,9 +35,9 @@ internal class TableElementProviderTest {
     fun testHeaderRowsWithNonEmptyTable() {
         test("example_30_rows_with_styles.html") { provider ->
             assertThat(provider).isNotNull
-            assertThat(provider.headerRows().size).isOne
+            assertThat(provider.headerRows.size).isOne
 
-            val headerRow = provider.headerRows().first()
+            val headerRow = provider.headerRows.first()
             assertThat(headerRow.element.tagName()).isEqualTo("tr")
             assertThat(headerRow.headers.size).isEqualTo(9)
             headerRow.headers.forEach { h -> assertThat(h.tagName()).isEqualTo("th") }
@@ -49,9 +48,9 @@ internal class TableElementProviderTest {
     fun testBodyRowsWithNonEmptyTable() {
         test("example_30_rows_with_styles.html") { provider ->
             assertThat(provider).isNotNull
-            assertThat(provider.bodyRows().size).isEqualTo(30)
+            assertThat(provider.bodyRows.size).isEqualTo(30)
 
-            provider.bodyRows().forEach { bodyRow ->
+            provider.bodyRows.forEach { bodyRow ->
                 assertThat(bodyRow.element.tagName()).isEqualTo("tr")
 
                 assertThat(bodyRow.headers.size).isOne
@@ -63,15 +62,13 @@ internal class TableElementProviderTest {
         }
     }
 
-    private fun test(filePath: String, testBlock: (provider: HtmlTableElementProvider) -> Unit) {
+    private fun test(filePath: String, testBlock: (provider: TableRowsProvider) -> Unit) {
         val fileContent = javaClass.getResource("/html/css/$filePath")!!.readText()
         Jsoup.parse(fileContent).selectFirst("table").let {
             assertThat(it).isNotNull
-            val filter = RowsOwnerNodeFilter()
-            NodeTraversor.filter(filter, it)
             val caller = Thread.currentThread().stackTrace[2].methodName
             measureIt(caller) {
-                testBlock(HtmlTableElementProvider(filter.headerRowsOwner, filter.bodyRowsOwner))
+                testBlock(TableRowsProvider(it))
             }
         }
     }

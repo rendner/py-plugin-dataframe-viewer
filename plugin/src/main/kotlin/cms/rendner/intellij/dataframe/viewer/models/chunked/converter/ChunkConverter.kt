@@ -24,13 +24,11 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValuesRow
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.IStyleComputer
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.StyleComputer
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.exceptions.ConvertException
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.HtmlTableElementProvider
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.RowsOwnerNodeFilter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.TableBodyRow
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.TableRowsProvider
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.SmartList
 import org.jsoup.nodes.Document
-import org.jsoup.select.NodeTraversor
 
 /**
  * The converter uses [SmartList] where possible to reduce the memory footprint.
@@ -43,40 +41,38 @@ open class ChunkConverter(
         private val logger = Logger.getInstance(ChunkConverter::class.java)
     }
 
-    private val tableElementProvider = createTableElementProvider(document)
+    private val tableRowsProvider = createTableRowsProvider(document)
 
     override fun convertText(excludeRowHeader: Boolean, excludeColumnHeader: Boolean): ChunkData {
-        return tableElementProvider.let { elementProvider ->
-            val bodyRows = elementProvider.bodyRows()
+        val columnHeaderLabels = if (excludeColumnHeader) {
+            ColumnHeaderLabelsExtractor.EMPTY_RESULT
+        } else ColumnHeaderLabelsExtractor().extract(tableRowsProvider.headerRows)
 
-            val columnHeaderLabels = if (excludeColumnHeader) {
-                ColumnHeaderLabelsExtractor.EMPTY_RESULT
-            } else ColumnHeaderLabelsExtractor().extract(elementProvider.headerRows())
+        val rowHeaderLabels = if (excludeRowHeader) {
+            emptyList()
+        } else RowHeaderLabelsExtractor().extract(tableRowsProvider.bodyRows)
 
-            val rowHeaderLabels = if (excludeRowHeader) {
-                emptyList()
-            } else RowHeaderLabelsExtractor().extract(bodyRows)
-
-            ChunkData(
-                ChunkHeaderLabels(
-                    columnHeaderLabels.legend,
-                    columnHeaderLabels.columns,
-                    rowHeaderLabels
-                ),
-                ChunkValues(SmartList(bodyRows.map { row -> ChunkValuesRow(row.data.map { StringValue(it.text()) }) }))
+        return ChunkData(
+            ChunkHeaderLabels(
+                columnHeaderLabels.legend,
+                columnHeaderLabels.columns,
+                rowHeaderLabels
+            ),
+            ChunkValues(
+                SmartList(
+                    tableRowsProvider.bodyRows.map { row -> ChunkValuesRow(row.data.map { StringValue(it.text()) }) }
+                )
             )
-        }
+        )
     }
 
     override fun mergeWithStyles(values: ChunkValues): ChunkValues {
-        return tableElementProvider.let {
-            val styleComputer = createTableStyleComputer(document)
-            ChunkValues(
-                SmartList(it.bodyRows().zip(values.rows) { tableRow, unstyledRow ->
-                    createStyledRow(tableRow, unstyledRow, styleComputer)
-                })
-            )
-        }
+        val styleComputer = createTableStyleComputer(document)
+        return ChunkValues(
+            SmartList(tableRowsProvider.bodyRows.zip(values.rows) { tableRow, unstyledRow ->
+                createStyledRow(tableRow, unstyledRow, styleComputer)
+            })
+        )
     }
 
     private fun createStyledRow(
@@ -99,14 +95,10 @@ open class ChunkConverter(
         )
     }
 
-    private fun createTableElementProvider(document: Document): HtmlTableElementProvider {
+    private fun createTableRowsProvider(document: Document): TableRowsProvider {
         val table = document.selectFirst("table")
             ?: throw ConvertException("No table-tag found in html document.", document.body().text())
-        return table.let {
-            val filter = RowsOwnerNodeFilter()
-            NodeTraversor.filter(filter, it)
-            HtmlTableElementProvider(filter.headerRowsOwner, filter.bodyRowsOwner)
-        }
+        return TableRowsProvider(table)
     }
 
     protected open fun createTableStyleComputer(document: Document): IStyleComputer {
