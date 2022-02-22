@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCasePath
 import org.assertj.core.api.Assertions.assertThat
 import java.awt.Color
 import java.nio.file.Path
-import java.util.*
 
 private val DEFAULT_COMPUTED_BACKGROUND_COLOR: Color? = null
 private val DEFAULT_COMPUTED_TEXT_COLOR: Color = Color.BLACK
@@ -39,7 +38,6 @@ internal class CSSValidationTest : BaseResourceValidationTest("css-validation") 
 
     override fun testCollectedTestCase(
         testCase: TestCase,
-        properties: Properties,
         tableStructure: TableStructure,
         chunkSize: ChunkSize,
     ) {

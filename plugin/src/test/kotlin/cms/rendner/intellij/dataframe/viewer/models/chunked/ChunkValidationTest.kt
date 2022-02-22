@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.createHTMLFil
 import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCasePath
 import org.assertj.core.api.Assertions.assertThat
 import java.nio.file.Path
-import java.util.*
 
 /**
  * Compares the [IDataFrameModel] created from combined HTML chunks against the [IDataFrameModel] created from
@@ -38,7 +37,6 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
 
     override fun testCollectedTestCase(
         testCase: TestCase,
-        properties: Properties,
         tableStructure: TableStructure,
         chunkSize: ChunkSize,
     ) {

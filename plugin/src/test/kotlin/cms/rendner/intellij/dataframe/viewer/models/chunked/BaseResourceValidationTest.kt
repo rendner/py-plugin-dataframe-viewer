@@ -72,7 +72,6 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
         val chunkSize = createChunkSize(properties)
         testCollectedTestCase(
             testCase,
-            properties,
             tableStructure,
             chunkSize,
         )
@@ -80,7 +79,6 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
 
     abstract fun testCollectedTestCase(
         testCase: TestCase,
-        properties: Properties,
         tableStructure: TableStructure,
         chunkSize: ChunkSize,
     )
