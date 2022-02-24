@@ -344,7 +344,7 @@ tasks {
         //
         // Problem:
         // When using "doLast" and running the gradle-task "runIde", the ide is started with the old
-        // resources. The resources are copied, but it seems the ide is started to early?
+        // resources. The resources are copied, but it seems the ide is started too early?
         //
         // Traceability:
         // - switch to "doLast"
