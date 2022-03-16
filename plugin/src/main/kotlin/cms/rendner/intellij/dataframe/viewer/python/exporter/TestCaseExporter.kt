@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,13 @@ import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import java.util.regex.Pattern
 
 class TestCaseExporter(private val baseExportDir: Path) {
 
     private var exportCounter = 0
     private val pythonBridge = PythonCodeBridge()
+    private val removeTrailingSpacesPattern = Pattern.compile("\\p{Blank}+$", Pattern.MULTILINE)
 
     fun export(testCase: TestCaseExportData) {
         val patchedStyler = pythonBridge.createPatchedStyler(testCase.styler)
@@ -96,7 +98,9 @@ class TestCaseExporter(private val baseExportDir: Path) {
         // To have a stable output the id is always replaced with a static one.
         val document = Jsoup.parse(html)
         val tableId = document.selectFirst("table").id()
-        val prettified = document.toString()
+        var prettified = document.outerHtml()
+        // fix for jsoup #1689 (Pretty print leaves extra space at end of many lines)
+        prettified = removeTrailingSpacesPattern.matcher(prettified).replaceAll("")
         return prettified.replace(tableId, "static_id")
     }
 
