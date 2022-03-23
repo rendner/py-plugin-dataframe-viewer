@@ -733,7 +733,6 @@ class PatchedStyler:
         target.hide_column_names = source.hide_column_names
         target.hide_index_ = source.hide_index_
         target.hide_index_names = source.hide_index_names
-        target.ctx = source.ctx
         target.cell_context = source.cell_context
         target._display_funcs = source._display_funcs
 
