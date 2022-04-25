@@ -16,15 +16,18 @@ from typing import Callable
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from tests.helpers.asserts.assert_styler_html_props import create_and_assert_patched_styler_html_props
-from tests.helpers.asserts.assert_styler_html_string import create_and_assert_patched_styler_html_string
+from plugin_code.patched_styler import PatchedStyler
 
 
-def create_and_assert_patched_styler(
+def create_and_assert_patched_styler_html_props(
         df: DataFrame,
         init_styler_func: Callable[[Styler], None],
         rows_per_chunk: int,
         cols_per_chunk: int,
 ):
-    create_and_assert_patched_styler_html_props(df, init_styler_func, rows_per_chunk, cols_per_chunk)
-    create_and_assert_patched_styler_html_string(df, init_styler_func, rows_per_chunk, cols_per_chunk)
+    styler = df.style
+    init_styler_func(styler)
+    patched_styler = PatchedStyler(styler)
+
+    result = patched_styler.create_html_props_validator().validate(rows_per_chunk, cols_per_chunk, True)
+    assert result.actual == result.expected
