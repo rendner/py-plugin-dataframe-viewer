@@ -87,3 +87,24 @@ def test_chunk_parent_is_provided_for_lambda(axis):
         2,
         2
     )
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_no_chunk_parent_is_provided_for_function(axis):
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.apply(highlight_even_numbers, axis=axis),
+        2,
+        2
+    )
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_no_chunk_parent_is_provided_for_lambda(axis):
+    highlighter = lambda d: highlight_even_numbers(d)
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.apply(highlighter, axis=axis),
+        2,
+        2
+    )

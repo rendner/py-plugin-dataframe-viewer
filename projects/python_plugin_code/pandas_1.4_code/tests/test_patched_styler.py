@@ -19,6 +19,8 @@ from pandas import MultiIndex, DataFrame
 from plugin_code.patched_styler import PatchedStyler
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
+np.random.seed(123456)
+
 midx = MultiIndex.from_product([["x", "y"], ["a", "b", "c"]])
 df = DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
 df.index.names = ["lev0", "lev1"]

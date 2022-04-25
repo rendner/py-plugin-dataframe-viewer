@@ -18,6 +18,9 @@ import pytest
 from tests.helpers.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
+np.random.seed(123456)
+
+
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
     "col_1": [5, 6, 7, 8, 9],
