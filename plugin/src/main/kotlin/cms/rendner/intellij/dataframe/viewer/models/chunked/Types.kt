@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@ import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
 import cms.rendner.intellij.dataframe.viewer.models.Value
 
 interface IChunkEvaluator {
-    fun evaluate(chunkCoordinates: ChunkCoordinates, excludeRowHeaders: Boolean, excludeColumnHeaders: Boolean): String
-    val chunkSize: ChunkSize
+    fun evaluate(chunkRegion: ChunkRegion, excludeRowHeaders: Boolean, excludeColumnHeaders: Boolean): String
 }
 
 interface IChunkValues {
@@ -43,9 +42,11 @@ data class ChunkHeaderLabels(
     val rows: List<IHeaderLabel>
 )
 
-data class ChunkCoordinates(
-    val indexOfFirstRow: Int,
-    val indexOfFirstColumn: Int
+data class ChunkRegion(
+    val firstRow: Int,
+    val firstColumn: Int,
+    val numberOfRows: Int,
+    val numberOfColumns: Int,
 )
 
 data class ChunkData(

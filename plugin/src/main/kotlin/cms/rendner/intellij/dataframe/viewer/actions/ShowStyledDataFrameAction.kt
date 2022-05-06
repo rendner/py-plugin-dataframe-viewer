@@ -167,13 +167,11 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             return ChunkedDataFrameModel(
                 patchedStyler.evaluateTableStructure(),
                 AsyncChunkDataLoader(
-                    ChunkEvaluator(
-                        patchedStyler,
-                        ChunkSize(30, 20)
-                    ),
+                    ChunkEvaluator(patchedStyler),
                     8,
                     notifier
-                )
+                ),
+                ChunkSize(30, 20),
             )
         }
     }

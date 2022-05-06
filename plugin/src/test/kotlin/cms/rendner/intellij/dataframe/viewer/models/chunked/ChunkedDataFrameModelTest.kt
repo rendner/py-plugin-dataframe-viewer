@@ -35,8 +35,12 @@ internal class ChunkedDataFrameModelTest {
 
 
     private fun setup(tableStructure: TableStructure, loaderDisposeCallback: (() -> Unit)? = null) {
-        dataProvider = ChunkDataProvider(chunkSize, ChunkDataAnswerBuilder())
-        model = ChunkedDataFrameModel(tableStructure, FakeChunkLoader(dataProvider, loaderDisposeCallback))
+        dataProvider = ChunkDataProvider(ChunkDataAnswerBuilder())
+        model = ChunkedDataFrameModel(
+            tableStructure,
+            FakeChunkLoader(dataProvider, loaderDisposeCallback),
+            chunkSize,
+        )
     }
 
     @Test
@@ -172,13 +176,13 @@ internal class ChunkedDataFrameModelTest {
             assertThat(requests).isNotEmpty
 
             requests.forEach {
-                if (it.chunkCoordinates.indexOfFirstRow > 0) {
+                if (it.chunkRegion.firstRow > 0) {
                     assertThat(it.excludeColumnHeaders).isTrue
                 } else {
                     assertThat(it.excludeColumnHeaders).isFalse
                 }
 
-                if (it.chunkCoordinates.indexOfFirstColumn > 0) {
+                if (it.chunkRegion.firstColumn > 0) {
                     assertThat(it.excludeRowHeaders).isTrue
                 } else {
                     assertThat(it.excludeRowHeaders).isFalse
@@ -258,40 +262,39 @@ internal class ChunkedDataFrameModelTest {
         }
 
         override fun isAlive() = true
-        override val chunkSize = chunkDataProvider.chunkSize
         override fun dispose() {
             disposeCallback?.let { it() }
         }
     }
 
     private class ChunkDataProvider(
-        val chunkSize: ChunkSize,
         private val answerBuilder: ChunkDataAnswerBuilder? = null
     ) {
         val recordedRequests: MutableList<LoadRequest> = mutableListOf()
         fun getData(request: LoadRequest): ChunkData? {
             recordedRequests.add(request)
-            return answerBuilder?.createAnswer(chunkSize, request)
+            return answerBuilder?.createAnswer(request)
         }
     }
 
     private class ChunkDataAnswerBuilder {
 
-        fun createAnswer(chunkSize: ChunkSize, request: LoadRequest): ChunkData {
+        fun createAnswer(request: LoadRequest): ChunkData {
+            val chunkRegion = request.chunkRegion
             return ChunkData(
                 ChunkHeaderLabels(
                     LegendHeaders(),
-                    createHeaderLabels(if (request.excludeColumnHeaders) 0 else chunkSize.columns),
-                    createHeaderLabels(if (request.excludeRowHeaders) 0 else chunkSize.rows)
+                    createHeaderLabels(if (request.excludeColumnHeaders) 0 else chunkRegion.numberOfColumns),
+                    createHeaderLabels(if (request.excludeRowHeaders) 0 else chunkRegion.numberOfRows)
                 ),
-                createValues(chunkSize)
+                createValues(chunkRegion)
             )
         }
 
-        private fun createValues(chunkSize: ChunkSize): ChunkValues {
+        private fun createValues(chunkRegion: ChunkRegion): ChunkValues {
             val value = StringValue("col")
-            val row = ChunkValuesRow(List(chunkSize.columns) { value })
-            return ChunkValues(List(chunkSize.rows) { row })
+            val row = ChunkValuesRow(List(chunkRegion.numberOfColumns) { value })
+            return ChunkValues(List(chunkRegion.numberOfRows) { row })
         }
 
         private fun createHeaderLabels(size: Int): List<IHeaderLabel> {

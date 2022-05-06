@@ -145,11 +145,9 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
         return createDataFrameModel(
             tableStructure,
             BlockingChunkDataLoader(
-                createHTMLFileEvaluator(
-                    TestCasePath.resolveExpectedResultFile(testCaseDir),
-                    ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount)
-                )
-            )
+                createHTMLFileEvaluator(TestCasePath.resolveExpectedResultFile(testCaseDir))
+            ),
+            ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount),
         )
     }
 
@@ -160,9 +158,8 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
     ): IDataFrameModel {
         return createDataFrameModel(
             tableStructure,
-            BlockingChunkDataLoader(
-                createHTMLChunksEvaluator(testCaseDir, chunkSize)
-            )
+            BlockingChunkDataLoader(createHTMLChunksEvaluator(testCaseDir)),
+            chunkSize,
         )
     }
 }

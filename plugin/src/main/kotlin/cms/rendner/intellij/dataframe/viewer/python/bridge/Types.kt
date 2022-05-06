@@ -49,8 +49,8 @@ interface IPyPatchedStylerRef : Disposable {
     fun evaluateRenderChunk(
         firstRow: Int,
         firstColumn: Int,
-        lastRow: Int,
-        lastColumn: Int,
+        numberOfRows: Int,
+        numberOfColumns: Int,
         excludeRowHeader: Boolean,
         excludeColumnHeader: Boolean
     ): String

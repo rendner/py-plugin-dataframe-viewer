@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,6 @@ abstract class AbstractChunkDataLoader(
 
     override fun isAlive() = true
 
-    override val chunkSize = chunkEvaluator.chunkSize
-
     override fun setResultHandler(resultHandler: IChunkDataResultHandler) {
         myResultHandler = resultHandler
     }
@@ -50,7 +48,7 @@ abstract class AbstractChunkDataLoader(
             val currentThread = Thread.currentThread()
             try {
                 val evaluatedChunk = myChunkEvaluator.evaluate(
-                    loadRequest.chunkCoordinates,
+                    loadRequest.chunkRegion,
                     loadRequest.excludeRowHeaders,
                     loadRequest.excludeColumnHeaders
                 )

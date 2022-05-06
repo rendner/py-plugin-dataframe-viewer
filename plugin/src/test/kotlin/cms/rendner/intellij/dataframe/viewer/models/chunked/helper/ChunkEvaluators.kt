@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkCoordinates
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCasePath
 import java.nio.file.Files
@@ -25,30 +24,27 @@ import java.nio.file.Path
 
 fun createHTMLFileEvaluator(
     filePath: Path,
-    chunkSize: ChunkSize
 ): IChunkEvaluator {
-    return HTMLFileEvaluator(filePath, chunkSize)
+    return HTMLFileEvaluator(filePath)
 }
 
 fun createHTMLChunksEvaluator(
     testCaseDir: Path,
-    chunkSize: ChunkSize
 ): IChunkEvaluator {
-    return HTMLChunkFileEvaluator(testCaseDir, chunkSize)
+    return HTMLChunkFileEvaluator(testCaseDir)
 }
 
 private class HTMLChunkFileEvaluator(
     private val testCaseDir: Path,
-    override val chunkSize: ChunkSize
 ) : IChunkEvaluator {
 
     override fun evaluate(
-        chunkCoordinates: ChunkCoordinates,
+        chunkRegion: ChunkRegion,
         excludeRowHeaders: Boolean,
         excludeColumnHeaders: Boolean
     ): String {
-        val file = chunkCoordinates.let {
-            TestCasePath.resolveChunkResultFile(testCaseDir, it.indexOfFirstRow, it.indexOfFirstColumn)
+        val file = chunkRegion.let {
+            TestCasePath.resolveChunkResultFile(testCaseDir, it.firstRow, it.firstColumn)
         }
         return Files.newBufferedReader(file).use {
             it.readText()
@@ -58,11 +54,10 @@ private class HTMLChunkFileEvaluator(
 
 private class HTMLFileEvaluator(
     private val filePath: Path,
-    override val chunkSize: ChunkSize
 ) : IChunkEvaluator {
 
     override fun evaluate(
-        chunkCoordinates: ChunkCoordinates,
+        chunkRegion: ChunkRegion,
         excludeRowHeaders: Boolean,
         excludeColumnHeaders: Boolean
     ): String {

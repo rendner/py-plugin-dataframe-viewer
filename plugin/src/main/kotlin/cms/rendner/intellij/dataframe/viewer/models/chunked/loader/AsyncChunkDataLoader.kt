@@ -59,7 +59,7 @@ class AsyncChunkDataLoader(
             myRequestedChunks.isEmpty() -> myRequestedChunks.add(request)
             myRequestedChunks.firstOrNull() == request -> return
             else -> {
-                myRequestedChunks.removeIf { r -> r.chunkCoordinates == request.chunkCoordinates }
+                myRequestedChunks.removeIf { r -> r.chunkRegion == request.chunkRegion }
                 myRequestedChunks.addFirst(request)
             }
         }
@@ -100,7 +100,7 @@ class AsyncChunkDataLoader(
             activeRequest = null
 
             if(isAliveFlag) {
-                logger.warn("Fetching data for chunk '${loadRequest.chunkCoordinates}' failed.", throwable)
+                logger.warn("Fetching data for chunk '${loadRequest.chunkRegion}' failed.", throwable)
 
                 if (throwable is EvaluateException && throwable.cause?.isDisconnectException() == true) {
                     isAliveFlag = false
@@ -109,7 +109,7 @@ class AsyncChunkDataLoader(
                 }
 
                 notifier?.error(
-                    "Can't load data for chunk ${loadRequest.chunkCoordinates}",
+                    "Can't load data for chunk ${loadRequest.chunkRegion}",
                     "Loading chunk failed",
                     throwable,
                 )

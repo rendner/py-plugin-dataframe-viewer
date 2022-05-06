@@ -116,18 +116,12 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
 
     protected fun createDataFrameModel(
         tableStructure: TableStructure,
-        chunkLoader: IChunkDataLoader
+        chunkLoader: IChunkDataLoader,
+        chunkSize: ChunkSize,
     ): IDataFrameModel {
-        val tableModel = ChunkedDataFrameModel(
-            tableStructure,
-            chunkLoader
-        )
-        preloadTableValues(
-            tableModel,
-            tableStructure,
-            chunkLoader.chunkSize
-        )
-        return tableModel
+        return ChunkedDataFrameModel(tableStructure, chunkLoader, chunkSize).also {
+            preloadTableValues(it, tableStructure, chunkSize)
+        }
     }
 
     private fun preloadTableValues(

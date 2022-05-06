@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkCoordinates
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
+import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import com.intellij.openapi.Disposable
 
 interface IChunkDataResultHandler {
@@ -36,11 +33,10 @@ interface IChunkDataLoader : Disposable {
     fun addToLoadingQueue(request: LoadRequest)
     fun setResultHandler(resultHandler: IChunkDataResultHandler)
     fun isAlive(): Boolean
-    val chunkSize: ChunkSize
 }
 
 data class LoadRequest(
-    val chunkCoordinates: ChunkCoordinates,
+    val chunkRegion: ChunkRegion,
     val excludeRowHeaders: Boolean,
-    val excludeColumnHeaders: Boolean
+    val excludeColumnHeaders: Boolean,
 )

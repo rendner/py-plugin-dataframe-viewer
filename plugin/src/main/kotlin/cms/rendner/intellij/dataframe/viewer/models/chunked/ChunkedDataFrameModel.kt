@@ -28,11 +28,13 @@ import javax.swing.table.AbstractTableModel
  *
  * @param tableStructure describes the structure of the model.
  * @param chunkDataLoader used for lazy data loading.
+ * @param chunkSize size of the chunks to load.
  * The [IChunkDataLoader.dispose] method of the [chunkDataLoader] is automatically called when the model is disposed.
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
-    private val chunkDataLoader: IChunkDataLoader
+    private val chunkDataLoader: IChunkDataLoader,
+    private val chunkSize: ChunkSize,
 ) : IDataFrameModel, IChunkDataResultHandler {
 
     private val logger = Logger.getInstance(this::class.java)
@@ -43,7 +45,7 @@ class ChunkedDataFrameModel(
     /**
      * Access is only allowed from event dispatch thread.
      */
-    private val myFetchedChunkValues: MutableMap<ChunkCoordinates, IChunkValues> = HashMap()
+    private val myFetchedChunkValues: MutableMap<ChunkRegion, IChunkValues> = HashMap()
 
     /**
      * Access is only allowed from event dispatch thread.
@@ -63,7 +65,7 @@ class ChunkedDataFrameModel(
     /**
      * Access is only allowed from event dispatch thread.
      */
-    private val myFailedChunks: MutableSet<ChunkCoordinates> = HashSet()
+    private val myFailedChunks: MutableSet<ChunkRegion> = HashSet()
 
     private val myNotYetLoadedHeaderLabel = HeaderLabel(EMPTY_TABLE_HEADER_VALUE)
     private val myNotYetLoadedLeveledHeaderLabel = LeveledHeaderLabel(EMPTY_TABLE_HEADER_VALUE)
@@ -104,11 +106,11 @@ class ChunkedDataFrameModel(
     private fun getValueAt(rowIndex: Int, columnIndex: Int): Value {
         checkIndex("RowIndex", rowIndex, tableStructure.rowsCount)
         checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
-        val chunkStartIndices = createChunkCoordinates(rowIndex, columnIndex)
-        return getOrFetchChunk(chunkStartIndices)
+        val chunkRegion = createChunkRegion(rowIndex, columnIndex)
+        return getOrFetchChunk(chunkRegion)
             .value(
-                rowIndex - chunkStartIndices.indexOfFirstRow,
-                columnIndex - chunkStartIndices.indexOfFirstColumn
+                rowIndex - chunkRegion.firstRow,
+                columnIndex - chunkRegion.firstColumn,
             )
     }
 
@@ -154,36 +156,40 @@ class ChunkedDataFrameModel(
         }
     }
 
-    private fun createChunkCoordinates(rowIndex: Int, columnIndex: Int): ChunkCoordinates {
-        return ChunkCoordinates(
-            getIndexOfFirstRowInChunk(rowIndex),
-            getIndexOfFirstColumnInChunk(columnIndex)
+    private fun createChunkRegion(rowIndex: Int, columnIndex: Int): ChunkRegion {
+        val firstRow = getIndexOfFirstRowInChunk(rowIndex)
+        val firstColumn = getIndexOfFirstColumnInChunk(columnIndex)
+        return ChunkRegion(
+            firstRow,
+            firstColumn,
+            chunkSize.rows,
+            chunkSize.columns,
         )
     }
 
     private fun getIndexOfFirstRowInChunk(rowIndex: Int): Int {
-        val rowBlockIndex = rowIndex / chunkDataLoader.chunkSize.rows
-        return rowBlockIndex * chunkDataLoader.chunkSize.rows
+        val rowBlockIndex = rowIndex / chunkSize.rows
+        return rowBlockIndex * chunkSize.rows
     }
 
     private fun getIndexOfFirstColumnInChunk(columnIndex: Int): Int {
-        val columnBlockIndex = columnIndex / chunkDataLoader.chunkSize.columns
-        return columnBlockIndex * chunkDataLoader.chunkSize.columns
+        val columnBlockIndex = columnIndex / chunkSize.columns
+        return columnBlockIndex * chunkSize.columns
     }
 
-    private fun getOrFetchChunk(chunkCoordinates: ChunkCoordinates): IChunkValues {
-        val values = myFetchedChunkValues[chunkCoordinates]
+    private fun getOrFetchChunk(chunkRegion: ChunkRegion): IChunkValues {
+        val values = myFetchedChunkValues[chunkRegion]
 
         if (values != null) {
             return values
         }
 
-        if (!disposed && chunkDataLoader.isAlive() && !myFailedChunks.contains(chunkCoordinates)) {
+        if (!disposed && chunkDataLoader.isAlive() && !myFailedChunks.contains(chunkRegion)) {
             chunkDataLoader.addToLoadingQueue(
                 LoadRequest(
-                    chunkCoordinates,
-                    tableStructure.hideRowHeader || myFetchedChunkRowHeaderLabels[chunkCoordinates.indexOfFirstRow] != null,
-                    tableStructure.hideColumnHeader || myFetchedChunkColumnHeaderLabels[chunkCoordinates.indexOfFirstColumn] != null
+                    chunkRegion,
+                    tableStructure.hideRowHeader || myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] != null,
+                    tableStructure.hideColumnHeader || myFetchedChunkColumnHeaderLabels[chunkRegion.firstColumn] != null
                 )
             )
         }
@@ -193,7 +199,7 @@ class ChunkedDataFrameModel(
 
     override fun onChunkLoaded(request: LoadRequest, chunkData: ChunkData) {
         if (disposed) return
-        val chunkStartIndices = request.chunkCoordinates
+        val chunkRegion = request.chunkRegion
 
         if (myFetchedLegendHeaders == null) {
             myFetchedLegendHeaders = chunkData.headerLabels.legend
@@ -201,47 +207,47 @@ class ChunkedDataFrameModel(
                 fireIndexModelHeaderUpdated()
             }
         }
-        if (!myFetchedChunkColumnHeaderLabels.containsKey(chunkStartIndices.indexOfFirstColumn)) {
-            myFetchedChunkColumnHeaderLabels[chunkStartIndices.indexOfFirstColumn] = chunkData.headerLabels.columns
+        if (!myFetchedChunkColumnHeaderLabels.containsKey(chunkRegion.firstColumn)) {
+            myFetchedChunkColumnHeaderLabels[chunkRegion.firstColumn] = chunkData.headerLabels.columns
             if (chunkData.headerLabels.columns.isNotEmpty()) {
                 fireValueModelHeadersUpdated(
-                    chunkStartIndices.indexOfFirstColumn,
-                    chunkStartIndices.indexOfFirstColumn + chunkData.headerLabels.columns.size - 1
+                    chunkRegion.firstColumn,
+                    chunkRegion.firstColumn + chunkData.headerLabels.columns.size - 1,
                 )
             }
         }
 
-        if (!myFetchedChunkRowHeaderLabels.containsKey(chunkStartIndices.indexOfFirstRow)) {
-            myFetchedChunkRowHeaderLabels[chunkStartIndices.indexOfFirstRow] = chunkData.headerLabels.rows
+        if (!myFetchedChunkRowHeaderLabels.containsKey(chunkRegion.firstRow)) {
+            myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] = chunkData.headerLabels.rows
             if (chunkData.headerLabels.rows.isNotEmpty()) {
                 fireIndexModelValuesUpdated(
-                    chunkStartIndices.indexOfFirstRow,
-                    chunkStartIndices.indexOfFirstRow + chunkData.headerLabels.rows.size - 1
+                    chunkRegion.firstRow,
+                    chunkRegion.firstRow + chunkData.headerLabels.rows.size - 1,
                 )
             }
         }
-        setChunkValues(chunkStartIndices, chunkData.values)
+        setChunkValues(chunkRegion, chunkData.values)
     }
 
     override fun onStyledValues(request: LoadRequest, chunkValues: ChunkValues) {
         if (disposed) return
-        setChunkValues(request.chunkCoordinates, chunkValues)
+        setChunkValues(request.chunkRegion, chunkValues)
     }
 
     override fun onError(request: LoadRequest, throwable: Throwable) {
         if (disposed) return
         logger.error("Failed to load chunk '${request}':", throwable)
-        myFailedChunks.add(request.chunkCoordinates)
+        myFailedChunks.add(request.chunkRegion)
     }
 
-    private fun setChunkValues(chunkCoordinates: ChunkCoordinates, chunkValues: ChunkValues) {
-        myFetchedChunkValues[chunkCoordinates] = chunkValues
+    private fun setChunkValues(chunkRegion: ChunkRegion, chunkValues: ChunkValues) {
+        myFetchedChunkValues[chunkRegion] = chunkValues
 
         fireValueModelValuesUpdated(
-            chunkCoordinates.indexOfFirstRow,
-            chunkCoordinates.indexOfFirstRow + chunkDataLoader.chunkSize.rows - 1,
-            chunkCoordinates.indexOfFirstColumn,
-            chunkCoordinates.indexOfFirstColumn + chunkDataLoader.chunkSize.columns - 1
+            chunkRegion.firstRow,
+            chunkRegion.firstRow + chunkRegion.numberOfRows - 1,
+            chunkRegion.firstColumn,
+            chunkRegion.firstColumn + chunkRegion.numberOfColumns - 1,
         )
     }
 

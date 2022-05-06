@@ -154,13 +154,13 @@ class PythonCodeBridge {
         override fun evaluateRenderChunk(
             firstRow: Int,
             firstColumn: Int,
-            lastRow: Int,
-            lastColumn: Int,
+            numberOfRows: Int,
+            numberOfColumns: Int,
             excludeRowHeader: Boolean,
             excludeColumnHeader: Boolean
         ): String {
             return pythonValue.evaluator.evaluate(
-                "${pythonValue.pythonRefEvalExpr}.render_chunk($firstRow, $firstColumn, $lastRow, $lastColumn, ${
+                "${pythonValue.pythonRefEvalExpr}.render_chunk($firstRow, $firstColumn, $numberOfRows, $numberOfColumns, ${
                     pythonBool(
                         excludeRowHeader
                     )

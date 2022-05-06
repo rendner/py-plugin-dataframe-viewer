@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,31 +15,27 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkCoordinates
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 
 /**
  * @param patchedStyler the styler from which the chunk is fetched.
- * @param chunkSize the size of the chunk. It is safe to provide a size with more rows/columns
- * as the DataFrame on which the [patchedStyler] operates.
  */
 class ChunkEvaluator(
     private val patchedStyler: IPyPatchedStylerRef,
-    override val chunkSize: ChunkSize
 ) : IChunkEvaluator {
 
     override fun evaluate(
-        chunkCoordinates: ChunkCoordinates,
+        chunkRegion: ChunkRegion,
         excludeRowHeaders: Boolean,
         excludeColumnHeaders: Boolean
     ): String {
         return patchedStyler.evaluateRenderChunk(
-            chunkCoordinates.indexOfFirstRow,
-            chunkCoordinates.indexOfFirstColumn,
-            chunkCoordinates.indexOfFirstRow + chunkSize.rows,
-            chunkCoordinates.indexOfFirstColumn + chunkSize.columns,
+            chunkRegion.firstRow,
+            chunkRegion.firstColumn,
+            chunkRegion.numberOfRows,
+            chunkRegion.numberOfColumns,
             excludeRowHeaders,
             excludeColumnHeaders
         )

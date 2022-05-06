@@ -138,11 +138,9 @@ internal class CSSValidationTest : BaseResourceValidationTest("css-validation") 
         return createDataFrameModel(
             tableStructure,
             BlockingChunkDataLoader(
-                createHTMLFileEvaluator(
-                    TestCasePath.resolveExpectedResultFile(testCaseDir),
-                    ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount)
-                )
-            )
+                createHTMLFileEvaluator(TestCasePath.resolveExpectedResultFile(testCaseDir))
+            ),
+            ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount),
         )
     }
 
@@ -153,11 +151,9 @@ internal class CSSValidationTest : BaseResourceValidationTest("css-validation") 
         return createDataFrameModel(
             tableStructure,
             BlockingChunkDataLoader(
-                createHTMLFileEvaluator(
-                    TestCasePath.resolveComputedCSSFile(testCaseDir),
-                    ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount)
-                )
-            ) { document -> ComputedCSSChunkConverter(document) }
+                createHTMLFileEvaluator(TestCasePath.resolveComputedCSSFile(testCaseDir))
+            ) { document -> ComputedCSSChunkConverter(document) },
+            ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount),
         )
     }
 
@@ -168,9 +164,8 @@ internal class CSSValidationTest : BaseResourceValidationTest("css-validation") 
     ): IDataFrameModel {
         return createDataFrameModel(
             tableStructure,
-            BlockingChunkDataLoader(
-                createHTMLChunksEvaluator(testCaseDir, chunkSize)
-            )
+            BlockingChunkDataLoader(createHTMLChunksEvaluator(testCaseDir)),
+            chunkSize,
         )
     }
 }

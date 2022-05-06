@@ -15,14 +15,12 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkCoordinates
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 
 class AllAtOnceEvaluator(
     private val patchedStyler: IPyPatchedStylerRef,
-    override val chunkSize: ChunkSize
 ) : IChunkEvaluator {
 
     fun evaluate(): String {
@@ -30,7 +28,7 @@ class AllAtOnceEvaluator(
     }
 
     override fun evaluate(
-        chunkCoordinates: ChunkCoordinates,
+        chunkRegion: ChunkRegion,
         excludeRowHeaders: Boolean,
         excludeColumnHeaders: Boolean
     ): String {

@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.exporter
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkCoordinates
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.AllAtOnceEvaluator
@@ -50,7 +50,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
             baseExportDir.resolve(testCase.exportDirectoryPath).let {
                 TestCasePath.createRequiredDirectories(it)
                 writePropertiesFile(testCase, it, tableStructure)
-                writeExpectedResultToFile(patchedStyler, it, tableStructure)
+                writeExpectedResultToFile(patchedStyler, it)
                 writeChunksToFile(patchedStyler, it, testCase, tableStructure)
             }
         } finally {
@@ -61,13 +61,8 @@ class TestCaseExporter(private val baseExportDir: Path) {
     private fun writeExpectedResultToFile(
         patchedStyler: IPyPatchedStylerRef,
         exportDir: Path,
-        tableStructure: TableStructure
     ) {
-        val evaluator =
-            AllAtOnceEvaluator(
-                patchedStyler,
-                ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount)
-            )
+        val evaluator = AllAtOnceEvaluator(patchedStyler)
         val result = evaluator.evaluate()
         Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir)).use {
             it.write(prettifyHtmlAndReplaceRandomTableId(result))
@@ -81,15 +76,24 @@ class TestCaseExporter(private val baseExportDir: Path) {
         tableStructure: TableStructure
     ) {
         val chunkSize = exportData.exportChunkSize
-        val evaluator = ChunkEvaluator(patchedStyler, chunkSize)
+        val evaluator = ChunkEvaluator(patchedStyler)
         for (row in 0 until tableStructure.rowsCount step chunkSize.rows) {
             for (column in 0 until tableStructure.columnsCount step chunkSize.columns) {
-                val result = evaluator.evaluate(ChunkCoordinates(row, column), column > 0, row > 0)
+                val result = evaluator.evaluate(toChunkRegion(row, column, chunkSize), column > 0, row > 0)
                 Files.newBufferedWriter(TestCasePath.resolveChunkResultFile(exportDir, row, column)).use {
                     it.write(prettifyHtmlAndReplaceRandomTableId(result))
                 }
             }
         }
+    }
+
+    private fun toChunkRegion(firstRow: Int, firstColumn: Int, chunkSize: ChunkSize): ChunkRegion {
+        return ChunkRegion(
+            firstRow,
+            firstColumn,
+            firstRow + chunkSize.rows - 1,
+            firstColumn + chunkSize.columns - 1,
+        )
     }
 
     private fun prettifyHtmlAndReplaceRandomTableId(html: String): String {
