@@ -63,7 +63,7 @@ class RowHeaderLabelsExtractor {
             parentNames = SmartList(openParents.map { it.name })
 
             if (levelsCache.containsKey(parentNames)) {
-                parentNames = levelsCache[parentNames]!!
+                parentNames = levelsCache.getValue(parentNames)
             } else {
                 levelsCache[parentNames] = parentNames
             }

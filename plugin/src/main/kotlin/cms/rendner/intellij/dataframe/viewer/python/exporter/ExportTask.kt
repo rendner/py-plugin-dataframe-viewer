@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ open class ExportTask(
         exportDataDict.pythonRefEvalExpr.let {
             val testCases = evaluator.evaluate("$it['test_cases']", true)
             val pandasVersion = evaluator.evaluate("$it['pandas_version']")
-            val versionParts = pandasVersion.value!!.split(".")
+            val versionParts = pandasVersion.forcedValue.split(".")
             val majorMinor = "${versionParts[0]}.${versionParts[1]}"
             return ExportData(testCases, majorMinor)
         }
@@ -54,8 +54,8 @@ open class ExportTask(
             val exportDir = evaluator.evaluate("$it['export_dir']")
             TestCaseExportData(
                 styler,
-                chunkSize.value!!.split(":").let { parts -> ChunkSize(parts[0].toInt(), parts[1].toInt()) },
-                exportDir.value!!
+                chunkSize.forcedValue.split(":").let { parts -> ChunkSize(parts[0].toInt(), parts[1].toInt()) },
+                exportDir.forcedValue
             )
         }
     }
@@ -65,7 +65,7 @@ open class ExportTask(
     ) : Iterator<PluginPyValue> {
 
         private var lastFetchedEntryIndex: Int = -1
-        private val size: Int = testCases.evaluator.evaluate("len(${testCases.pythonRefEvalExpr})").value!!.toInt()
+        private val size: Int = testCases.evaluator.evaluate("len(${testCases.pythonRefEvalExpr})").forcedValue.toInt()
 
         override fun hasNext(): Boolean {
             return lastFetchedEntryIndex + 1 < size

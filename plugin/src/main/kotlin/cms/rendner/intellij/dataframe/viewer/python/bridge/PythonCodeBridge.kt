@@ -109,7 +109,7 @@ class PythonCodeBridge {
             val pandasImport = "import pandas as pd"
             evaluator.execute(pandasImport)
             val evaluateResult = evaluator.evaluate("pd.__version__")
-            return PandasVersion.fromString(evaluateResult.value!!)
+            return PandasVersion.fromString(evaluateResult.forcedValue)
         } catch (ex: EvaluateException) {
             throw InjectException("Failed to determine pandas version.", ex)
         }
@@ -137,16 +137,16 @@ class PythonCodeBridge {
                 pythonValue.evaluator.evaluate("str(${pythonValue.pythonRefEvalExpr}.get_table_structure().__dict__)")
             val propsMap = convertStringifiedDictionary(evalResult.value)
 
-            val rowsCount = propsMap["rows_count"]?.toInt() ?: 0
+            val rowsCount = propsMap.getValue("rows_count").toInt()
 
             return TableStructure(
                 rowsCount = rowsCount,
                 // if we have no rows we interpret the DataFrame as empty - therefore no columns
-                columnsCount = if (rowsCount > 0) propsMap["columns_count"]?.toInt() ?: 0 else 0,
-                rowLevelsCount = propsMap["row_levels_count"]?.toInt() ?: 0,
-                columnLevelsCount = propsMap["column_levels_count"]?.toInt() ?: 0,
-                hideRowHeader = propsMap["hide_row_header"] == "True",
-                hideColumnHeader = propsMap["hide_column_header"] == "True"
+                columnsCount = if (rowsCount > 0) propsMap.getValue("columns_count").toInt() else 0,
+                rowLevelsCount = propsMap.getValue("row_levels_count").toInt(),
+                columnLevelsCount = propsMap.getValue("column_levels_count").toInt(),
+                hideRowHeader = propsMap.getValue("hide_row_header") == "True",
+                hideColumnHeader = propsMap.getValue("hide_column_header") == "True"
             )
         }
 
@@ -165,7 +165,7 @@ class PythonCodeBridge {
                         excludeRowHeader
                     )
                 }, ${pythonBool(excludeColumnHeader)})"
-            ).value!!
+            ).forcedValue
         }
 
         @Throws(EvaluateException::class)
@@ -174,7 +174,7 @@ class PythonCodeBridge {
             // Each time this method is called on the same instance style-properties are re-created without
             // clearing previous ones. Calling this method n-times results in n-times duplicated properties.
             // At least this is the behaviour in pandas 1.2.0 and looks like a bug in pandas.
-            return pythonValue.evaluator.evaluate("${pythonValue.pythonRefEvalExpr}.render_unpatched()").value!!
+            return pythonValue.evaluator.evaluate("${pythonValue.pythonRefEvalExpr}.render_unpatched()").forcedValue
         }
 
         override fun dispose() {
