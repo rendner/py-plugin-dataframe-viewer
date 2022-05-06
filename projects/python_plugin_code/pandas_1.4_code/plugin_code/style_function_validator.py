@@ -30,25 +30,22 @@ class _StyleFunctionsHTMLPropsValidator(AbstractHTMLPropsValidator):
         self._region_to_validate: dict = {}
         self.set_region_to_validate(0, 0, len(visible_data.index), len(visible_data.columns))
 
-    def set_region_to_validate(self, first_row: int, first_col: int, last_row: int, last_col: int):
+    def set_region_to_validate(self, first_row: int, first_col: int, rows: int, cols: int):
         self._region_to_validate['first_row'] = first_row
         self._region_to_validate['first_col'] = first_col
-        self._region_to_validate['last_row'] = last_row
-        self._region_to_validate['last_col'] = last_col
+        self._region_to_validate['rows'] = rows
+        self._region_to_validate['cols'] = cols
 
     def validate(self,
                  todos: List[Tuple[Callable, tuple, dict]],
                  rows_per_chunk: int,
                  cols_per_chunk: int,
                  ) -> HTMLPropsValidationResult:
-        region = self._visible_data.iloc[
-                 self._region_to_validate['first_row']:self._region_to_validate['last_row'],
-                 self._region_to_validate['first_col']:self._region_to_validate['last_col']
-                 ]
+        region = self._get_region_data()
         rows_in_region: int = len(region.index)
-        columns_in_region: int = len(region.columns)
+        cols_in_region: int = len(region.columns)
 
-        if rows_in_region == 0 or columns_in_region == 0:
+        if rows_in_region == 0 or cols_in_region == 0:
             # special case region has no columns/rows and therefore no important html props
             return HTMLPropsValidationResult('', '', True)
 
@@ -58,26 +55,33 @@ class _StyleFunctionsHTMLPropsValidator(AbstractHTMLPropsValidator):
 
         combined_html_props = self._create_combined_html_props(
             rows_in_region=rows_in_region,
-            columns_in_region=columns_in_region,
+            cols_in_region=cols_in_region,
             rows_per_chunk=rows_per_chunk,
             cols_per_chunk=cols_per_chunk,
         )
 
         expected_html_props = self._html_props_generator.generate_props_for_chunk(
             first_row=self._region_to_validate['first_row'],
-            first_column=self._region_to_validate['first_col'],
-            last_row=self._region_to_validate['last_row'],
-            last_column=self._region_to_validate['last_col'],
+            first_col=self._region_to_validate['first_col'],
+            rows=self._region_to_validate['rows'],
+            cols=self._region_to_validate['cols'],
             exclude_row_header=False,
-            exclude_column_header=False,
+            exclude_col_header=False,
         )
 
         return self._validate_html_props(combined_html_props, expected_html_props)
 
+    def _get_region_data(self):
+        first_row = self._region_to_validate['first_row']
+        first_col = self._region_to_validate['first_col']
+        last_row = first_row + self._region_to_validate['rows']
+        last_col = first_col + self._region_to_validate['cols']
+        return self._visible_data.iloc[first_row:last_row, first_col:last_col]
+
     def _create_combined_html_props(
             self,
             rows_in_region: int,
-            columns_in_region: int,
+            cols_in_region: int,
             rows_per_chunk: int,
             cols_per_chunk: int,
     ):
@@ -87,14 +91,14 @@ class _StyleFunctionsHTMLPropsValidator(AbstractHTMLPropsValidator):
         first_col_index_of_region = self._region_to_validate['first_col']
 
         for ri in range(0, rows_in_region, rows_per_chunk):
-            for ci in range(0, columns_in_region, cols_per_chunk):
+            for ci in range(0, cols_in_region, cols_per_chunk):
                 chunk_html_props = self._html_props_generator.generate_props_for_chunk(
                     first_row=first_row_index_of_region + ri,
-                    first_column=first_col_index_of_region + ci,
-                    last_row=first_row_index_of_region + ri + rows_per_chunk,
-                    last_column=first_col_index_of_region + ci + cols_per_chunk,
+                    first_col=first_col_index_of_region + ci,
+                    rows=rows_per_chunk,
+                    cols=cols_per_chunk,
                     exclude_row_header=False,
-                    exclude_column_header=False,
+                    exclude_col_header=False,
                 )
 
                 self._append_chunk_html_props(
@@ -184,20 +188,18 @@ class StyleFunctionsValidator:
 
     def validate(self,
                  first_row: int,
-                 first_column: int,
-                 last_row: int,
-                 last_column: int,
+                 first_col: int,
+                 rows: int,
+                 cols: int,
                  ) -> List[StyleFunctionValidationInfo]:
 
         if len(self.__styler._todo) == 0:
             return []
 
-        rows_in_region = max(1, last_row - first_row)
-        columns_in_region = max(1, last_column - first_column)
-        rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(rows_in_region, columns_in_region)
+        rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(rows, cols)
 
         html_props_validator = _StyleFunctionsHTMLPropsValidator(self.__visible_data)
-        html_props_validator.set_region_to_validate(first_row, first_column, last_row, last_column)
+        html_props_validator.set_region_to_validate(first_row, first_col, rows, cols)
 
         if len(self.__styler._todo) == 1:
             return self.__validate_single_todos(html_props_validator, rows_per_chunk, cols_per_chunk)

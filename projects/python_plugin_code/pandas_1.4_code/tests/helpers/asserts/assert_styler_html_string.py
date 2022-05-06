@@ -76,8 +76,8 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
             chunk_html = patched_styler.render_chunk(
                 ri,
                 ci,
-                ri + rows_per_chunk,
-                ci + cols_per_chunk,
+                rows_per_chunk,
+                cols_per_chunk,
                 exclude_row_header,
                 exclude_col_header
             )

@@ -149,14 +149,14 @@ class HTMLPropsGenerator:
 
     def generate_props_for_chunk(self,
                                  first_row: int,
-                                 first_column: int,
-                                 last_row: int,
-                                 last_column: int,
+                                 first_col: int,
+                                 rows: int,
+                                 cols: int,
                                  exclude_row_header: bool = False,
-                                 exclude_column_header: bool = False,
+                                 exclude_col_header: bool = False,
                                  ) -> dict:
         # chunk contains always only non-hidden data
-        chunk = self.__visible_data.iloc[first_row:last_row, first_column:last_column]
+        chunk = self.__visible_data.iloc[first_row:first_row+rows, first_col:first_col+cols]
 
         # patch apply/applymap params to not operate outside of the chunk bounds
         patched_todos = TodosPatcher().patch_todos_for_chunk(self.__styler, chunk)
@@ -164,7 +164,7 @@ class HTMLPropsGenerator:
         computed_styler = self.__compute_styles(
             patched_todos=patched_todos,
             exclude_row_header=exclude_row_header,
-            exclude_column_header=exclude_column_header,
+            exclude_col_header=exclude_col_header,
         )
 
         if len(self.__styler.hidden_rows) == 0:
@@ -173,7 +173,7 @@ class HTMLPropsGenerator:
             rit = _SequenceIndexTranslator(self.__styler.index.get_indexer_for(chunk.index))
 
         if len(self.__styler.hidden_columns) == 0:
-            cit = _OffsetIndexTranslator(first_column)
+            cit = _OffsetIndexTranslator(first_col)
         else:
             cit = _SequenceIndexTranslator(self.__styler.columns.get_indexer_for(chunk.columns))
 
@@ -202,7 +202,7 @@ class HTMLPropsGenerator:
     def __compute_styles(self,
                          patched_todos: List[Tuple[Callable, tuple, dict]],
                          exclude_row_header: bool = False,
-                         exclude_column_header: bool = False,
+                         exclude_col_header: bool = False,
                          ) -> Styler:
         # create a copy to not pollute original styler
         copy = self.__styler.data.style
@@ -214,7 +214,7 @@ class HTMLPropsGenerator:
         # only hide if forced
         if exclude_row_header:
             copy.hide(axis="index")
-        if exclude_column_header:
+        if exclude_col_header:
             copy.hide(axis="columns")
 
         # operate on copy

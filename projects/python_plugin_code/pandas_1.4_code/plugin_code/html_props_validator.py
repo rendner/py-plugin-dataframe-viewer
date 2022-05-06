@@ -197,9 +197,9 @@ class HTMLPropsValidator(AbstractHTMLPropsValidator):
 
     def validate(self, rows_per_chunk: int, cols_per_chunk: int, write_html_on_error: bool = False) -> HTMLPropsValidationResult:
         rows_in_frame: int = len(self._visible_data.index)
-        columns_in_frame: int = len(self._visible_data.columns)
+        cols_in_frame: int = len(self._visible_data.columns)
 
-        if rows_in_frame == 0 or columns_in_frame == 0:
+        if rows_in_frame == 0 or cols_in_frame == 0:
             # special case frame has no columns/rows and therefore no important html props
             return HTMLPropsValidationResult('', '', True)
 
@@ -215,17 +215,17 @@ class HTMLPropsValidator(AbstractHTMLPropsValidator):
     ):
         combined_props: dict = {}
         rows_in_frame: int = len(self._visible_data.index)
-        columns_in_frame: int = len(self._visible_data.columns)
+        cols_in_frame: int = len(self._visible_data.columns)
 
         for ri in range(0, rows_in_frame, rows_per_chunk):
-            for ci in range(0, columns_in_frame, cols_per_chunk):
+            for ci in range(0, cols_in_frame, cols_per_chunk):
                 chunk_html_props = self._html_props_generator.generate_props_for_chunk(
                     first_row=ri,
-                    first_column=ci,
-                    last_row=ri + rows_per_chunk,
-                    last_column=ci + cols_per_chunk,
+                    first_col=ci,
+                    rows=rows_per_chunk,
+                    cols=cols_per_chunk,
                     exclude_row_header=False,
-                    exclude_column_header=False,
+                    exclude_col_header=False,
                 )
 
                 self._append_chunk_html_props(
