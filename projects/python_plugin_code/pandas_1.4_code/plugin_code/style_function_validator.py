@@ -121,12 +121,12 @@ class ValidationStrategyType(Enum):
 
 
 class _AbstractValidationStrategy(ABC):
-    def __init__(self, strategy_ype: ValidationStrategyType):
-        self._strategy_ype: ValidationStrategyType = strategy_ype
+    def __init__(self, strategy_type: ValidationStrategyType):
+        self._strategy_type: ValidationStrategyType = strategy_type
 
     @property
-    def strategy_ype(self):
-        return self._strategy_ype
+    def strategy_type(self):
+        return self._strategy_type
 
     @abstractmethod
     def get_chunk_size(self, rows_in_region: int, columns_in_region: int) -> Tuple[int, int]:
@@ -174,7 +174,7 @@ class StyleFunctionsValidator:
         self.__validation_strategy: _AbstractValidationStrategy = _FastValidationStrategy()
 
     def set_validation_strategy_type(self, strategy_type: ValidationStrategyType):
-        if self.__validation_strategy.strategy_ype is strategy_type:
+        if self.__validation_strategy.strategy_type is strategy_type:
             return
         if strategy_type is ValidationStrategyType.FAST:
             self.__validation_strategy = _FastValidationStrategy()
