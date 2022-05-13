@@ -16,6 +16,7 @@ import pytest
 from pandas import MultiIndex, DataFrame, Series
 from pandas.io.formats.style import Styler
 
+from plugin_code.html_props_generator import Region
 from plugin_code.patched_styler import PatchedStyler
 from plugin_code.style_function_validator import StyleFunctionValidationInfo, StyleFunctionsValidator, \
     ValidationStrategyType
@@ -43,48 +44,68 @@ def _create_validator(style: Styler, validation_strategy_type: ValidationStrateg
 
 
 @pytest.mark.parametrize("validation_strategy_type", [ValidationStrategyType.FAST, ValidationStrategyType.PRECISION])
-def test_background_gradient(validation_strategy_type: ValidationStrategyType):
+@pytest.mark.parametrize(
+    "region", [
+        Region(1, 2, 1, 2),
+        Region(0, 0, len(mi_df.index) // 2, len(mi_df.columns) // 2),
+        Region(0, 0, len(mi_df.index), len(mi_df.columns)),
+        Region(3, 3, 100, 100)
+    ])
+def test_background_gradient(validation_strategy_type: ValidationStrategyType, region: Region):
     styler = mi_df.style.background_gradient()
 
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+    result = validator.validate(region)
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 0
 
-        result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+        result = validator.validate(region)
         assert len(result) == 0
     else:
         assert len(result) == 0
 
 
 @pytest.mark.parametrize("validation_strategy_type", [ValidationStrategyType.FAST, ValidationStrategyType.PRECISION])
-def test_empty_df_with_styles(validation_strategy_type: ValidationStrategyType):
-    styler = DataFrame().style.highlight_max().highlight_min()
+@pytest.mark.parametrize(
+    "region", [
+        Region(1, 2, 1, 2),
+        Region(0, 0, 0, 0),
+        Region(0, 0, 6, 6)
+    ])
+def test_empty_df_with_styles(validation_strategy_type: ValidationStrategyType, region: Region):
+    empty_df = DataFrame()
+    styler = empty_df.style.highlight_max().highlight_min()
 
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+    result = validator.validate(region)
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 0
 
-        result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+        result = validator.validate(region)
         assert len(result) == 0
     else:
         assert len(result) == 0
 
 
 @pytest.mark.parametrize("validation_strategy_type", [ValidationStrategyType.FAST, ValidationStrategyType.PRECISION])
-def test_df_without_styles(validation_strategy_type: ValidationStrategyType):
+@pytest.mark.parametrize(
+    "region", [
+        Region(1, 2, 1, 2),
+        Region(0, 0, len(df.index) // 2, len(df.columns) // 2),
+        Region(0, 0, len(df.index), len(df.columns))
+    ])
+def test_df_without_styles(validation_strategy_type: ValidationStrategyType, region: Region):
     styler = df.style
 
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+    result = validator.validate(region)
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 0
 
-        result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+        result = validator.validate(region)
         assert len(result) == 0
     else:
         assert len(result) == 0
@@ -97,14 +118,15 @@ def test_does_not_fail_on_exception(validation_strategy_type: ValidationStrategy
 
     styler = df.style.apply(raise_exception, axis='index')
 
+    region = Region(0, 0, len(df.index), len(df.columns))
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+    result = validator.validate(region)
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 1
         assert result[0] == StyleFunctionValidationInfo(index=0, reason="EXCEPTION", message="I don't care")
 
-        result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+        result = validator.validate(region)
         assert len(result) == 1
         assert result[0] == StyleFunctionValidationInfo(index=0, reason="EXCEPTION", message="I don't care")
     else:
@@ -121,21 +143,22 @@ def test_detect_invalid_styling_function(axis: str, validation_strategy_type: Va
 
     styler = df.style.apply(my_highlight_max, axis=axis)
 
+    region = Region(0, 0, len(df.index), len(df.columns))
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+    result = validator.validate(region)
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         if axis == 'index':
             assert len(result) == 0
 
-            result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+            result = validator.validate(region)
             assert len(result) == 1
             assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
         else:
             assert len(result) == 1
             assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
 
-            result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+            result = validator.validate(region)
             assert len(result) == 0
     else:
         assert len(result) == 1
@@ -153,14 +176,15 @@ def test_detect_invalid_styling_functions(validation_strategy_type: ValidationSt
 
     styler = df.style.apply(my_highlight_max, axis=0).highlight_max().apply(raise_exception, axis=1)
 
+    region = Region(0, 0, len(df.index), len(df.columns))
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+    result = validator.validate(region)
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 1
         assert result[0] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
 
-        result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+        result = validator.validate(region)
         assert len(result) == 2
         assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
         assert result[1] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
@@ -176,13 +200,14 @@ def test_detect_unsupported_builtin_styling_function(validation_strategy_type: V
     # TodosPatcher excludes unsupported builtin styles
     assert len(TodosPatcher().patch_todos_for_chunk(styler, DataFrame())) == 0
 
+    region = Region(0, 0, len(df.index), len(df.columns))
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+    result = validator.validate(region)
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 0
 
-        result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+        result = validator.validate(region)
         assert len(result) == 0
     else:
         assert len(result) == 0
@@ -205,14 +230,15 @@ def test_detect_invalid_styling_functions_with_unsupported_in_between(validation
     # TodosPatcher excludes unsupported builtin styles
     assert len(TodosPatcher().patch_todos_for_chunk(styler, DataFrame())) == 2
 
+    region = Region(0, 0, len(df.index), len(df.columns))
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+    result = validator.validate(region)
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 1
         assert result[0] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
 
-        result = validator.validate(0, 0, len(mi_df.index), len(mi_df.columns))
+        result = validator.validate(region)
         assert len(result) == 2
         assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
         assert result[1] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")

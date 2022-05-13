@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from plugin_code.html_props_generator import HTMLPropsGenerator
+from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
 from plugin_code.style_function_validator import StyleFunctionsValidator, StyleFunctionValidationInfo, \
@@ -75,12 +75,7 @@ class PatchedStyler:
                                  ) -> List[StyleFunctionValidationInfo]:
         if validation_strategy is not None:
             self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
-        return self.__style_functions_validator.validate(
-            first_row=first_row,
-            first_col=first_col,
-            rows=rows,
-            cols=cols,
-        )
+        return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
 
     def render_chunk(
             self,
@@ -92,10 +87,7 @@ class PatchedStyler:
             exclude_col_header: bool = False
     ) -> str:
         html_props = self.__html_props_generator.generate_props_for_chunk(
-            first_row=first_row,
-            first_col=first_col,
-            rows=rows,
-            cols=cols,
+            region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
         )
