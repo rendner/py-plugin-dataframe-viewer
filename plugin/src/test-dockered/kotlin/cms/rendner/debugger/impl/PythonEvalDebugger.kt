@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,10 +111,10 @@ abstract class PythonEvalDebugger {
         while (checkCounter-- > 0) {
             checkProcessIsAlive(pythonProcess)
             if (pythonProcess.canRead()) {
-                val lines = sanitizeDebuggerOutput(pythonProcess.readLinesNonBlocking())
+                val lines = unescapeDebuggerOutput(pythonProcess.readLinesNonBlocking())
                 if (lastLineIsPrompt(lines)) {
                     pythonProcess.writeLine(
-                        "!exec(${sanitizeDebuggerInput(createDebuggerInternalsInstanceSnippet(), "\\n")})"
+                        "!exec(${escapeDebugHelperCode(createDebuggerInternalsInstanceSnippet())})"
                     )
                     return true
                 } else {
@@ -143,7 +143,7 @@ abstract class PythonEvalDebugger {
                 checkProcessIsAlive(pythonProcess)
 
                 if (checkForInputPrompt && pythonProcess.canRead()) {
-                    lines = sanitizeDebuggerOutput(pythonProcess.readLinesNonBlocking())
+                    lines = unescapeDebuggerOutput(pythonProcess.readLinesNonBlocking())
                     stoppedAtInputPrompt = lastLineIsPrompt(lines)
                 }
 
@@ -159,7 +159,7 @@ abstract class PythonEvalDebugger {
 
                     if (openTasks.isNotEmpty()) {
                         activeTask = openTasks.take()
-                        val expression = sanitizeDebuggerInput(activeTask.request.expression)
+                        val expression = escapeDebuggerInput(activeTask.request.expression)
                         nextDebugCommand = if (activeTask.request.execute) {
                             "!__debugger_internals__.exec($expression)"
                         } else {
@@ -282,7 +282,7 @@ abstract class PythonEvalDebugger {
     /*
     All helper methods are put into a single class to not pollute the globals.
     The class and the created instance are visible after injection and therefore
-    accessible from outside the debugger (unwanted behavior).
+    accessible from outside the debugger (unwanted behavior, but OK for the integration tests).
 
     Visible means, an evaluator could also evaluate something like this:
 
@@ -303,12 +303,11 @@ abstract class PythonEvalDebugger {
 
         exec:
             exec("a = 'a\nb'")              => {SyntaxError}EOL while scanning string literal (<string>, line 1)
-            exec("a = 'a\\nb'")             => a = ['a', 'b']
+            exec("a = 'a\\nb'")             => a is 'a\\nb'
      */
     private fun createDebuggerInternalsInstanceSnippet(): String {
         return """
 import inspect
-import os
 
 
 class __DebuggerInternals__:
@@ -326,16 +325,14 @@ class __DebuggerInternals__:
 
     def eval(self, expression) -> str:
         if isinstance(expression, str):
-            expression = expression.replace("\\$NEW_LINE_CHAR", "\\\\n")
-            expression = expression.replace("$NEW_LINE_CHAR", "\\n")
+            expression = self._unescape(expression)
             
         # get the caller's frame
         previous_frame = inspect.currentframe().f_back
         result = eval(expression, previous_frame.f_globals, previous_frame.f_locals)
 
         if isinstance(result, str):
-            result = result.replace("\\\\n", "\\$NEW_LINE_CHAR")
-            result = result.replace("\\n", "$NEW_LINE_CHAR")
+            result = self._escape(result)
 
         ref_key = None
         if result is not None and not isinstance(result, self.excluded_result_types):
@@ -345,46 +342,39 @@ class __DebuggerInternals__:
             self.id_counter += 1
         return f'{self.__full_type(result)} {ref_key} {result}'
 
-    @staticmethod
-    def exec(value) -> None:
+    def exec(self, value) -> None:
         if isinstance(value, str):
-            value = value.replace("\\$NEW_LINE_CHAR", "\\\\n")
-            value = value.replace("$NEW_LINE_CHAR", "\\n")
+            value = self._unescape(value)
         # get the caller's frame
         previous_frame = inspect.currentframe().f_back
         exec(value, previous_frame.f_globals, previous_frame.f_locals)
+        
+    @staticmethod
+    def _unescape(value: str) -> str:
+        return value.replace("$NEW_LINE_CHAR", "\\n")
 
+    @staticmethod
+    def _escape(value: str) -> str:
+        return value.replace("\\n", "$NEW_LINE_CHAR")
 
 __debugger_internals__ = __DebuggerInternals__()
-        """
+"""
     }
 
-    private fun sanitizeDebuggerOutput(output: List<String>): List<String> {
-        return output.map {
-            it
-                .replace("\\$NEW_LINE_CHAR", "\\n")
-                .replace(NEW_LINE_CHAR, "\n")
-        }
+    private fun unescapeDebuggerOutput(output: List<String>): List<String> {
+        return output.map { it.replace(NEW_LINE_CHAR, "\n") }
     }
 
-    private fun sanitizeDebuggerInput(input: String, lineSeparatorReplacement: String = NEW_LINE_CHAR): String {
-        /*
-         The "input" has to be sanitized to not break the debugger.
-         For example calling "__debugger_internals__.eval(x = 2)"
-         with "x = 2" (without quotes) as input, would lead to a:
+    private fun escapeDebuggerInput(input: String) = escapeInput(input, NEW_LINE_CHAR)
 
-         *** TypeError: eval() got an unexpected keyword argument 'x'
-       */
+    private fun escapeDebugHelperCode(code: String) = escapeInput(code, "\\n")
 
-        var sanitizedInput = input
-            .replace("\n", lineSeparatorReplacement)
+    private fun escapeInput(input: String, escapedNewLine: String): String {
+        val sanitizedInput = input
+            // new lines have to be escaped to forward multiline expressions as a single line
+            .replace("\n", escapedNewLine)
+            // single quotes have to be escaped to be able to surround the expression with ''
             .replace("'", "\\'")
-            .replace("\"", "\\\"")
-
-        if (lineSeparatorReplacement != "\\n") {
-            sanitizedInput = sanitizedInput.replace("\\n", "\\$lineSeparatorReplacement")
-        }
-
         return "'$sanitizedInput'"
     }
 }

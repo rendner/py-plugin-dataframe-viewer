@@ -68,20 +68,6 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     }
 
     @Test
-    fun shouldNotFailIfLinebreakIsInMultilineString() {
-        runWithPythonDebugger { valueEvaluator, _ ->
-
-            valueEvaluator.execute("""multi = 'line_1\nline_2'""")
-            val multi = valueEvaluator.evaluate("multi")
-            assertThat(multi.value).isEqualTo("line_1\nline_2")
-
-            val multi2 = valueEvaluator.evaluate("""'line_1\nline_2'""")
-            assertThat(multi2.value).isEqualTo("line_1\nline_2")
-        }
-    }
-
-
-    @Test
     fun shouldEvaluateExpression() {
         runWithPythonDebugger { valueEvaluator, _ ->
 

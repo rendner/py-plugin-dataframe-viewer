@@ -115,10 +115,7 @@ internal open class AbstractPipEnvEnvironmentTest {
                 val result = pythonDebugger.submit(EvaluateRequest(code, execute, doTrunc)).get()
                 return createPluginPyValue(result)
             } catch (ex: ExecutionException) {
-                ex.cause?.let {
-                    throw it
-                }
-                throw EvaluateException(ex.message ?: "Unknown error occurred.")
+                throw ex.cause ?: EvaluateException(ex.message ?: "Unknown error occurred.")
             }
         }
 
