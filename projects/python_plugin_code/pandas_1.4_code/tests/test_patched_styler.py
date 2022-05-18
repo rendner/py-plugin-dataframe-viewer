@@ -135,8 +135,8 @@ def test_get_style_function_details_df():
     assert len(details) == 3
     assert details[0] == StyleFunctionDetails(
         index=0,
-        name='_bar',
-        display_name='_bar',
+        qname='_bar',
+        resolved_name='_bar',
         axis='0',
         is_chunk_parent_requested=False,
         is_apply=True,
@@ -145,8 +145,8 @@ def test_get_style_function_details_df():
     )
     assert details[1] == StyleFunctionDetails(
         index=1,
-        name='_highlight_value',
-        display_name='highlight_min',
+        qname='_highlight_value',
+        resolved_name='highlight_min',
         axis='columns',
         is_chunk_parent_requested=False,
         is_apply=True,
@@ -155,8 +155,8 @@ def test_get_style_function_details_df():
     )
     assert details[2] == StyleFunctionDetails(
         index=2,
-        name='test_get_style_function_details_df.<locals>.do_nothing',
-        display_name='do_nothing',
+        qname='test_get_style_function_details_df.<locals>.do_nothing',
+        resolved_name='do_nothing',
         axis='index',
         is_chunk_parent_requested=True,
         is_apply=True,
