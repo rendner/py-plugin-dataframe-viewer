@@ -55,15 +55,20 @@ class StyleFunctionNameResolver:
 
     @staticmethod
     def is_pandas_text_gradient(style_func_qname: str, todo: StylerTodo) -> bool:
-        return style_func_qname == '_background_gradient' and todo.style_func_kwargs.get("text_only", False)
+        return style_func_qname == '_background_gradient' \
+               and todo.style_func_kwargs.get("text_only", False)
 
     @staticmethod
     def is_pandas_highlight_max(style_func_qname: str, todo: StylerTodo) -> bool:
-        return style_func_qname == '_highlight_value' and todo.apply_args.style_func.keywords.get('op', '') == 'max'
+        return style_func_qname == '_highlight_value' \
+               and isinstance(todo.apply_args.style_func, partial) \
+               and todo.apply_args.style_func.keywords.get('op', '') == 'max'
 
     @staticmethod
     def is_pandas_highlight_min(style_func_qname: str, todo: StylerTodo) -> bool:
-        return style_func_qname == '_highlight_value' and todo.apply_args.style_func.keywords.get('op', '') == 'min'
+        return style_func_qname == '_highlight_value' \
+               and isinstance(todo.apply_args.style_func, partial) \
+               and todo.apply_args.style_func.keywords.get('op', '') == 'min'
 
     @staticmethod
     def is_pandas_highlight_null(style_func_qname: str) -> bool:

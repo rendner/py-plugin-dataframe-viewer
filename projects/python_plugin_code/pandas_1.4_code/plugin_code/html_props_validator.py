@@ -83,8 +83,11 @@ class AbstractHTMLPropsValidator:
     def __init__(self, html_props_generator: HTMLPropsGenerator):
         self._html_props_generator: HTMLPropsGenerator = html_props_generator
 
-    def _validate_html_props(self, actual_html_props: dict, expected_html_props: dict,
-                             write_html_on_error: bool = False) -> HTMLPropsValidationResult:
+    def _validate_html_props(self,
+                             actual_html_props: dict,
+                             expected_html_props: dict,
+                             write_html_on_error: bool = False,
+                             ) -> HTMLPropsValidationResult:
         actual_json = _jsonify_html_props(actual_html_props)
         expected_json = _jsonify_html_props(expected_html_props)
 
@@ -195,7 +198,11 @@ class HTMLPropsValidator(AbstractHTMLPropsValidator):
         self._visible_data: DataFrame = visible_data
         self._styler: Styler = styler
 
-    def validate(self, rows_per_chunk: int, cols_per_chunk: int, write_html_on_error: bool = False) -> HTMLPropsValidationResult:
+    def validate(self,
+                 rows_per_chunk: int,
+                 cols_per_chunk: int,
+                 write_html_on_error: bool = False,
+                 ) -> HTMLPropsValidationResult:
         rows_in_frame: int = len(self._visible_data.index)
         cols_in_frame: int = len(self._visible_data.columns)
 
@@ -208,11 +215,7 @@ class HTMLPropsValidator(AbstractHTMLPropsValidator):
 
         return self._validate_html_props(combined_html_props, expected_html_props, write_html_on_error)
 
-    def _create_combined_html_props(
-            self,
-            rows_per_chunk: int,
-            cols_per_chunk: int,
-    ):
+    def _create_combined_html_props(self, rows_per_chunk: int, cols_per_chunk: int):
         combined_props: dict = {}
         rows_in_frame: int = len(self._visible_data.index)
         cols_in_frame: int = len(self._visible_data.columns)
