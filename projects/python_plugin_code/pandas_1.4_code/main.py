@@ -15,6 +15,10 @@ PACKAGE_NAME = "plugin_code"
 COPY_MARKER = "# == copy after here =="
 
 
+# todo: strip out comments and docstrings -> allows us to document the source code
+# https://stackoverflow.com/questions/1769332/script-to-remove-python-comments-docstrings/1769577#1769577
+# use "astunparse" to implement it
+
 def generate_plugin_code():
     # the order of the files matters (Python does not allow calling of a function/class before declaring it)
     file_names = [

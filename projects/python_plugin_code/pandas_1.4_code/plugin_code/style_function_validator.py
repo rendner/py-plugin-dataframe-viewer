@@ -106,7 +106,7 @@ class _StyleFunctionsHTMLPropsValidator(AbstractHTMLPropsValidator):
 
 
 @dataclass(frozen=True)
-class StyleFunctionValidationInfo:
+class StyleFunctionValidationProblem:
     index: int
     reason: str
     message: str = ""
@@ -181,7 +181,7 @@ class StyleFunctionsValidator:
         else:
             self.__validation_strategy = _PrecisionValidationStrategy()
 
-    def validate(self, region: Region) -> List[StyleFunctionValidationInfo]:
+    def validate(self, region: Region) -> List[StyleFunctionValidationProblem]:
 
         if len(self.__styler._todo) == 0:
             return []
@@ -205,17 +205,17 @@ class StyleFunctionsValidator:
                                 region: Region,
                                 rows_per_chunk: int,
                                 cols_per_chunk: int,
-                                ) -> List[StyleFunctionValidationInfo]:
+                                ) -> List[StyleFunctionValidationProblem]:
         validation_result = []
 
         for i, todo in enumerate(self.__styler._todo):
             try:
                 result = html_props_validator.validate([todo], region, rows_per_chunk, cols_per_chunk)
                 if not result.is_equal:
-                    validation_result.append(StyleFunctionValidationInfo(i, "NOT_EQUAL"))
+                    validation_result.append(StyleFunctionValidationProblem(i, "NOT_EQUAL"))
             except Exception as e:
                 # repr(e) gives the exception and the message string
                 # str(e) only the message string
-                validation_result.append(StyleFunctionValidationInfo(i, "EXCEPTION", str(e)))
+                validation_result.append(StyleFunctionValidationProblem(i, "EXCEPTION", str(e)))
 
         return validation_result
