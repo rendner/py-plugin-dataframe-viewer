@@ -17,7 +17,6 @@ package cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header
 
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.IRendererComponentStyler
 import com.intellij.ui.ExpandableItemsHandler
-import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Font
 import javax.swing.JComponent
@@ -54,7 +53,7 @@ class CenteredHeaderLabelStyler(
 
             Therefore, disable it completely for all table headers. To have a consistent behavior.
             */
-            UIUtil.putClientProperty(component, ExpandableItemsHandler.RENDERER_DISABLED, true)
+            component.putClientProperty(ExpandableItemsHandler.RENDERER_DISABLED, true)
         }
 
         if (component is JLabel) {
