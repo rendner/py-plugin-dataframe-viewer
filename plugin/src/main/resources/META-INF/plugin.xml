@@ -54,7 +54,14 @@
     </actions>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService"/>
         <projectService serviceImplementation="cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService"/>
         <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON"/>
+        <applicationConfigurable
+                parentId="tools"
+                instance="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettings"
+                id="cms.rendner.StyledDataFrameViewer"
+                displayName="Styled DataFrame Viewer"
+        />
     </extensions>
 </idea-plugin>
