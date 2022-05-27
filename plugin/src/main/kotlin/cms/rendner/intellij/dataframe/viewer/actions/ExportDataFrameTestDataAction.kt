@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,13 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
-import com.intellij.xdebugger.impl.ui.tree.XDebuggerTree
 import com.intellij.xdebugger.impl.ui.tree.actions.XDebuggerTreeActionBase
 import com.jetbrains.python.debugger.PyDebugValue
 import java.nio.file.Paths
 
+/**
+ * Helper action, used to dump test data from the "html_from_styler" Python projects via the PyCharm debugger.
+ */
 class ExportDataFrameTestDataAction : AnAction(), DumbAware {
 
     private val exportDir = System.getProperty(SystemPropertyEnum.EXPORT_TEST_DATA_DIR.key)?.let { Paths.get(it) }
@@ -45,8 +47,9 @@ class ExportDataFrameTestDataAction : AnAction(), DumbAware {
 
     override fun actionPerformed(event: AnActionEvent) {
         if (exportDir == null) return
+        val project = event.project ?: return
+        if (project.isDisposed) return
         val exportDataValue = getExportDataValue(event) ?: return
-        val project: Project = XDebuggerTree.getTree(event.dataContext)!!.project
         isEnabled = false
         ProgressManager.getInstance().run(
             MyExportTask(
@@ -91,6 +94,5 @@ class ExportDataFrameTestDataAction : AnAction(), DumbAware {
                 onFinally()
             }
         }
-
     }
 }

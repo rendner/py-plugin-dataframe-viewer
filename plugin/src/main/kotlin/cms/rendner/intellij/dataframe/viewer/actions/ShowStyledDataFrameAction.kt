@@ -17,17 +17,22 @@ package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.components.DataFrameTable
 import cms.rendner.intellij.dataframe.viewer.models.IDataFrameModel
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkedDataFrameModel
+import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AsyncChunkDataLoader
-import cms.rendner.intellij.dataframe.viewer.notifications.UserNotifier
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoaderErrorHandler
+import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
+import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
+import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.isDataFrame
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.isStyler
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService
+import cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService
+import com.intellij.notification.NotificationGroup
+import com.intellij.notification.NotificationGroupManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
@@ -38,17 +43,24 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
-import com.intellij.xdebugger.impl.ui.tree.XDebuggerTree
 import com.intellij.xdebugger.impl.ui.tree.actions.XDebuggerTreeActionBase
 import com.jetbrains.python.debugger.PyDebugValue
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.*
 
+/**
+ * Action to open the "StyledDataFrameViewer" dialog from the PyCharm debugger.
+ */
 class ShowStyledDataFrameAction : AnAction(), DumbAware {
 
     companion object {
         private val logger = Logger.getInstance(ShowStyledDataFrameAction::class.java)
+        // NotificationGroup is registered in plugin.xml
+        // https://plugins.jetbrains.com/docs/intellij/notifications.html#notificationgroup-20203-and-later
+        private val BALLOON: NotificationGroup = NotificationGroupManager
+            .getInstance()
+            .getNotificationGroup("cms.rendner.StyledDataFrameViewer")
     }
 
     override fun update(event: AnActionEvent) {
@@ -57,12 +69,15 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
     }
 
     override fun actionPerformed(event: AnActionEvent) {
+        val project = event.project ?: return
+        if (project.isDisposed) return
         val frameOrStyler = getFrameOrStyler(event)
         if (frameOrStyler !== null) {
-            val project: Project = XDebuggerTree.getTree(event.dataContext)!!.project
+            val settings = ApplicationSettingsService.instance.state
             val dialog = MyDialog(project)
-            dialog.createModelFrom(frameOrStyler)
-            dialog.title = "Styled DataFrame"
+            // note: dialog doesn't sync the "validationStrategyType" after model creation
+            // user has to re-open the dialog after the setting was changed
+            dialog.createModelFrom(frameOrStyler, settings.validationStrategyType)
             dialog.show()
         }
     }
@@ -80,16 +95,19 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         return null
     }
 
-    private class MyDialog(project: Project): DialogWrapper(project, false) {
+    private class MyDialog(private val project: Project) :
+        DialogWrapper(project, false),
+        IChunkValidationProblemHandler,
+        IChunkDataLoaderErrorHandler {
+
         private val myDataFrameTable: DataFrameTable
-        private val myStatusLabel = JLabel()
         private val myParentDisposable = project.service<ParentDisposableService>()
-        private val myUserNotifier = UserNotifier(project)
 
         init {
             Disposer.register(myParentDisposable, disposable)
 
             isModal = false
+            title = "Styled DataFrame"
 
             setOKButtonText("Close")
             // "Alt" + "c" triggers OK action (esc also closes the window)
@@ -103,7 +121,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             init()
         }
 
-        fun createModelFrom(frameOrStyler: PyDebugValue) {
+        fun createModelFrom(frameOrStyler: PyDebugValue, validationStrategyType: ValidationStrategyType) {
             BackgroundTaskUtil.executeOnPooledThread(myParentDisposable) {
                 var patchedStyler: IPyPatchedStylerRef? = null
                 var model: IDataFrameModel? = null
@@ -113,7 +131,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                         frameOrStyler.toPluginType()
                     )
 
-                    model = createChunkedModel(patchedStyler, myUserNotifier)
+                    model = createChunkedModel(patchedStyler, validationStrategyType)
 
                     ApplicationManager.getApplication().invokeLater {
                         if (!isDisposed) {
@@ -127,7 +145,13 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                     }
                 } catch (ex: Exception) {
                     logger.error("Creating DataFrame model failed", ex)
-                    myUserNotifier.error("Can't display content from Styler", "Creating model failed", ex)
+
+                    ErrorNotification(
+                        BALLOON.displayId,
+                        "Creating DataFrame model failed",
+                        ex.localizedMessage,
+                        ex
+                    ).notify(project)
 
                     patchedStyler?.dispose()
                     model?.dispose()
@@ -136,16 +160,11 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         }
 
         override fun createCenterPanel(): JComponent {
-            val result = JPanel()
-            result.layout = BoxLayout(result, BoxLayout.Y_AXIS)
-
-            myStatusLabel.alignmentX = Component.LEFT_ALIGNMENT
-            myDataFrameTable.alignmentX = Component.LEFT_ALIGNMENT
-
-            result.add(myStatusLabel)
-            result.add(myDataFrameTable)
-
-            return result
+            return JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                myDataFrameTable.alignmentX = Component.LEFT_ALIGNMENT
+                add(myDataFrameTable)
+            }
         }
 
         override fun createActions(): Array<Action> {
@@ -160,19 +179,58 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             return myDataFrameTable
         }
 
-        /**
-         * The chunked model evaluates the underlying dataframe in slices.
-         */
-        fun createChunkedModel(patchedStyler: IPyPatchedStylerRef, notifier: UserNotifier? = null): IDataFrameModel {
+        private fun createChunkedModel(
+            patchedStyler: IPyPatchedStylerRef,
+            validationStrategyType: ValidationStrategyType
+        ): IDataFrameModel {
+            val loader = AsyncChunkDataLoader(
+                ChunkEvaluator(patchedStyler),
+                createChunkValidator(patchedStyler, validationStrategyType),
+                this,
+            )
+            loader.setMaxWaitingRequests(8)
             return ChunkedDataFrameModel(
                 patchedStyler.evaluateTableStructure(),
-                AsyncChunkDataLoader(
-                    ChunkEvaluator(patchedStyler),
-                    8,
-                    notifier
-                ),
+                loader,
                 ChunkSize(30, 20),
             )
+        }
+
+        private fun createChunkValidator(
+            patchedStyler: IPyPatchedStylerRef,
+            validationStrategyType: ValidationStrategyType
+        ): ChunkValidator? {
+            return if (validationStrategyType != ValidationStrategyType.DISABLED) {
+                ChunkValidator(patchedStyler, validationStrategyType, this)
+            } else null
+        }
+
+        override fun handleValidationProblems(
+            region: ChunkRegion,
+            validationStrategy: ValidationStrategyType,
+            problems: List<StyleFunctionValidationProblem>,
+            details: List<StyleFunctionDetails>,
+        ) {
+            if (problems.isNotEmpty()) {
+                logger.warn("Possible incompatible styling function detected for $region.\n$problems")
+                ChunkValidationProblemNotification(
+                    BALLOON.displayId,
+                    region,
+                    validationStrategy,
+                    problems,
+                    details,
+                ).notify(project)
+            }
+        }
+
+        override fun handleChunkDataError(region: ChunkRegion, throwable: Throwable) {
+            logger.error("Error during fetching/processing chunk for $region.", throwable)
+            ErrorNotification(
+                BALLOON.displayId,
+                "Error during fetching/processing chunk",
+                "${throwable.message ?: "Unknown error occurred"}\nfor $region",
+                throwable
+            ).notify(project)
         }
     }
 }
