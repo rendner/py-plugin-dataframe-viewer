@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.pycharm
 
-import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
@@ -25,20 +24,13 @@ import com.jetbrains.python.debugger.PyFrameAccessor
 
 fun PyDebugValue.isDataFrame(): Boolean = this.qualifiedType == "pandas.core.frame.DataFrame"
 fun PyDebugValue.isStyler(): Boolean = this.qualifiedType == "pandas.io.formats.style.Styler"
-fun PyDebugValue.isNone(): Boolean = qualifiedType == PythonQualifiedTypes.None.value
-fun PyDebugValue.varName(): String {
-    return if (this.name.startsWith("'")) {
-        // like: "'styler' (1234567890)"
-        this.name.substring(1, this.name.indexOf("'", 1))
-    }
-    // like "0" (for example index 0 in a tuple)
-    else this.name
-}
 
+/**
+ * Converts the PyCharm [PyDebugValue] into a plugin internal value.
+ */
 fun PyDebugValue.toPluginType(): PluginPyValue {
     return PluginPyValue(
         value,
-        isErrorOnEval,
         type ?: "",
         typeQualifier ?: "",
         evaluationExpression,
@@ -47,31 +39,30 @@ fun PyDebugValue.toPluginType(): PluginPyValue {
 }
 
 private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFrameAccessor) : IPluginPyValueEvaluator {
-
     @Throws(EvaluateException::class)
     override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
-        // in case of a debugger timeout null is returned
-        val result: PyDebugValue? = try {
-            frameAccessor.evaluate(expression, false, trimResult)
+        try {
+            val result: PyDebugValue = frameAccessor.evaluate(expression, false, trimResult)
+                ?: throw EvaluateException("Evaluation aborted, timeout threshold reached.")
+            if (result.isErrorOnEval) {
+                throw EvaluateException(result.value ?: EvaluateException.EVAL_FALLBACK_ERROR_MSG)
+            }
+            return result.toPluginType()
         } catch (ex: PyDebuggerException) {
-            throw EvaluateException("Couldn't evaluate expression.", ex.toPluginType())
+            throw EvaluateException(EvaluateException.EVAL_FALLBACK_ERROR_MSG, ex.toPluginType())
         }
-        if (result == null || result.isErrorOnEval) {
-            throw EvaluateException(result?.value ?: "Couldn't evaluate expression.")
-        }
-        return result.toPluginType()
     }
 
     @Throws(EvaluateException::class)
-    override fun execute(statement: String) {
+    override fun execute(statements: String) {
         try {
-            // in case of a debugger timeout null is returned
-            val result: PyDebugValue? = frameAccessor.evaluate(statement, true, false)
-            if (result == null || result.isErrorOnEval) {
-                throw EvaluateException(result?.value ?: "Couldn't evaluate statement.")
+            val result: PyDebugValue = frameAccessor.evaluate(statements, true, false)
+                ?: throw EvaluateException("Execution aborted, timeout threshold reached.")
+            if (result.isErrorOnEval) {
+                throw EvaluateException(result.value ?: EvaluateException.EXEC_FALLBACK_ERROR_MSG)
             }
         } catch (ex: PyDebuggerException) {
-            throw EvaluateException("Couldn't execute statement.", ex.toPluginType())
+            throw EvaluateException(EvaluateException.EXEC_FALLBACK_ERROR_MSG, ex.toPluginType())
         }
     }
 }

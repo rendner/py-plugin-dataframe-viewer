@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,35 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * A set of test cases to export.
+ *
+ * A testcase is a Python dict with at least the following keys:
+ * - styler: the styled DataFrame to export
+ * - chunk_size: the size of the chunks used to export smaller chunks
+ * - export_dir: the name of the test case as directory name
+ *
+ * @param testCases a Python ref to a list of test cases.
+ * @param pandasMajorMinorVersion the major and minor version, of pandas used by the test cases, separated by a ".".
+ */
 data class ExportData(val testCases: PluginPyValue, val pandasMajorMinorVersion: String)
 
+/**
+ * Describes a test case to export.
+ *
+ * @param styler the styled DataFrame to export
+ * @param exportChunkSize the size of the chunks used to export smaller chunks
+ * @param exportDirectoryPath the name of the test case as directory name
+ */
 data class TestCaseExportData(
     val styler: PluginPyValue,
     val exportChunkSize: ChunkSize,
     val exportDirectoryPath: String
 )
 
+/**
+ * Test case path resolver.
+ */
 class TestCasePath {
     companion object {
         fun resolveChunkResultFile(testCaseDir: Path, row: Int, column: Int): Path {

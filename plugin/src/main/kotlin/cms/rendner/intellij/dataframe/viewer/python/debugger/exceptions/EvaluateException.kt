@@ -18,4 +18,9 @@ package cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions
 class EvaluateException(
     message: String,
     override val cause: PluginPyDebuggerException? = null,
-) : Exception(message, cause)
+) : Exception(message, cause) {
+    companion object {
+        const val EXEC_FALLBACK_ERROR_MSG = "Statements could not be executed."
+        const val EVAL_FALLBACK_ERROR_MSG = "Expression could not be evaluated."
+    }
+}

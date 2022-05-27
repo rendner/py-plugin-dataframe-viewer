@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,7 +103,15 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     @Test
     fun shouldAllowToExecuteCode() {
         runWithPythonDebugger { valueEvaluator, _ ->
-            assertThatNoException().isThrownBy { valueEvaluator.execute(getPythonSnippet()) }
+            assertThatNoException().isThrownBy {
+                valueEvaluator.execute(
+                    """
+                    from urllib.parse import urlparse
+            
+                    o = urlparse('http://test.123')
+                    """.trimIndent()
+                )
+            }
         }
     }
 
@@ -135,7 +143,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
             val dict = valueEvaluator.evaluate("{'a': 10}")
 
-            assertThat(valueEvaluator.evaluate("${dict.pythonRefEvalExpr}['a']").value).isEqualTo("10")
+            assertThat(valueEvaluator.evaluate("${dict.refExpr}['a']").value).isEqualTo("10")
         }
     }
 
@@ -143,7 +151,13 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldEvaluateValuesFromExecutedCode() {
         runWithPythonDebugger { valueEvaluator, _ ->
 
-            valueEvaluator.execute(getPythonSnippet())
+            valueEvaluator.execute(
+                """
+                from urllib.parse import urlparse
+            
+                o = urlparse('http://test.123')
+                """.trimIndent()
+            )
             val result = valueEvaluator.evaluate("o.scheme")
 
             assertThat(result.value).isEqualTo("http")
@@ -158,12 +172,12 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
             val dict = valueEvaluator.evaluate("{'a': 12}")
 
-            valueEvaluator.execute("del ${dict.pythonRefEvalExpr}")
+            valueEvaluator.execute("del ${dict.refExpr}")
 
             assertFailsWith<EvaluateException> {
-                valueEvaluator.evaluate("${dict.pythonRefEvalExpr}['a']")
+                valueEvaluator.evaluate("${dict.refExpr}['a']")
             }.also {
-                assertThat(it).hasMessage("*** NameError: name '${dict.pythonRefEvalExpr}' is not defined")
+                assertThat(it).hasMessage("*** NameError: name '${dict.refExpr}' is not defined")
             }
         }
     }
@@ -174,7 +188,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
             val evalDict = valueEvaluator.evaluate("{'a': 12}")
 
-            valueEvaluator.execute("exec_dict = {'a': ${evalDict.pythonRefEvalExpr}['a'] + 1}")
+            valueEvaluator.execute("exec_dict = {'a': ${evalDict.refExpr}['a'] + 1}")
 
             val execDict = valueEvaluator.evaluate("exec_dict['a']")
 
@@ -182,11 +196,25 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
         }
     }
 
-    private fun getPythonSnippet(): String {
-        return """
-            from urllib.parse import urlparse
-            
-            o = urlparse('http://test.123')
-        """.trimIndent()
+    @Test
+    fun evaluateStringyfiedDict_shouldNotFailOnValuesWithComma() {
+        runWithPythonDebugger { valueEvaluator, _ ->
+            assertThat(
+                valueEvaluator.evaluateStringyfiedDict("{'a': 12, 'b': '123', 'c': ['a', 'b', 'c']}")
+            ).isEqualTo(
+                mapOf(Pair("a", "12"), Pair("b", "123"), Pair("c", "['a', 'b', 'c']"))
+            )
+        }
+    }
+
+    @Test
+    fun evaluateStringyfiedList_shouldNotFailOnValuesWithComma() {
+        runWithPythonDebugger { valueEvaluator, _ ->
+            assertThat(
+                valueEvaluator.evaluateStringyfiedList("[12, '123', ['a', 'b', 'c']]")
+            ).isEqualTo(
+                listOf("12", "123", "['a', 'b', 'c']")
+            )
+        }
     }
 }

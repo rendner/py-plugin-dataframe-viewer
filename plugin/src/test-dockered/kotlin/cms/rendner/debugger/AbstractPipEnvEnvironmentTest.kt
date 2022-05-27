@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,10 @@
  */
 package cms.rendner.debugger
 
-import cms.rendner.debugger.impl.*
+import cms.rendner.debugger.impl.DockeredPythonEvalDebugger
+import cms.rendner.debugger.impl.EvaluateRequest
+import cms.rendner.debugger.impl.EvaluateResponse
+import cms.rendner.debugger.impl.PythonEvalDebugger
 import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
@@ -27,9 +30,15 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-
+/**
+ * Abstract class which provides access to a dockered Python interpreter with a pre-configured
+ * pip-env environment.
+ *
+ * The docker image to use, has to be specified via the system properties
+ * [SystemPropertyEnum.DOCKERED_TEST_IMAGE.key] and [SystemPropertyEnum.DOCKERED_TEST_WORKDIR.key].
+ */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-internal open class AbstractPipEnvEnvironmentTest {
+internal abstract class AbstractPipEnvEnvironmentTest {
     private val executorService: ExecutorService = Executors.newSingleThreadExecutor()
     private var debuggerStarted = false
     private val debugger = DockeredPythonEvalDebugger(
@@ -90,39 +99,38 @@ internal open class AbstractPipEnvEnvironmentTest {
 
     private class MyValueEvaluator(private val pythonDebugger: PythonEvalDebugger) : IPluginPyValueEvaluator {
         override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
-            val result = try {
-                evalOrExec(expression, execute = false, doTrunc = trimResult)
+            return try {
+                evalOrExec(expression, execute = false, doTrunc = trimResult, EvaluateException.EVAL_FALLBACK_ERROR_MSG)
             } catch (ex: PluginPyDebuggerException) {
-                throw EvaluateException("Couldn't evaluate expression.", ex)
-            }
-            if (result.isErrorOnEval) {
-                throw EvaluateException(result.value ?: "Couldn't evaluate expression.")
-            }
-
-            return result
-        }
-
-        override fun execute(statement: String) {
-            try {
-                evalOrExec(statement, execute = true, doTrunc = false)
-            } catch (ex: PluginPyDebuggerException) {
-                throw EvaluateException("Couldn't execute statement.", ex)
+                throw EvaluateException(EvaluateException.EVAL_FALLBACK_ERROR_MSG, ex)
             }
         }
 
-        fun evalOrExec(code: String, execute: Boolean, doTrunc: Boolean): PluginPyValue {
+        override fun execute(statements: String) {
             try {
-                val result = pythonDebugger.submit(EvaluateRequest(code, execute, doTrunc)).get()
-                return createPluginPyValue(result)
+                evalOrExec(statements, execute = true, doTrunc = false, EvaluateException.EXEC_FALLBACK_ERROR_MSG)
+            } catch (ex: PluginPyDebuggerException) {
+                throw EvaluateException(EvaluateException.EXEC_FALLBACK_ERROR_MSG, ex)
+            }
+        }
+
+        fun evalOrExec(code: String, execute: Boolean, doTrunc: Boolean, fallbackErrorMessage: String): PluginPyValue {
+            return try {
+                createPluginPyValue(
+                    pythonDebugger.submit(EvaluateRequest(code, execute, doTrunc)).get(),
+                    fallbackErrorMessage,
+                )
             } catch (ex: ExecutionException) {
                 throw ex.cause ?: EvaluateException(ex.message ?: "Unknown error occurred.")
             }
         }
 
-        private fun createPluginPyValue(response: EvaluateResponse): PluginPyValue {
+        private fun createPluginPyValue(response: EvaluateResponse, fallbackErrorMessage: String): PluginPyValue {
+            if (response.isError) {
+                throw EvaluateException(response.value ?: fallbackErrorMessage)
+            }
             return PluginPyValue(
                 response.value,
-                response.isError,
                 response.type ?: "",
                 response.typeQualifier ?: "",
                 response.refId ?: "",

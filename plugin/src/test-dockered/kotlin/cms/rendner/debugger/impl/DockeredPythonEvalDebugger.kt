@@ -24,7 +24,8 @@ import java.util.concurrent.TimeUnit
 /**
  * Allows to use a dockered Python interpreter during tests.
  *
- * The [dockerImage] has to exist.
+ * The [dockerImage] has to exist and contain a pre-configured pip-env
+ * environment.
  *
  * @param dockerImage the docker image to start. The docker image has to exist.
  * @param workdir the pipenv environment workdir to use.

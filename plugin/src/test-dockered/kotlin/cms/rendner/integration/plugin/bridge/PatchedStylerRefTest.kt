@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package cms.rendner.integration.plugin.bridge
 
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
+import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionDetails
+import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
@@ -24,11 +26,15 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
-@Order(2)
+/**
+ * Tests that all provided methods can be called on Python side.
+ * The functionality of the methods is tested in the Python plugin-code projects.
+ */
+@Order(3)
 internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
-    fun shouldBeAbleToCallMethodGetTableStructure() {
+    fun evaluateTableStructure_shouldBeCallable() {
         runWithPatchedStyler {
             assertThat(it.evaluateTableStructure()).isEqualTo(
                 TableStructure(
@@ -44,7 +50,44 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun shouldBeAbleToCallMethodRenderChunk() {
+    fun evaluateStyleFunctionDetails_shouldBeCallable() {
+        runWithPatchedStyler {
+            assertThat(it.evaluateStyleFunctionDetails()).isEqualTo(
+                listOf(
+                    StyleFunctionDetails(
+                        0,
+                        "<lambda>",
+                        "<lambda>",
+                        "",
+                        isPandasBuiltin = false,
+                        isSupported = true,
+                        isApply = false,
+                        isChunkParentRequested = false
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
+    fun evaluateValidateStyleFunctions_shouldBeCallable() {
+        runWithPatchedStyler {
+            assertThat(
+                it.evaluateValidateStyleFunctions(
+                    0,
+                    0,
+                    2,
+                    2,
+                    ValidationStrategyType.DISABLED,
+                )
+            ).isEqualTo(
+                emptyList<StyleFunctionDetails>()
+            )
+        }
+    }
+
+    @Test
+    fun evaluateRenderChunk_shouldBeCallable() {
         runWithPatchedStyler {
             assertThat(
                 it.evaluateRenderChunk(
@@ -60,7 +103,7 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun shouldBeAbleToCallMethodRenderUnpatched() {
+    fun evaluateRenderUnpatched_shouldBeCallable() {
         runWithPatchedStyler {
             assertThat(
                 it.evaluateRenderUnpatched()
@@ -69,8 +112,8 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     private fun runWithPatchedStyler(block: (patchedStyler: IPyPatchedStylerRef) -> Unit) {
-        runWithInjectedPluginCode(createDataFrameSnippet()) { codeBridge: PythonCodeBridge, valueEvaluator: IPluginPyValueEvaluator ->
-            val styler = valueEvaluator.evaluate("df.style")
+        runWithPluginCodeBridge(createDataFrameSnippet()) { codeBridge: PythonCodeBridge, valueEvaluator: IPluginPyValueEvaluator ->
+            val styler = valueEvaluator.evaluate("df.style.applymap(lambda x: 'color: red')")
             block(codeBridge.createPatchedStyler(styler))
         }
     }

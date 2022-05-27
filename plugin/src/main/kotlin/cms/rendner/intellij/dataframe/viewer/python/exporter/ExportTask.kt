@@ -17,27 +17,39 @@ package cms.rendner.intellij.dataframe.viewer.python.exporter
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
+import cms.rendner.intellij.dataframe.viewer.python.utils.parsePythonTuple
 import java.nio.file.Path
 
-open class ExportTask(
+/**
+ * Iterates over the available test data, provided by [exportDataValue] and saves the HTML files
+ * for each one in the directory specified by [baseExportDir].
+ *
+ * @param baseExportDir the base directory for the HTML files generated from the test cases.
+ * @param exportDataValue provides a list of test cases.
+ */
+class ExportTask(
     private val baseExportDir: Path,
     private val exportDataValue: PluginPyValue,
 ) {
     fun run() {
-        val exportData = convertExportValue(exportDataValue)
-        val exportDir = baseExportDir.resolve("pandas_${exportData.pandasMajorMinorVersion}")
-        println("exportDir: $exportDir")
-        val testCaseExporter = TestCaseExporter(exportDir)
-        val testCaseIterator = EvaluateElementWiseListIterator(exportData.testCases)
+        try {
+            val exportData = convertExportValue(exportDataValue)
+            val exportDir = baseExportDir.resolve("pandas_${exportData.pandasMajorMinorVersion}")
+            println("exportDir: $exportDir")
+            val testCaseExporter = TestCaseExporter(exportDir)
+            val testCaseIterator = EvaluateElementWiseListIterator(exportData.testCases)
 
-        while (testCaseIterator.hasNext()) {
-            testCaseExporter.export(convertTestCaseValue(testCaseIterator.next()))
+            while (testCaseIterator.hasNext()) {
+                testCaseExporter.export(convertTestCaseValue(testCaseIterator.next()))
+            }
+        } catch (e: Throwable) {
+            println("ExportTask::run failed: ${e.stackTraceToString()}")
         }
     }
 
     private fun convertExportValue(exportDataDict: PluginPyValue): ExportData {
         val evaluator = exportDataDict.evaluator
-        exportDataDict.pythonRefEvalExpr.let {
+        exportDataDict.refExpr.let {
             val testCases = evaluator.evaluate("$it['test_cases']", true)
             val pandasVersion = evaluator.evaluate("$it['pandas_version']")
             val versionParts = pandasVersion.forcedValue.split(".")
@@ -48,14 +60,16 @@ open class ExportTask(
 
     private fun convertTestCaseValue(exportTestCaseDict: PluginPyValue): TestCaseExportData {
         val evaluator = exportTestCaseDict.evaluator
-        return exportTestCaseDict.pythonRefEvalExpr.let {
+        return exportTestCaseDict.refExpr.let {
+            val dictAsMap = evaluator.evaluateStringyfiedDict(it)
             val styler = evaluator.evaluate("$it['styler']")
-            val chunkSize = evaluator.evaluate("str($it['chunk_size'][0]) + ':' + str($it['chunk_size'][1])")
-            val exportDir = evaluator.evaluate("$it['export_dir']")
+            val exportDir = dictAsMap.getValue("export_dir")
+            val chunkSize = parsePythonTuple(dictAsMap.getValue("chunk_size"))
+
             TestCaseExportData(
                 styler,
-                chunkSize.forcedValue.split(":").let { parts -> ChunkSize(parts[0].toInt(), parts[1].toInt()) },
-                exportDir.forcedValue
+                ChunkSize(chunkSize[0].toInt(), chunkSize[1].toInt()),
+                exportDir,
             )
         }
     }
@@ -65,7 +79,7 @@ open class ExportTask(
     ) : Iterator<PluginPyValue> {
 
         private var lastFetchedEntryIndex: Int = -1
-        private val size: Int = testCases.evaluator.evaluate("len(${testCases.pythonRefEvalExpr})").forcedValue.toInt()
+        private val size: Int = testCases.evaluator.evaluate("len(${testCases.refExpr})").forcedValue.toInt()
 
         override fun hasNext(): Boolean {
             return lastFetchedEntryIndex + 1 < size
@@ -73,7 +87,7 @@ open class ExportTask(
 
         override fun next(): PluginPyValue {
             lastFetchedEntryIndex++
-            return testCases.evaluator.evaluate("${testCases.pythonRefEvalExpr}[$lastFetchedEntryIndex]")
+            return testCases.evaluator.evaluate("${testCases.refExpr}[$lastFetchedEntryIndex]")
         }
     }
 }

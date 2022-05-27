@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,20 @@ import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
-internal open class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest() {
+/**
+ * Abstract class to run tests with a Python interpreter.
+ * The plugin code
+ */
+internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest() {
 
-    protected fun runWithInjectedPluginCode(
+    /**
+     * Injects the [pythonCodeToRun] and calls afterwards the [block].
+     *
+     * @param pythonCodeToRun Python code without plugin related code.
+     * @param block callable to run afterwards. The [PythonCodeBridge] and
+     * [IPluginPyValueEvaluator] are provided by the caller.
+     */
+    protected fun runWithPluginCodeBridge(
         pythonCodeToRun: String?,
         block: (codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator) -> Unit
     ) {
