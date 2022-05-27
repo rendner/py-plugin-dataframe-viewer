@@ -186,11 +186,11 @@ tasks {
                 classpath = testDockeredSourceSet.runtimeClasspath
 
                 systemProperty(
-                    "cms.rendner.dataframe.renderer.dockered.test.image",
+                    "cms.rendner.dataframe.viewer.dockered.test.image",
                     entry.dockerImageName,
                 )
                 systemProperty(
-                    "cms.rendner.dataframe.renderer.dockered.test.workdir",
+                    "cms.rendner.dataframe.viewer.dockered.test.workdir",
                     entry.getWorkdir(pipEnvEnvironment),
                 )
                 useJUnitPlatform {
@@ -230,15 +230,15 @@ tasks {
                 classpath = testDockeredSourceSet.runtimeClasspath
 
                 systemProperty(
-                    "cms.rendner.dataframe.renderer.export.test.data.dir",
+                    "cms.rendner.dataframe.viewer.export.test.data.dir",
                     exportTestDataPath,
                 )
                 systemProperty(
-                    "cms.rendner.dataframe.renderer.dockered.test.image",
+                    "cms.rendner.dataframe.viewer.dockered.test.image",
                     entry.dockerImageName,
                 )
                 systemProperty(
-                    "cms.rendner.dataframe.renderer.dockered.test.workdir",
+                    "cms.rendner.dataframe.viewer.dockered.test.workdir",
                     entry.getWorkdir(pipEnvEnvironment),
                 )
                 useJUnitPlatform {
@@ -302,11 +302,11 @@ tasks {
 
     test {
         systemProperty(
-            "cms.rendner.dataframe.renderer.export.test.data.dir",
+            "cms.rendner.dataframe.viewer.export.test.data.dir",
             exportTestDataPath,
         )
         systemProperty(
-            "cms.rendner.dataframe.renderer.export.test.error.image.dir",
+            "cms.rendner.dataframe.viewer.export.test.error.image.dir",
             exportTestErrorImagesPath,
         )
         useJUnitPlatform()
@@ -322,11 +322,11 @@ tasks {
 
     runIde {
         systemProperty(
-            "cms.rendner.dataframe.renderer.enable.test.data.export.action",
+            "cms.rendner.dataframe.viewer.enable.test.data.export.action",
             true,
         )
         systemProperty(
-            "cms.rendner.dataframe.renderer.export.test.data.dir",
+            "cms.rendner.dataframe.viewer.export.test.data.dir",
             exportTestDataPath,
         )
         // enable debug log for plugin

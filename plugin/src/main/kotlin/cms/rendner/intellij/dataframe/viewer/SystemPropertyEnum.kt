@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,33 @@
 package cms.rendner.intellij.dataframe.viewer
 
 enum class SystemPropertyEnum(val key: String) {
-    DOCKERED_TEST_WORKDIR("cms.rendner.dataframe.renderer.dockered.test.workdir"),
-    DOCKERED_TEST_IMAGE("cms.rendner.dataframe.renderer.dockered.test.image"),
-    ENABLE_TEST_DATA_EXPORT_ACTION("cms.rendner.dataframe.renderer.enable.test.data.export.action"),
-    EXPORT_TEST_DATA_DIR("cms.rendner.dataframe.renderer.export.test.data.dir"),
-    EXPORT_TEST_ERROR_IMAGE_DIR("cms.rendner.dataframe.renderer.export.test.error.image.dir")
+    /**
+     * The working directory inside the docker container.
+     * (used by integration tests)
+     */
+    DOCKERED_TEST_WORKDIR("cms.rendner.dataframe.viewer.dockered.test.workdir"),
+
+    /**
+     * The docker image to run.
+     * (used by integration tests)
+     */
+    DOCKERED_TEST_IMAGE("cms.rendner.dataframe.viewer.dockered.test.image"),
+
+    /**
+     * Enables the export-test-data action if set to "true".
+     * (for local development)
+     */
+    ENABLE_TEST_DATA_EXPORT_ACTION("cms.rendner.dataframe.viewer.enable.test.data.export.action"),
+
+    /**
+     * The target directory for the exported test-data.
+     * (for local development)
+     */
+    EXPORT_TEST_DATA_DIR("cms.rendner.dataframe.viewer.export.test.data.dir"),
+
+    /**
+     * The target directory for the test screenshots in case of an error.
+     * (for unit tests)
+     */
+    EXPORT_TEST_ERROR_IMAGE_DIR("cms.rendner.dataframe.viewer.export.test.error.image.dir"),
 }
