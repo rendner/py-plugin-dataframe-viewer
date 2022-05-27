@@ -22,10 +22,7 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkHeaderLabels
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValuesRow
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.IStyleComputer
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.StyleComputer
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.exceptions.ConvertException
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.TableBodyRow
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.html.TableRowsProvider
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.SmartList
 import org.jsoup.nodes.Document
@@ -33,17 +30,15 @@ import org.jsoup.nodes.Document
 /**
  * The converter uses [SmartList] where possible to reduce the memory footprint.
  */
-open class ChunkConverter(
-    private val document: Document
-) : IChunkConverter {
+open class ChunkConverter(document: Document): AbstractChunkConverter(document) {
 
     companion object {
         private val logger = Logger.getInstance(ChunkConverter::class.java)
     }
 
-    private val tableRowsProvider = createTableRowsProvider(document)
+    private val tableRowsProvider = createTableRowsProvider()
 
-    override fun convertText(excludeRowHeader: Boolean, excludeColumnHeader: Boolean): ChunkData {
+    override fun extractData(excludeRowHeader: Boolean, excludeColumnHeader: Boolean): ChunkData {
         val columnHeaderLabels = if (excludeColumnHeader) {
             ColumnHeaderLabelsExtractor.EMPTY_RESULT
         } else ColumnHeaderLabelsExtractor().extract(tableRowsProvider.headerRows)
@@ -67,7 +62,7 @@ open class ChunkConverter(
     }
 
     override fun mergeWithStyles(values: ChunkValues): ChunkValues {
-        val styleComputer = createTableStyleComputer(document)
+        val styleComputer = createTableStyleComputer()
         return ChunkValues(
             SmartList(tableRowsProvider.bodyRows.zip(values.rows) { tableRow, unstyledRow ->
                 createStyledRow(tableRow, unstyledRow, styleComputer)
@@ -93,15 +88,5 @@ open class ChunkConverter(
                 }
             })
         )
-    }
-
-    private fun createTableRowsProvider(document: Document): TableRowsProvider {
-        val table = document.selectFirst("table")
-            ?: throw ConvertException("No table-tag found in html document.", document.body().text())
-        return TableRowsProvider(table)
-    }
-
-    protected open fun createTableStyleComputer(document: Document): IStyleComputer {
-        return StyleComputer(document)
     }
 }

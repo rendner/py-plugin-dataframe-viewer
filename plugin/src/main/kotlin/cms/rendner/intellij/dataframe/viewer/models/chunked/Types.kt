@@ -19,7 +19,22 @@ import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
 import cms.rendner.intellij.dataframe.viewer.models.Value
 
+/**
+ * An interface to evaluate data of a pandas DataFrame.
+ */
 interface IChunkEvaluator {
+    /**
+     * Evaluates the HTML representation for a chunk of a pandas DataFrame.
+     *
+     * Excluding already fetched headers reduces the amount of data which to be fetched and parsed.
+     *
+     * @param chunkRegion the region of the data to evaluate
+     * @param excludeRowHeaders if result should not include the headers of the rows
+     * @param excludeColumnHeaders if result should not include the headers of the columns
+     * @return returns a HtML string like pandas "Styler::to_html"
+     *
+     * [pandas-docs - Styler.to_html](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.to_html.html)
+     */
     fun evaluate(chunkRegion: ChunkRegion, excludeRowHeaders: Boolean, excludeColumnHeaders: Boolean): String
 }
 
@@ -27,21 +42,39 @@ interface IChunkValues {
     fun value(rowIndexInChunk: Int, columnIndexInChunk: Int): Value
 }
 
+/**
+ * The values of a row, without header.
+ */
 data class ChunkValuesRow(val values: List<Value>)
+
+/**
+ * The values of a chunk.
+ */
 data class ChunkValues(val rows: List<ChunkValuesRow>) : IChunkValues {
     override fun value(rowIndexInChunk: Int, columnIndexInChunk: Int) = rows[rowIndexInChunk].values[columnIndexInChunk]
 }
 
-data class ChunkValuesPlaceholder(private val placeholder: Value) : IChunkValues {
-    override fun value(rowIndexInChunk: Int, columnIndexInChunk: Int) = placeholder
-}
-
+/**
+ * The headers of a chunk.
+ *
+ * @property legend the legend headers (contain additional information for multi index DataFrames)
+ * @property columns list of column headers
+ * @property rows list of rows headers
+ */
 data class ChunkHeaderLabels(
     val legend: LegendHeaders,
     val columns: List<IHeaderLabel>,
     val rows: List<IHeaderLabel>
 )
 
+/**
+ * Describes the location and size of a chunk inside a pandas DataFrame.
+ *
+ * @property firstRow index of the first row of the chunk
+ * @property firstColumn index of the first column of the chunk
+ * @property numberOfRows number of rows in the chunk
+ * @property numberOfColumns number of columns in the chunk
+ */
 data class ChunkRegion(
     val firstRow: Int,
     val firstColumn: Int,
@@ -49,11 +82,22 @@ data class ChunkRegion(
     val numberOfColumns: Int,
 )
 
+/**
+ * The data of a chunk.
+ * @property headerLabels the row and column labels of the chunk.
+ * @property values the values of the chunk.
+ */
 data class ChunkData(
     val headerLabels: ChunkHeaderLabels,
     val values: ChunkValues
 )
 
+/**
+ * Describes the size of a chunk.
+ *
+ * @property rows number of rows in the chunk
+ * @property columns number of columns in the chunk
+ */
 data class ChunkSize(val rows: Int, val columns: Int)
 
 /**

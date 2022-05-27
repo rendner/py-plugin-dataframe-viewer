@@ -90,7 +90,7 @@ private class RowsParentFilter: NodeFilter {
     var tbodyElement: Element? = null
         private set
 
-    override fun head(node: Node?, depth: Int): NodeFilter.FilterResult {
+    override fun head(node: Node, depth: Int): NodeFilter.FilterResult {
         if (node is Element) {
             return when (node.tagName()) {
                 "table" -> NodeFilter.FilterResult.CONTINUE
@@ -115,7 +115,7 @@ private class RowsParentFilter: NodeFilter {
         return NodeFilter.FilterResult.SKIP_ENTIRELY
     }
 
-    override fun tail(node: Node?, depth: Int): NodeFilter.FilterResult {
+    override fun tail(node: Node, depth: Int): NodeFilter.FilterResult {
         return if (tbodyElement != null) NodeFilter.FilterResult.STOP else NodeFilter.FilterResult.CONTINUE
     }
 }

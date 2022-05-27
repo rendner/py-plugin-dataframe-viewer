@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,37 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.IChunkConverter
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.AbstractChunkConverter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AbstractChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
 import org.jsoup.nodes.Document
+import java.util.concurrent.Executor
 
+/**
+ * Loads chunks of a pandas DataFrame synchronously (blocks the calling thread).
+ *
+ * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
+ * @param chunkConverterFactory a factory to create custom chunk converters. A chunk converter is responsible
+ * for providing the extracted css styling and values from the fetched HTML data.
+ */
 internal class BlockingChunkDataLoader(
     chunkEvaluator: IChunkEvaluator,
-    private val chunkConverterFactory: ((document: Document) -> IChunkConverter)? = null,
-) : AbstractChunkDataLoader(
+    private val chunkConverterFactory: ((document: Document) -> AbstractChunkConverter)? = null,
+) : Executor, AbstractChunkDataLoader(
     chunkEvaluator
 ) {
-    override fun addToLoadingQueue(request: LoadRequest) {
-        createFetchChunkTask(request).run()
+    override fun loadChunk(request: LoadRequest) {
+        submitFetchChunkTask(request, this).whenComplete { _, throwable ->
+            if (throwable != null) {
+                myResultHandler?.onError(request, throwable)
+                throw throwable
+            }
+        }
+    }
+
+    override fun isAlive() = true
+    override fun dispose() {
+        // do nothing
     }
 
     override fun handleChunkData(loadRequest: LoadRequest, chunkData: ChunkData) {
@@ -38,16 +56,14 @@ internal class BlockingChunkDataLoader(
     }
 
     override fun handleStyledValues(loadRequest: LoadRequest, chunkValues: ChunkValues) {
-        myResultHandler?.onStyledValues(loadRequest, chunkValues)
+        myResultHandler?.onStyledValuesProcessed(loadRequest, chunkValues)
     }
 
-    override fun handleError(loadRequest: LoadRequest, throwable: Throwable) {
-        myResultHandler?.onError(loadRequest, throwable)
-        // re-throw unexpected error
-        throw throwable
-    }
-
-    override fun createChunkConverter(document: Document): IChunkConverter {
+    override fun createChunkConverter(document: Document): AbstractChunkConverter {
         return chunkConverterFactory?.let { it(document) } ?: super.createChunkConverter(document)
+    }
+
+    override fun execute(command: Runnable) {
+        command.run()
     }
 }

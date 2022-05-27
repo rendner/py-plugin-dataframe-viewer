@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.models.chunked.converter
+package cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
-
-interface IChunkConverter {
-    fun convertText(excludeRowHeader: Boolean, excludeColumnHeader: Boolean): ChunkData
-    fun mergeWithStyles(values: ChunkValues): ChunkValues
-}
+class ChunkDataLoaderException(message: String, cause: Throwable? = null) : Exception(message, cause)

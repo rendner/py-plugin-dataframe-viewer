@@ -32,7 +32,7 @@ class ComputedCSSChunkConverter(
     document: Document
 ) : ChunkConverter(document) {
 
-    override fun createTableStyleComputer(document: Document): IStyleComputer {
+    override fun createTableStyleComputer(): IStyleComputer {
         return ComputedCSSExtractor(CSSOMParser(SACParserCSS3()))
     }
 }

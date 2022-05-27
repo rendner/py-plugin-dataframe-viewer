@@ -15,67 +15,128 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
-import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.ChunkConverter
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.IChunkConverter
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.AbstractChunkConverter
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
+import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ChunkValidator
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
+import java.util.function.Supplier
 
+/**
+ * Abstract class for loading chunks of a pandas DataFrame.
+ * The data is fetched by using an [IChunkEvaluator] and validated by an optional [ChunkValidator].
+ *
+ * Chunks of a specific area of a DataFrame can be requested by calling [loadChunk] and specifying the exact
+ * location inside the DataFrame. Since, the underlying pandas DataFrame isn't thread safe, there should not be
+ * more than one running request in parallel.
+ *
+ * See [pandas-docs - Thread-safety](https://pandas.pydata.org/pandas-docs/dev/user_guide/gotchas.html#thread-safety)
+ * See [DataFrame.copy(), at least, should be threadsafe](https://github.com/pandas-dev/pandas/issues/2728)
+ *
+ * Note:
+ * Subclasses are responsible for:
+ * - forwarding the results of a load request to the registered result handler ([setResultHandler])
+ * - ensure that only one task, returned by [submitFetchChunkTask], is executed at a time
+ *
+ * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
+ * @param chunkValidator the validator to validate the generated HTML data for a chunk
+ */
 abstract class AbstractChunkDataLoader(
-    chunkEvaluator: IChunkEvaluator
+    private var chunkEvaluator: IChunkEvaluator,
+    private var chunkValidator: ChunkValidator? = null,
 ) : IChunkDataLoader {
 
     protected var myResultHandler: IChunkDataResultHandler? = null
-    private val myChunkEvaluator = chunkEvaluator
-
-    override fun isAlive() = true
 
     override fun setResultHandler(resultHandler: IChunkDataResultHandler) {
         myResultHandler = resultHandler
     }
 
-    override fun dispose() {
-    }
-
-    protected open fun createChunkConverter(document: Document): IChunkConverter {
+    protected open fun createChunkConverter(document: Document): AbstractChunkConverter {
         return ChunkConverter(document)
     }
 
-    protected fun createFetchChunkTask(loadRequest: LoadRequest): Runnable {
-        return Runnable {
-            val currentThread = Thread.currentThread()
+    /**
+     * Creates a fetch-chunk task.
+     *
+     * The created task is able to run on a single thread, two threads are optimal.
+     * Using more than two threads can't speed up the processing.
+     *
+     * @param loadRequest the location of the data to fetch
+     * @param executor to submit additional subtasks at execution time.
+     * @return the fetch-chunk task.
+     */
+    protected fun submitFetchChunkTask(loadRequest: LoadRequest, executor: Executor): CompletableFuture<Void> {
+        return CompletableFuture
+            .supplyAsync(createFetchHtmlTask(loadRequest), executor)
+            .thenCompose { html ->
+                val tasks = mutableListOf<CompletableFuture<Void>>()
+                tasks.add(CompletableFuture.runAsync(createParseHtmlTask(loadRequest, html), executor))
+                chunkValidator?.let {
+                    tasks.add(CompletableFuture.runAsync(createValidateChunkTask(loadRequest), executor))
+                }
+                CompletableFuture.allOf(*tasks.toTypedArray())
+            }
+    }
+
+    private fun createFetchHtmlTask(loadRequest: LoadRequest): Supplier<String> {
+        return Supplier {
             try {
-                val evaluatedChunk = myChunkEvaluator.evaluate(
+                chunkEvaluator.evaluate(
                     loadRequest.chunkRegion,
                     loadRequest.excludeRowHeaders,
                     loadRequest.excludeColumnHeaders
                 )
-                if (currentThread.isInterrupted) return@Runnable
+            } catch (throwable: Throwable) {
+                if (throwable is InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+                throw ChunkDataLoaderException("Fetching data failed", throwable)
+            }
+        }
+    }
 
-                val document = Jsoup.parse(evaluatedChunk)
-                if (currentThread.isInterrupted) return@Runnable
+    private fun createParseHtmlTask(loadRequest: LoadRequest, html: String): Runnable {
+        return Runnable {
+            try {
+                val document = Jsoup.parse(html)
+                if (Thread.currentThread().isInterrupted) return@Runnable
 
                 val converter = createChunkConverter(document)
 
-                val chunkData = converter.convertText(loadRequest.excludeRowHeaders, loadRequest.excludeColumnHeaders)
-                if (currentThread.isInterrupted) return@Runnable
+                val chunkData = converter.extractData(loadRequest.excludeRowHeaders, loadRequest.excludeColumnHeaders)
+                if (Thread.currentThread().isInterrupted) return@Runnable
                 handleChunkData(loadRequest, chunkData)
 
                 val styledValues = converter.mergeWithStyles(chunkData.values)
-                if (currentThread.isInterrupted) return@Runnable
+                if (Thread.currentThread().isInterrupted) return@Runnable
                 handleStyledValues(loadRequest, styledValues)
-            } catch (e: Throwable) {
-                handleError(loadRequest, e)
-                if (e is InterruptedException) {
+            } catch (throwable: Throwable) {
+                if (throwable is InterruptedException) {
                     Thread.currentThread().interrupt()
                 }
+                throw ChunkDataLoaderException("Parsing fetched data for failed", throwable)
+            }
+        }
+    }
+
+    private fun createValidateChunkTask(loadRequest: LoadRequest): Runnable {
+        return Runnable {
+            try {
+                chunkValidator?.validate(loadRequest.chunkRegion)
+            } catch (throwable: Throwable) {
+                if (throwable is InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+                throw ChunkDataLoaderException("Validating styling functions failed", throwable)
             }
         }
     }
 
     protected abstract fun handleChunkData(loadRequest: LoadRequest, chunkData: ChunkData)
     protected abstract fun handleStyledValues(loadRequest: LoadRequest, chunkValues: ChunkValues)
-    protected abstract fun handleError(loadRequest: LoadRequest, throwable: Throwable)
 }

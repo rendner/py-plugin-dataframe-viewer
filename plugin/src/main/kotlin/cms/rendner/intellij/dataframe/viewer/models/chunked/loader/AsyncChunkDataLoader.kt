@@ -15,70 +15,97 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 
-import cms.rendner.intellij.dataframe.viewer.notifications.UserNotifier
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
-import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.*
+import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ChunkValidator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.intellij.dataframe.viewer.shutdownExecutorSilently
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.util.ConcurrencyUtil
 import java.util.*
+import java.util.concurrent.CompletionException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
- * Fetches data of a pandas DataFrame chunkwise.
- * If the DataFrame becomes unreachable (disconnected debugger) all pending requests are dropped
- * without notification.
+ * Loader for loading chunks of a pandas DataFrame asynchronously.
+ *
+ * The implementation is not thread safe and should only be called from a single thread.
+ * This behavior is on purpose because this class is used by a swing component.
+ *
+ * It is guaranteed that all the methods provided by the [IChunkDataResultHandler] are called
+ * from the event dispatch thread (EDT).
+ *
+ * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
+ * @param chunkValidator the validator to validate the generated HTML data for a chunk
+ * @param errorHandler the error handler. All errors during the data fetching are forwarded to this handler.
  */
 class AsyncChunkDataLoader(
     chunkEvaluator: IChunkEvaluator,
-    waitingQueueSize: Int,
-    private var notifier: UserNotifier? = null
+    chunkValidator: ChunkValidator?,
+    private val errorHandler: IChunkDataLoaderErrorHandler,
 ) : AbstractChunkDataLoader(
-    chunkEvaluator
+    chunkEvaluator,
+    chunkValidator,
 ) {
 
     companion object {
         private val logger = Logger.getInstance(AsyncChunkDataLoader::class.java)
     }
 
-    private var isAliveFlag = true
-    private var activeRequest: LoadRequest? = null
-    private val myMaxRequestedChunks: Int = waitingQueueSize
-    private val myRequestedChunks: Deque<LoadRequest> = ArrayDeque()
+    private var myIsAliveFlag = true
+    private var myActiveRequest: LoadRequest? = null
+    private val myPendingRequests: Deque<LoadRequest> = ArrayDeque()
+    private val myExecutorService = Executors.newFixedThreadPool(2)
+    private var myMaxWaitingRequests: Int = 4
 
-    // http://gafter.blogspot.com/2006/11/thread-pool-puzzler.html
-    private val myExecutorService = ConcurrencyUtil.newSingleThreadExecutor(AsyncChunkDataLoader::class.java.simpleName)
+    fun setMaxWaitingRequests(value: Int) {
+        myMaxWaitingRequests = value
+    }
 
-    override fun isAlive() = isAliveFlag
+    override fun isAlive() = myIsAliveFlag
 
-    override fun addToLoadingQueue(request: LoadRequest) {
-        if(!isAliveFlag) return
+    /**
+     * Adds a load request to an internal waiting queue.
+     * The added requests are processed according to the LIFO principle (last-in-first-out).
+     * Entries of the waiting queue are processed as soon as the next chunk can be fetched.
+     *
+     * Since the internal waiting queue has a limited capacity, the oldest waiting request
+     * is dropped unprocessed as this limit exceeds to free space for the new one.
+     *
+     * The capacity of the internal waiting queue can be configured by using [setMaxWaitingRequests].
+     *
+     * Adding a load request with the same [ChunkRegion] as a previous added one:
+     * - before the previous one is processed, will remove the old one unprocessed and add the new one
+     * - which is currently processed, will not add the new one
+     * - which was already processed in the past, will add the new one
+     *
+     */
+    override fun loadChunk(request: LoadRequest) {
+        if (!myIsAliveFlag) return
         when {
-            request == activeRequest -> return
-            myRequestedChunks.isEmpty() -> myRequestedChunks.add(request)
-            myRequestedChunks.firstOrNull() == request -> return
+            request.chunkRegion == myActiveRequest?.chunkRegion -> return
+            myPendingRequests.isEmpty() -> myPendingRequests.add(request)
+            myPendingRequests.firstOrNull() == request -> return
             else -> {
-                myRequestedChunks.removeIf { r -> r.chunkRegion == request.chunkRegion }
-                myRequestedChunks.addFirst(request)
+                myPendingRequests.removeIf { r -> r.chunkRegion == request.chunkRegion }
+                myPendingRequests.addFirst(request)
             }
         }
-        if (myRequestedChunks.size >= myMaxRequestedChunks) {
-            myRequestedChunks.pollLast()
+        if (myPendingRequests.size >= myMaxWaitingRequests) {
+            myPendingRequests.pollLast()
         }
 
         fetchNextChunk()
     }
 
     override fun dispose() {
-        super.dispose()
-        try {
-            myExecutorService.shutdownNow()
-        } catch (ignore: SecurityException) {
-        }
-        myRequestedChunks.clear()
-        activeRequest = null
-        notifier = null
+        shutdownExecutorSilently(myExecutorService, 0, TimeUnit.SECONDS)
+        myIsAliveFlag = false
+        myPendingRequests.clear()
+        // call loadRequestDone after shutting down the executorService
+        // in case a not yet finished request was processed
+        myActiveRequest?.let { loadRequestDone(it) }
+        myActiveRequest = null
     }
 
     override fun handleChunkData(loadRequest: LoadRequest, chunkData: ChunkData) {
@@ -89,41 +116,48 @@ class AsyncChunkDataLoader(
 
     override fun handleStyledValues(loadRequest: LoadRequest, chunkValues: ChunkValues) {
         ApplicationManager.getApplication().invokeLater {
-            activeRequest = null
-            myResultHandler?.onStyledValues(loadRequest, chunkValues)
-            fetchNextChunk()
+            myResultHandler?.onStyledValuesProcessed(loadRequest, chunkValues)
         }
     }
 
-    override fun handleError(loadRequest: LoadRequest, throwable:Throwable) {
+    private fun loadRequestDone(loadRequest: LoadRequest) {
         ApplicationManager.getApplication().invokeLater {
-            activeRequest = null
-
-            if(isAliveFlag) {
-                logger.warn("Fetching data for chunk '${loadRequest.chunkRegion}' failed.", throwable)
-
-                if (throwable is EvaluateException && throwable.cause?.isDisconnectException() == true) {
-                    isAliveFlag = false
-                    myRequestedChunks.clear()
-                    logger.info("Debugger disconnected, setting 'isAlive' to false.")
-                }
-
-                notifier?.error(
-                    "Can't load data for chunk ${loadRequest.chunkRegion}",
-                    "Loading chunk failed",
-                    throwable,
-                )
-                myResultHandler?.onError(loadRequest, throwable)
+            myActiveRequest = null
+            if (myIsAliveFlag) {
                 fetchNextChunk()
             }
         }
     }
 
     private fun fetchNextChunk() {
-        if (activeRequest == null && myRequestedChunks.isNotEmpty()) {
-            val loadRequest = myRequestedChunks.pollFirst()
-            activeRequest = loadRequest
-            myExecutorService.execute(createFetchChunkTask(loadRequest))
+        if (myActiveRequest == null && myPendingRequests.isNotEmpty()) {
+            myPendingRequests.pollFirst().let {
+                myActiveRequest = it
+
+                submitFetchChunkTask(it, myExecutorService).whenComplete { _, throwable ->
+                    if (throwable != null) {
+                        val unwrapped = if (throwable is CompletionException) throwable.cause!! else throwable
+                        handleFetchTaskError(it, unwrapped)
+                    }
+                    loadRequestDone(it)
+                }
+            }
+        }
+    }
+
+    private fun handleFetchTaskError(loadRequest: LoadRequest, throwable: Throwable) {
+        errorHandler.handleChunkDataError(loadRequest.chunkRegion, throwable)
+        ApplicationManager.getApplication().invokeLater {
+
+            if (myIsAliveFlag) {
+                if (throwable is EvaluateException && throwable.cause?.isDisconnectException() == true) {
+                    myIsAliveFlag = false
+                    myPendingRequests.clear()
+                    logger.info("Debugger disconnected, setting 'isAlive' to false.")
+                }
+
+                myResultHandler?.onError(loadRequest, throwable)
+            }
         }
     }
 }

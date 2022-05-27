@@ -20,24 +20,21 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.events.ChunkTableMod
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataResultHandler
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
-import com.intellij.openapi.diagnostic.Logger
 import javax.swing.table.AbstractTableModel
 
 /**
- * Fetches thd model data chunkwise via the specified [chunkDataLoader].
+ * Fetches the model data chunkwise via a [chunkDataLoader].
+ * The [IChunkDataLoader.dispose] method of the [chunkDataLoader] is automatically called when the model is disposed.
  *
  * @param tableStructure describes the structure of the model.
  * @param chunkDataLoader used for lazy data loading.
  * @param chunkSize size of the chunks to load.
- * The [IChunkDataLoader.dispose] method of the [chunkDataLoader] is automatically called when the model is disposed.
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
 ) : IDataFrameModel, IChunkDataResultHandler {
-
-    private val logger = Logger.getInstance(this::class.java)
 
     private val myValueModel = ValueModel(this)
     private val myIndexModel = IndexModel(this)
@@ -185,7 +182,7 @@ class ChunkedDataFrameModel(
         }
 
         if (!disposed && chunkDataLoader.isAlive() && !myFailedChunks.contains(chunkRegion)) {
-            chunkDataLoader.addToLoadingQueue(
+            chunkDataLoader.loadChunk(
                 LoadRequest(
                     chunkRegion,
                     tableStructure.hideRowHeader || myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] != null,
@@ -229,14 +226,13 @@ class ChunkedDataFrameModel(
         setChunkValues(chunkRegion, chunkData.values)
     }
 
-    override fun onStyledValues(request: LoadRequest, chunkValues: ChunkValues) {
+    override fun onStyledValuesProcessed(request: LoadRequest, chunkValues: ChunkValues) {
         if (disposed) return
         setChunkValues(request.chunkRegion, chunkValues)
     }
 
     override fun onError(request: LoadRequest, throwable: Throwable) {
         if (disposed) return
-        logger.error("Failed to load chunk '${request}':", throwable)
         myFailedChunks.add(request.chunkRegion)
     }
 
@@ -273,6 +269,10 @@ class ChunkedDataFrameModel(
         myIndexModel.fireTableChanged(
             ChunkTableModelEvent.createHeaderLabelsChanged(myIndexModel, 0, 0)
         )
+    }
+
+    private data class ChunkValuesPlaceholder(private val placeholder: Value) : IChunkValues {
+        override fun value(rowIndexInChunk: Int, columnIndexInChunk: Int) = placeholder
     }
 
     private class ValueModel(private val source: ChunkedDataFrameModel) : AbstractTableModel(), ITableValueDataModel {

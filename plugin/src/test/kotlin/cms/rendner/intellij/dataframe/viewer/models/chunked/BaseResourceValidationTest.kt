@@ -19,6 +19,7 @@ import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
 import cms.rendner.intellij.dataframe.viewer.models.IDataFrameModel
 import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.DataFrameTableImageWriter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
+import cms.rendner.intellij.dataframe.viewer.models.chunked.utils.iterateDataFrame
 import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCasePath
 import com.intellij.util.io.createDirectories
 import com.intellij.util.io.delete
@@ -131,10 +132,9 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
     ) {
         val valueModel = dateFrameModel.getValueDataModel()
         if (valueModel.columnCount == 0 && valueModel.rowCount == 0) return
-        for (row in 0 until tableStructure.rowsCount step chunkSize.rows) {
-            for (column in 0 until tableStructure.columnsCount step chunkSize.columns) {
-                valueModel.getValueAt(row, column)
-            }
+
+        iterateDataFrame(tableStructure.rowsCount, tableStructure.columnsCount, chunkSize).forEach {
+            valueModel.getValueAt(it.firstRow, it.firstColumn)
         }
     }
 

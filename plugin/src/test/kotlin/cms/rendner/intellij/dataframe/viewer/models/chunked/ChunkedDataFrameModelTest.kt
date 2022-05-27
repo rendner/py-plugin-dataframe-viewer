@@ -251,7 +251,7 @@ internal class ChunkedDataFrameModelTest {
     ) : IChunkDataLoader {
         private var resultHandler: IChunkDataResultHandler? = null
 
-        override fun addToLoadingQueue(request: LoadRequest) {
+        override fun loadChunk(request: LoadRequest) {
             chunkDataProvider.getData(request)?.let {
                 resultHandler?.onChunkLoaded(request, it)
             }

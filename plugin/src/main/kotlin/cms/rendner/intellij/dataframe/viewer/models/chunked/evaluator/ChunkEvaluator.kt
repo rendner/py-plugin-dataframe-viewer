@@ -15,11 +15,12 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
-import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 
 /**
+ * Evaluates the HTML representation for a chunk.
+ *
  * @param patchedStyler the styler from which the chunk is fetched.
  */
 class ChunkEvaluator(
