@@ -263,14 +263,21 @@ class PatchedStyler:
         target.uuid_len = 0
         target.cell_ids = False
 
-        # copy
+        # copy/assign
         target.table_styles = source.table_styles
         target.table_attributes = source.table_attributes
         target.hide_columns_ = source.hide_columns_
         target.hide_index_ = source.hide_index_
-        target.ctx = source.ctx
         target.cell_context = source.cell_context
         target._display_funcs = source._display_funcs
-        # don't copy "_todo"
-        # don't copy "hidden_columns" and "self.hidden_rows"
-        #   - these values are already used to calculate "self.__visible_df"
+        # don't copy/assign:
+        # "_todo"
+        #   - will be overwritten with the patched ones in a later step
+        # "hidden_columns" and "self.hidden_rows"
+        #   - these values are already used to calculate "self.__visible_data"
+        #     and therefore not needed any more
+        # "ctx"
+        #   - gets modified/filled when generating html
+        #   - causes html output with wrong values when multiple targets copy the
+        #     same ref (source) and are processed in different threads => each thread
+        #     modifies the same ref (ctx is cleared and new values are added)
