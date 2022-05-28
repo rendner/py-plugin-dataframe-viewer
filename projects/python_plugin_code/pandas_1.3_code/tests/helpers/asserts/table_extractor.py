@@ -99,10 +99,16 @@ class TableExtractor(HTMLParser):
     def handle_data(self, data: str):
         data = data.strip()
         if len(data) != 0:
-            if self.get_starttag_text() == '<style type="text/css">':
+            if self.starttag_is_style_tag():
                 self.ctx.styled_table.styles = self.__build_selector_map(data)
             else:
                 self.ctx.open_elements_stack[-1].text = data
+
+    def starttag_is_style_tag(self):
+        # the style tag in pandas 1.1.x - 1.2.x was '<style  type="text/css" >' (note the extra spaces)
+        # but it is now fixed
+        # -> this method ensures the detection of the tag independent how many spaces are used
+        return self.get_starttag_text().replace(" ", "") == '<style type="text/css">'.replace(" ", "")
 
     @staticmethod
     def __build_selector_map(html_stylesheet: str) -> Dict[str, str]:
