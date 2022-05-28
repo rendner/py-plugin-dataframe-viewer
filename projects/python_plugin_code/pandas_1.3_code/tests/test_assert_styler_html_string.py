@@ -14,7 +14,7 @@
 import pandas as pd
 import pytest
 
-from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
+from tests.helpers.asserts.assert_styler_html_string import create_and_assert_patched_styler_html_string
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -28,7 +28,7 @@ df = pd.DataFrame.from_dict({
 def test_should_fail_if_css_doesnt_match():
     colors = ["yellow", "pink"]
     with pytest.raises(AssertionError):
-        create_and_assert_patched_styler(
+        create_and_assert_patched_styler_html_string(
             df,
             lambda styler: styler.highlight_max(color=colors.pop()),
             len(df.index),
@@ -39,7 +39,7 @@ def test_should_fail_if_css_doesnt_match():
 def test_should_fail_if_styled_value_doesnt_match():
     style_methods = ["highlight_max", "highlight_min"]
     with pytest.raises(AssertionError):
-        create_and_assert_patched_styler(
+        create_and_assert_patched_styler_html_string(
             df,
             lambda styler: getattr(styler, style_methods.pop())(color="yellow"),
             len(df.index),
@@ -48,7 +48,7 @@ def test_should_fail_if_styled_value_doesnt_match():
 
 
 def test_should_not_fail_if_same_styling_and_value():
-    create_and_assert_patched_styler(
+    create_and_assert_patched_styler_html_string(
         df,
         lambda styler: styler.highlight_max(),
         len(df.index),
