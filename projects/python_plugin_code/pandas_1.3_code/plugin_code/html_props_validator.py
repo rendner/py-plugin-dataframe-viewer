@@ -15,19 +15,20 @@ from plugin_code.html_props_generator import HTMLPropsGenerator
 
 # == copy after here ==
 import json
-
+from typing import Any
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
+from dataclasses import dataclass
 
 
 class _MyJSONEncoder(json.JSONEncoder):
-    def encode(self, obj):
+    def encode(self, obj: Any):
         return super().encode(self._sanitize_dict_keys(obj))
 
-    def default(self, obj: any) -> str:
+    def default(self, obj: Any) -> str:
         return str(obj)
 
-    def _sanitize_dict_keys(self, obj):
+    def _sanitize_dict_keys(self, obj: Any):
         if isinstance(obj, dict):
             result = {}
             for key, value in obj.items():
@@ -84,11 +85,11 @@ def _remove_empty_rows_and_hidden_row_entries(rows: list, removed_entry_ids: set
     return result
 
 
+@dataclass(frozen=True)
 class HTMLPropsValidationResult:
-    def __init__(self, actual: str, expected: str, is_equal: bool):
-        self.actual = actual
-        self.expected = expected
-        self.is_equal = is_equal
+    actual: str
+    expected: str
+    is_equal: bool
 
 
 class AbstractHTMLPropsValidator:

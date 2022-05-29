@@ -13,12 +13,46 @@
 #  limitations under the License.
 from plugin_code.html_props_generator import HTMLPropsGenerator
 from plugin_code.html_props_validator import HTMLPropsValidator
-from plugin_code.table_structure import TableStructure
+from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
+from plugin_code.style_function_validator import StyleFunctionValidationInfo, ValidationStrategyType, \
+    StyleFunctionsValidator
+from plugin_code.styler_todo import StylerTodo
+from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
-import numpy as np
+from dataclasses import dataclass, asdict
+import numpy as np  # numpy is required by pandas (therefore should be available at runtime)
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
+from typing import List, Optional
+
+
+@dataclass(frozen=True)
+class TableStructure:
+    rows_count: int
+    columns_count: int
+    row_levels_count: int
+    column_levels_count: int
+    hide_row_header: bool
+    hide_column_header: bool
+
+    def __str__(self):
+        return str(asdict(self))
+
+
+@dataclass(frozen=True)
+class StyleFunctionDetails:
+    index: int
+    name: str
+    display_name: str
+    axis: str
+    is_chunk_parent_requested: bool
+    is_apply: bool
+    is_pandas_builtin: bool
+    is_supported: bool
+
+    def __str__(self):
+        return str(asdict(self))
 
 
 class PatchedStyler:
@@ -27,9 +61,26 @@ class PatchedStyler:
         self.__styler: Styler = styler
         self.__visible_data: DataFrame = self.__get_visible_data(styler)
         self.__html_props_generator = HTMLPropsGenerator(self.__get_visible_data(styler), styler)
+        self.__style_functions_validator = StyleFunctionsValidator(self.__get_visible_data(styler), styler)
 
     def create_html_props_validator(self) -> HTMLPropsValidator:
         return HTMLPropsValidator(self.__visible_data, self.__styler)
+
+    def validate_style_functions(self,
+                                 first_row: int,
+                                 first_column: int,
+                                 last_row: int,
+                                 last_column: int,
+                                 validation_strategy: Optional[ValidationStrategyType] = None,
+                                 ) -> List[StyleFunctionValidationInfo]:
+        if validation_strategy is not None:
+            self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
+        return self.__style_functions_validator.validate(
+            first_row=first_row,
+            first_column=first_column,
+            last_row=last_row,
+            last_column=last_column,
+        )
 
     def render_chunk(
             self,
@@ -75,6 +126,24 @@ class PatchedStyler:
             hide_row_header=self.__styler.hide_index_,
             hide_column_header=self.__styler.hide_columns_
         )
+
+    def get_style_function_details(self) -> List[StyleFunctionDetails]:
+        result = []
+
+        for i, todo in enumerate(self.__styler._todo):
+            t = StylerTodo.from_tuple(todo)
+            result.append(StyleFunctionDetails(
+                index=i,
+                name=StyleFunctionNameResolver.get_style_func_name(t),
+                display_name=StyleFunctionNameResolver.get_style_func_display_name(t),
+                axis=str(t.apply_args.axis),
+                is_pandas_builtin=t.is_pandas_style_func(),
+                is_supported=TodosPatcher.is_style_function_supported(t),
+                is_apply=t.is_apply_call(),
+                is_chunk_parent_requested=t.should_provide_chunk_parent(),
+            ))
+
+        return result
 
     @staticmethod
     def __get_visible_data(styler: Styler) -> DataFrame:
