@@ -84,14 +84,10 @@ class BackgroundGradientPatcher(TodoPatcher):
                                           ) -> np.ndarray:
         # Note:
         # "get_indexer_for" has to be used.
-        # Using "first_row, first_column, last_row, last_column" which were used to create the chunk, like:
-        #
-        # (gmap is a DataFrame)
-        # "gmap = gmap.iloc[self._first_row:self._last_row, self._first_column:self._last_column]"
-        #
-        # will not work, because a user could have specified a subset. The coordinates of the subset
-        # have to be taken into account to adjust the gmap correctly. This is all done automatically
-        # by using "get_indexer_for" without the need to access the "first_row, first_column, last_row, last_column".
+        # Using "first_row, first_col, rows, and cols" which were used to create the chunk can't be used
+        # to get the matching "gmap" for the chunk, because a user could have specified a subset.
+        # The coordinates of the subset have to be taken into account to adjust the gmap correctly.
+        # This is all done automatically by using "get_indexer_for".
         if isinstance(chunk_or_series_from_chunk, Series):
             return gmap[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
         elif isinstance(chunk_or_series_from_chunk, DataFrame) and self._todo.apply_args.axis is None:

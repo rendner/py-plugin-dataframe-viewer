@@ -72,17 +72,21 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
     table_extractor = TableExtractor()
     table_structure = patched_styler.get_table_structure()
 
-    for ri in range(0, table_structure.rows_count, rows_per_chunk):
-        for ci in range(0, table_structure.columns_count, cols_per_chunk):
+    rows_processed = 0
+    while rows_processed < table_structure.rows_count:
+        rows = min(rows_per_chunk, table_structure.rows_count - rows_processed)
+        cols_in_row_processed = 0
+        while cols_in_row_processed < table_structure.columns_count:
+            cols = min(cols_per_chunk, table_structure.columns_count - cols_in_row_processed)
             # fetch column header only for whole first row (all other rows have the same)
-            exclude_col_header = ri > 0
+            exclude_col_header = rows_processed > 0
             # fetch row header only for first col-block (all others have the same row header)
-            exclude_row_header = ci > 0
+            exclude_row_header = cols_in_row_processed > 0
             chunk_html = patched_styler.render_chunk(
-                ri,
-                ci,
-                ri + rows_per_chunk,
-                ci + cols_per_chunk,
+                rows_processed,
+                cols_in_row_processed,
+                rows,
+                cols,
                 exclude_row_header,
                 exclude_col_header
             )
@@ -92,7 +96,10 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
             if result is None:
                 result = extracted_table
             else:
-                _merge_tables(result, extracted_table, ri, ri == 0, ci == 0)
+                _merge_tables(result, extracted_table, rows_processed, rows_processed == 0, cols_in_row_processed == 0)
+
+            cols_in_row_processed += cols
+        rows_processed += rows
 
     return result
 

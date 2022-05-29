@@ -14,6 +14,7 @@
 from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
+from dataclasses import dataclass
 from abc import abstractmethod, ABC
 from typing import List, Tuple, Callable
 from collections.abc import Mapping
@@ -116,6 +117,20 @@ class _HTMLPropsIndexAdjuster:
         return index
 
 
+@dataclass(frozen=True)
+class Region:
+    first_row: int = 0
+    first_col: int = 0
+    rows: int = 0
+    cols: int = 0
+
+    def is_empty(self) -> bool:
+        return self.rows == 0 or self.cols == 0
+
+    def is_valid(self) -> bool:
+        return self.first_row >= 0 and self.first_col >= 0 and self.rows >= 0 and self.cols >= 0
+
+
 class HTMLPropsGenerator:
     def __init__(self, visible_data: DataFrame, styler: Styler):
         self.__visible_data: DataFrame = visible_data
@@ -145,15 +160,15 @@ class HTMLPropsGenerator:
         return copy._translate(sparse_index=False, sparse_cols=False)
 
     def generate_props_for_chunk(self,
-                                 first_row: int,
-                                 first_column: int,
-                                 last_row: int,
-                                 last_column: int,
+                                 region: Region,
                                  exclude_row_header: bool = False,
-                                 exclude_column_header: bool = False,
+                                 exclude_col_header: bool = False,
                                  ) -> dict:
         # chunk contains always only non-hidden data
-        chunk = self.__visible_data.iloc[first_row:last_row, first_column:last_column]
+        chunk = self.__visible_data.iloc[
+                region.first_row: region.first_row + region.rows,
+                region.first_col: region.first_col + region.cols,
+                ]
 
         # patch apply/applymap params to not operate outside of the chunk bounds
         patched_todos = TodosPatcher().patch_todos_for_chunk(self.__styler, chunk)
@@ -161,16 +176,16 @@ class HTMLPropsGenerator:
         computed_styler = self.__compute_styles(
             patched_todos=patched_todos,
             exclude_row_header=exclude_row_header,
-            exclude_column_header=exclude_column_header,
+            exclude_col_header=exclude_col_header,
         )
 
         if len(self.__styler.hidden_rows) == 0:
-            rit = _OffsetIndexTranslator(first_row)
+            rit = _OffsetIndexTranslator(region.first_row)
         else:
             rit = _SequenceIndexTranslator(self.__styler.index.get_indexer_for(chunk.index))
 
         if len(self.__styler.hidden_columns) == 0:
-            cit = _OffsetIndexTranslator(first_column)
+            cit = _OffsetIndexTranslator(region.first_col)
         else:
             cit = _SequenceIndexTranslator(self.__styler.columns.get_indexer_for(chunk.columns))
 
@@ -199,7 +214,7 @@ class HTMLPropsGenerator:
     def __compute_styles(self,
                          patched_todos: List[Tuple[Callable, tuple, dict]],
                          exclude_row_header: bool = False,
-                         exclude_column_header: bool = False,
+                         exclude_col_header: bool = False,
                          ) -> Styler:
         # create a copy to not pollute original styler
         copy = self.__styler.data.style
@@ -211,7 +226,7 @@ class HTMLPropsGenerator:
         # only hide if forced
         if exclude_row_header:
             copy.hide_index()
-        if exclude_column_header:
+        if exclude_col_header:
             copy.hide_columns()
 
         # operate on copy
