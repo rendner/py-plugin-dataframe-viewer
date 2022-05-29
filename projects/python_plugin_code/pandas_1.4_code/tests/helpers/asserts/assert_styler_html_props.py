@@ -29,5 +29,5 @@ def create_and_assert_patched_styler_html_props(
     init_styler_func(styler)
     patched_styler = PatchedStyler(styler)
 
-    result = patched_styler.create_html_props_validator().validate(rows_per_chunk, cols_per_chunk, True)
+    result = patched_styler.create_html_props_validator().validate(rows_per_chunk, cols_per_chunk)
     assert result.actual == result.expected

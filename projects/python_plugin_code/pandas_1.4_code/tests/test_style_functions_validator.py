@@ -18,7 +18,7 @@ from pandas.io.formats.style import Styler
 
 from plugin_code.html_props_generator import Region
 from plugin_code.patched_styler import PatchedStyler
-from plugin_code.style_function_validator import StyleFunctionValidationProblem, StyleFunctionsValidator, \
+from plugin_code.style_functions_validator import StyleFunctionValidationProblem, StyleFunctionsValidator, \
     ValidationStrategyType
 
 np.random.seed(123456)

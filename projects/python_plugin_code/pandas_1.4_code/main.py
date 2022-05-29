@@ -34,7 +34,7 @@ def generate_plugin_code():
         'todos_patcher.py',
         'html_props_generator.py',
         'html_props_validator.py',
-        'style_function_validator.py',
+        'style_functions_validator.py',
         'patched_styler.py',
         'styled_data_frame_viewer_bridge.py',
     ]

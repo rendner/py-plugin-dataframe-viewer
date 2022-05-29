@@ -14,7 +14,7 @@
 from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
-from plugin_code.style_function_validator import StyleFunctionsValidator, StyleFunctionValidationProblem, \
+from plugin_code.style_functions_validator import StyleFunctionsValidator, StyleFunctionValidationProblem, \
     ValidationStrategyType
 from plugin_code.styler_todo import StylerTodo
 from plugin_code.todos_patcher import TodosPatcher
@@ -90,7 +90,16 @@ class PatchedStyler:
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
         )
-        return self.__html_props_generator.create_html(html_props)
+        # use templates of original styler
+        return self.__styler.template_html.render(
+            **html_props,
+            encoding="utf-8",
+            doctype_html=True,
+            sparse_columns=False,
+            sparse_index=False,
+            html_table_tpl=self.__styler.template_html_table,
+            html_style_tpl=self.__styler.template_html_style,
+        )
 
     def render_unpatched(self) -> str:
         # This method deliberately does not use the "html_props_generator" but the original

@@ -115,12 +115,14 @@ def test_multiple_style_functions_with_subset():
     assert result.is_equal is True
 
 
-def test_datetime_values():
-    dates_df = DataFrame({
+def test_non_string_values():
+    my_df = DataFrame.from_dict({
         'date': [datetime.fromisoformat(x) for x in ['2022-06-10', '2022-07-01', '2022-10-12']],
-        'value': [2, 3, 4],
+        'int': [2, 3, 4],
+        'tuple': [(0, 0), (0, 1), (0, 2)],
+        'dict_tuple_keys': [{(0, 0): 'a'}, {(0, 1): 'b'}, {(0, 2): 'c'}],
     })
-    styler = dates_df.style
+    styler = my_df.style
     result = create_validator(styler).validate(1, 1)
     assert result.actual == result.expected
     assert result.is_equal is True
