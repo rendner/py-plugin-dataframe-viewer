@@ -14,7 +14,7 @@
 from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
-from plugin_code.style_functions_validator import StyleFunctionValidationInfo, ValidationStrategyType, \
+from plugin_code.style_functions_validator import StyleFunctionValidationProblem, ValidationStrategyType, \
     StyleFunctionsValidator
 from plugin_code.styler_todo import StylerTodo
 from plugin_code.todos_patcher import TodosPatcher
@@ -72,27 +72,34 @@ class PatchedStyler:
                                  rows: int,
                                  cols: int,
                                  validation_strategy: Optional[ValidationStrategyType] = None,
-                                 ) -> List[StyleFunctionValidationInfo]:
+                                 ) -> List[StyleFunctionValidationProblem]:
         if validation_strategy is not None:
             self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
         return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
 
-
-    def render_chunk(
-            self,
-            first_row: int,
-            first_col: int,
-            rows: int,
-            cols: int,
-            exclude_row_header: bool = False,
-            exclude_col_header: bool = False
-    ) -> str:
+    def render_chunk(self,
+                     first_row: int,
+                     first_col: int,
+                     rows: int,
+                     cols: int,
+                     exclude_row_header: bool = False,
+                     exclude_col_header: bool = False
+                     ) -> str:
         html_props = self.__html_props_generator.generate_props_for_chunk(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
         )
-        return self.__html_props_generator.create_html(html_props)
+        # use templates of original styler
+        return self.__styler.template_html.render(
+            **html_props,
+            encoding="utf-8",
+            sparse_columns=False,
+            sparse_index=False,
+            doctype_html=True,
+            html_table_tpl=self.__styler.template_html_table,
+            html_style_tpl=self.__styler.template_html_style,
+        )
 
     def render_unpatched(self) -> str:
         # This method deliberately does not use the "html_props_generator" but the original
@@ -129,7 +136,7 @@ class PatchedStyler:
                 index=i,
                 qname=StyleFunctionNameResolver.get_style_func_qname(t),
                 resolved_name=StyleFunctionNameResolver.resolve_style_func_name(t),
-                axis=str(t.apply_args.axis),
+                axis='' if not t.is_apply_call() else str(t.apply_args.axis),
                 is_pandas_builtin=t.is_pandas_style_func(),
                 is_supported=TodosPatcher.is_style_function_supported(t),
                 is_apply=t.is_apply_call(),

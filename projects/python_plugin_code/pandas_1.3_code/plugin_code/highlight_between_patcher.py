@@ -30,13 +30,10 @@ class HighlightBetweenPatcher(TodoPatcher):
         super().__init__(df, todo)
 
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
-        return self._todo.builder()\
-            .with_subset(self._calculate_chunk_subset(chunk))\
-            .with_style_func(ChunkParentProvider(
-                self._styling_func,
-                self._todo.apply_args.axis,
-                self._subset_data,
-            )).build()
+        return self._todo.builder() \
+            .with_subset(self._calculate_chunk_subset(chunk)) \
+            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, self._subset_data)) \
+            .build()
 
     def _styling_func(self,
                       chunk_or_series_from_chunk: Union[DataFrame, Series],
@@ -50,16 +47,12 @@ class HighlightBetweenPatcher(TodoPatcher):
         right = kwargs.get("right", None)
 
         if np.iterable(left) and not isinstance(left, str):
-            left = _validate_apply_axis_arg(
-                left, "left", None, chunk_parent
-            )
+            left = _validate_apply_axis_arg(left, "left", None, chunk_parent)
             # adjust shape of "left" to match shape of chunk
             left = self._adjust_range_part(left, chunk_or_series_from_chunk, chunk_parent)
 
         if np.iterable(right) and not isinstance(right, str):
-            right = _validate_apply_axis_arg(
-                right, "right", None, chunk_parent
-            )
+            right = _validate_apply_axis_arg(right, "right", None, chunk_parent)
             # adjust shape of "right" to match shape of chunk
             right = self._adjust_range_part(right, chunk_or_series_from_chunk, chunk_parent)
 
@@ -68,12 +61,7 @@ class HighlightBetweenPatcher(TodoPatcher):
             **dict(kwargs, left=left, right=right),
         )
 
-    def _adjust_range_part(
-            self,
-            part,
-            chunk,
-            chunk_parent,
-    ):
+    def _adjust_range_part(self, part, chunk, chunk_parent):
         if isinstance(chunk, Series):
             return part[chunk_parent.index.get_indexer_for(chunk.index)]
         elif isinstance(chunk, DataFrame) and self._todo.apply_args.axis is None:
@@ -82,3 +70,4 @@ class HighlightBetweenPatcher(TodoPatcher):
             ri_slice = slice(ri[0], ri[-1] + 1)
             ci_slice = slice(ci[0], ci[-1] + 1)
             return part[ri_slice, ci_slice]
+        raise ValueError(f"Unexpected chunk type:{type(chunk)} for axis:{str(self._todo.apply_args.axis)}")

@@ -136,18 +136,6 @@ class HTMLPropsGenerator:
         self.__visible_data: DataFrame = visible_data
         self.__styler: Styler = styler
 
-    def create_html(self, html_props: dict) -> str:
-        # use templates of original styler
-        return self.__styler.template_html.render(
-            **html_props,
-            encoding="utf-8",
-            sparse_columns=False,
-            sparse_index=False,
-            doctype_html=True,
-            html_table_tpl=self.__styler.template_html_table,
-            html_style_tpl=self.__styler.template_html_style,
-        )
-
     def generate_props_unpatched(self) -> dict:
         # don't use "styler._copy(deepcopy=True)" - the copy behavior was "broken" until pandas 1.3
         # (some parts were missing)
@@ -163,6 +151,7 @@ class HTMLPropsGenerator:
                                  region: Region,
                                  exclude_row_header: bool = False,
                                  exclude_col_header: bool = False,
+                                 translate_indices: bool = True,
                                  ) -> dict:
         # chunk contains always only non-hidden data
         chunk = self.__visible_data.iloc[
@@ -204,10 +193,11 @@ class HTMLPropsGenerator:
         # generate html props for chunk
         result = chunk_styler._translate(sparse_index=False, sparse_cols=False)
 
-        # translated props doesn't know about the chunk
-        # therefore some row/col indices have to be adjusted
-        # to have the correct index
-        _HTMLPropsIndexAdjuster(rit, cit).adjust(result)
+        if translate_indices:
+            # Translate the row/col indices, ids and css-selectors of the chunk.
+            # Only required if the html-props of multiple chunks should be combined in a later step.
+            # Chunks can contain elements with the same ids and css-selectors but different css-styling.
+            _HTMLPropsIndexAdjuster(rit, cit).adjust(result)
 
         return result
 
@@ -234,10 +224,7 @@ class HTMLPropsGenerator:
         return copy
 
     @staticmethod
-    def __copy_styler_state(
-            source: Styler,
-            target: Styler,
-    ):
+    def __copy_styler_state(source: Styler, target: Styler):
         # clear
         target.uuid = ''
         target.uuid_len = 0
@@ -253,7 +240,7 @@ class HTMLPropsGenerator:
         # don't copy/assign:
         # "_todo"
         #   - will be overwritten with the patched ones in a later step
-        # "hidden_columns" and "self.hidden_rows"
+        # "hidden_columns" and "hidden_rows"
         #   - these values are already used to calculate "self.__visible_data"
         #     and therefore not needed any more
         # "ctx"
