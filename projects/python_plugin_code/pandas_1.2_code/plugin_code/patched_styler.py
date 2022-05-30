@@ -207,7 +207,7 @@ class PatchedStyler:
         result = chunk_styler._translate()
         # filter out empty styles, every cell will have a class
         # but the list of props may just be [['', '']].
-        # so we have the nested anys below
+        # "nested any" used to detect this
         trimmed = [x for x in result["cellstyle"] if any(any(y) for y in x["props"])]
         result["cellstyle"] = trimmed
 
@@ -279,13 +279,20 @@ class PatchedStyler:
         target.uuid_len = 0
         target.cell_ids = False
 
-        # copy
+        # copy/assign
         target.table_styles = source.table_styles
         target.table_attributes = source.table_attributes
         target.hidden_index = source.hidden_index
-        target.ctx = source.ctx
         target.cell_context = source.cell_context
         target._display_funcs = source._display_funcs
-        # don't copy "_todo"
-        # don't copy "hidden_columns"
-        #   - these value is already used to calculate "self.__visible_data"
+        # don't copy/assign:
+        # "_todo"
+        #   - will be overwritten with the patched ones in a later step
+        # "hidden_columns" and "self.hidden_rows"
+        #   - these values are already used to calculate "self.__visible_data"
+        #     and therefore not needed any more
+        # "ctx"
+        #   - gets modified/filled when generating html
+        #   - causes html output with wrong values when multiple targets copy the
+        #     same ref (source) and are processed in different threads => each thread
+        #     modifies the same ref (ctx is cleared and new values are added)

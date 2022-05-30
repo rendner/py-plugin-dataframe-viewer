@@ -647,7 +647,6 @@ class PatchedStyler:
         target.table_styles = source.table_styles
         target.table_attributes = source.table_attributes
         target.hidden_index = source.hidden_index
-        target.ctx = source.ctx
         target.cell_context = source.cell_context
         target._display_funcs = source._display_funcs
 
