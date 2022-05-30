@@ -25,6 +25,6 @@ class ApplyMapPatcher(TodoPatcher):
         super().__init__(df, todo)
 
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
-        return self._todo.copy_with(
-            apply_args_subset=self._calculate_chunk_subset(chunk),
-        )
+        return self._todo.builder() \
+            .with_subset(self._calculate_chunk_subset(chunk)) \
+            .build()

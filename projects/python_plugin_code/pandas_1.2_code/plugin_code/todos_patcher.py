@@ -19,8 +19,6 @@ from plugin_code.styler_todo import StylerTodo
 from plugin_code.todo_patcher import TodoPatcher
 
 # == copy after here ==
-import inspect
-from functools import partial
 from typing import Callable, List, Tuple, Optional
 
 from pandas import DataFrame
@@ -36,7 +34,7 @@ class TodosPatcher:
         for t in source._todo:
             todo = StylerTodo.from_tuple(t)
 
-            if self.__is_builtin_style(todo.apply_args.style_func):
+            if todo.is_builtin_style_func():
                 patcher = self.__get_patcher_for_builtin_style(source.data, todo)
             else:
                 if todo.is_applymap_call():
@@ -50,7 +48,7 @@ class TodosPatcher:
         return result
 
     def __get_patcher_for_builtin_style(self, df: DataFrame, todo: StylerTodo) -> Optional[TodoPatcher]:
-        style_func_qname = self.__get_qname(todo.apply_args.style_func)
+        style_func_qname = todo.get_style_func_name()
         if self.__is_builtin_background_gradient(style_func_qname):
             return BackgroundGradientPatcher(df, todo)
         elif self.__is_builtin_highlight_extrema(style_func_qname):
@@ -60,20 +58,6 @@ class TodosPatcher:
         elif self.__is_builtin_set_properties(style_func_qname):
             return ApplyMapPatcher(df, todo)
         return None
-
-    @staticmethod
-    def __get_qname(func: Callable) -> str:
-        if isinstance(func, partial):
-            func = func.func
-        return getattr(func, '__qualname__', '')
-
-    @staticmethod
-    def __is_builtin_style(style_func_qname: Callable) -> bool:
-        if isinstance(style_func_qname, partial):
-            style_func_qname = style_func_qname.func
-        inspect_result = inspect.getmodule(style_func_qname)
-        return False if inspect_result is None else inspect.getmodule(
-            style_func_qname).__name__ == 'pandas.io.formats.style'
 
     @staticmethod
     def __is_builtin_background_gradient(style_func_qname: str) -> bool:
