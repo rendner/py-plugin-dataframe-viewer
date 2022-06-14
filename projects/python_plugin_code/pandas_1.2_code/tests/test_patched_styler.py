@@ -97,10 +97,7 @@ def test_get_style_function_details_df_no_styles():
 
 
 def test_get_style_function_details_df():
-    def do_nothing(data: Series, chunk_parent: Series = None):
-        return data
-
-    styler = df.style.bar().highlight_min(axis='columns').apply(do_nothing, axis='index')
+    styler = df.style.bar().highlight_min(axis='columns').applymap(lambda x: "color: red")
     details = PatchedStyler(styler).get_style_function_details()
     assert len(details) == 3
     assert details[0] == StyleFunctionDetails(
@@ -125,11 +122,11 @@ def test_get_style_function_details_df():
     )
     assert details[2] == StyleFunctionDetails(
         index=2,
-        qname='test_get_style_function_details_df.<locals>.do_nothing',
-        resolved_name='do_nothing',
-        axis='index',
-        is_chunk_parent_requested=True,
-        is_apply=True,
+        qname='test_get_style_function_details_df.<locals>.<lambda>',
+        resolved_name='<lambda>',
+        axis='',
+        is_chunk_parent_requested=False,
+        is_apply=False,
         is_pandas_builtin=False,
         is_supported=True,
     )

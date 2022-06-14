@@ -11,10 +11,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import numpy as np
 import pandas as pd
 import pytest
+from pandas import MultiIndex, DataFrame
 
 from tests.helpers.asserts.assert_styler_html_string import create_and_assert_patched_styler_html_string
+
+np.random.seed(123456)
+
+midx = MultiIndex.from_product([["x", "y"], ["a", "b", "c"]])
+mi_df = DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
+mi_df.index.names = ["lev0", "lev1"]
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -53,4 +61,19 @@ def test_should_not_fail_if_same_styling_and_value():
         lambda styler: styler.highlight_max(),
         len(df.index),
         len(df.columns)
+    )
+
+
+@pytest.mark.xfail(reason=f"create_and_assert_patched_styler_html_string can't unroll rowspan/colspan")
+@pytest.mark.parametrize(
+    "rows_per_chunk, cols_per_chunk", [
+        (1, 2),
+        (len(mi_df.index), len(mi_df.columns))  # single chunk
+    ])
+def test_should_not_fail_on_rowspan_or_colspan(rows_per_chunk: int, cols_per_chunk: int):
+    create_and_assert_patched_styler_html_string(
+        mi_df,
+        lambda s: s,
+        rows_per_chunk,
+        cols_per_chunk,
     )

@@ -136,16 +136,6 @@ class HTMLPropsGenerator:
         self.__visible_data: DataFrame = visible_data
         self.__styler: Styler = styler
 
-    def create_html(self, html_props: dict) -> str:
-        # use template of original styler
-        return self.__styler.template.render(
-            **html_props,
-            encoding="utf-8",
-            sparse_columns=False,
-            sparse_index=False,
-            doctype_html=True,
-        )
-
     def generate_props_unpatched(self) -> dict:
         # can't use "styler._copy(deepcopy=True)" - pandas 1.2 only copies ctx and _todo)
         # therefore use org instead
@@ -153,6 +143,12 @@ class HTMLPropsGenerator:
         copy.uuid = ''
         copy.uuid_len = 0
         copy.cell_ids = False
+
+        # bug in pandas 1.2.x - "_compute" doesn't clear the "ctx" before executing the style functions
+        # each "_compute" call adds the same values again into the "ctx" (is fixed in pandas 1.3)
+        # -> css styles are added multiple times, which breaks the "HtmlPropsValidator"
+        copy.ctx.clear()
+
         copy._compute()
 
         return copy._translate()
@@ -160,6 +156,7 @@ class HTMLPropsGenerator:
     def generate_props_for_chunk(self,
                                  region: Region,
                                  exclude_row_header: bool = False,
+                                 translate_indices: bool = True,
                                  ) -> dict:
         # chunk contains always only non-hidden data
         chunk = self.__visible_data.iloc[
@@ -202,9 +199,11 @@ class HTMLPropsGenerator:
         trimmed = [x for x in result["cellstyle"] if any(any(y) for y in x["props"])]
         result["cellstyle"] = trimmed
 
-        # translated props doesn't know about the chunk
-        # translate the row/col indices and ids of the chunk
-        _HTMLPropsIndexAdjuster(rit, cit).adjust(result)
+        if translate_indices:
+            # Translate the row/col indices, ids and css-selectors of the chunk.
+            # Only required if the html-props of multiple chunks should be combined in a later step.
+            # Chunks can contain elements with the same ids and css-selectors but different css-styling.
+            _HTMLPropsIndexAdjuster(rit, cit).adjust(result)
 
         return result
 
@@ -264,9 +263,8 @@ class HTMLPropsGenerator:
         # don't copy/assign:
         # "_todo"
         #   - will be overwritten with the patched ones in a later step
-        # "hidden_columns" and "self.hidden_rows"
-        #   - these values are already used to calculate "self.__visible_data"
-        #     and therefore not needed any more
+        # "hidden_columns"
+        #   - already used to calculate "self.__visible_data" and therefore not needed any more
         # "ctx"
         #   - gets modified/filled when generating html
         #   - causes html output with wrong values when multiple targets copy the

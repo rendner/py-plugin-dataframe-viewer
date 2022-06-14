@@ -18,9 +18,8 @@ from pandas.io.formats.style import Styler
 
 from plugin_code.html_props_generator import Region
 from plugin_code.patched_styler import PatchedStyler
-from plugin_code.style_functions_validator import StyleFunctionValidationInfo, StyleFunctionsValidator, \
+from plugin_code.style_functions_validator import StyleFunctionValidationProblem, StyleFunctionsValidator, \
     ValidationStrategyType
-from plugin_code.todos_patcher import TodosPatcher
 
 np.random.seed(123456)
 
@@ -123,14 +122,14 @@ def test_does_not_fail_on_exception(validation_strategy_type: ValidationStrategy
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 1
-        assert result[0] == StyleFunctionValidationInfo(index=0, reason="EXCEPTION", message="I don't care")
+        assert result[0] == StyleFunctionValidationProblem(index=0, reason="EXCEPTION", message="I don't care")
 
         result = validator.validate(region)
         assert len(result) == 1
-        assert result[0] == StyleFunctionValidationInfo(index=0, reason="EXCEPTION", message="I don't care")
+        assert result[0] == StyleFunctionValidationProblem(index=0, reason="EXCEPTION", message="I don't care")
     else:
         assert len(result) == 1
-        assert result[0] == StyleFunctionValidationInfo(index=0, reason="EXCEPTION", message="I don't care")
+        assert result[0] == StyleFunctionValidationProblem(index=0, reason="EXCEPTION", message="I don't care")
 
 
 @pytest.mark.parametrize("axis", ['index', 'columns'])
@@ -152,16 +151,16 @@ def test_detect_invalid_styling_function(axis: str, validation_strategy_type: Va
 
             result = validator.validate(region)
             assert len(result) == 1
-            assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
+            assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
         else:
             assert len(result) == 1
-            assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
+            assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
 
             result = validator.validate(region)
             assert len(result) == 0
     else:
         assert len(result) == 1
-        assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
+        assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
 
 
 @pytest.mark.parametrize("validation_strategy_type", [ValidationStrategyType.FAST, ValidationStrategyType.PRECISION])
@@ -181,67 +180,13 @@ def test_detect_invalid_styling_functions(validation_strategy_type: ValidationSt
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 1
-        assert result[0] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
+        assert result[0] == StyleFunctionValidationProblem(index=2, reason="EXCEPTION", message="I don't care")
 
         result = validator.validate(region)
         assert len(result) == 2
-        assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
-        assert result[1] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
+        assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
+        assert result[1] == StyleFunctionValidationProblem(index=2, reason="EXCEPTION", message="I don't care")
     else:
         assert len(result) == 2
-        assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
-        assert result[1] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
-
-
-@pytest.mark.parametrize("validation_strategy_type", [ValidationStrategyType.FAST, ValidationStrategyType.PRECISION])
-def test_detect_unsupported_builtin_styling_function(validation_strategy_type: ValidationStrategyType):
-    styler = df.style.bar()
-    # TodosPatcher excludes unsupported builtin styles
-    assert len(TodosPatcher().patch_todos_for_chunk(styler, DataFrame())) == 0
-
-    region = Region(0, 0, len(df.index), len(df.columns))
-    validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(region)
-
-    if validation_strategy_type is ValidationStrategyType.FAST:
-        assert len(result) == 0
-
-        result = validator.validate(region)
-        assert len(result) == 0
-    else:
-        assert len(result) == 0
-
-
-@pytest.mark.parametrize("validation_strategy_type", [ValidationStrategyType.FAST, ValidationStrategyType.PRECISION])
-def test_detect_invalid_styling_functions_with_unsupported_in_between(validation_strategy_type: ValidationStrategyType):
-    def my_highlight_max(series: Series):
-        is_max = series == series.max()
-        return ['background-color: red' if cell else '' for cell in is_max]
-
-    def raise_exception(_: Series):
-        raise Exception("I don't care")
-
-    # bar() is unsupported
-    styler = df.style \
-        .apply(my_highlight_max, axis=0) \
-        .bar() \
-        .apply(raise_exception, axis=1)
-    # TodosPatcher excludes unsupported builtin styles
-    assert len(TodosPatcher().patch_todos_for_chunk(styler, DataFrame())) == 2
-
-    region = Region(0, 0, len(df.index), len(df.columns))
-    validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(region)
-
-    if validation_strategy_type is ValidationStrategyType.FAST:
-        assert len(result) == 1
-        assert result[0] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
-
-        result = validator.validate(region)
-        assert len(result) == 2
-        assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
-        assert result[1] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
-    else:
-        assert len(result) == 2
-        assert result[0] == StyleFunctionValidationInfo(index=0, reason="NOT_EQUAL")
-        assert result[1] == StyleFunctionValidationInfo(index=2, reason="EXCEPTION", message="I don't care")
+        assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
+        assert result[1] == StyleFunctionValidationProblem(index=2, reason="EXCEPTION", message="I don't care")

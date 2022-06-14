@@ -15,7 +15,7 @@ from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
 from plugin_code.style_functions_validator import StyleFunctionsValidator, ValidationStrategyType, \
-    StyleFunctionValidationInfo
+    StyleFunctionValidationProblem
 from plugin_code.styler_todo import StylerTodo
 from plugin_code.todos_patcher import TodosPatcher
 
@@ -72,7 +72,7 @@ class PatchedStyler:
                                  rows: int,
                                  cols: int,
                                  validation_strategy: Optional[ValidationStrategyType] = None,
-                                 ) -> List[StyleFunctionValidationInfo]:
+                                 ) -> List[StyleFunctionValidationProblem]:
         if validation_strategy is not None:
             self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
         return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
@@ -83,13 +83,19 @@ class PatchedStyler:
                      rows: int,
                      cols: int,
                      exclude_row_header: bool = False,
-                     exclude_col_header: bool = False  # unused in this version
+                     exclude_col_header: bool = False,  # unused in this version
                      ) -> str:
         html_props = self.__html_props_generator.generate_props_for_chunk(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
         )
-        return self.__html_props_generator.create_html(html_props)
+        # use template of original styler
+        return self.__styler.template.render(
+            **html_props,
+            encoding="utf-8",
+            sparse_columns=False,
+            sparse_index=False,
+        )
 
     def render_unpatched(self) -> str:
         # This method deliberately does not use the "html_props_generator" but the original
@@ -102,7 +108,6 @@ class PatchedStyler:
         self.__styler.cell_ids = False
         return self.__styler.render(
             encoding="utf-8",
-            doctype_html=True,
             sparse_columns=False,
             sparse_index=False,
         )
@@ -125,7 +130,7 @@ class PatchedStyler:
                 index=i,
                 qname=StyleFunctionNameResolver.get_style_func_qname(t),
                 resolved_name=StyleFunctionNameResolver.resolve_style_func_name(t),
-                axis=str(t.apply_args.axis),
+                axis='' if not t.is_apply_call() else str(t.apply_args.axis),
                 is_pandas_builtin=t.is_pandas_style_func(),
                 is_supported=TodosPatcher.is_style_function_supported(t),
                 is_apply=t.is_apply_call(),
