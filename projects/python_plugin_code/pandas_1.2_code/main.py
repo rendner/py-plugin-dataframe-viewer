@@ -19,14 +19,17 @@ def generate_plugin_code():
     # the order of the files matters (Python does not allow calling of a function/class before declaring it)
     file_names = [
         'styler_todo.py',
+        'style_function_name_resolver.py',
         'todo_patcher.py',
         'apply_map_patcher.py',
         'apply_patcher.py',
         'background_gradient_patcher.py',
         'chunk_parent_provider.py',
         'highlight_extrema_patcher.py',
-        'table_structure.py',
         'todos_patcher.py',
+        'html_props_generator.py',
+        'html_props_validator.py',
+        'style_function_validator.py',
         'patched_styler.py',
         'styled_data_frame_viewer_bridge.py',
     ]
@@ -42,7 +45,7 @@ def generate_plugin_code():
                                 print(f"WARN: print found in code:\n\t{stripped_line}")
                             if f"from {PACKAGE_NAME}" in stripped_line:
                                 # import is not required in the final plugin code
-                                print(f"ERROR: wrong placed import in file '{file_name}' - move it above copy marker")
+                                print(f"ERROR: wrong placed import in file '{file_name}' - move above copy marker: {stripped_line}")
                                 return
                             outfile.write(line)
                     else:
@@ -52,7 +55,7 @@ def generate_plugin_code():
                         elif not stripped_line.startswith("#"):
                             if any(s in stripped_line for s in ["from", "import"]) and f"{PACKAGE_NAME}" not in stripped_line:
                                 # import is required in the final plugin code
-                                print(f"ERROR: wrong placed import in file '{file_name}' - move it below copy marker")
+                                print(f"ERROR: wrong placed import in file '{file_name}' - move below copy marker: {stripped_line}")
                                 return
                 if not copy_marker_found:
                     print(f"ERROR: specified file '{file_name}' doesn't contain a copy marker '{COPY_MARKER}'")
