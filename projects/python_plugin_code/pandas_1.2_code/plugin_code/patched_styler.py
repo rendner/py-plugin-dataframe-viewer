@@ -43,8 +43,8 @@ class TableStructure:
 @dataclass(frozen=True)
 class StyleFunctionDetails:
     index: int
-    name: str
-    display_name: str
+    qname: str
+    resolved_name: str
     axis: str
     is_chunk_parent_requested: bool
     is_apply: bool
@@ -124,8 +124,8 @@ class PatchedStyler:
             t = StylerTodo.from_tuple(todo)
             result.append(StyleFunctionDetails(
                 index=i,
-                name=StyleFunctionNameResolver.get_style_func_name(t),
-                display_name=StyleFunctionNameResolver.get_style_func_display_name(t),
+                qname=StyleFunctionNameResolver.get_style_func_qname(t),
+                resolved_name=StyleFunctionNameResolver.resolve_style_func_name(t),
                 axis=str(t.apply_args.axis),
                 is_pandas_builtin=t.is_pandas_style_func(),
                 is_supported=TodosPatcher.is_style_function_supported(t),

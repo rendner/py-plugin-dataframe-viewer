@@ -23,11 +23,11 @@ def _decode_first_todo(styler: Styler) -> StylerTodo:
 
 
 def _resolve_style_func_display_name(styler: Styler) -> str:
-    return StyleFunctionNameResolver.get_style_func_display_name(_decode_first_todo(styler))
+    return StyleFunctionNameResolver.resolve_style_func_name(_decode_first_todo(styler))
 
 
-def _resolve_style_func_name(todo: StylerTodo) -> str:
-    return StyleFunctionNameResolver.get_style_func_name(todo)
+def _get_style_func_qname(todo: StylerTodo) -> str:
+    return StyleFunctionNameResolver.get_style_func_qname(todo)
 
 
 def test_pandas_background_gradient_display_name():
@@ -62,29 +62,29 @@ def test_pandas_set_properties_display_name():
 
 def test_is_pandas_background_gradient():
     todo = _decode_first_todo(DataFrame().style.background_gradient())
-    name = _resolve_style_func_name(todo)
-    assert StyleFunctionNameResolver.is_pandas_background_gradient(name)
+    qname = _get_style_func_qname(todo)
+    assert StyleFunctionNameResolver.is_pandas_background_gradient(qname)
 
 
 def test_is_pandas_highlight_max():
     todo = _decode_first_todo(DataFrame().style.highlight_max())
-    name = _resolve_style_func_name(todo)
-    assert StyleFunctionNameResolver.is_pandas_highlight_max(name, todo)
+    qname = _get_style_func_qname(todo)
+    assert StyleFunctionNameResolver.is_pandas_highlight_max(qname, todo)
 
 
 def test_is_pandas_highlight_min():
     todo = _decode_first_todo(DataFrame().style.highlight_min())
-    name = _resolve_style_func_name(todo)
-    assert StyleFunctionNameResolver.is_pandas_highlight_min(name, todo)
+    qname = _get_style_func_qname(todo)
+    assert StyleFunctionNameResolver.is_pandas_highlight_min(qname, todo)
 
 
 def test_is_pandas_highlight_null():
     todo = _decode_first_todo(DataFrame().style.highlight_null())
-    name = _resolve_style_func_name(todo)
-    assert StyleFunctionNameResolver.is_pandas_highlight_null(name)
+    qname = _get_style_func_qname(todo)
+    assert StyleFunctionNameResolver.is_pandas_highlight_null(qname)
 
 
 def test_is_pandas_set_properties():
     todo = _decode_first_todo(DataFrame().style.set_properties())
-    name = _resolve_style_func_name(todo)
-    assert StyleFunctionNameResolver.is_pandas_set_properties(name)
+    qname = _get_style_func_qname(todo)
+    assert StyleFunctionNameResolver.is_pandas_set_properties(qname)
