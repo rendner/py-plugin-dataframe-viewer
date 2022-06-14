@@ -249,10 +249,7 @@ class HTMLPropsGenerator:
         return copy
 
     @staticmethod
-    def __copy_styler_state(
-            source: Styler,
-            target: Styler,
-    ):
+    def __copy_styler_state(source: Styler, target: Styler):
         # clear
         target.uuid = ''
         target.uuid_len = 0

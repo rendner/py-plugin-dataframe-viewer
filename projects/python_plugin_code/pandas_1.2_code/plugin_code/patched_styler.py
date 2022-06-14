@@ -77,15 +77,14 @@ class PatchedStyler:
             self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
         return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
 
-    def render_chunk(
-            self,
-            first_row: int,
-            first_col: int,
-            rows: int,
-            cols: int,
-            exclude_row_header: bool = False,
-            exclude_col_header: bool = False  # unused in this version
-    ) -> str:
+    def render_chunk(self,
+                     first_row: int,
+                     first_col: int,
+                     rows: int,
+                     cols: int,
+                     exclude_row_header: bool = False,
+                     exclude_col_header: bool = False  # unused in this version
+                     ) -> str:
         html_props = self.__html_props_generator.generate_props_for_chunk(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,

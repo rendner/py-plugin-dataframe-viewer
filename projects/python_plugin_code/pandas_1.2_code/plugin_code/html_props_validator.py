@@ -258,8 +258,11 @@ class HTMLPropsValidator(AbstractHTMLPropsValidator):
         self._visible_data: DataFrame = visible_data
         self._styler: Styler = styler
 
-    def validate(self, rows_per_chunk: int, cols_per_chunk: int,
-                 write_html_on_error: bool = False) -> HTMLPropsValidationResult:
+    def validate(self,
+                 rows_per_chunk: int,
+                 cols_per_chunk: int,
+                 write_html_on_error: bool = False,
+                 ) -> HTMLPropsValidationResult:
         rows_in_frame: int = len(self._visible_data.index)
         cols_in_frame: int = len(self._visible_data.columns)
 
@@ -272,11 +275,7 @@ class HTMLPropsValidator(AbstractHTMLPropsValidator):
 
         return self._validate_html_props(combined_html_props, expected_html_props, write_html_on_error)
 
-    def _create_combined_html_props(
-            self,
-            rows_per_chunk: int,
-            cols_per_chunk: int,
-    ):
+    def _create_combined_html_props(self, rows_per_chunk: int, cols_per_chunk: int):
         combined_props: dict = {}
         rows_in_frame: int = len(self._visible_data.index)
         cols_in_frame: int = len(self._visible_data.columns)

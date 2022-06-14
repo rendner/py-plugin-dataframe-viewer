@@ -34,11 +34,8 @@ class HighlightExtremaPatcher(TodoPatcher):
         return self._todo.builder() \
             .with_subset(self._calculate_chunk_subset(chunk)) \
             .with_style_func_kwargs({}) \
-            .with_style_func(ChunkParentProvider(
-                self._styling_func,
-                self._todo.apply_args.axis,
-                self._subset_data,
-            )).build()
+            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, self._subset_data)) \
+            .build()
 
     def _styling_func(self,
                       chunk_or_series_from_chunk: Union[DataFrame, Series],
