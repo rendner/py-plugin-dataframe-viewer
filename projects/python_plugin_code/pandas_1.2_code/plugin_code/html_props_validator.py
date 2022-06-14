@@ -51,11 +51,11 @@ class _MyJSONEncoder(json.JSONEncoder):
         return obj
 
 
+@dataclass(frozen=True)
 class HTMLPropsValidationResult:
-    def __init__(self, actual: str, expected: str, is_equal: bool):
-        self.actual = actual
-        self.expected = expected
-        self.is_equal = is_equal
+    actual: str
+    expected: str
+    is_equal: bool
 
 
 class AbstractHTMLPropsValidator:

@@ -14,24 +14,16 @@
 
 # == copy after here ==
 import inspect
+from dataclasses import dataclass
 from functools import partial
 from typing import Tuple, Callable, Optional, Union, Any
 from pandas._typing import Axis
 
 
+@dataclass(frozen=True)
 class ApplyMapArgs:
-
-    def __init__(self, style_func: Callable, subset: Optional[Any]):
-        self._style_func: Callable = style_func
-        self._subset: Optional[Any] = subset
-
-    @property
-    def style_func(self):
-        return self._style_func
-
-    @property
-    def subset(self):
-        return self._subset
+    style_func: Callable
+    subset: Optional[Any]
 
     @classmethod
     def from_tuple(cls, args: Tuple[Callable, Optional[Any]]):
@@ -45,24 +37,11 @@ class ApplyMapArgs:
         return self.style_func, self.subset
 
 
+@dataclass(frozen=True)
 class ApplyArgs:
-
-    def __init__(self, style_func: Callable, axis: Optional[Axis], subset: Optional[Any]):
-        self._style_func: Callable = style_func
-        self._axis: Optional[Axis] = axis
-        self._subset: Optional[Any] = subset
-
-    @property
-    def style_func(self):
-        return self._style_func
-
-    @property
-    def axis(self):
-        return self._axis
-
-    @property
-    def subset(self):
-        return self._subset
+    style_func: Callable
+    axis: Optional[Axis]
+    subset: Optional[Any]
 
     @classmethod
     def from_tuple(cls, args: Tuple[Callable, Optional[Axis], Optional[Any]]):
@@ -75,23 +54,11 @@ class ApplyArgs:
         return self.style_func, self.axis, self.subset
 
 
+@dataclass(frozen=True)
 class StylerTodo:
-    def __init__(self, apply_func: Callable, apply_args: Union[ApplyArgs, ApplyMapArgs], style_func_kwargs: dict):
-        self._apply_func: Callable = apply_func
-        self._apply_args: Union[ApplyArgs, ApplyMapArgs] = apply_args
-        self._style_func_kwargs: dict = style_func_kwargs
-
-    @property
-    def apply_func(self):
-        return self._apply_func
-
-    @property
-    def apply_args(self):
-        return self._apply_args
-
-    @property
-    def style_func_kwargs(self):
-        return self._style_func_kwargs
+    apply_func: Callable
+    apply_args: Union[ApplyArgs, ApplyMapArgs]
+    style_func_kwargs: dict
 
     @classmethod
     def from_tuple(cls, todo: Tuple[Callable, tuple, dict]):
@@ -113,18 +80,19 @@ class StylerTodo:
     def is_apply_call(self) -> bool:
         return not self.is_applymap_call()
 
-    def is_builtin_style_func(self) -> bool:
+    def is_pandas_style_func(self) -> bool:
         func = self.apply_args.style_func
         if isinstance(func, partial):
             func = func.func
         inspect_result = inspect.getmodule(func)
         return False if inspect_result is None else inspect.getmodule(func).__name__ == 'pandas.io.formats.style'
 
-    def get_style_func_name(self) -> str:
-        func = self.apply_args.style_func
-        if isinstance(func, partial):
-            func = func.func
-        return getattr(func, '__qualname__', '')
+    def should_provide_chunk_parent(self):
+        sig = inspect.signature(self.apply_args.style_func)
+        for param in sig.parameters.values():
+            if param.name == "chunk_parent" or param.kind == inspect.Parameter.VAR_KEYWORD:
+                return True
+        return False
 
     def to_tuple(self) -> Tuple[Callable, tuple, dict]:
         return self.apply_func, self.apply_args.to_tuple(), self.style_func_kwargs
