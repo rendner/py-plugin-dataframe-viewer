@@ -13,15 +13,17 @@
 #  limitations under the License.
 
 # == copy after here ==
-from typing import Tuple, Callable, Optional, Union
+import inspect
+from functools import partial
+from typing import Tuple, Callable, Optional, Union, Any
 from pandas._typing import Axis
 
 
 class ApplyMapArgs:
 
-    def __init__(self, style_func: Callable, subset: Optional[any]):
+    def __init__(self, style_func: Callable, subset: Optional[Any]):
         self._style_func: Callable = style_func
-        self._subset: Optional[any] = subset
+        self._subset: Optional[Any] = subset
 
     @property
     def style_func(self):
@@ -32,25 +34,23 @@ class ApplyMapArgs:
         return self._subset
 
     @classmethod
-    def from_tuple(cls, args: Tuple[Callable, Optional[any]]):
+    def from_tuple(cls, args: Tuple[Callable, Optional[Any]]):
         return cls(args[0], args[1])
 
-    def copy_with(self, style_func: Optional[Callable] = None, subset: Optional[any] = None):
-        return ApplyMapArgs(
-            self.style_func if style_func is None else style_func,
-            self.subset if subset is None else subset,
-        )
+    @staticmethod
+    def copy_with(style_func: Callable, subset: Optional[Any]):
+        return ApplyMapArgs(style_func, subset)
 
-    def to_tuple(self) -> Tuple[Callable, Optional[any]]:
+    def to_tuple(self) -> Tuple[Callable, Optional[Any]]:
         return self.style_func, self.subset
 
 
 class ApplyArgs:
 
-    def __init__(self, style_func: Callable, axis: Optional[Axis], subset: Optional[any]):
+    def __init__(self, style_func: Callable, axis: Optional[Axis], subset: Optional[Any]):
         self._style_func: Callable = style_func
         self._axis: Optional[Axis] = axis
-        self._subset: Optional[any] = subset
+        self._subset: Optional[Any] = subset
 
     @property
     def style_func(self):
@@ -65,17 +65,13 @@ class ApplyArgs:
         return self._subset
 
     @classmethod
-    def from_tuple(cls, args: Tuple[Callable, Optional[Axis], Optional[any]]):
+    def from_tuple(cls, args: Tuple[Callable, Optional[Axis], Optional[Any]]):
         return cls(args[0], args[1], args[2])
 
-    def copy_with(self, style_func: Optional[Callable] = None, subset: Optional[any] = None):
-        return ApplyArgs(
-            self.style_func if style_func is None else style_func,
-            self.axis,
-            self.subset if subset is None else subset,
-        )
+    def copy_with(self, style_func: Callable, subset: Optional[Any]):
+        return ApplyArgs(style_func, self.axis, subset)
 
-    def to_tuple(self) -> Tuple[Callable, Optional[Axis], Optional[any]]:
+    def to_tuple(self) -> Tuple[Callable, Optional[Axis], Optional[Any]]:
         return self.style_func, self.axis, self.subset
 
 
@@ -101,16 +97,8 @@ class StylerTodo:
     def from_tuple(cls, todo: Tuple[Callable, tuple, dict]):
         return cls(todo[0], cls._to_apply_args(todo), todo[2])
 
-    def copy_with(self,
-                  apply_args_subset: Optional[any] = None,
-                  style_func: Optional[Callable] = None,
-                  style_func_kwargs: Optional[dict] = None,
-                  ):
-        return StylerTodo(
-            self.apply_func,
-            self.apply_args.copy_with(style_func=style_func, subset=apply_args_subset),
-            dict(**self.style_func_kwargs) if style_func_kwargs is None else style_func_kwargs,
-        )
+    def builder(self):
+        return StylerTodoBuilder(self)
 
     @staticmethod
     def _to_apply_args(todo: Tuple[Callable, tuple, dict]):
@@ -125,5 +113,47 @@ class StylerTodo:
     def is_apply_call(self) -> bool:
         return not self.is_applymap_call()
 
+    def is_builtin_style_func(self) -> bool:
+        func = self.apply_args.style_func
+        if isinstance(func, partial):
+            func = func.func
+        inspect_result = inspect.getmodule(func)
+        return False if inspect_result is None else inspect.getmodule(func).__name__ == 'pandas.io.formats.style'
+
+    def get_style_func_name(self) -> str:
+        func = self.apply_args.style_func
+        if isinstance(func, partial):
+            func = func.func
+        return getattr(func, '__qualname__', '')
+
     def to_tuple(self) -> Tuple[Callable, tuple, dict]:
         return self.apply_func, self.apply_args.to_tuple(), self.style_func_kwargs
+
+
+class StylerTodoBuilder:
+
+    def __init__(self, source: StylerTodo):
+        self.source: StylerTodo = source
+        self.values: dict = {}
+
+    def with_subset(self, subset: Optional[Any]):
+        self.values["subset"] = subset
+        return self
+
+    def with_style_func(self, style_func: Callable):
+        self.values["style_func"] = style_func
+        return self
+
+    def with_style_func_kwargs(self, style_func_kwargs: dict):
+        self.values["style_func_kwargs"] = style_func_kwargs
+        return self
+
+    def build(self) -> StylerTodo:
+        return StylerTodo(
+            self.source.apply_func,
+            self.source.apply_args.copy_with(
+                style_func=self.values.get("style_func", self.source.apply_args.style_func),
+                subset=self.values.get("subset", self.source.apply_args.subset),
+            ),
+            self.values.get("style_func_kwargs", self.source.style_func_kwargs),
+        )

@@ -15,7 +15,7 @@ from plugin_code.styler_todo import StylerTodo
 
 # == copy after here ==
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 from pandas import DataFrame
 from pandas.core.indexing import _non_reducing_slice
@@ -31,13 +31,13 @@ class TodoPatcher(ABC):
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
         pass
 
-    def _calculate_chunk_subset(self, chunk: DataFrame) -> any:
+    def _calculate_chunk_subset(self, chunk: DataFrame) -> Any:
         index_intersection = chunk.index.intersection(self._subset_data.index)
         column_intersection = chunk.columns.intersection(self._subset_data.columns)
         return index_intersection, column_intersection
 
     @staticmethod
-    def _get_subset_data(df: DataFrame, subset: Optional[any]) -> DataFrame:
+    def _get_subset_data(df: DataFrame, subset: Optional[Any]) -> DataFrame:
         # same steps as in pandas
         # https://github.com/pandas-dev/pandas/blob/v1.1.5/pandas/io/formats/style.py#L635-L637
         subset = slice(None) if subset is None else subset
