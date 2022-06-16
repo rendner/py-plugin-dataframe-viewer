@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -81,6 +81,27 @@ def test_chunk_parent_is_provided_for_function(axis):
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_chunk_parent_is_provided_for_lambda(axis):
     highlighter = lambda d, chunk_parent=None: highlight_max_values(d, chunk_parent=chunk_parent)
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.apply(highlighter, axis=axis),
+        2,
+        2
+    )
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_no_chunk_parent_is_provided_for_function(axis):
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.apply(highlight_even_numbers, axis=axis),
+        2,
+        2
+    )
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_no_chunk_parent_is_provided_for_lambda(axis):
+    highlighter = lambda d: highlight_even_numbers(d)
     create_and_assert_patched_styler(
         df,
         lambda styler: styler.apply(highlighter, axis=axis),
