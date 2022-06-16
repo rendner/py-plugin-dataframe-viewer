@@ -56,15 +56,15 @@ class TodosPatcher:
 
     @staticmethod
     def __get_patcher_for_pandas_style_function(df: DataFrame, todo: StylerTodo) -> Optional[TodoPatcher]:
-        style_func_qname = StyleFunctionNameResolver.get_style_func_name(todo)
-        if StyleFunctionNameResolver.is_pandas_background_gradient(style_func_qname):
+        qname = StyleFunctionNameResolver.get_style_func_qname(todo)
+        if StyleFunctionNameResolver.is_pandas_background_gradient(qname):
             return BackgroundGradientPatcher(df, todo)
-        elif StyleFunctionNameResolver.is_pandas_highlight_min(style_func_qname, todo):
+        elif StyleFunctionNameResolver.is_pandas_highlight_min(qname, todo):
             return HighlightExtremaPatcher(df, todo)
-        elif StyleFunctionNameResolver.is_pandas_highlight_max(style_func_qname, todo):
+        elif StyleFunctionNameResolver.is_pandas_highlight_max(qname, todo):
             return HighlightExtremaPatcher(df, todo)
-        elif StyleFunctionNameResolver.is_pandas_highlight_null(style_func_qname):
+        elif StyleFunctionNameResolver.is_pandas_highlight_null(qname):
             return ApplyMapPatcher(df, todo)
-        elif StyleFunctionNameResolver.is_pandas_set_properties(style_func_qname):
+        elif StyleFunctionNameResolver.is_pandas_set_properties(qname):
             return ApplyMapPatcher(df, todo)
         return None
