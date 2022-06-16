@@ -39,7 +39,7 @@ def generate_plugin_code():
                     if copy_marker_found:
                         if not stripped_line.startswith("#"):
                             if stripped_line.startswith("print"):
-                                print("WARN: print found in code")
+                                print(f"WARN: print found in code:\n\t{stripped_line}")
                             if f"from {PACKAGE_NAME}" in stripped_line:
                                 # import is not required in the final plugin code
                                 print(f"ERROR: wrong placed import in file '{file_name}' - move it above copy marker")
@@ -57,7 +57,7 @@ def generate_plugin_code():
                                 return
                 if not copy_marker_found:
                     print(f"ERROR: specified file '{file_name}' doesn't contain a copy marker '{COPY_MARKER}'")
-    print("done")
+    print("\ndone")
 
 
 if __name__ == "__main__":
