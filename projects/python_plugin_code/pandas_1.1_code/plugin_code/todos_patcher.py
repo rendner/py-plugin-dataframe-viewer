@@ -15,6 +15,7 @@ from plugin_code.apply_map_patcher import ApplyMapPatcher
 from plugin_code.apply_patcher import ApplyPatcher
 from plugin_code.background_gradient_patcher import BackgroundGradientPatcher
 from plugin_code.highlight_extrema_patcher import HighlightExtremaPatcher
+from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
 from plugin_code.styler_todo import StylerTodo
 from plugin_code.todo_patcher import TodoPatcher
 
@@ -34,8 +35,8 @@ class TodosPatcher:
         for t in source._todo:
             todo = StylerTodo.from_tuple(t)
 
-            if todo.is_builtin_style_func():
-                patcher = self.__get_patcher_for_builtin_style(source.data, todo)
+            if todo.is_pandas_style_func():
+                patcher = self.__get_patcher_for_pandas_style_function(source.data, todo)
             else:
                 if todo.is_applymap_call():
                     patcher = ApplyMapPatcher(source.data, todo)
@@ -47,30 +48,23 @@ class TodosPatcher:
 
         return result
 
-    def __get_patcher_for_builtin_style(self, df: DataFrame, todo: StylerTodo) -> Optional[TodoPatcher]:
-        style_func_qname = todo.get_style_func_name()
-        if self.__is_builtin_background_gradient(style_func_qname):
+    @staticmethod
+    def is_style_function_supported(todo: StylerTodo) -> bool:
+        if todo.is_pandas_style_func():
+            return TodosPatcher.__get_patcher_for_pandas_style_function(DataFrame(), todo) is not None
+        return True
+
+    @staticmethod
+    def __get_patcher_for_pandas_style_function(df: DataFrame, todo: StylerTodo) -> Optional[TodoPatcher]:
+        style_func_qname = StyleFunctionNameResolver.get_style_func_name(todo)
+        if StyleFunctionNameResolver.is_pandas_background_gradient(style_func_qname):
             return BackgroundGradientPatcher(df, todo)
-        elif self.__is_builtin_highlight_extrema(style_func_qname):
+        elif StyleFunctionNameResolver.is_pandas_highlight_min(style_func_qname, todo):
             return HighlightExtremaPatcher(df, todo)
-        elif self.__is_builtin_highlight_null(style_func_qname):
+        elif StyleFunctionNameResolver.is_pandas_highlight_max(style_func_qname, todo):
+            return HighlightExtremaPatcher(df, todo)
+        elif StyleFunctionNameResolver.is_pandas_highlight_null(style_func_qname):
             return ApplyMapPatcher(df, todo)
-        elif self.__is_builtin_set_properties(style_func_qname):
+        elif StyleFunctionNameResolver.is_pandas_set_properties(style_func_qname):
             return ApplyMapPatcher(df, todo)
         return None
-
-    @staticmethod
-    def __is_builtin_background_gradient(style_func_qname: str) -> bool:
-        return style_func_qname == 'Styler._background_gradient'
-
-    @staticmethod
-    def __is_builtin_highlight_extrema(style_func_qname: str) -> bool:
-        return style_func_qname.startswith('Styler._highlight_extrema')
-
-    @staticmethod
-    def __is_builtin_highlight_null(style_func_qname: str) -> bool:
-        return style_func_qname.startswith('Styler._highlight_null')
-
-    @staticmethod
-    def __is_builtin_set_properties(style_func_qname: str) -> bool:
-        return style_func_qname.startswith('Styler.set_properties')

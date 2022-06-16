@@ -14,9 +14,9 @@
 import pandas as pd
 import numpy as np
 import pytest
-from pandas import MultiIndex, DataFrame
+from pandas import MultiIndex, DataFrame, Series
 
-from plugin_code.patched_styler import PatchedStyler
+from plugin_code.patched_styler import PatchedStyler, TableStructure, StyleFunctionDetails
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 
 np.random.seed(123456)
@@ -26,6 +26,18 @@ df = DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
 df.index.names = ["lev0", "lev1"]
 
 
+def test_table_structure_columns_count():
+    ts = PatchedStyler(df.style).get_table_structure()
+    assert ts == TableStructure(
+        rows_count=6,
+        columns_count=6,
+        row_levels_count=2,
+        column_levels_count=2,
+        hide_row_header=False,
+        hide_column_header=False,
+    )
+
+
 def test_table_structure_hide_row_header():
     styler = df.style.hide_index()
     ts = PatchedStyler(styler).get_table_structure()
@@ -33,31 +45,11 @@ def test_table_structure_hide_row_header():
     assert ts.hide_column_header is False
 
 
-def test_table_structure_columns_count():
-    ts = PatchedStyler(df.style).get_table_structure()
-    assert ts.columns_count == 6
-
-
-def test_table_structure_rows_count():
-    ts = PatchedStyler(df.style).get_table_structure()
-    assert ts.rows_count == 6
-
-
 def test_table_structure_columns_count_hide_all_columns():
     styler = df.style.hide_columns(subset=df.columns)
     ts = PatchedStyler(styler).get_table_structure()
     assert ts.columns_count == 0
     assert ts.hide_column_header is False
-
-
-def test_table_structure_column_level_count():
-    ts = PatchedStyler(df.style).get_table_structure()
-    assert ts.column_levels_count == 2
-
-
-def test_table_structure_row_level_count():
-    ts = PatchedStyler(df.style).get_table_structure()
-    assert ts.row_levels_count == 2
 
 
 other_df = pd.DataFrame.from_dict({
@@ -96,4 +88,49 @@ def test_render_chunk_translates_display_funcs_correct_also_with_hidden_cols(
             .format(formatter=formatter),
         rows_per_chunk,
         cols_per_chunk
+    )
+
+
+def test_get_style_function_details_df_no_styles():
+    styler = df.style
+    details = PatchedStyler(styler).get_style_function_details()
+    assert len(details) == 0
+
+
+def test_get_style_function_details_df():
+    def do_nothing(data: Series, chunk_parent: Series = None):
+        return data
+
+    styler = df.style.bar().highlight_min(axis='columns').apply(do_nothing, axis='index')
+    details = PatchedStyler(styler).get_style_function_details()
+    assert len(details) == 3
+    assert details[0] == StyleFunctionDetails(
+        index=0,
+        name='Styler._bar',
+        display_name='_bar',
+        axis='0',
+        is_chunk_parent_requested=False,
+        is_apply=True,
+        is_pandas_builtin=True,
+        is_supported=False,
+    )
+    assert details[1] == StyleFunctionDetails(
+        index=1,
+        name='Styler._highlight_extrema',
+        display_name='highlight_min',
+        axis='columns',
+        is_chunk_parent_requested=False,
+        is_apply=True,
+        is_pandas_builtin=True,
+        is_supported=True,
+    )
+    assert details[2] == StyleFunctionDetails(
+        index=2,
+        name='test_get_style_function_details_df.<locals>.do_nothing',
+        display_name='do_nothing',
+        axis='index',
+        is_chunk_parent_requested=True,
+        is_apply=True,
+        is_pandas_builtin=False,
+        is_supported=True,
     )

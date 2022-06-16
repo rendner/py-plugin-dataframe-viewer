@@ -25,7 +25,7 @@ class TodoPatcher(ABC):
 
     def __init__(self, df: DataFrame, todo: StylerTodo):
         self._todo: StylerTodo = todo
-        self._subset_data: DataFrame = self._get_subset_data(df, todo.apply_args.subset)
+        self._subset_data: DataFrame = df if df.empty else self._get_subset_data(df, todo.apply_args.subset)
 
     @abstractmethod
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:

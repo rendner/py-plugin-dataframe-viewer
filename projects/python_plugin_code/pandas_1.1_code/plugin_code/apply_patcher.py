@@ -16,7 +16,6 @@ from plugin_code.styler_todo import StylerTodo
 from plugin_code.todo_patcher import TodoPatcher
 
 # == copy after here ==
-import inspect
 from typing import Optional, Union
 
 from pandas import DataFrame, Series
@@ -29,7 +28,7 @@ class ApplyPatcher(TodoPatcher):
 
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
         builder = self._todo.builder().with_subset(self._calculate_chunk_subset(chunk))
-        if self._should_provide_chunk_parent():
+        if self._todo.should_provide_chunk_parent():
             builder.with_style_func(ChunkParentProvider(
                 self._styling_func,
                 self._todo.apply_args.axis,
@@ -47,10 +46,3 @@ class ApplyPatcher(TodoPatcher):
             return chunk_or_series_from_chunk
 
         return self._todo.apply_args.style_func(chunk_or_series_from_chunk, **kwargs)
-
-    def _should_provide_chunk_parent(self):
-        sig = inspect.signature(self._todo.apply_args.style_func)
-        for param in sig.parameters.values():
-            if param.name == "chunk_parent" or param.kind == inspect.Parameter.VAR_KEYWORD:
-                return True
-        return False
