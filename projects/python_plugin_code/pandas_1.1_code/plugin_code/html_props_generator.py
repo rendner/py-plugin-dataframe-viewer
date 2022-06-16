@@ -136,15 +136,6 @@ class HTMLPropsGenerator:
         self.__visible_data: DataFrame = visible_data
         self.__styler: Styler = styler
 
-    def create_html(self, html_props: dict) -> str:
-        # use template of original styler
-        return self.__styler.template.render(
-            **html_props,
-            encoding="utf-8",
-            sparse_columns=False,
-            sparse_index=False,
-        )
-
     def generate_props_unpatched(self) -> dict:
         # can't use "styler._copy(deepcopy=True)" - pandas 1.1 only copies ctx and _todo)
         # therefore use org instead
@@ -152,6 +143,12 @@ class HTMLPropsGenerator:
         copy.uuid = ''
         copy.uuid_len = 0
         copy.cell_ids = False
+
+        # bug in pandas 1.1.x - "_compute" doesn't clear the "ctx" before executing the style functions
+        # each "_compute" call adds the same values again into the "ctx" (is fixed in pandas 1.3)
+        # -> css styles are added multiple times, which breaks the "HtmlPropsValidator"
+        copy.ctx.clear()
+
         copy._compute()
 
         return self.__sanitize_props(copy._translate())
@@ -159,6 +156,7 @@ class HTMLPropsGenerator:
     def generate_props_for_chunk(self,
                                  region: Region,
                                  exclude_row_header: bool = False,
+                                 translate_indices: bool = True,
                                  ) -> dict:
         # chunk contains always only non-hidden data
         chunk = self.__visible_data.iloc[
@@ -200,10 +198,11 @@ class HTMLPropsGenerator:
         trimmed = [x for x in result["cellstyle"] if any(any(y) for y in x["props"])]
         result["cellstyle"] = trimmed
 
-        # translated props doesn't know about the chunk
-        # therefore some row/col indices have to be adjusted
-        # to have the correct index
-        _HTMLPropsIndexAdjuster(rit, cit).adjust(result)
+        if translate_indices:
+            # Translate the row/col indices, ids and css-selectors of the chunk.
+            # Only required if the html-props of multiple chunks should be combined in a later step.
+            # Chunks can contain elements with the same ids and css-selectors but different css-styling.
+            _HTMLPropsIndexAdjuster(rit, cit).adjust(result)
 
         return self.__sanitize_props(result)
 
