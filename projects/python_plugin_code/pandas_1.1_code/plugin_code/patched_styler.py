@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from plugin_code.html_props_generator import HTMLPropsGenerator
+from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
 from plugin_code.style_functions_validator import StyleFunctionsValidator, StyleFunctionValidationInfo, \
@@ -68,34 +68,26 @@ class PatchedStyler:
 
     def validate_style_functions(self,
                                  first_row: int,
-                                 first_column: int,
-                                 last_row: int,
-                                 last_column: int,
+                                 first_col: int,
+                                 rows: int,
+                                 cols: int,
                                  validation_strategy: Optional[ValidationStrategyType] = None,
                                  ) -> List[StyleFunctionValidationInfo]:
         if validation_strategy is not None:
             self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
-        return self.__style_functions_validator.validate(
-            first_row=first_row,
-            first_column=first_column,
-            last_row=last_row,
-            last_column=last_column,
-        )
+        return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
 
     def render_chunk(
             self,
             first_row: int,
-            first_column: int,
-            last_row: int,
-            last_column: int,
+            first_col: int,
+            rows: int,
+            cols: int,
             exclude_row_header: bool = False,
             exclude_column_header: bool = False,  # unused in this version
     ) -> str:
         html_props = self.__html_props_generator.generate_props_for_chunk(
-            first_row=first_row,
-            first_column=first_column,
-            last_row=last_row,
-            last_column=last_column,
+            region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
         )
         return self.__html_props_generator.create_html(html_props)

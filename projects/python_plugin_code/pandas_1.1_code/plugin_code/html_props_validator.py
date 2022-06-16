@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from plugin_code.html_props_generator import HTMLPropsGenerator
+from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 
 # == copy after here ==
 from copy import deepcopy
@@ -260,9 +260,9 @@ class HTMLPropsValidator(AbstractHTMLPropsValidator):
     def validate(self, rows_per_chunk: int, cols_per_chunk: int,
                  write_html_on_error: bool = False) -> HTMLPropsValidationResult:
         rows_in_frame: int = len(self._visible_data.index)
-        columns_in_frame: int = len(self._visible_data.columns)
+        cols_in_frame: int = len(self._visible_data.columns)
 
-        if rows_in_frame == 0 or columns_in_frame == 0:
+        if rows_in_frame == 0 or cols_in_frame == 0:
             # special case frame has no columns/rows and therefore no important html props
             return HTMLPropsValidationResult('', '', True)
 
@@ -278,22 +278,26 @@ class HTMLPropsValidator(AbstractHTMLPropsValidator):
     ):
         combined_props: dict = {}
         rows_in_frame: int = len(self._visible_data.index)
-        columns_in_frame: int = len(self._visible_data.columns)
+        cols_in_frame: int = len(self._visible_data.columns)
 
-        for ri in range(0, rows_in_frame, rows_per_chunk):
-            for ci in range(0, columns_in_frame, cols_per_chunk):
+        rows_processed = 0
+        while rows_processed < rows_in_frame:
+            rows = min(rows_per_chunk, rows_in_frame - rows_processed)
+            cols_in_row_processed = 0
+            while cols_in_row_processed < cols_in_frame:
+                cols = min(cols_per_chunk, cols_in_frame - cols_in_row_processed)
                 chunk_html_props = self._html_props_generator.generate_props_for_chunk(
-                    first_row=ri,
-                    first_column=ci,
-                    last_row=ri + rows_per_chunk,
-                    last_column=ci + cols_per_chunk,
+                    region=Region(rows_processed, cols_in_row_processed, rows, cols),
                     exclude_row_header=False,
                 )
 
                 self._append_chunk_html_props(
                     chunk_props=chunk_html_props,
                     target=combined_props,
-                    target_row_offset=ri,
+                    target_row_offset=rows_processed,
                 )
+
+                cols_in_row_processed += cols
+            rows_processed += rows
 
         return combined_props
