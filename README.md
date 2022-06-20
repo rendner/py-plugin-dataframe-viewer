@@ -12,7 +12,7 @@ The configured style is used to render a styled output of the `DataFrame`.
 
 ![preview of the plugin](./docs/images/preview.png)
 
-#### Supported Styler Methods
+### Supported Styler Methods
 The following `Styler` methods are supported:
 
   | pandas Styler method                                                                                                                             | supported pandas version |
@@ -145,10 +145,12 @@ In general, you pass your custom style function into one of the following method
 
 Both of those methods take a function (and some other keyword arguments) and applies your function to the `DataFrame` in 
 a certain way. `Styler.applymap` works through the `DataFrame` elementwise. `Styler.apply` passes each column or row into 
-your `DataFrame` one-at-a-time or the entire table at once, depending on the axis keyword argument.
+your `DataFrame` one-at-a-time or the entire `DataFrame` at once, depending on the axis keyword argument.
 
-In case of chunks, a passed column or the entire table are taken from the chunk and not from the original `DataFrame`. This
-leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. Because this value can't be evaluated if your custom styler only get a chunk.
+In case of chunks, a passed row or column is taken from the chunk and not from the original `DataFrame`. 
+Same for `axis=None`, here the chunk is passed instead of the original `DataFrame`.
+This leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. 
+Because this value can't be evaluated if your custom styler only get the data from the chunk instead of the original `DataFrame`.
 
 > All builtin styles listed under [supported-styler-methods](#supported-styler-methods), except `apply` and `applymap`, are automatically handled by the plugin and can therefore be used without any changes.
 
@@ -207,6 +209,12 @@ def my_highlight_max_using_kwargs(series, **kwargs):
     max = kwargs.get("chunk_parent", series).max()
     return ['background-color: red' if cell == max else '' for cell in series]
 ```
+
+##### Automatic Problem Detection
+Depending on the complexity of a custom styling function it can be hard to determine if the displayed result is always correct.
+
+The plugin can do some of the work for you and automatically try to detect problems in the background.
+Check [Validating Style Functions](./docs/VALIDATING_STYLE_FUNCTIONS.md)
 
 ## Used Libraries
 - AWT Color Factory (https://github.com/beryx/awt-color-factory)
