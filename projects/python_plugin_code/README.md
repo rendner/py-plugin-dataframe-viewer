@@ -51,6 +51,7 @@ The structure below lists only the important folders/files.
 ├── plugin_code
 │   └── patched_styler.py
 │   └── styled_data_frame_viewer_bridge.py
+│   └── ...
 └── tests
 ```
 
@@ -89,13 +90,14 @@ Therefore, it is mandatory that the method signatures of this class match those 
 
 Short overview about the public methods of the class:
 
-| Method              | used by the plugin | purpose                                                                              |
-|:--------------------|:------------------:|:-------------------------------------------------------------------------------------|
-| render_chunk        |         X          | To extract small HTML chunk.                                                         |
-| render_unpatched    |         -          | To extract unmodified HTML output. Used to generated test data or during unit tests. |
-| get_table_structure |         X          | To extract initial information about a DataFrame.                                    |
-
-If you want to support a new pandas builtin style, you have to add it to this class.
+| Method                      | used by the plugin | purpose                                                                              |
+|:----------------------------|:------------------:|:-------------------------------------------------------------------------------------|
+| create_html_props_validator |         -          | Required for unit tests.                                                             |
+| get_style_function_details  |         X          | To extract information about used styling functions.                                 |
+| get_table_structure         |         X          | To extract initial information about a DataFrame.                                    |
+| render_chunk                |         X          | To extract small HTML chunk.                                                         |
+| render_unpatched            |         -          | To extract unmodified HTML output. Used to generated test data or during unit tests. |
+| validate_style_functions    |         X          | To validate styling functions.                                                       |
 
 #### StyledDataFrameViewerBridge.py
 This class is used by the plugin (Kotlin part) to create and maintain `PatchedStyler` instances.
