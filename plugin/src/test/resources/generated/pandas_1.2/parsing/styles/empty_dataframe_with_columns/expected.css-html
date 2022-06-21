@@ -19,7 +19,7 @@
      <th class="col_heading level0 col11" style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:center;">col_11</th>
     </tr>
    </thead>
-   <tbody style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;"> 
+   <tbody style="background-color:rgba(0, 0, 0, 0);color:rgb(0, 0, 0);text-align:start;">
    </tbody>
   </table>
  </body>
