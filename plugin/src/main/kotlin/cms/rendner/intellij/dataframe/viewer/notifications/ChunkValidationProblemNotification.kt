@@ -133,7 +133,7 @@ class ChunkValidationProblemNotification(
 
         private fun groupByReason(problems: List<StyleFunctionValidationProblem>): List<Section> {
             val warnings = Section("Warnings", "Exception during validation")
-            val errors = Section("Errors", "Styling-function is not chunk aware (compared results didn't match)")
+            val errors = Section("Errors", "Styling function is not chunk aware (compared results didn't match)")
 
             problems.forEach {
                 when (it.reason) {
