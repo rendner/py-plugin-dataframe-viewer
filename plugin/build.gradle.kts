@@ -22,15 +22,15 @@ dependencies {
     // is provided by the intellij instance which runs the plugin
     compileOnly(kotlin("stdlib"))
 
-    implementation("org.jsoup:jsoup:1.14.3")
+    implementation("org.jsoup:jsoup:1.15.1")
     implementation("net.sourceforge.cssparser:cssparser:0.9.29")
     implementation("org.beryx:awt-color-factory:1.0.2")
 
-    // https://github.com/junit-team/junit5-samples/blob/r5.8.1/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
-    testImplementation(platform("org.junit:junit-bom:5.8.1"))
+    // https://github.com/junit-team/junit5-samples/blob/r5.8.2/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
+    testImplementation(platform("org.junit:junit-bom:5.8.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
-    testImplementation("org.assertj:assertj-core:3.22.0")
+    testImplementation("org.assertj:assertj-core:3.23.1")
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
