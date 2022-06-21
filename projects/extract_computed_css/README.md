@@ -22,7 +22,7 @@ The task will:
 
 The tool iterates recursive over an input directory and generates for each `expected.html` file in `<PLUGIN_DIR>/src/test/resources/generated/` an `expected.css-html`.
 
-A more detailed description how to generate test data can be found in [PLUGIN_TEST_DATA.md](../../plugin/docs/PLUGIN_TEST_DATA.md)
+A more detailed description how to generate test data can be found in [GENERATE_TEST_DATA_MANUALLY.md](../../plugin/docs/GENERATE_TEST_DATA_MANUALLY.md)
 
 ## Upgrading JBR
 In case the tool has to be migrated to a newer "JBR with JCEF". The following steps have to be done:
