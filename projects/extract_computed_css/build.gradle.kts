@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jsoup:jsoup:1.14.3")
+    implementation("org.jsoup:jsoup:1.15.1")
     implementation("commons-cli:commons-cli:1.5.0")
 }
 
