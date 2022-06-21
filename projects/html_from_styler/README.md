@@ -15,7 +15,7 @@ All projects are set up via [pipenv](https://pypi.org/project/pipenv/) and use t
 
 ## Running These Projects (preferred way)
 The test data for the plugin can only be generated when using a PyCharm instance started by the gradle-task `runIde` of the plugin project.
-A more detailed description can be found in [PLUGIN_TEST_DATA.md](../../plugin/docs/PLUGIN_TEST_DATA.md)
+A more detailed description can be found in [GENERATE_TEST_DATA_MANUALLY.md](../../plugin/docs/GENERATE_TEST_DATA_MANUALLY.md)
 
 ## Configure Python Interpreter (PyCharm)
 After importing one of the Python projects, open the `Add Python Interpreter` dialog:
@@ -30,8 +30,9 @@ The structure below lists only the important folders/files.
 ├── export_data
 │   ├── main.py
 │   └── parsing
+│   └── ...
 └── manual_testing
-    └── styles.py
+    └── ...
 ```
 
 ### File: export_data/main.py
@@ -73,8 +74,6 @@ Nearly all tests specify small styled `DataFrames`, because the generated data i
 The benefit of small test cases is, that in a short amount of time many test cases can be fetched from the debugger without running into a timeout exception.
 
 ### Directory: manual_testing
-The directory contains one example of a large `DataFrame` and should be used to manually test the fetch behavior of the plugin when scrolling around.
-
-- debug the file
-- in the debugger tab, right-click on a pandas `Styler` instance to open the context menu
-- select `Export DataFrame Test Data` from the context menu
+The directory contains examples to test the behavior of the plugin manually. 
+Manual testing isn't required because most of the functionality is tested by unit or integration tests.
+However, it provides an easy way to do quick checks during development.
