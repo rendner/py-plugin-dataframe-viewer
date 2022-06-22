@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@ interface IRendererComponentStyler {
     fun applyStyle(
         component: Component,
         table: JTable?, value: Any?,
-        isSelected: Boolean, hasFocus: Boolean,
+        isSelected: Boolean,
+        hasFocus: Boolean,
         row: Int, column: Int
     )
 }

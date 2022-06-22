@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,11 +107,15 @@ private class MyValueTable : MyTable<ITableValueDataModel>() {
         getColumnModel().selectionModel.addListSelectionListener {
             if (!it.valueIsAdjusting) {
                 /**
-                required to render the selected column with a bold label - see [CenteredHeaderLabelStyler]
+                required to render the header for selected column in another style - see [CenteredHeaderLabelStyler]
                  */
                 tableHeader?.repaint()
             }
         }
+
+        // set property to 1 - to automatically determine the required row height
+        // 1 because we use the same cell renderer for all cells
+        this.setMaxItemsForSizeCalculation(1)
     }
 
     override fun setModel(tableModel: TableModel) {
@@ -170,9 +174,12 @@ private class MyIndexTable(
 ) : MyTable<ITableIndexDataModel>() {
 
     init {
-        isFocusable = false
-        setSelectionModel(mainTable.selectionModel)
+        // disable automatic row height adjustment - use the value from the mainTable
+        setMaxItemsForSizeCalculation(0)
         rowHeight = mainTable.rowHeight
+
+        setSelectionModel(mainTable.selectionModel)
+        isFocusable = false
         autoResizeMode = JTable.AUTO_RESIZE_OFF
 
         setDefaultRenderer(
@@ -221,7 +228,7 @@ private class MyIndexTable(
 
     override fun addMouseListener(l: MouseListener?) {
         // do nothing
-        // table should not clickable but tooltip should work
+        // table should not be clickable but tooltip should work
     }
 
     override fun createLeveledTableHeaderRenderer(): TableCellRenderer {
@@ -268,8 +275,6 @@ abstract class MyTable<M : ITableDataModel> : JBTable(null) {
         rowSorter = null
         tableHeader?.reorderingAllowed = false
         updateDefaultHeaderRenderer()
-
-        this.setMaxItemsForSizeCalculation(0)
     }
 
     override fun addColumn(column: TableColumn) {

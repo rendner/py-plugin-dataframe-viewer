@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.IRendererComponentStyler
 import com.intellij.ui.ExpandableItemsHandler
 import java.awt.Component
-import java.awt.Font
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.SwingConstants
+import javax.swing.UIManager
 
 class CenteredHeaderLabelStyler(
     private val isRowHeader: Boolean = false
@@ -59,23 +59,19 @@ class CenteredHeaderLabelStyler(
         if (component is JLabel) {
             component.horizontalAlignment = SwingConstants.CENTER
             component.horizontalTextPosition = SwingConstants.LEFT
-            component.verticalAlignment = SwingConstants.BOTTOM
+            component.verticalAlignment = SwingConstants.CENTER
         }
 
-        val setBold = if (isRowHeader) {
+        val rowOrColumnSelected = if (isRowHeader) {
             table?.isRowSelected(row) == true
         } else {
             table?.isColumnSelected(column) == true
         }
 
-        val newFontStyle = if (setBold) {
-            component.font.style or Font.BOLD
-        } else {
-            component.font.style and Font.BOLD.inv()
-        }
-
-        if (newFontStyle != component.font.style) {
-            component.font = component.font.deriveFont(newFontStyle)
+        if (rowOrColumnSelected) {
+            UIManager.getColor("TableHeader.separatorColor")?.let {
+                component.background = it
+            }
         }
     }
 }
