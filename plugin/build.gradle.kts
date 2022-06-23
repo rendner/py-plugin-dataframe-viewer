@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "cms.rendner.intellij"
-version = "0.6.0"
+version = "0.7.0"
 
 repositories {
     mavenCentral()
@@ -335,6 +335,7 @@ tasks {
             "idea.log.debug.categories",
             "#cms.rendner",
         )
+        // systemProperty("PYCHARM_DEBUG", "True")
         // ideDir.set(File("/snap/intellij-idea-community/current"))
     }
 
@@ -380,8 +381,8 @@ tasks {
 
     listProductsReleases {
         sinceVersion.set("2020.3")
-        untilVersion.set("221.4165.171") // 2022.1 EAP
-        //untilVersion.set("2022.1")
+        untilVersion.set("222.3048.9") // 2022.2 EAP
+        //untilVersion.set("2022.2")
     }
 }
 

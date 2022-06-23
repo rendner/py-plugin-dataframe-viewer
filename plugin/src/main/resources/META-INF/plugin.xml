@@ -19,9 +19,11 @@
     For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
     ]]></description>
 
-    <idea-version since-build="203" until-build="223.*"/>
+    <idea-version since-build="203.5981.155" until-build="223.*"/>
 
     <change-notes><![CDATA[
+    <b>0.7.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/v0.7.0/plugin/docs/release_notes/0.7.x/changelog-0.md">changelog</a>
+    <br/>
     <b>0.6.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/v0.6.0/plugin/docs/release_notes/0.6.x/changelog-0.md">changelog</a>
     <br/>
     <b>0.5.1</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/v0.5.1/plugin/docs/release_notes/0.5.x/changelog-1.md">changelog</a>

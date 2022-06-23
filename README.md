@@ -81,6 +81,7 @@ This may be improved if there are major problems with it.
 ## Version History
 | version   | changelog                                                  |
 |-----------|------------------------------------------------------------|
+| 0.7.0     | [link](./plugin/docs/release_notes/0.7.x/changelog-0.md)   |
 | 0.6.0     | [link](./plugin/docs/release_notes/0.6.x/changelog-0.md)   |
 | 0.5.1     | [link](./plugin/docs/release_notes/0.5.x/changelog-1.md)   |
 | 0.5.0     | [link](./plugin/docs/release_notes/0.5.x/changelog-0.md)   |
