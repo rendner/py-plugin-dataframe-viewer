@@ -25,10 +25,11 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.text.StringUtil
+import java.awt.Dimension
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import javax.swing.JOptionPane
 
 /**
  * Notification about a chunk-validation-result.
@@ -78,11 +79,14 @@ class ChunkValidationProblemNotification(
     ) : AnAction("Show Report"), DumbAware {
 
         override fun actionPerformed(event: AnActionEvent) {
-            Messages.showMessageDialog(
+            showHtmlMessageDialog(
+                event.project,
                 HTMLReportGenerator().createReport(region, validationStrategy, problems, details),
                 "Chunk Validation Report",
-                Messages.getInformationIcon(),
-            )
+                JOptionPane.INFORMATION_MESSAGE,
+            ) { messageScrollPane ->
+                messageScrollPane.preferredSize = Dimension(messageScrollPane.preferredSize.width, 250)
+            }
         }
     }
 

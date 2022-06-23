@@ -20,10 +20,11 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.text.StringUtil
+import java.awt.Dimension
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import javax.swing.JOptionPane
 
 /**
  * Notification about an error.
@@ -66,11 +67,14 @@ class ErrorNotification(
         private val throwable: Throwable,
     ) : AnAction("Show Error"), DumbAware {
         override fun actionPerformed(event: AnActionEvent) {
-            Messages.showMessageDialog(
+            showHtmlMessageDialog(
+                event.project,
                 "<html><h3>$content</h3><pre>${StringUtil.escapeXmlEntities(throwable.stackTraceToString())}</pre></html>",
                 title,
-                Messages.getErrorIcon(),
-            )
+                JOptionPane.ERROR_MESSAGE,
+            ) { messageScrollPane ->
+                messageScrollPane.preferredSize = Dimension(messageScrollPane.preferredSize.width, 250)
+            }
         }
     }
 }
