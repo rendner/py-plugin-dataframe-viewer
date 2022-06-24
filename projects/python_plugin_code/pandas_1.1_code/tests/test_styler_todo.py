@@ -16,6 +16,22 @@ from pandas import DataFrame, Series
 from plugin_code.styler_todo import StylerTodo
 
 
+def test_is_applymap_tuple_with_applymap():
+    def style_func(scalar: Any):
+        return scalar
+
+    styler = DataFrame().style.applymap(style_func)
+    assert StylerTodo.is_applymap_tuple(styler._todo[0])
+
+
+def test_is_applymap_tuple_with_apply():
+    def style_func(series: Series):
+        return series
+
+    styler = DataFrame().style.apply(style_func)
+    assert StylerTodo.is_applymap_tuple(styler._todo[0]) is False
+
+
 def test_apply_parsing():
     def style_func(series: Series):
         return series
@@ -23,8 +39,7 @@ def test_apply_parsing():
     styler = DataFrame().style.apply(style_func, axis='index', subset=['a', 'b'])
     actual = StylerTodo.from_tuple(styler._todo[0])
 
-    assert actual.is_apply_call()
-    assert actual.is_applymap_call() is False
+    assert actual.is_applymap() is False
     assert actual.apply_args.style_func == style_func
     assert actual.apply_args.axis == 'index'
     assert actual.apply_args.subset == ['a', 'b']
@@ -47,8 +62,7 @@ def test_applymap_parsing():
     styler = DataFrame().style.applymap(style_func, subset=['a', 'b'])
     actual = StylerTodo.from_tuple(styler._todo[0])
 
-    assert actual.is_applymap_call()
-    assert actual.is_apply_call() is False
+    assert actual.is_applymap()
     assert actual.apply_args.style_func == style_func
     assert actual.apply_args.subset == ['a', 'b']
 

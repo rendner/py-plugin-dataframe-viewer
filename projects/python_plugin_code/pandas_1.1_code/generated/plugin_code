@@ -55,16 +55,21 @@ class StylerTodo:
 
     @staticmethod
     def _to_apply_args(todo: Tuple[Callable, tuple, dict]):
-        if getattr(todo[0], '__qualname__', '').startswith('Styler.applymap'):
+        if StylerTodo.is_applymap_tuple(todo):
             return ApplyMapArgs.from_tuple(todo[1])
         else:
             return ApplyArgs.from_tuple(todo[1])
 
-    def is_applymap_call(self) -> bool:
-        return isinstance(self.apply_args, ApplyMapArgs)
+    @classmethod
+    def is_applymap_tuple(cls, todo: Tuple[Callable, tuple, dict]):
+        return cls.__is_apply_map_func(todo[0])
 
-    def is_apply_call(self) -> bool:
-        return not self.is_applymap_call()
+    def is_applymap(self) -> bool:
+        return self.__is_apply_map_func(self.apply_func)
+
+    @staticmethod
+    def __is_apply_map_func(func: Callable) -> bool:
+        return getattr(func, '__qualname__', '').startswith('Styler.applymap')
 
     def is_pandas_style_func(self) -> bool:
         func = self.apply_args.style_func
@@ -354,7 +359,7 @@ class TodosPatcher:
             if todo.is_pandas_style_func():
                 patcher = self.__get_patcher_for_pandas_style_function(source.data, todo)
             else:
-                if todo.is_applymap_call():
+                if todo.is_applymap():
                     patcher = ApplyMapPatcher(source.data, todo)
                 else:
                     patcher = ApplyPatcher(source.data, todo)
@@ -594,7 +599,7 @@ class HTMLPropsGenerator:
         target._display_funcs = source._display_funcs
 
 from dataclasses import dataclass, asdict, is_dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import json
 
 from pandas import DataFrame
@@ -956,7 +961,7 @@ class StyleFunctionsValidator:
 
     def validate(self, region: Region) -> List[StyleFunctionValidationProblem]:
 
-        if len(self.__styler._todo) == 0:
+        if not self.__has_apply_calls():
             return []
 
         rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(region.rows, region.cols)
@@ -984,6 +989,8 @@ class StyleFunctionsValidator:
         try:
             for i, todo in enumerate(org_todo):
                 try:
+                    if StylerTodo.is_applymap_tuple(todo):
+                        continue
                     self.__styler._todo = [todo]
                     validator = HTMLPropsValidator(self.__visible_data, self.__styler)
                     result = validator.validate_region(region, rows_per_chunk, cols_per_chunk)
@@ -995,6 +1002,12 @@ class StyleFunctionsValidator:
             self.__styler._todo = org_todo
 
         return validation_result
+
+    def __has_apply_calls(self) -> bool:
+        todos = self.__styler._todo
+        if len(todos) == 0:
+            return False
+        return any(not StylerTodo.is_applymap_tuple(t) for t in todos)
 
 import numpy as np
 from pandas import DataFrame
@@ -1101,10 +1114,10 @@ class PatchedStyler:
                 index=i,
                 qname=StyleFunctionNameResolver.get_style_func_qname(t),
                 resolved_name=StyleFunctionNameResolver.resolve_style_func_name(t),
-                axis='' if not t.is_apply_call() else str(t.apply_args.axis),
+                axis='' if t.is_applymap() else str(t.apply_args.axis),
                 is_pandas_builtin=t.is_pandas_style_func(),
                 is_supported=TodosPatcher.is_style_function_supported(t),
-                is_apply=t.is_apply_call(),
+                is_apply=not t.is_applymap(),
                 is_chunk_parent_requested=t.should_provide_chunk_parent(),
             ))
 

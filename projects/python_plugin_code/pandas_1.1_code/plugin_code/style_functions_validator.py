@@ -13,6 +13,7 @@
 #  limitations under the License.
 from plugin_code.html_props_generator import Region
 from plugin_code.html_props_validator import HTMLPropsValidator
+from plugin_code.styler_todo import StylerTodo
 
 # == copy after here ==
 from dataclasses import dataclass, asdict
@@ -99,7 +100,7 @@ class StyleFunctionsValidator:
 
     def validate(self, region: Region) -> List[StyleFunctionValidationProblem]:
 
-        if len(self.__styler._todo) == 0:
+        if not self.__has_apply_calls():
             return []
 
         rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(region.rows, region.cols)
@@ -127,6 +128,8 @@ class StyleFunctionsValidator:
         try:
             for i, todo in enumerate(org_todo):
                 try:
+                    if StylerTodo.is_applymap_tuple(todo):
+                        continue
                     self.__styler._todo = [todo]
                     validator = HTMLPropsValidator(self.__visible_data, self.__styler)
                     result = validator.validate_region(region, rows_per_chunk, cols_per_chunk)
@@ -140,3 +143,9 @@ class StyleFunctionsValidator:
             self.__styler._todo = org_todo
 
         return validation_result
+
+    def __has_apply_calls(self) -> bool:
+        todos = self.__styler._todo
+        if len(todos) == 0:
+            return False
+        return any(not StylerTodo.is_applymap_tuple(t) for t in todos)
