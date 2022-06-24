@@ -15,7 +15,7 @@ from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 
 # == copy after here ==
 from dataclasses import dataclass, asdict, is_dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import json
 
 from pandas import DataFrame

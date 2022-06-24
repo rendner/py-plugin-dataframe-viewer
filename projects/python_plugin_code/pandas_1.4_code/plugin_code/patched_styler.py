@@ -136,10 +136,10 @@ class PatchedStyler:
                 index=i,
                 qname=StyleFunctionNameResolver.get_style_func_qname(t),
                 resolved_name=StyleFunctionNameResolver.resolve_style_func_name(t),
-                axis='' if not t.is_apply_call() else str(t.apply_args.axis),
+                axis='' if t.is_applymap() else str(t.apply_args.axis),
                 is_pandas_builtin=t.is_pandas_style_func(),
                 is_supported=TodosPatcher.is_style_function_supported(t),
-                is_apply=t.is_apply_call(),
+                is_apply=not t.is_applymap(),
                 is_chunk_parent_requested=t.should_provide_chunk_parent(),
             ))
 

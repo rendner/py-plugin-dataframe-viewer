@@ -39,7 +39,7 @@ class TodosPatcher:
             if todo.is_pandas_style_func():
                 patcher = self.__get_patcher_for_pandas_style_function(source.data, todo)
             else:
-                if todo.is_applymap_call():
+                if todo.is_applymap():
                     patcher = ApplyMapPatcher(source.data, todo)
                 else:
                     patcher = ApplyPatcher(source.data, todo)
