@@ -131,3 +131,8 @@ def test_get_style_function_details_df():
         is_pandas_builtin=False,
         is_supported=True,
     )
+
+
+def test_to_json():
+    ts = PatchedStyler(df.style).to_json({"a": 12, "b": (True, False)})
+    assert ts == '{"a": 12, "b": [true, false]}'

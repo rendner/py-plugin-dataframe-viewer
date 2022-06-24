@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from plugin_code.custom_json_encoder import CustomJSONEncoder
 from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
@@ -20,11 +21,12 @@ from plugin_code.styler_todo import StylerTodo
 from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
+import json
 import numpy as np
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
-from dataclasses import dataclass, asdict
-from typing import Optional, List
+from dataclasses import dataclass
+from typing import Optional, List, Any
 
 
 @dataclass(frozen=True)
@@ -35,9 +37,6 @@ class TableStructure:
     column_levels_count: int
     hide_row_header: bool
     hide_column_header: bool = False
-
-    def __str__(self):
-        return str(asdict(self))
 
 
 @dataclass(frozen=True)
@@ -51,9 +50,6 @@ class StyleFunctionDetails:
     is_pandas_builtin: bool
     is_supported: bool
 
-    def __str__(self):
-        return str(asdict(self))
-
 
 class PatchedStyler:
 
@@ -62,6 +58,10 @@ class PatchedStyler:
         self.__visible_data: DataFrame = self.__get_visible_data(styler)
         self.__html_props_generator = HTMLPropsGenerator(self.__get_visible_data(styler), styler)
         self.__style_functions_validator = StyleFunctionsValidator(self.__get_visible_data(styler), styler)
+
+    @staticmethod
+    def to_json(data: Any) -> str:
+        return json.dumps(data, cls=CustomJSONEncoder)
 
     def create_html_props_validator(self) -> HTMLPropsValidator:
         return HTMLPropsValidator(self.__visible_data, self.__styler)
@@ -115,9 +115,13 @@ class PatchedStyler:
         )
 
     def get_table_structure(self) -> TableStructure:
+        rows_count = len(self.__visible_data.index)
+        columns_count = len(self.__visible_data.columns)
+        if rows_count == 0 or columns_count == 0:
+            rows_count = columns_count = 0
         return TableStructure(
-            rows_count=len(self.__visible_data.index),
-            columns_count=len(self.__visible_data.columns),
+            rows_count=rows_count,
+            columns_count=columns_count,
             row_levels_count=self.__visible_data.index.nlevels,
             column_levels_count=self.__visible_data.columns.nlevels,
             hide_row_header=self.__styler.hidden_index,
