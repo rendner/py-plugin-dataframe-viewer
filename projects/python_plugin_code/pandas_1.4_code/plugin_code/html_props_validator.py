@@ -11,11 +11,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from plugin_code.custom_json_encoder import CustomJSONEncoder
 from plugin_code.html_props_generator import HTMLPropsGenerator, Region
 
 # == copy after here ==
-from dataclasses import dataclass, asdict, is_dataclass
-from typing import List, Dict, Any
+from dataclasses import dataclass
+from typing import List, Dict
 import json
 
 from pandas import DataFrame
@@ -42,13 +43,6 @@ class _SpannedElement:
     row_span: int
     col_span: int
     element: _TableElement
-
-
-class _MyJSONEncoder(json.JSONEncoder):
-    def default(self, obj: Any) -> str:
-        if is_dataclass(obj):
-            return str(asdict(obj))
-        return str(obj)
 
 
 @dataclass(frozen=True)
@@ -150,7 +144,7 @@ class HTMLPropsValidator:
 
     @staticmethod
     def __jsonify_html_props(html_props: _Table) -> str:
-        return json.dumps(html_props, indent=2, cls=_MyJSONEncoder)
+        return json.dumps(html_props, indent=2, cls=CustomJSONEncoder)
 
     def __transform_rows(self, rows: List[List[dict]], css_dict: Dict[str, str]) -> List[List[_TableElement]]:
         # - ids are removed from the entries, otherwise they have to be re-indexed to be unique when combining chunks
@@ -191,7 +185,8 @@ class HTMLPropsValidator:
 
                     transformed_element = _TableElement(
                         type=element_type,
-                        display_value=element.get("display_value", ""),
+                        # convert to string (value can be tuple, dict, etc.)
+                        display_value=str(element.get("display_value", "")),
                         is_heading=is_header and ("col_heading" in element_classes or "row_heading" in element_classes),
                         css=transformed_css,
                         attributes=element.get("attributes", []),

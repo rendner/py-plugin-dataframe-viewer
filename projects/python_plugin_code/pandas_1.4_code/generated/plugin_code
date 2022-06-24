@@ -1,4 +1,14 @@
 
+import json
+from dataclasses import is_dataclass, asdict
+from typing import Any
+
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj: Any):
+        if is_dataclass(obj):
+            return asdict(obj)
+        return str(obj)
 import inspect
 from dataclasses import dataclass
 from functools import partial
@@ -693,8 +703,8 @@ class HTMLPropsGenerator:
         target.cell_context = source.cell_context
         target._display_funcs = source._display_funcs
 
-from dataclasses import dataclass, asdict, is_dataclass
-from typing import List, Dict, Any
+from dataclasses import dataclass
+from typing import List, Dict
 import json
 
 from pandas import DataFrame
@@ -721,13 +731,6 @@ class _SpannedElement:
     row_span: int
     col_span: int
     element: _TableElement
-
-
-class _MyJSONEncoder(json.JSONEncoder):
-    def default(self, obj: Any) -> str:
-        if is_dataclass(obj):
-            return str(asdict(obj))
-        return str(obj)
 
 
 @dataclass(frozen=True)
@@ -829,7 +832,7 @@ class HTMLPropsValidator:
 
     @staticmethod
     def __jsonify_html_props(html_props: _Table) -> str:
-        return json.dumps(html_props, indent=2, cls=_MyJSONEncoder)
+        return json.dumps(html_props, indent=2, cls=CustomJSONEncoder)
 
     def __transform_rows(self, rows: List[List[dict]], css_dict: Dict[str, str]) -> List[List[_TableElement]]:
         transformed_rows: List[List[_TableElement]] = []
@@ -864,7 +867,7 @@ class HTMLPropsValidator:
 
                     transformed_element = _TableElement(
                         type=element_type,
-                        display_value=element.get("display_value", ""),
+                        display_value=str(element.get("display_value", "")),
                         is_heading=is_header and ("col_heading" in element_classes or "row_heading" in element_classes),
                         css=transformed_css,
                         attributes=element.get("attributes", []),
@@ -973,7 +976,7 @@ class HTMLPropsValidator:
                         target_row.extend(row[j:])
                         break
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Tuple
 from abc import ABC, abstractmethod
@@ -986,9 +989,6 @@ class StyleFunctionValidationProblem:
     index: int
     reason: str
     message: str = ""
-
-    def __str__(self):
-        return str(asdict(self))
 
 
 class ValidationStrategyType(Enum):
@@ -1105,11 +1105,12 @@ class StyleFunctionsValidator:
             return False
         return any(not StylerTodo.is_applymap_tuple(t) for t in todos)
 
-from dataclasses import dataclass, asdict
+import json
+from dataclasses import dataclass
 import numpy as np  # numpy is required by pandas (therefore should be available at runtime)
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
-from typing import List, Optional
+from typing import List, Optional, Any
 
 
 @dataclass(frozen=True)
@@ -1120,9 +1121,6 @@ class TableStructure:
     column_levels_count: int
     hide_row_header: bool
     hide_column_header: bool
-
-    def __str__(self):
-        return str(asdict(self))
 
 
 @dataclass(frozen=True)
@@ -1136,9 +1134,6 @@ class StyleFunctionDetails:
     is_pandas_builtin: bool
     is_supported: bool
 
-    def __str__(self):
-        return str(asdict(self))
-
 
 class PatchedStyler:
 
@@ -1147,6 +1142,10 @@ class PatchedStyler:
         self.__visible_data: DataFrame = self.__get_visible_data(styler)
         self.__html_props_generator = HTMLPropsGenerator(self.__get_visible_data(styler), styler)
         self.__style_functions_validator = StyleFunctionsValidator(self.__get_visible_data(styler), styler)
+
+    @staticmethod
+    def to_json(data: Any) -> str:
+        return json.dumps(data, cls=CustomJSONEncoder)
 
     def create_html_props_validator(self) -> HTMLPropsValidator:
         return HTMLPropsValidator(self.__visible_data, self.__styler)
@@ -1197,9 +1196,13 @@ class PatchedStyler:
         )
 
     def get_table_structure(self) -> TableStructure:
+        rows_count = len(self.__visible_data.index)
+        columns_count = len(self.__visible_data.columns)
+        if rows_count == 0 or columns_count == 0:
+            rows_count = columns_count = 0
         return TableStructure(
-            rows_count=len(self.__visible_data.index),
-            columns_count=len(self.__visible_data.columns),
+            rows_count=rows_count,
+            columns_count=columns_count,
             row_levels_count=self.__visible_data.index.nlevels - self.__styler.hide_index_.count(True),
             column_levels_count=self.__visible_data.columns.nlevels - self.__styler.hide_columns_.count(True),
             hide_row_header=all(self.__styler.hide_index_),
