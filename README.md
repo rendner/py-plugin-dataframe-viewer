@@ -145,9 +145,9 @@ In general, you pass your custom style function into one of the following method
   - `Styler.apply`
 
 Both of those methods take a function (and some other keyword arguments) and applies your function to the `DataFrame` in 
-a certain way. `Styler.applymap` works through the `DataFrame` elementwise. `Styler.apply` passes each column or row into 
-your `DataFrame` one-at-a-time or the entire `DataFrame` at once, depending on the axis keyword argument.
+a certain way. `Styler.applymap` works through the `DataFrame` elementwise, therefore it is safe to use in combination with chunks. 
 
+`Styler.apply` passes each column or row into your `DataFrame` one-at-a-time or the entire `DataFrame` at once, depending on the axis keyword argument.
 In case of chunks, a passed row or column is taken from the chunk and not from the original `DataFrame`. 
 Same for `axis=None`, here the chunk is passed instead of the original `DataFrame`.
 This leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. 

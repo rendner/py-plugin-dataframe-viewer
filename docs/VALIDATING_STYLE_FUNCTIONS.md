@@ -4,7 +4,7 @@
 > This will help to improve the quality and stability of this feature.
 
 As mentioned in [README.md](../README.md#handle-chunks-in-custom-styles) the user has to take some extra care to
-ensure that custom styling functions behave correctly. 
+ensure that custom styling functions behave correctly when applied via `Styler.apply`. 
 
 The problem is, how can I recognize that the displayed styled values are not correct?
 
@@ -105,7 +105,7 @@ The following information is provided to identify the function that may be fault
 | pandasBuiltin   | True, if it is a pandas builtin styling function. Only for pandas builtin styling functions.         |
 | isSupported     | True, if the styling function is supported by the plugin. Only for pandas builtin styling functions. |
 | arg-chunkParent | True, if the styling function already uses the `chunk_parent` parameter.                             |
-| arg-axis        | The used axis of the styling function. Only for `Styler.apply`.                                      |
+| arg-axis        | The used axis of the styling function.                                                               |
 
 ### Action: Copy To Clipboard
 Copies a simplified report string into the clipboard.
