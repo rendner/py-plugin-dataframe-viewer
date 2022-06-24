@@ -30,9 +30,6 @@ class StyleFunctionValidationProblem:
     reason: str
     message: str = ""
 
-    def __str__(self):
-        return str(asdict(self))
-
 
 class ValidationStrategyType(Enum):
     FAST = "fast"
