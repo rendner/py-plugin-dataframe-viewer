@@ -17,7 +17,7 @@ June 2022
 * 1.1.x
 * 1.2.x
 * 1.3.x (tested with 1.3.5)
-* 1.4.x (new in this version, tested with pandas 1.4.2)
+* 1.4.x (tested with pandas 1.4.3)
 
 ### Min Required IntelliJ Version
 * 2020.3
