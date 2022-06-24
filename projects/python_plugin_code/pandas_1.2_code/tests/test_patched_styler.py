@@ -37,6 +37,7 @@ def test_table_structure_columns_count():
         hide_column_header=False,
     )
 
+
 def test_table_structure_hide_row_header():
     styler = df.style.hide_index()
     ts = PatchedStyler(styler).get_table_structure()
@@ -130,3 +131,8 @@ def test_get_style_function_details_df():
         is_pandas_builtin=False,
         is_supported=True,
     )
+
+
+def test_to_json():
+    ts = PatchedStyler(df.style).to_json({"a": 12, "b": (True, False)})
+    assert ts == '{"a": 12, "b": [true, false]}'

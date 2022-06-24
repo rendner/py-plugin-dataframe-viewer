@@ -16,7 +16,7 @@ from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.styler_todo import StylerTodo
 
 # == copy after here ==
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Tuple
 from abc import ABC, abstractmethod
@@ -29,9 +29,6 @@ class StyleFunctionValidationProblem:
     index: int
     reason: str
     message: str = ""
-
-    def __str__(self):
-        return str(asdict(self))
 
 
 class ValidationStrategyType(Enum):
