@@ -16,7 +16,6 @@
 package cms.rendner.intellij.dataframe.viewer.python.bridge
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ProblemReason
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionDetails
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionValidationProblem
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
@@ -25,8 +24,11 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectExce
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
-import cms.rendner.intellij.dataframe.viewer.python.utils.*
+import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyMethodCall
 import com.intellij.openapi.diagnostic.Logger
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 /**
  * Creates [PyPatchedStylerRef] instances to enable "communication" with pandas objects.
@@ -144,40 +146,16 @@ class PythonCodeBridge {
 
         @Throws(EvaluateException::class)
         override fun evaluateTableStructure(): TableStructure {
-            val methodCallExpr = stringifyMethodCall(pythonValue.refExpr, "get_table_structure")
-            return pythonValue.evaluator.evaluate("str($methodCallExpr)").forcedValue.let {
-                val propsMap = parsePythonDictionary(it)
-                val rowsCount = parsePythonInt(propsMap.getValue("rows_count"))
-
-                TableStructure(
-                    rowsCount = rowsCount,
-                    // if we have no rows we interpret the DataFrame as empty - therefore no columns
-                    columnsCount = if (rowsCount > 0) parsePythonInt(propsMap.getValue("columns_count")) else 0,
-                    rowLevelsCount = parsePythonInt(propsMap.getValue("row_levels_count")),
-                    columnLevelsCount = parsePythonInt(propsMap.getValue("column_levels_count")),
-                    hideRowHeader = parsePythonBool(propsMap.getValue("hide_row_header")),
-                    hideColumnHeader = parsePythonBool(propsMap.getValue("hide_column_header"))
-                )
-            }
+            return fetchResultAsJsonAndDecode(
+                stringifyMethodCall(pythonValue.refExpr, "get_table_structure")
+            )
         }
 
         @Throws(EvaluateException::class)
         override fun evaluateStyleFunctionDetails(): List<StyleFunctionDetails> {
-            return pythonValue.evaluator.evaluateStringyfiedList(
-                stringifyMethodCall(pythonValue.refExpr, "get_style_function_details"),
-            ).map { detail ->
-                val propsMap = parsePythonDictionary(detail)
-                StyleFunctionDetails(
-                    index = parsePythonInt(propsMap.getValue("index")),
-                    qname = parsePythonString(propsMap.getValue("qname")),
-                    resolvedName = parsePythonString(propsMap.getValue("resolved_name")),
-                    axis = parsePythonString(propsMap.getValue("axis")),
-                    isPandasBuiltin = parsePythonBool(propsMap.getValue("is_pandas_builtin")),
-                    isSupported = parsePythonBool(propsMap.getValue("is_supported")),
-                    isApply = parsePythonBool(propsMap.getValue("is_apply")),
-                    isChunkParentRequested = parsePythonBool(propsMap.getValue("is_chunk_parent_requested")),
-                )
-            }
+            return fetchResultAsJsonAndDecode(
+                stringifyMethodCall(pythonValue.refExpr, "get_style_function_details")
+            )
         }
 
         override fun evaluateValidateStyleFunctions(
@@ -188,21 +166,23 @@ class PythonCodeBridge {
             validationStrategy: ValidationStrategyType,
         ): List<StyleFunctionValidationProblem> {
             if (validationStrategy == ValidationStrategyType.DISABLED) return emptyList()
-            return pythonValue.evaluator.evaluateStringyfiedList(
+            return fetchResultAsJsonAndDecode(
                 stringifyMethodCall(pythonValue.refExpr, "validate_style_functions") {
                     numberParam(firstRow)
                     numberParam(firstColumn)
                     numberParam(numberOfRows)
                     numberParam(numberOfColumns)
                     refParam("${pythonValue.evaluator.getFromPluginGlobalsExpr("ValidationStrategyType")}.${validationStrategy.name}")
-                },
-            ).map { info ->
-                val propsMap = parsePythonDictionary(info)
-                StyleFunctionValidationProblem(
-                    index = parsePythonInt(propsMap.getValue("index")),
-                    reason = ProblemReason.valueOfOrUnknown(parsePythonString(propsMap.getValue("reason"))),
-                    message = parsePythonString(propsMap.getValue("message")),
-                )
+                }
+            )
+        }
+
+        private inline fun <reified T> fetchResultAsJsonAndDecode(methodCallExpr: String): T {
+            return pythonValue.evaluator.evaluate("${pythonValue.refExpr}.to_json($methodCallExpr)").forcedValue.let {
+                // IntelliJ marks the @OptIn as redundant but removing it results in a warning:
+                // Warning: This declaration is experimental and its usage should be marked with '@kotlinx.serialization.ExperimentalSerializationApi' or '@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)'
+                @OptIn(ExperimentalSerializationApi::class)
+                Json.decodeFromString(it)
             }
         }
 

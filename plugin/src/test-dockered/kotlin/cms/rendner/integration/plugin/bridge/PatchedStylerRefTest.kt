@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test
  * Tests that all provided methods can be called on Python side.
  * The functionality of the methods is tested in the Python plugin-code projects.
  */
-@Order(3)
+@Order(2)
 internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test

@@ -143,7 +143,6 @@ class ChunkValidationProblemNotification(
                 when (it.reason) {
                     ProblemReason.NOT_EQUAL -> errors.entries.add(it)
                     ProblemReason.EXCEPTION -> warnings.entries.add(it)
-                    else -> throw IllegalStateException("Unsupported reason ${it.reason} found.")
                 }
             }
 

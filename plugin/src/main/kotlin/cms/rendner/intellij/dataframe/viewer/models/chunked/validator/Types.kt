@@ -16,6 +16,8 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked.validator
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /**
  * An interface to handle validation problems.
@@ -90,15 +92,16 @@ enum class ValidationStrategyType {
  * @property isApply true if styling function was added via "Styler::apply"
  * @property isChunkParentRequested true if styling function requests the "chunk_parent"
  */
+@Serializable
 data class StyleFunctionDetails(
-    val index: Int,
-    val qname: String,
-    val resolvedName: String,
-    val axis: String,
-    val isPandasBuiltin: Boolean,
-    val isSupported: Boolean,
-    val isApply: Boolean,
-    val isChunkParentRequested: Boolean,
+    @SerialName("index") val index: Int,
+    @SerialName("qname") val qname: String,
+    @SerialName("resolved_name") val resolvedName: String,
+    @SerialName("axis") val axis: String,
+    @SerialName("is_pandas_builtin") val isPandasBuiltin: Boolean,
+    @SerialName("is_supported") val isSupported: Boolean,
+    @SerialName("is_apply") val isApply: Boolean,
+    @SerialName("is_chunk_parent_requested") val isChunkParentRequested: Boolean,
 )
 
 /**
@@ -108,10 +111,11 @@ data class StyleFunctionDetails(
  * @property reason the reason
  * @property message a message, only set if [reason] is [ProblemReason.EXCEPTION]
  */
+@Serializable
 data class StyleFunctionValidationProblem(
-    val index: Int,
-    val reason: ProblemReason,
-    val message: String = "",
+    @SerialName("index") val index: Int,
+    @SerialName("reason") val reason: ProblemReason,
+    @SerialName("message") val message: String = "",
 )
 
 /**
@@ -128,20 +132,4 @@ enum class ProblemReason {
      * Therefore, no validation could be done.
      */
     EXCEPTION,
-
-    /**
-     * An unknown reason.
-     * This is a marker value and doesn't exist in the plugin Python code.
-     */
-    UNKNOWN;
-
-    companion object {
-        fun valueOfOrUnknown(value: String): ProblemReason {
-            return try {
-                ProblemReason.valueOf(value.toUpperCase())
-            } catch (ignore:IllegalArgumentException) {
-                UNKNOWN
-            }
-        }
-    }
 }

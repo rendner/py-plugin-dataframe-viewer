@@ -18,6 +18,8 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
 import cms.rendner.intellij.dataframe.viewer.models.Value
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /**
  * An interface to evaluate data of a pandas DataFrame.
@@ -108,11 +110,12 @@ data class ChunkSize(val rows: Int, val columns: Int)
  * @param hideRowHeader is true when no row-header should be displayed
  * @param hideColumnHeader is true when no column-header should be displayed
  */
+@Serializable
 data class TableStructure(
-    val rowsCount: Int,
-    val columnsCount: Int,
-    val rowLevelsCount: Int,
-    val columnLevelsCount: Int,
-    val hideRowHeader: Boolean,
-    val hideColumnHeader: Boolean
+    @SerialName("rows_count") val rowsCount: Int,
+    @SerialName("columns_count") val columnsCount: Int,
+    @SerialName("row_levels_count") val rowLevelsCount: Int,
+    @SerialName("column_levels_count") val columnLevelsCount: Int,
+    @SerialName("hide_row_header") val hideRowHeader: Boolean,
+    @SerialName("hide_column_header") val hideColumnHeader: Boolean
 )

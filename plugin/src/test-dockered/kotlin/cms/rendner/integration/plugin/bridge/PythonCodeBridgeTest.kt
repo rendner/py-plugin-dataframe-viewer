@@ -22,7 +22,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
-@Order(2)
+@Order(1)
 internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
 
     @Test
