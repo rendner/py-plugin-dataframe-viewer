@@ -42,6 +42,18 @@ def create_and_assert_patched_styler_html_string(
     _assert_render(styler, patched_styler, rows_per_chunk, cols_per_chunk)
 
 
+def create_combined_html_string(
+        df: DataFrame,
+        init_styler_func: Callable[[Styler], None],
+        rows_per_chunk: int,
+        cols_per_chunk: int,
+) -> StyledTable:
+    patched_styler_styler = df.style
+    init_styler_func(patched_styler_styler)
+    patched_styler = PatchedStyler(patched_styler_styler)
+    return _create_render_result_for_chunks(patched_styler, rows_per_chunk, cols_per_chunk)
+
+
 def _assert_render(styler: Styler, patched_styler: PatchedStyler, rows_per_chunk: int, cols_per_chunk: int):
     actual_table = _create_render_result_for_chunks(patched_styler, rows_per_chunk, cols_per_chunk)
     expected_table = _convert_to_styled_table(PatchedStyler(styler).render_unpatched())
@@ -59,10 +71,10 @@ def _assert_render(styler: Styler, patched_styler: PatchedStyler, rows_per_chunk
     _delete_unused_css_rules_with_id_selector(expected_table)
 
     # use a json string to compare the tables to get a nicer output if they are not equal
-    assert jsonify_table(actual_table) == jsonify_table(expected_table)
+    assert _jsonify_table(actual_table) == _jsonify_table(expected_table)
 
 
-def jsonify_table(table: StyledTable) -> str:
+def _jsonify_table(table: StyledTable) -> str:
     return json.dumps(table, default=lambda x: getattr(x, '__dict__', str(x)), indent=2, sort_keys=True)
 
 
@@ -78,6 +90,8 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
         cols_in_row_processed = 0
         while cols_in_row_processed < table_structure.columns_count:
             cols = min(cols_per_chunk, table_structure.columns_count - cols_in_row_processed)
+            # fetch column header only for whole first row (all other rows have the same)
+            exclude_col_header = rows_processed > 0
             # fetch row header only for first col-block (all others have the same row header)
             exclude_row_header = cols_in_row_processed > 0
             chunk_html = patched_styler.render_chunk(
@@ -86,6 +100,7 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
                 rows,
                 cols,
                 exclude_row_header,
+                exclude_col_header
             )
 
             extracted_table = table_extractor.extract(chunk_html)
@@ -106,6 +121,7 @@ def _merge_tables(target_styled_table: StyledTable, source_styled_table: StyledT
                   is_first_col_chunk: bool):
     source_table = source_styled_table.table
     target_table = target_styled_table.table
+
     if is_first_row_chunk:
         target_thead = target_table.find_first('thead')
         for i, row in enumerate(source_table.find_first('thead').children):
