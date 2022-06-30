@@ -13,6 +13,7 @@
 #  limitations under the License.
 from plugin_code.custom_json_encoder import CustomJSONEncoder
 from plugin_code.html_props_generator import HTMLPropsGenerator, Region
+from plugin_code.html_props_table_builder import HTMLPropsTableBuilder, HTMLPropsTable
 from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
 from plugin_code.style_functions_validator import StyleFunctionValidationProblem, ValidationStrategyType, \
@@ -22,7 +23,7 @@ from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import numpy as np  # numpy is required by pandas (therefore should be available at runtime)
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
@@ -77,6 +78,39 @@ class PatchedStyler:
             self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
         return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
 
+    def compute_chunk_html_props_table(self,
+                                       first_row: int,
+                                       first_col: int,
+                                       rows: int,
+                                       cols: int,
+                                       exclude_row_header: bool = False,
+                                       exclude_col_header: bool = False
+                                       ) -> HTMLPropsTable:
+        html_props = self.__html_props_generator.compute_chunk_props(
+            region=Region(first_row, first_col, rows, cols),
+            exclude_row_header=exclude_row_header,
+            exclude_col_header=exclude_col_header,
+        )
+
+        props_table_builder = HTMLPropsTableBuilder()
+        props_table_builder.append_props(
+            html_props=html_props,
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return props_table_builder.build_table()
+
+    def compute_unpatched_html_props_table(self) -> HTMLPropsTable:
+        props_table_builder = HTMLPropsTableBuilder()
+        props_table_builder.append_props(
+            html_props=self.__html_props_generator.compute_unpatched_props(),
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return props_table_builder.build_table()
+
     def render_chunk(self,
                      first_row: int,
                      first_col: int,
@@ -85,7 +119,7 @@ class PatchedStyler:
                      exclude_row_header: bool = False,
                      exclude_col_header: bool = False
                      ) -> str:
-        html_props = self.__html_props_generator.generate_props_for_chunk(
+        html_props = self.__html_props_generator.compute_chunk_props(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,

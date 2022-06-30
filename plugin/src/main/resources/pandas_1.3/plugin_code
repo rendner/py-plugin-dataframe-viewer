@@ -9,6 +9,7 @@ class CustomJSONEncoder(json.JSONEncoder):
         if is_dataclass(obj):
             return asdict(obj)
         return str(obj)
+
 import inspect
 from dataclasses import dataclass
 from functools import partial
@@ -614,7 +615,7 @@ class HTMLPropsGenerator:
         self.__visible_data: DataFrame = visible_data
         self.__styler: Styler = styler
 
-    def generate_props_unpatched(self) -> dict:
+    def compute_unpatched_props(self) -> dict:
         copy = self.__styler
         copy.uuid = ''
         copy.uuid_len = 0
@@ -622,12 +623,12 @@ class HTMLPropsGenerator:
         copy._compute()
         return copy._translate(sparse_index=False, sparse_cols=False)
 
-    def generate_props_for_chunk(self,
-                                 region: Region,
-                                 exclude_row_header: bool = False,
-                                 exclude_col_header: bool = False,
-                                 translate_indices: bool = True,
-                                 ) -> dict:
+    def compute_chunk_props(self,
+                            region: Region,
+                            exclude_row_header: bool = False,
+                            exclude_col_header: bool = False,
+                            translate_indices: bool = True,
+                            ) -> dict:
         chunk = self.__visible_data.iloc[
                 region.first_row: region.first_row + region.rows,
                 region.first_col: region.first_col + region.cols,
@@ -700,33 +701,265 @@ class HTMLPropsGenerator:
         target._display_funcs = source._display_funcs
 
 from dataclasses import dataclass
-from typing import List, Dict
-import json
-
-from pandas import DataFrame
-from pandas.io.formats.style import Styler
+from typing import List, Dict, Set, Any, Optional
 
 
 @dataclass
-class _TableElement:
+class HTMLPropsTableElementCSS:
+    id_props: Dict[str, str]
+    class_props: List[Dict[str, str]]
+
+
+@dataclass
+class HTMLPropsTableRowElement:
     type: str
     display_value: str
-    is_heading: bool
-    css: dict
-    attributes: List[str]
+    kind: str
+    css_props: Optional[Dict[str, str]]
+    attributes: Optional[Dict[str, Any]]
 
 
 @dataclass
-class _Table:
-    body: List[List[_TableElement]]
-    head: List[List[_TableElement]]
+class HTMLPropsTable:
+    body: List[List[HTMLPropsTableRowElement]]
+    head: List[List[HTMLPropsTableRowElement]]
+
+
+@dataclass
+class _CSSPropsWithIndex:
+    props: Dict[str, str]
+    index: int
 
 
 @dataclass
 class _SpannedElement:
     row_span: int
     col_span: int
-    element: _TableElement
+    element: HTMLPropsTableRowElement
+
+
+class HTMLPropsTableBuilder:
+    def __init__(self):
+        self.__table = HTMLPropsTable([], [])
+
+    def build_table(self) -> HTMLPropsTable:
+        table = self.__table
+        self.__table = HTMLPropsTable([], [])
+        return table
+
+    def append_props(self,
+                     html_props: dict,
+                     target_row_offset: int,
+                     is_part_of_first_rows_in_chunk: bool,
+                     is_part_of_first_cols_in_chunk: bool,
+                     ):
+        css_dict = self.__create_css_dict_from_cellstyles(html_props)
+
+        if is_part_of_first_rows_in_chunk:
+            self.__append_head_elements(html_props.get("head", []), css_dict)
+
+        self.__append_body_elements(
+            html_props.get("body", []),
+            target_row_offset,
+            is_part_of_first_cols_in_chunk,
+            css_dict,
+        )
+
+    def __append_head_elements(self, head_elements: list, css_dict: Dict[str, _CSSPropsWithIndex]):
+        transformed_head_elements = self.__transform_rows(head_elements, css_dict)
+        if len(self.__table.head) == 0:
+            self.__table.head.extend(transformed_head_elements)
+        else:
+            for i, row in enumerate(transformed_head_elements):
+                for element in row:
+                    if element.kind == "col_heading":
+                        self.__table.head[i].append(element)
+
+    def __append_body_elements(self,
+                               body_elements: list,
+                               target_row_offset: int,
+                               is_part_of_first_cols_in_chunk: bool,
+                               css_dict: Dict[str, _CSSPropsWithIndex],
+                               ):
+        transformed_body_elements = self.__transform_rows(body_elements, css_dict)
+        if is_part_of_first_cols_in_chunk:
+            self.__table.body.extend(transformed_body_elements)
+        else:
+            for i, row in enumerate(transformed_body_elements):
+                target_row = self.__table.body[target_row_offset + i]
+                for j, entry in enumerate(row):
+                    if entry.type == 'td':
+                        target_row.extend(row[j:])
+                        break
+
+    @staticmethod
+    def __create_css_dict_from_cellstyles(html_props: dict) -> Dict[str, _CSSPropsWithIndex]:
+        cellstyle = html_props.get("cellstyle", None)
+        css_dict: Dict[str, _CSSPropsWithIndex] = {}
+        if cellstyle is not None:
+            for index, entry in enumerate(cellstyle):
+                props = entry['props']
+                if len(props) == 0:
+                    continue
+                css_props = _CSSPropsWithIndex({p[0]: p[1] for p in props}, index)
+                for s in entry.get('selectors', []):
+                    css_dict[s] = css_props
+        return css_dict
+
+    def __transform_rows(self,
+                         rows: List[List[dict]],
+                         css_dict: Dict[str, _CSSPropsWithIndex],
+                         ) -> List[List[HTMLPropsTableRowElement]]:
+        transformed_rows: List[List[HTMLPropsTableRowElement]] = []
+        open_spans: Dict[int, List[_SpannedElement]] = {}
+
+        for row in rows:
+
+            transformed_row = []
+            ignore_trailing_blank_row_headers = False
+
+            for ci, element in enumerate(row):
+
+                element_to_add = None
+                element_classes_set = set(element.get("class", "").split(" "))
+                is_header = element.get("type", "") == "th"
+
+                if ignore_trailing_blank_row_headers:
+                    if is_header and "blank" in element_classes_set:
+                        continue
+                else:
+                    ignore_trailing_blank_row_headers = is_header and "blank" not in element_classes_set
+
+                if element.get("is_visible", True):
+                    transformed_element = self.__transform_row_element(
+                        element,
+                        element_classes_set,
+                        css_dict,
+                    )
+                    element_to_add = transformed_element
+
+                    spanned_element = self.__create_spanned_element_from_span_attributes(transformed_element)
+                    if spanned_element is not None:
+                        element_to_add = None
+                        open_spans.setdefault(ci, []).append(spanned_element)
+
+                if ci in open_spans:
+                    pending_col_spans = open_spans[ci]
+                    remove_consumed_spans = False
+                    for pending_span in pending_col_spans:
+                        transformed_row.extend(pending_span.col_span * [pending_span.element])
+                        pending_span.row_span -= 1
+                        if pending_span.row_span < 1:
+                            remove_consumed_spans = True
+
+                    if remove_consumed_spans:
+                        cleaned = [s for s in pending_col_spans if s.row_span > 0]
+                        if len(cleaned) == 0:
+                            del open_spans[ci]
+                        else:
+                            open_spans[ci] = cleaned
+
+                if element_to_add is not None:
+                    transformed_row.append(element_to_add)
+
+            if len(transformed_row) > 0:
+                transformed_rows.append(transformed_row)
+
+        assert len(open_spans) == 0, f"Trailing spans are not implemented, found {len(open_spans)} pending."
+        return transformed_rows
+
+    def __transform_row_element(self,
+                                element: dict,
+                                element_classes_set: Set[str],
+                                css_dict: Dict[str, _CSSPropsWithIndex],
+                                ) -> HTMLPropsTableRowElement:
+        return HTMLPropsTableRowElement(
+            type=element.get("type", ""),
+            display_value=str(element.get("display_value", "")),
+            kind=self.__get_kind(element_classes_set),
+            css_props=self.__compute_element_css(element, element_classes_set, css_dict),
+            attributes=self.__extract_attributes(element),
+        )
+
+    @staticmethod
+    def __compute_element_css(
+            element: dict,
+            element_classes_set: Set[str],
+            css_dict: Dict[str, _CSSPropsWithIndex],
+    ) -> Optional[Dict[str, str]]:
+        matching_css_props: List[_CSSPropsWithIndex] = []
+
+        for c in element_classes_set:
+            css_props = css_dict.get(c, None)
+            if css_props is not None:
+                matching_css_props.append(css_props)
+        if len(matching_css_props) > 1:
+            matching_css_props.sort(key=lambda x: x.index)
+
+        id_css_props = css_dict.get(element.get("id", None), None)
+        if id_css_props is not None:
+            matching_css_props.append(id_css_props)
+
+        if len(matching_css_props) == 0:
+            return None
+
+        result: Dict[str, str] = {}
+        for css_props in matching_css_props:
+            result.update(css_props.props)
+        return result
+
+    @staticmethod
+    def __get_kind(element_classes_set: Set[str]) -> str:
+        if "blank" in element_classes_set:
+            return "blank"
+        if "index_name" in element_classes_set:
+            return "index_name"
+        if "col_heading" in element_classes_set:
+            return "col_heading"
+        if "row_heading" in element_classes_set:
+            return "row_heading"
+        return ""
+
+    @staticmethod
+    def __create_spanned_element_from_span_attributes(element: HTMLPropsTableRowElement) -> Optional[_SpannedElement]:
+        attributes = element.attributes
+        if attributes is None:
+            return None
+
+        rowspan = attributes.pop("rowspan", None)
+        colspan = attributes.pop("colspan", None)
+        if len(attributes) == 0:
+            element.attributes = None
+        if rowspan is None and colspan is None:
+            return None
+
+        rowspan = 1 if rowspan is None else int(rowspan)
+        colspan = 1 if colspan is None else int(colspan)
+        if rowspan > 1 or colspan > 1:
+            return _SpannedElement(rowspan, colspan, element)
+
+        return None
+
+    @staticmethod
+    def __extract_attributes(element: dict) -> Optional[Dict[str, Any]]:
+        attributes = element.get("attributes", '')  # empty attributes can be defined as an empty string instead of list
+        if attributes == '':
+            return None
+        if isinstance(attributes, list):
+            if len(attributes) == 0:
+                return None
+            attributes_dict = {}
+            for attr in attributes:
+                key, value = attr.split("=")
+                attributes_dict[key] = value.strip('"')
+            return attributes_dict
+        return None
+
+from dataclasses import dataclass
+import json
+
+from pandas import DataFrame
+from pandas.io.formats.style import Styler
 
 
 @dataclass(frozen=True)
@@ -753,10 +986,10 @@ class HTMLPropsValidator:
         if clamped_region.is_empty():
             return HTMLPropsValidationResult('', '', True)
 
-        combined_table = self.__create_combined_table_from_chunks(clamped_region, rows_per_chunk, cols_per_chunk)
-        expected_table = self.__create_expected_table(clamped_region)
-        combined_json = self.__jsonify_html_props(combined_table)
-        expected_json = self.__jsonify_html_props(expected_table)
+        combined_table = self.__compute_table_from_chunks(clamped_region, rows_per_chunk, cols_per_chunk)
+        expected_table = self.__compute_expected_table(clamped_region)
+        combined_json = self.__jsonify_table(combined_table)
+        expected_json = self.__jsonify_table(expected_table)
 
         return HTMLPropsValidationResult(combined_json, expected_json, combined_json == expected_json)
 
@@ -774,34 +1007,36 @@ class HTMLPropsValidator:
         cols = min(region.cols, cols_left)
         return Region(first_row, first_col, rows, cols)
 
-    def __create_expected_table(self, region: Region) -> _Table:
+    def __compute_expected_table(self, region: Region) -> HTMLPropsTable:
         if region == self.__visible_region:
-            html_props = self.__html_props_generator.generate_props_unpatched()
+            html_props = self.__html_props_generator.compute_unpatched_props()
         else:
-            html_props = self.__html_props_generator.generate_props_for_chunk(
+            html_props = self.__html_props_generator.compute_chunk_props(
                 region=region,
                 translate_indices=False,
             )
-        table: _Table = _Table([], [])
-        self.__append_to_table(
-            table=table,
+        props_table_generator = HTMLPropsTableBuilder()
+        props_table_generator.append_props(
             html_props=html_props,
             target_row_offset=0,
             is_part_of_first_rows_in_chunk=True,
             is_part_of_first_cols_in_chunk=True,
         )
-        return table
+        return props_table_generator.build_table()
 
-    def __create_combined_table_from_chunks(self, region: Region, rows_per_chunk: int, cols_per_chunk: int):
-        table: _Table = _Table([], [])
-
+    def __compute_table_from_chunks(self,
+                                    region: Region,
+                                    rows_per_chunk: int,
+                                    cols_per_chunk: int,
+                                    ) -> HTMLPropsTable:
+        props_table_generator = HTMLPropsTableBuilder()
         rows_processed = 0
         while rows_processed < region.rows:
             rows = min(rows_per_chunk, region.rows - rows_processed)
             cols_in_row_processed = 0
             while cols_in_row_processed < region.cols:
                 cols = min(cols_per_chunk, region.cols - cols_in_row_processed)
-                chunk_html_props = self.__html_props_generator.generate_props_for_chunk(
+                chunk_html_props = self.__html_props_generator.compute_chunk_props(
                     region=Region(
                         region.first_row + rows_processed,
                         region.first_col + cols_in_row_processed,
@@ -813,8 +1048,7 @@ class HTMLPropsValidator:
                     translate_indices=False,
                 )
 
-                self.__append_to_table(
-                    table=table,
+                props_table_generator.append_props(
                     html_props=chunk_html_props,
                     target_row_offset=rows_processed,
                     is_part_of_first_rows_in_chunk=rows_processed == 0,
@@ -824,153 +1058,11 @@ class HTMLPropsValidator:
                 cols_in_row_processed += cols
             rows_processed += rows
 
-        return table
+        return props_table_generator.build_table()
 
     @staticmethod
-    def __jsonify_html_props(html_props: _Table) -> str:
-        return json.dumps(html_props, indent=2, cls=CustomJSONEncoder)
-
-    def __transform_rows(self, rows: List[List[dict]], css_dict: Dict[str, str]) -> List[List[_TableElement]]:
-        transformed_rows: List[List[_TableElement]] = []
-        open_spans: Dict[int, List[_SpannedElement]] = {}
-        css_dict_is_empty = len(css_dict) == 0
-
-        for row in rows:
-
-            transformed_row = []
-            ignore_trailing_blank_row_headers = False
-
-            for ci, element in enumerate(row):
-
-                element_to_add = None
-                element_type = element.get("type", "")
-                element_classes = set(element.get("class", []).split(" "))
-                is_header = element_type == "th"
-
-                if ignore_trailing_blank_row_headers:
-                    if is_header and "blank" in element_classes:
-                        continue
-                else:
-                    ignore_trailing_blank_row_headers = is_header and "blank" not in element_classes
-
-                if element.get("is_visible", True):
-                    transformed_css = {"id": css_dict.get(element.get("id", None), None), "class": []}
-                    if not css_dict_is_empty:
-                        for c in element_classes:
-                            css = css_dict.get(c, None)
-                            if css is not None:
-                                transformed_css["class"].append(css)
-
-                    transformed_element = _TableElement(
-                        type=element_type,
-                        display_value=str(element.get("display_value", "")),
-                        is_heading=is_header and ("col_heading" in element_classes or "row_heading" in element_classes),
-                        css=transformed_css,
-                        attributes=element.get("attributes", []),
-                    )
-                    element_to_add = transformed_element
-
-                    attributes = transformed_element.attributes
-                    if attributes is not None:
-                        row_span = self.__get_and_remove_span_value(attributes, "rowspan")
-                        col_span = self.__get_and_remove_span_value(attributes, "colspan")
-                        if row_span > 1 or col_span > 1:
-                            element_to_add = None
-                            open_spans.setdefault(ci, []).append(
-                                _SpannedElement(row_span, col_span, transformed_element),
-                            )
-
-                if ci in open_spans:
-                    pending_col_spans = open_spans[ci]
-                    remove_consumed_spans = False
-                    for pending_span in pending_col_spans:
-                        transformed_row.extend(pending_span.col_span * [pending_span.element])
-                        pending_span.row_span -= 1
-                        if pending_span.row_span < 1:
-                            remove_consumed_spans = True
-
-                    if remove_consumed_spans:
-                        cleaned = [s for s in pending_col_spans if s.row_span > 0]
-                        if len(cleaned) == 0:
-                            del open_spans[ci]
-                        else:
-                            open_spans[ci] = cleaned
-
-                if element_to_add is not None:
-                    transformed_row.append(element_to_add)
-
-            if len(transformed_row) > 0:
-                transformed_rows.append(transformed_row)
-
-        assert len(open_spans) == 0, f"Found {len(open_spans)} non processed open spans"
-        return transformed_rows
-
-    @staticmethod
-    def __get_and_remove_span_value(attributes: List[str], span_name: str) -> int:
-        span = next((x for x in attributes if x.startswith(f"{span_name}=")), None)
-        if span is None:
-            return 1
-        attributes.remove(span)
-        return int(span.split("=")[1].strip('"'))
-
-    def __append_to_table(self,
-                          table: _Table,
-                          html_props: dict,
-                          target_row_offset: int,
-                          is_part_of_first_rows_in_chunk: bool,
-                          is_part_of_first_cols_in_chunk: bool,
-                          ):
-        cellstyle = html_props.get("cellstyle", None)
-        css_dict = {}
-        if cellstyle is not None:
-            for entry in cellstyle:
-                if len(entry["props"]) == 0:
-                    continue
-                for s in entry.get('selectors', []):
-                    css_dict[s] = entry['props']
-
-        if is_part_of_first_rows_in_chunk:
-            self.__append_head_elements(
-                table,
-                html_props.get("head", []),
-                css_dict,
-            )
-
-        self.__append_body_elements(
-            table,
-            html_props.get("body", []),
-            target_row_offset,
-            is_part_of_first_cols_in_chunk,
-            css_dict,
-        )
-
-    def __append_head_elements(self, table: _Table, head_elements: list, css_dict: dict):
-        transformed_head_elements = self.__transform_rows(head_elements, css_dict)
-        if len(table.head) == 0:
-            table.head.extend(transformed_head_elements)
-        else:
-            for i, row in enumerate(transformed_head_elements):
-                for element in row:
-                    if element.is_heading:
-                        table.head[i].append(element)
-
-    def __append_body_elements(self,
-                               table: _Table,
-                               body_elements: list,
-                               target_row_offset: int,
-                               is_part_of_first_cols_in_chunk: bool,
-                               css_dict: dict,
-                               ):
-        transformed_body_elements = self.__transform_rows(body_elements, css_dict)
-        if is_part_of_first_cols_in_chunk:
-            table.body.extend(transformed_body_elements)
-        else:
-            for i, row in enumerate(transformed_body_elements):
-                target_row = table.body[target_row_offset + i]
-                for j, entry in enumerate(row):
-                    if 'td' == entry.type:
-                        target_row.extend(row[j:])
-                        break
+    def __jsonify_table(table: HTMLPropsTable) -> str:
+        return json.dumps(table, indent=2, cls=CustomJSONEncoder)
 
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -985,9 +1077,6 @@ class StyleFunctionValidationProblem:
     index: int
     reason: str
     message: str = ""
-
-    def __str__(self):
-        return str(asdict(self))
 
 
 class ValidationStrategyType(Enum):
@@ -1105,7 +1194,7 @@ class StyleFunctionsValidator:
         return any(not StylerTodo.is_applymap_tuple(t) for t in todos)
 
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import numpy as np  # numpy is required by pandas (therefore should be available at runtime)
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
@@ -1121,9 +1210,6 @@ class TableStructure:
     hide_row_header: bool
     hide_column_header: bool
 
-    def __str__(self):
-        return str(asdict(self))
-
 
 @dataclass(frozen=True)
 class StyleFunctionDetails:
@@ -1135,9 +1221,6 @@ class StyleFunctionDetails:
     is_apply: bool
     is_pandas_builtin: bool
     is_supported: bool
-
-    def __str__(self):
-        return str(asdict(self))
 
 
 class PatchedStyler:
@@ -1166,6 +1249,39 @@ class PatchedStyler:
             self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
         return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
 
+    def compute_chunk_html_props_table(self,
+                                       first_row: int,
+                                       first_col: int,
+                                       rows: int,
+                                       cols: int,
+                                       exclude_row_header: bool = False,
+                                       exclude_col_header: bool = False
+                                       ) -> HTMLPropsTable:
+        html_props = self.__html_props_generator.compute_chunk_props(
+            region=Region(first_row, first_col, rows, cols),
+            exclude_row_header=exclude_row_header,
+            exclude_col_header=exclude_col_header,
+        )
+
+        props_table_builder = HTMLPropsTableBuilder()
+        props_table_builder.append_props(
+            html_props=html_props,
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return props_table_builder.build_table()
+
+    def compute_unpatched_html_props_table(self) -> HTMLPropsTable:
+        props_table_builder = HTMLPropsTableBuilder()
+        props_table_builder.append_props(
+            html_props=self.__html_props_generator.compute_unpatched_props(),
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return props_table_builder.build_table()
+
     def render_chunk(self,
                      first_row: int,
                      first_col: int,
@@ -1174,7 +1290,7 @@ class PatchedStyler:
                      exclude_row_header: bool = False,
                      exclude_col_header: bool = False
                      ) -> str:
-        html_props = self.__html_props_generator.generate_props_for_chunk(
+        html_props = self.__html_props_generator.compute_chunk_props(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,

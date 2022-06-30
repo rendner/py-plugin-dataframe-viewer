@@ -30,6 +30,7 @@ def generate_plugin_code():
         'highlight_extrema_patcher.py',
         'todos_patcher.py',
         'html_props_generator.py',
+        'html_props_table_builder.py',
         'html_props_validator.py',
         'style_functions_validator.py',
         'patched_styler.py',
