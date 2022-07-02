@@ -16,6 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
+import cms.rendner.intellij.dataframe.viewer.python.bridge.HTMLPropsTable
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 
 /**
@@ -33,6 +34,21 @@ class ChunkEvaluator(
         excludeColumnHeaders: Boolean
     ): String {
         return patchedStyler.evaluateRenderChunk(
+            chunkRegion.firstRow,
+            chunkRegion.firstColumn,
+            chunkRegion.numberOfRows,
+            chunkRegion.numberOfColumns,
+            excludeRowHeaders,
+            excludeColumnHeaders
+        )
+    }
+
+    override fun evaluateHTMLProps(
+        chunkRegion: ChunkRegion,
+        excludeRowHeaders: Boolean,
+        excludeColumnHeaders: Boolean
+    ): HTMLPropsTable {
+        return patchedStyler.evaluateComputeChunkHTMLPropsTable(
             chunkRegion.firstRow,
             chunkRegion.firstColumn,
             chunkRegion.numberOfRows,

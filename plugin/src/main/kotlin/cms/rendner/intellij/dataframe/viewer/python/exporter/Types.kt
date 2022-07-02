@@ -16,7 +16,9 @@
 package cms.rendner.intellij.dataframe.viewer.python.exporter
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
+import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
+import kotlinx.serialization.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -47,24 +49,38 @@ data class TestCaseExportData(
 )
 
 /**
+ * Additional information about an exported DataFrame.
+ *
+ * @param rowsPerChunk number of rows per chunk, used during the export of a styled DataFrame.
+ * @param colsPerChunk number of columns per chunk, used during the export a styled DataFrame.
+ * @param tableStructure describes the structure of the exported DataFrame.
+ */
+@Serializable
+class TestCaseProperties(
+    val rowsPerChunk: Int,
+    val colsPerChunk: Int,
+    val tableStructure: TableStructure,
+)
+
+/**
  * Test case path resolver.
  */
 class TestCasePath {
     companion object {
-        fun resolveChunkResultFile(testCaseDir: Path, row: Int, column: Int): Path {
-            return testCaseDir.resolve("chunks/r${row}_c${column}.html")
+        fun resolveChunkResultFile(testCaseDir: Path, row: Int, column: Int, fileExtension: String): Path {
+            return testCaseDir.resolve("chunks/r${row}_c${column}.$fileExtension")
         }
 
-        fun resolveTestPropertiesFile(testCaseDir: Path): Path {
-            return testCaseDir.resolve("test.properties")
+        fun resolveTestCasePropertiesFile(testCaseDir: Path): Path {
+            return testCaseDir.resolve("testCaseProperties.json")
         }
 
-        fun resolveExpectedResultFile(testCaseDir: Path): Path {
-            return testCaseDir.resolve("expected.html")
+        fun resolveExpectedResultFile(testCaseDir: Path, fileExtension: String): Path {
+            return testCaseDir.resolve("expected.$fileExtension")
         }
 
         fun resolveComputedCSSFile(testCaseDir: Path): Path {
-            return testCaseDir.resolve("expected.css-html")
+            return testCaseDir.resolve("expected.css.json")
         }
 
         fun createRequiredDirectories(testCaseDir: Path) {

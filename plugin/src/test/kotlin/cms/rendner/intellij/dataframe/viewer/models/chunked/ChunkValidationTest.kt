@@ -16,12 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
 import cms.rendner.intellij.dataframe.viewer.models.*
-import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.BlockingChunkDataLoader
-import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.createHTMLChunksEvaluator
-import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.createHTMLFileEvaluator
-import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCasePath
 import org.assertj.core.api.Assertions.assertThat
-import java.nio.file.Path
 
 /**
  * Compares the [IDataFrameModel] created from combined HTML chunks against the [IDataFrameModel] created from
@@ -40,8 +35,8 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
         tableStructure: TableStructure,
         chunkSize: ChunkSize,
     ) {
-        val expectedModel = createExpectedModel(testCase.dir, tableStructure)
-        val chunkedModel = createChunkedModel(testCase.dir, tableStructure, chunkSize)
+        val expectedModel = createExpectedModel(testCase, tableStructure)
+        val chunkedModel = createChunkedModel(testCase, tableStructure, chunkSize)
 
         try {
             assertHeadersFromValueDataModel(chunkedModel.getValueDataModel(), tableStructure)
@@ -139,27 +134,5 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
                     .isEqualTo(expectedValue)
             }
         }
-    }
-
-    private fun createExpectedModel(testCaseDir: Path, tableStructure: TableStructure): IDataFrameModel {
-        return createDataFrameModel(
-            tableStructure,
-            BlockingChunkDataLoader(
-                createHTMLFileEvaluator(TestCasePath.resolveExpectedResultFile(testCaseDir))
-            ),
-            ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount),
-        )
-    }
-
-    private fun createChunkedModel(
-        testCaseDir: Path,
-        tableStructure: TableStructure,
-        chunkSize: ChunkSize
-    ): IDataFrameModel {
-        return createDataFrameModel(
-            tableStructure,
-            BlockingChunkDataLoader(createHTMLChunksEvaluator(testCaseDir)),
-            chunkSize,
-        )
     }
 }

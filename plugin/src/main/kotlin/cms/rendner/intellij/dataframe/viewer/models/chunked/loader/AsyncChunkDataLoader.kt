@@ -36,15 +36,20 @@ import java.util.concurrent.TimeUnit
  * from the event dispatch thread (EDT).
  *
  * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
+ * @param loadNewDataStructure flag to switch between old and new data structure.
+ * The old one is an HTML string which has to be parsed to extract the element and style information.
+ * The new one is an object which describes the required HTML properties - it is easier to process.
  * @param chunkValidator the validator to validate the generated HTML data for a chunk
  * @param errorHandler the error handler. All errors during the data fetching are forwarded to this handler.
  */
 class AsyncChunkDataLoader(
     chunkEvaluator: IChunkEvaluator,
+    loadNewDataStructure: Boolean,
     chunkValidator: ChunkValidator?,
     private val errorHandler: IChunkDataLoaderErrorHandler,
 ) : AbstractChunkDataLoader(
     chunkEvaluator,
+    loadNewDataStructure,
     chunkValidator,
 ) {
 
@@ -104,7 +109,7 @@ class AsyncChunkDataLoader(
         myPendingRequests.clear()
         // call loadRequestDone after shutting down the executorService
         // in case a not yet finished request was processed
-        myActiveRequest?.let { loadRequestDone(it) }
+        myActiveRequest?.let { loadRequestDone() }
         myActiveRequest = null
     }
 
@@ -120,7 +125,7 @@ class AsyncChunkDataLoader(
         }
     }
 
-    private fun loadRequestDone(loadRequest: LoadRequest) {
+    private fun loadRequestDone() {
         ApplicationManager.getApplication().invokeLater {
             myActiveRequest = null
             if (myIsAliveFlag) {
@@ -139,7 +144,7 @@ class AsyncChunkDataLoader(
                         val unwrapped = if (throwable is CompletionException) throwable.cause!! else throwable
                         handleFetchTaskError(it, unwrapped)
                     }
-                    loadRequestDone(it)
+                    loadRequestDone()
                 }
             }
         }

@@ -75,9 +75,8 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         if (frameOrStyler !== null) {
             val settings = ApplicationSettingsService.instance.state
             val dialog = MyDialog(project)
-            // note: dialog doesn't sync the "validationStrategyType" after model creation
-            // user has to re-open the dialog after the setting was changed
-            dialog.createModelFrom(frameOrStyler, settings.validationStrategyType)
+            // note: dialog doesn't sync on settings user has to re-open the dialog after the settings were changed
+            dialog.createModelFrom(frameOrStyler, settings.validationStrategyType, settings.fsLoadNewDataStructure)
             dialog.show()
         }
     }
@@ -121,7 +120,11 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             init()
         }
 
-        fun createModelFrom(frameOrStyler: PyDebugValue, validationStrategyType: ValidationStrategyType) {
+        fun createModelFrom(
+            frameOrStyler: PyDebugValue,
+            validationStrategyType: ValidationStrategyType,
+            loadNewDataStructure: Boolean,
+        ) {
             BackgroundTaskUtil.executeOnPooledThread(myParentDisposable) {
                 var patchedStyler: IPyPatchedStylerRef? = null
                 var model: IDataFrameModel? = null
@@ -131,7 +134,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                         frameOrStyler.toPluginType()
                     )
 
-                    model = createChunkedModel(patchedStyler, validationStrategyType)
+                    model = createChunkedModel(patchedStyler, validationStrategyType, loadNewDataStructure)
 
                     ApplicationManager.getApplication().invokeLater {
                         if (!isDisposed) {
@@ -181,10 +184,12 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
 
         private fun createChunkedModel(
             patchedStyler: IPyPatchedStylerRef,
-            validationStrategyType: ValidationStrategyType
+            validationStrategyType: ValidationStrategyType,
+            loadNewDataStructure: Boolean,
         ): IDataFrameModel {
             val loader = AsyncChunkDataLoader(
                 ChunkEvaluator(patchedStyler),
+                loadNewDataStructure,
                 createChunkValidator(patchedStyler, validationStrategyType),
                 this,
             )
