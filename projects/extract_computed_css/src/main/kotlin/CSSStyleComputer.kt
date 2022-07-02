@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import org.cef.callback.CefQueryCallback
 import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefMessageRouterHandlerAdapter
 import org.cef.network.CefRequest
-import org.jsoup.Jsoup
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -51,7 +50,7 @@ class CSSStyleComputer(
         val outputPath = Path.of(file.parent, outputFileName)
         println("\twriting export: $outputPath")
         Files.newBufferedWriter(outputPath).use {
-            it.write(prettifyHtmlAndReplaceRandomTableId(request))
+            it.write(request)
         }
         loadNextFile(browser)
         return true
@@ -93,18 +92,5 @@ class CSSStyleComputer(
         } else {
             allDoneCallback()
         }
-    }
-
-    private fun prettifyHtmlAndReplaceRandomTableId(html: String): String {
-        // The exported table has a random id, if not a static one was specified on the styler.
-        // That id is used for the table elements and for the css styles which style the table elements.
-        // To have a stable output the id is always replaced with a static one.
-        val document = Jsoup.parse(html)
-        val prettified = document.toString()
-        val tableId = document.selectFirst("table")?.id()
-        if (!tableId.isNullOrEmpty()) {
-            return prettified.replace(tableId, "static_id")
-        }
-        return prettified
     }
 }

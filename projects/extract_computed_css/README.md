@@ -1,9 +1,7 @@
 # Extract Computed CSS
 
 This command line tool extracts the computed CSS values for each table element by using [JCEF](https://github.com/chromiumembedded/java-cef).
-The generated output file contains the computed CSS styles, stored in the `style` attribute of each element. 
-
->Note: CSS rules are not re-exported!
+The generated json output file contains the computed CSS styles for each table element.
 
 ## Setup
 ### JDK
@@ -20,7 +18,7 @@ The task will:
   - build the tool
   - run the tool with the right configured parameters
 
-The tool iterates recursive over an input directory and generates for each `expected.html` file in `<PLUGIN_DIR>/src/test/resources/generated/` an `expected.css-html`.
+The tool iterates recursive over an input directory and generates for each `expected.html` file in `<PLUGIN_DIR>/src/test/resources/generated/` an `expected.css.json`.
 
 A more detailed description how to generate test data can be found in [GENERATE_TEST_DATA_MANUALLY.md](../../plugin/docs/GENERATE_TEST_DATA_MANUALLY.md)
 

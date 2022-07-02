@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,11 @@
  */
 fun createJSQueryCode(): String {
     return """
-        ${getJSMethodComputeElementRecursive()}
-        ${getJSMethodBuildStyleAttributeString()}
+        ${getJSMethodComputeElementRecursiveNew()}
         const table = document.getElementsByTagName("table")[0];
-        const result = computeElementRecursive(table);
+        const styledTable = computeStyledTable(table);
         window.cefQuery({
-            request: result,
+            request: JSON.stringify(styledTable, null, 2),
             onSuccess: function(response) {
                 console.log('cefQuery-Success-Response: ' + response);
             },
@@ -31,50 +30,52 @@ fun createJSQueryCode(): String {
     """.trimIndent()
 }
 
-private fun getJSMethodComputeElementRecursive(): String {
+private fun getJSMethodComputeElementRecursiveNew(): String {
     return """
+        function computeStyledTable(element) {
+            const computedElement = computeElementRecursive(element);
+            let head = null;
+            let body = null;
+            for (let i = 0; i < computedElement.children.length; i++) {
+                const child = computedElement.children[i];
+                if (child.type == "thead") head = child;
+                else if (child.type == "tbody") body = child;
+            }
+            delete computedElement["children"];
+            computedElement["head"] = head;
+            computedElement["body"] = body;
+            return computedElement;
+        }
+        
         function computeElementRecursive(element) {
-            const tag = element.tagName.toLowerCase();
-            const compStyles = window.getComputedStyle(element);
-            const styleAttr = buildStyleAttributeString(element);
-            let computedChildren = "";
+            const cs = window.getComputedStyle(element);
+            const styles = {
+                "backgroundColor": `${"$"}{cs.getPropertyValue('background-color')}`,
+                "color": `${"$"}{cs.getPropertyValue('color')}`,
+                "textAlign": `${"$"}{cs.getPropertyValue('text-align')}`,
+            };
+            const computedElement = {
+                "styles": styles, 
+                "type": element.tagName.toLowerCase(), 
+            };
             let text = "";
+            const children = [];
             if (element.hasChildNodes()) {
-                const children = element.childNodes;
-                for (let i = 0; i < children.length; i++) {
-                    const child = children[i];
+                for (let i = 0; i < element.childNodes.length; i++) {
+                    const child = element.childNodes[i];
                     if (child.nodeType === Node.ELEMENT_NODE) {
-                        computedChildren += computeElementRecursive(children[i]);
+                        children.push(computeElementRecursive(child));
                     } else if (child.nodeType === Node.TEXT_NODE) {
                         text += child.textContent
                     }
                 }
             }
-            let result = "<" + tag;
-            if (element.className.length > 0) result += " class='" + element.className + "'";
-            if (styleAttr.length > 0) result += " " + styleAttr;
-            if (computedChildren.length > 0) {
-                result += ">" + computedChildren + "</" + tag + ">"
-            } else if (text.length > 0) {
-                result += ">" + text + "</" + tag + ">"
+            if (computedElement.type == "th" || computedElement.type == "td") {
+                computedElement["text"] = text
             } else {
-                result += "/>";
+                 computedElement["children"] = children
             }
-            return result;
-        }
-    """.trimIndent()
-}
-
-private fun getJSMethodBuildStyleAttributeString(): String {
-    return """
-        function buildStyleAttributeString(element) {
-            const cs = window.getComputedStyle(element);
-            let result = "style='";
-            result += `background-color:${"$"}{cs.getPropertyValue('background-color')};`;
-            result += `color:${"$"}{cs.getPropertyValue('color')};`;
-            result += `text-align:${"$"}{cs.getPropertyValue('text-align')};`;
-            result += "'";
-            return result;
+            return computedElement;
         }
     """.trimIndent()
 }
