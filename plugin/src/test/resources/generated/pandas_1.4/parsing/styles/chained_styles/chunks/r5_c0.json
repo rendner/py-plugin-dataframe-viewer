@@ -1,0 +1,206 @@
+{
+    "head": [
+    ],
+    "body": [
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "5",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-2.16",
+                "css_props": {
+                    "background-color": "yellow"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.96",
+                "css_props": {
+                    "background-color": "red"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+1.22",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.10",
+                "css_props": {
+                    "background-color": "yellow"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-2.41",
+                "css_props": {
+                    "background-color": "yellow"
+                }
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "6",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+1.08",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.13",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.09",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.65",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.60",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "7",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.85",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.22",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.22",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.00",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.51",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "8",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.24",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.10",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+1.32",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.83",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.34",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "9",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.788175",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.511121",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "2.085125",
+                "css_props": {
+                    "background-color": "red"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.118013",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.260572",
+                "css_props": null
+            }
+        ]
+    ]
+}

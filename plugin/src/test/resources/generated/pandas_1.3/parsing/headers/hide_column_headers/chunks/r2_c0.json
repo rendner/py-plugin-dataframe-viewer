@@ -1,0 +1,46 @@
+{
+    "head": [
+    ],
+    "body": [
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "i_2",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.369053",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.023315",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "i_3",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.702008",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.538013",
+                "css_props": null
+            }
+        ]
+    ]
+}

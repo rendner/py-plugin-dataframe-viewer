@@ -1,0 +1,38 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "C",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "col_4",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "26",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "27",
+                "css_props": null
+            }
+        ]
+    ]
+}

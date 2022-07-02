@@ -1,0 +1,245 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "5",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "6",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "7",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "8",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "9",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.177336",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "2.005198",
+                "css_props": {
+                    "background-color": " red"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.612497",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.272783",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.183319",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.076813",
+                "css_props": {
+                    "background-color": " yellow",
+                    "color": " #000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.183103",
+                "css_props": {
+                    "background-color": " #023858",
+                    "color": " #f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.960314",
+                "css_props": {
+                    "background-color": " #b1c2de",
+                    "color": " #000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.594561",
+                "css_props": {
+                    "background-color": " #046097",
+                    "color": " #f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.709693",
+                "css_props": {
+                    "background-color": " #023858",
+                    "color": " #f1f1f1"
+                }
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.60",
+                "css_props": {
+                    "background-color": " #023858",
+                    "color": " #f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.26",
+                "css_props": {
+                    "background-color": " #fff7fb",
+                    "color": " #000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.15",
+                "css_props": {
+                    "background-color": " #023858",
+                    "color": " #f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.66",
+                "css_props": {
+                    "background-color": " #fff7fb",
+                    "color": " #000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.54",
+                "css_props": {
+                    "background-color": " #fff7fb",
+                    "color": " #000000"
+                }
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.21",
+                "css_props": {
+                    "background-color": " #6ba5cd",
+                    "color": " #000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.41",
+                "css_props": {
+                    "background-color": " #81aed2",
+                    "color": " #000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.53",
+                "css_props": {
+                    "background-color": " #fff7fb",
+                    "color": " #000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.84",
+                "css_props": {
+                    "background-color": " #023858",
+                    "color": " #f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.66",
+                "css_props": {
+                    "background-color": " #187cb6",
+                    "color": " #000000"
+                }
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.84",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.30",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+1.99",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.54",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.13",
+                "css_props": null
+            }
+        ]
+    ]
+}

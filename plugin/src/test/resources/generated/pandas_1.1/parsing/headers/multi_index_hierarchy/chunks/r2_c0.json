@@ -1,0 +1,124 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "blank",
+                "display_value": "",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "index_name",
+                "display_value": "subject",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "Bob",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "Bob",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "blank",
+                "display_value": "",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "index_name",
+                "display_value": "type",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "HR",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "Temp",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "index_name",
+                "display_value": "",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "index_name",
+                "display_value": "",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "2014",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "1",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.700000",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.700000",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "2014",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "2",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.300000",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.100000",
+                "css_props": null
+            }
+        ]
+    ]
+}
