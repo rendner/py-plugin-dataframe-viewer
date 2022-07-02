@@ -55,7 +55,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
      * - the table structure info
      */
     fun export(testCase: TestCaseExportData) {
-        val patchedStyler = pythonBridge.createPatchedStyler(testCase.styler)
+        val patchedStyler = createPatchedStyler(testCase)
         try {
             val tableStructure = patchedStyler.evaluateTableStructure()
             if (tableStructure.rowsCount > 200) {
@@ -73,7 +73,11 @@ class TestCaseExporter(private val baseExportDir: Path) {
             baseExportDir.resolve(testCase.exportDirectoryPath).let {
                 TestCasePath.createRequiredDirectories(it)
                 writeTestCasePropertiesToFile(it, testCaseProperties)
-                writeExpectedResultToFile(patchedStyler, it)
+                // create new patched styler instances for the expected results
+                // otherwise css styles are duplicated in the generated output
+                // (some pandas versions don't do a proper cleanup before generating the HTML)
+                writeExpectedJsonResultToFile(createPatchedStyler(testCase), it)
+                writeExpectedHTMLResultToFile(createPatchedStyler(testCase), it)
                 writeChunksToFile(patchedStyler, it, testCase, tableStructure)
             }
         } finally {
@@ -81,15 +85,27 @@ class TestCaseExporter(private val baseExportDir: Path) {
         }
     }
 
+    private fun createPatchedStyler(testCase: TestCaseExportData): IPyPatchedStylerRef {
+        return pythonBridge.createPatchedStyler(
+            testCase.createStylerFunc.evaluator.evaluate("${testCase.createStylerFunc.refExpr}()"),
+        )
+    }
+
     @OptIn(ExperimentalSerializationApi::class)
-    private fun writeExpectedResultToFile(
+    private fun writeExpectedJsonResultToFile(
         patchedStyler: IPyPatchedStylerRef,
         exportDir: Path,
     ) {
-        val jsonResult = json.encodeToString(patchedStyler.evaluateComputeUnpatchedHTMLPropsTable())
+        val result = json.encodeToString(patchedStyler.evaluateComputeUnpatchedHTMLPropsTable())
         Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir, "json")).use {
-            it.write(jsonResult)
+            it.write(result)
         }
+    }
+
+    private fun writeExpectedHTMLResultToFile(
+        patchedStyler: IPyPatchedStylerRef,
+        exportDir: Path,
+    ) {
         val result = patchedStyler.evaluateRenderUnpatched()
         Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir, "html")).use {
             it.write(prettifyHtmlAndReplaceRandomTableId(result))

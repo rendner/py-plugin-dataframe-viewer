@@ -38,12 +38,12 @@ data class ExportData(val testCases: PluginPyValue, val pandasMajorMinorVersion:
 /**
  * Describes a test case to export.
  *
- * @param styler the styled DataFrame to export
+ * @param createStylerFunc a parameterless function to create a styled DataFrame for export
  * @param exportChunkSize the size of the chunks used to export smaller chunks
  * @param exportDirectoryPath the name of the test case as directory name
  */
 data class TestCaseExportData(
-    val styler: PluginPyValue,
+    val createStylerFunc: PluginPyValue,
     val exportChunkSize: ChunkSize,
     val exportDirectoryPath: String
 )

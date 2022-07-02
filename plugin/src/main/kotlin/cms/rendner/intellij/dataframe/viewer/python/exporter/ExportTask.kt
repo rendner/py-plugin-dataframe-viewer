@@ -60,12 +60,12 @@ class ExportTask(
     private fun convertTestCaseValue(exportTestCaseDict: PluginPyValue): TestCaseExportData {
         val evaluator = exportTestCaseDict.evaluator
         return exportTestCaseDict.refExpr.let {
-            val styler = evaluator.evaluate("$it['styler']")
+            val createStylerFunc = evaluator.evaluate("$it['create_styler']")
             val chunkSize = evaluator.evaluate("$it['chunk_size']").forcedValue.removeSurrounding("(", ")").split(", ")
             val exportDir = evaluator.evaluate("$it['export_dir']").forcedValue
 
             TestCaseExportData(
-                styler,
+                createStylerFunc,
                 ChunkSize(chunkSize[0].toInt(), chunkSize[1].toInt()),
                 exportDir,
             )
