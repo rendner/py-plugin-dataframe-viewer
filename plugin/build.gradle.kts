@@ -394,7 +394,7 @@ tasks.withType<KotlinCompile>().configureEach {
         jvmTarget = "11"
         freeCompilerArgs = listOf(
             // to allow experimental "Json.decodeFromString()"
-            "-Xopt-in=kotlinx.serialization.ExperimentalSerializationApi",
+            "-Xopt-in=kotlin.RequiresOptIn",
         )
     }
 }

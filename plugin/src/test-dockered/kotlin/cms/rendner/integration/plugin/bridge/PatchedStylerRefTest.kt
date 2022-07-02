@@ -111,6 +111,31 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
         }
     }
 
+    @Test
+    fun evaluateComputeChunkHTMLPropsTable_shouldBeCallable() {
+        runWithPatchedStyler {
+            assertThat(
+                it.evaluateComputeChunkHTMLPropsTable(
+                    0,
+                    0,
+                    2,
+                    2,
+                    excludeRowHeader = false,
+                    excludeColumnHeader = false,
+                )
+            ).matches { propsTable -> propsTable.head.isNotEmpty() && propsTable.body.isNotEmpty() }
+        }
+    }
+
+    @Test
+    fun evaluateComputeUnpatchedHTMLPropsTable_shouldBeCallable() {
+        runWithPatchedStyler {
+            assertThat(
+                it.evaluateComputeUnpatchedHTMLPropsTable()
+            ).matches { propsTable -> propsTable.head.isNotEmpty() && propsTable.body.isNotEmpty() }
+        }
+    }
+
     private fun runWithPatchedStyler(block: (patchedStyler: IPyPatchedStylerRef) -> Unit) {
         runWithPluginCodeBridge(createDataFrameSnippet()) { codeBridge: PythonCodeBridge, valueEvaluator: IPluginPyValueEvaluator ->
             val styler = valueEvaluator.evaluate("df.style.applymap(lambda x: 'color: red')")

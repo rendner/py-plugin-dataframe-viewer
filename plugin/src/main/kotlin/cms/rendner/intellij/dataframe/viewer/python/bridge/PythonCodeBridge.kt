@@ -143,6 +143,9 @@ class PythonCodeBridge {
     ) : IPyPatchedStylerRef {
 
         private var disposed = false
+        private val json: Json by lazy {
+            Json { ignoreUnknownKeys = true }
+        }
 
         @Throws(EvaluateException::class)
         override fun evaluateTableStructure(): TableStructure {
@@ -182,7 +185,7 @@ class PythonCodeBridge {
                 // IntelliJ marks the @OptIn as redundant but removing it results in a warning:
                 // Warning: This declaration is experimental and its usage should be marked with '@kotlinx.serialization.ExperimentalSerializationApi' or '@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)'
                 @OptIn(ExperimentalSerializationApi::class)
-                Json.decodeFromString(it)
+                json.decodeFromString(it)
             }
         }
 
@@ -205,6 +208,32 @@ class PythonCodeBridge {
                     boolParam(excludeColumnHeader)
                 }
             ).forcedValue
+        }
+
+        override fun evaluateComputeChunkHTMLPropsTable(
+            firstRow: Int,
+            firstColumn: Int,
+            numberOfRows: Int,
+            numberOfColumns: Int,
+            excludeRowHeader: Boolean,
+            excludeColumnHeader: Boolean
+        ): HTMLPropsTable {
+            return fetchResultAsJsonAndDecode(
+                stringifyMethodCall(pythonValue.refExpr, "compute_chunk_html_props_table") {
+                    numberParam(firstRow)
+                    numberParam(firstColumn)
+                    numberParam(numberOfRows)
+                    numberParam(numberOfColumns)
+                    boolParam(excludeRowHeader)
+                    boolParam(excludeColumnHeader)
+                }
+            )
+        }
+
+        override fun evaluateComputeUnpatchedHTMLPropsTable(): HTMLPropsTable {
+            return fetchResultAsJsonAndDecode(
+                stringifyMethodCall(pythonValue.refExpr, "compute_unpatched_html_props_table")
+            )
         }
 
         @Throws(EvaluateException::class)
