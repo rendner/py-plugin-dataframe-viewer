@@ -17,7 +17,10 @@ package cms.rendner.intellij.dataframe.viewer.settings
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.ui.border.IdeaTitledBorder
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.util.ui.FormBuilder
+import java.awt.Insets
 import javax.swing.Box
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -28,6 +31,7 @@ import javax.swing.JPanel
 class SettingsComponent {
 
     private val myValidationStrategyComboBox = MyValidationStrategyComboBox(ValidationStrategyType.DISABLED)
+    private val myFSLoadNewDataStructureCheckBox = JBCheckBox("Use new data structure when loading chunks", true)
 
     private val myPanel: JPanel
 
@@ -35,12 +39,33 @@ class SettingsComponent {
         get() = myValidationStrategyComboBox.item
         set(value) { myValidationStrategyComboBox.item = value }
 
+    var fsLoadNewDataStructure: Boolean
+        get() = myFSLoadNewDataStructureCheckBox.isSelected
+        set(value) { myFSLoadNewDataStructureCheckBox.isSelected = value }
+
 
     init {
-        myPanel = FormBuilder.createFormBuilder()
+        val defaultSettingsPanel = FormBuilder.createFormBuilder()
             .addLabeledComponent("Validation strategy: ", myValidationStrategyComboBox)
+            .addTooltip("Automatic validation of used styling functions")
+            .panel
+        defaultSettingsPanel.border = createTitleBorder("Settings")
+
+        val featureSwitchPanel = FormBuilder.createFormBuilder()
+            .addComponent(myFSLoadNewDataStructureCheckBox)
+            .addTooltip("New one uses JSON instead of HTML")
+            .panel
+        featureSwitchPanel.border = createTitleBorder("Feature Switches")
+
+        myPanel = FormBuilder.createFormBuilder()
+            .addComponent(defaultSettingsPanel)
+            .addComponent(featureSwitchPanel)
             .addComponentFillVertically(Box.createVerticalGlue() as JComponent, 0)
             .panel
+    }
+
+    private fun createTitleBorder(title: String): IdeaTitledBorder {
+        return IdeaTitledBorder(title, 20, Insets(0, 0, 20, 0))
     }
 
     fun getPanel(): JComponent {

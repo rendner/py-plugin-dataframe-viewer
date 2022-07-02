@@ -48,6 +48,7 @@ class ApplicationSettings : Configurable {
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
             it.validationStrategyType = settings.validationStrategyType
+            it.fsLoadNewDataStructure = settings.fsLoadNewDataStructure
         }
     }
 
@@ -55,7 +56,10 @@ class ApplicationSettings : Configurable {
         var modified = false
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
-            modified = (it.validationStrategyType !== settings.validationStrategyType)
+            modified = it.validationStrategyType !== settings.validationStrategyType
+            if (!modified) {
+                modified = it.fsLoadNewDataStructure != settings.fsLoadNewDataStructure
+            }
         }
         return modified
     }
@@ -64,6 +68,7 @@ class ApplicationSettings : Configurable {
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
             settings.validationStrategyType = it.validationStrategyType
+            settings.fsLoadNewDataStructure = it.fsLoadNewDataStructure
         }
     }
 
