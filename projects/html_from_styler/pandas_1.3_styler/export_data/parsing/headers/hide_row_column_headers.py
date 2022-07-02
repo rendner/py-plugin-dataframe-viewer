@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -18,6 +18,6 @@ np.random.seed(6182018)
 df = pd.DataFrame(np.random.randn(5, 5))
 
 test_case = {
-    "styler": df.style.hide_index().hide_columns(),
+    "create_styler": lambda: df.style.hide_index().hide_columns(),
     "chunk_size": (2, 2),
 }

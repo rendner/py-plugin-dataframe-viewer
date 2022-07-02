@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -21,6 +21,6 @@ idx = pd.Index([f'i_{i}' for i in range(5)], name="idx_name")
 df = pd.DataFrame(np.random.randn(5, 5), index=idx, columns=cols)
 
 test_case = {
-    "styler": df.style.hide_columns(),
+    "create_styler": lambda: df.style.hide_columns(),
     "chunk_size": (2, 2),
 }

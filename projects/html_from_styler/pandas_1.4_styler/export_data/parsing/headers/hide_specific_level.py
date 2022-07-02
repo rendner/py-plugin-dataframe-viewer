@@ -20,6 +20,6 @@ midx = MultiIndex.from_product([["x", "y"], ["a", "b", "c"]])
 df = DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
 
 test_case = {
-    "styler": df.style.hide(level=1),
+    "create_styler": lambda: df.style.hide(level=1),
     "chunk_size": (2, 2),
 }

@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ np.random.seed(6182018)
 df = pd.DataFrame(np.random.randn(12, 12))
 
 test_case = {
-    "styler": (df.style
-               .format('{:+.2f}', subset=pd.IndexSlice[2:8, :])
-               .background_gradient(subset=pd.IndexSlice[1:3, :])
-               .highlight_max(color="red")
-               .highlight_min()
-               .highlight_null(null_color="pink")),
+    "create_styler": lambda: (df.style
+                              .format('{:+.2f}', subset=pd.IndexSlice[2:8, :])
+                              .background_gradient(subset=pd.IndexSlice[1:3, :])
+                              .highlight_max(color="red")
+                              .highlight_min()
+                              .highlight_null(null_color="pink")),
     "chunk_size": (5, 5)
 }

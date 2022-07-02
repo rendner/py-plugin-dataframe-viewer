@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ data = np.round(np.random.randn(4, 6), 1)
 df = pd.DataFrame(data, index=index, columns=columns)
 
 test_case = {
-    "styler": df.style,
+    "create_styler": lambda: df.style,
     "chunk_size": (2, 2)
 }
 

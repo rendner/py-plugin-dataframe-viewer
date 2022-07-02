@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -22,6 +22,6 @@ df = pd.DataFrame.from_dict({
 })
 
 test_case = {
-    "styler": df.style,
+    "create_styler": lambda: df.style,
     "chunk_size": (2, 2),
 }
