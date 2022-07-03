@@ -1,0 +1,26 @@
+{
+  "styles": {
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "color": "rgb(0, 0, 0)",
+    "textAlign": "start"
+  },
+  "type": "table",
+  "head": {
+    "styles": {
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "color": "rgb(0, 0, 0)",
+      "textAlign": "start"
+    },
+    "type": "thead",
+    "children": []
+  },
+  "body": {
+    "styles": {
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "color": "rgb(0, 0, 0)",
+      "textAlign": "start"
+    },
+    "type": "tbody",
+    "children": []
+  }
+}

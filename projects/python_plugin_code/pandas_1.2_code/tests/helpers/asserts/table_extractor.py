@@ -61,7 +61,6 @@ class StyledTable:
 
 class ExtractContext:
     def __init__(self):
-        super().__init__()
         self.styled_table = StyledTable()
         self.open_elements_stack = []
 

@@ -31,6 +31,7 @@ import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
+import java.awt.event.MouseMotionListener
 import javax.swing.*
 import javax.swing.event.ChangeEvent
 import javax.swing.event.TableModelEvent
@@ -191,6 +192,13 @@ private class MyIndexTable(
             )
         )
         adjustPreferredScrollableViewportSize()
+    }
+
+    override fun addMouseMotionListener(l: MouseMotionListener?) {
+        // Workaround to disable unwanted hovered-background behavior of the JBTable.
+        // The feature can be disabled by setting "putClientProperty(RenderingUtil.PAINT_HOVERED_BACKGROUND, false)"
+        // on the table, but then the IDE gives the following warning:
+        // 'PAINT_HOVERED_BACKGROUND' is marked unstable with @ApiStatus.Experimental
     }
 
     override fun updateUI() {

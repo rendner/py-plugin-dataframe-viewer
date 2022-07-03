@@ -1,0 +1,12 @@
+{
+    "rowsPerChunk": 1,
+    "colsPerChunk": 2,
+    "tableStructure": {
+        "rows_count": 3,
+        "columns_count": 2,
+        "row_levels_count": 1,
+        "column_levels_count": 1,
+        "hide_row_header": false,
+        "hide_column_header": false
+    }
+}

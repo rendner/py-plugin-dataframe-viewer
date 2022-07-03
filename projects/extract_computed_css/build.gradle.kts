@@ -11,7 +11,6 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jsoup:jsoup:1.15.1")
     implementation("commons-cli:commons-cli:1.5.0")
 }
 
@@ -32,7 +31,7 @@ tasks.register("extractComputedCSSForPlugin") {
                 "-i",
                 "expected.html",
                 "-o",
-                "expected.css-html"
+                "expected.css.json"
             )
         ).exec()
     }

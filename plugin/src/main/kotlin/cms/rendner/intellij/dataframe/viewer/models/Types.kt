@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ enum class TextAlign {
 data class StyleProperties(
     val textColor: Color? = null,
     val backgroundColor: Color? = null,
-    val textAlign: TextAlign? = TextAlign.center
+    val textAlign: TextAlign? = null,
 ) {
     fun isEmpty(): Boolean {
         return textColor == null && backgroundColor == null && textAlign == null

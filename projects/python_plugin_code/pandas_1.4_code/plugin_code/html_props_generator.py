@@ -139,7 +139,7 @@ class HTMLPropsGenerator:
         self.__visible_data: DataFrame = visible_data
         self.__styler: Styler = styler
 
-    def generate_props_unpatched(self) -> dict:
+    def compute_unpatched_props(self) -> dict:
         # don't use "styler._copy(deepcopy=True)" - the copy behavior was "broken" until pandas 1.3
         # (some parts were missing)
         # -> to be really sure we use the original one instead of a copy
@@ -150,12 +150,12 @@ class HTMLPropsGenerator:
         copy._compute()
         return copy._translate(sparse_index=False, sparse_cols=False)
 
-    def generate_props_for_chunk(self,
-                                 region: Region,
-                                 exclude_row_header: bool = False,
-                                 exclude_col_header: bool = False,
-                                 translate_indices: bool = True,
-                                 ) -> dict:
+    def compute_chunk_props(self,
+                            region: Region,
+                            exclude_row_header: bool = False,
+                            exclude_col_header: bool = False,
+                            translate_indices: bool = True,
+                            ) -> dict:
         # chunk contains always only non-hidden data
         chunk = self.__visible_data.iloc[
                 region.first_row: region.first_row + region.rows,

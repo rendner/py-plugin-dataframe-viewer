@@ -1,0 +1,62 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "B",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "B",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "col_2",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "col_3",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "14",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "20",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "15",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "21",
+                "css_props": null
+            }
+        ]
+    ]
+}

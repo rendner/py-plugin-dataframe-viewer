@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ import pandas as pd
 df = pd.DataFrame({"a": [pd.NA, 1, None], "b": [np.nan, 1, -1]})
 
 test_case = {
-    "styler": df.style.format(na_rep='').highlight_min(),
+    "create_styler": lambda: df.style.format(na_rep='').highlight_min(),
     "chunk_size": (1, 2),
     # in pandas < 1.3.2 there was a bug: https://github.com/pandas-dev/pandas/pull/42650
     # which raised an error when calling "df.style.highlight_min().render()"

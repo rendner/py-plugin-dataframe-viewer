@@ -1,0 +1,1679 @@
+{
+  "styles": {
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "color": "rgb(0, 0, 0)",
+    "textAlign": "start"
+  },
+  "type": "table",
+  "head": {
+    "styles": {
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "color": "rgb(0, 0, 0)",
+      "textAlign": "start"
+    },
+    "type": "thead",
+    "children": [
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "0"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "1"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "2"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "3"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "4"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "5"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "6"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "7"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "8"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "9"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "10"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "11"
+          }
+        ]
+      }
+    ]
+  },
+  "body": {
+    "styles": {
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "color": "rgb(0, 0, 0)",
+      "textAlign": "start"
+    },
+    "type": "tbody",
+    "children": [
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "0"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.180065"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.065147"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.295056"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.381788"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "1.172496"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.177336"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "2.005198"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.612497"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "1.272783"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.183319"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.369053"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.023315"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "1"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.308297"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-3.010104"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.158011"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.702008"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.538013"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.076813"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "1.183103"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(177, 194, 222)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.960314"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(4, 96, 151)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.594561"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.709693"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.969455"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(140, 179, 213)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.972990"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "2"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.10"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.79"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(196, 203, 227)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.16"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(161, 187, 218)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.36"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.63"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.60"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.26"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.15"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.66"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.54"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(208, 209, 230)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.05"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.03"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "3"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(227, 224, 238)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.08"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(3, 74, 116)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.52"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.94"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.14"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(250, 243, 249)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.59"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(107, 165, 205)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.21"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(129, 174, 210)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.41"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.53"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(2, 56, 88)",
+              "color": "rgb(241, 241, 241)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.84"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(24, 124, 182)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.66"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.26"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 247, 251)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.71"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "4"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.84"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.26"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.12"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.79"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.33"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.84"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.30"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.99"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.54"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.13"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.24"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.36"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "5"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-2.16"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.96"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.22"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.10"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-2.41"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.85"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.14"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.01"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.09"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.59"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.56"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.22"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "6"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.08"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.13"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.09"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.65"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.60"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.43"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.47"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-2.03"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.83"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.36"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.63"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.99"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "7"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.85"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.22"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.22"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.00"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.51"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.23"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.09"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.09"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.96"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-2.14"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.30"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.56"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "8"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.24"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.10"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.32"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.83"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.34"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.09"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.03"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.04"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.34"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.67"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+0.89"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "+1.01"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "9"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.788175"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.511121"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "2.085125"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.118013"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.260572"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.083941"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.105872"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "2.389470"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.680650"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.341244"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "1.633368"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.737564"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "10"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.511339"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.755499"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.962037"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.187429"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.290538"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.265948"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.361673"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.144999"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.295700"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.115604"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.518814"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.859076"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "11"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.001547"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.709033"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgb(255, 255, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.714961"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.605747"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.260336"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.318401"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.122491"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.048000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.978477"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.285763"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.405147"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.234554"
+          }
+        ]
+      }
+    ]
+  }
+}

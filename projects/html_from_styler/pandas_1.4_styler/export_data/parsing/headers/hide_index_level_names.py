@@ -21,6 +21,6 @@ df = DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
 df.index.names = ["lev0", "lev1"]
 
 test_case = {
-    "styler": df.style.hide(axis="index", names=False),
+    "create_styler": lambda: df.style.hide(axis="index", names=False),
     "chunk_size": (2, 2),
 }

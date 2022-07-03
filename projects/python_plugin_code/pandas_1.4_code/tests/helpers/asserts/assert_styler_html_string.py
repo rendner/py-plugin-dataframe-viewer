@@ -42,6 +42,18 @@ def create_and_assert_patched_styler_html_string(
     _assert_render(styler, patched_styler, rows_per_chunk, cols_per_chunk)
 
 
+def create_combined_html_string(
+        df: DataFrame,
+        init_styler_func: Callable[[Styler], None],
+        rows_per_chunk: int,
+        cols_per_chunk: int,
+) -> StyledTable:
+    patched_styler_styler = df.style
+    init_styler_func(patched_styler_styler)
+    patched_styler = PatchedStyler(patched_styler_styler)
+    return _create_render_result_for_chunks(patched_styler, rows_per_chunk, cols_per_chunk)
+
+
 def _assert_render(styler: Styler, patched_styler: PatchedStyler, rows_per_chunk: int, cols_per_chunk: int):
     actual_table = _create_render_result_for_chunks(patched_styler, rows_per_chunk, cols_per_chunk)
     expected_table = _convert_to_styled_table(PatchedStyler(styler).render_unpatched())
@@ -54,10 +66,10 @@ def _assert_render(styler: Styler, patched_styler: PatchedStyler, rows_per_chunk
         return
 
     # use a json string to compare the tables to get a nicer output if they are not equal
-    assert jsonify_table(actual_table) == jsonify_table(expected_table)
+    assert _jsonify_table(actual_table) == _jsonify_table(expected_table)
 
 
-def jsonify_table(table: StyledTable) -> str:
+def _jsonify_table(table: StyledTable) -> str:
     return json.dumps(table, default=lambda x: getattr(x, '__dict__', str(x)), indent=2, sort_keys=True)
 
 
@@ -140,4 +152,3 @@ def _count_cell_values(styled_table: StyledTable) -> int:
     for i, row in enumerate(styled_table.table.find_first('tbody').children):
         result += len(row.find('td'))
     return result
-

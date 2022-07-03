@@ -17,7 +17,6 @@ package cms.rendner.intellij.dataframe.viewer.python.exporter
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
-import cms.rendner.intellij.dataframe.viewer.python.utils.parsePythonTuple
 import java.nio.file.Path
 
 /**
@@ -61,13 +60,12 @@ class ExportTask(
     private fun convertTestCaseValue(exportTestCaseDict: PluginPyValue): TestCaseExportData {
         val evaluator = exportTestCaseDict.evaluator
         return exportTestCaseDict.refExpr.let {
-            val dictAsMap = evaluator.evaluateStringyfiedDict(it)
-            val styler = evaluator.evaluate("$it['styler']")
-            val exportDir = dictAsMap.getValue("export_dir")
-            val chunkSize = parsePythonTuple(dictAsMap.getValue("chunk_size"))
+            val createStylerFunc = evaluator.evaluate("$it['create_styler']")
+            val chunkSize = evaluator.evaluate("$it['chunk_size']").forcedValue.removeSurrounding("(", ")").split(", ")
+            val exportDir = evaluator.evaluate("$it['export_dir']").forcedValue
 
             TestCaseExportData(
-                styler,
+                createStylerFunc,
                 ChunkSize(chunkSize[0].toInt(), chunkSize[1].toInt()),
                 exportDir,
             )

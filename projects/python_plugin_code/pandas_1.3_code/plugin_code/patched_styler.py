@@ -11,7 +11,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from plugin_code.custom_json_encoder import CustomJSONEncoder
 from plugin_code.html_props_generator import HTMLPropsGenerator, Region
+from plugin_code.html_props_table_builder import HTMLPropsTableBuilder, HTMLPropsTable
 from plugin_code.html_props_validator import HTMLPropsValidator
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
 from plugin_code.style_functions_validator import StyleFunctionValidationProblem, ValidationStrategyType, \
@@ -20,11 +22,12 @@ from plugin_code.styler_todo import StylerTodo
 from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
-from dataclasses import dataclass, asdict
+import json
+from dataclasses import dataclass
 import numpy as np  # numpy is required by pandas (therefore should be available at runtime)
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
-from typing import List, Optional
+from typing import List, Optional, Any
 
 
 @dataclass(frozen=True)
@@ -35,9 +38,6 @@ class TableStructure:
     column_levels_count: int
     hide_row_header: bool
     hide_column_header: bool
-
-    def __str__(self):
-        return str(asdict(self))
 
 
 @dataclass(frozen=True)
@@ -51,9 +51,6 @@ class StyleFunctionDetails:
     is_pandas_builtin: bool
     is_supported: bool
 
-    def __str__(self):
-        return str(asdict(self))
-
 
 class PatchedStyler:
 
@@ -62,6 +59,10 @@ class PatchedStyler:
         self.__visible_data: DataFrame = self.__get_visible_data(styler)
         self.__html_props_generator = HTMLPropsGenerator(self.__get_visible_data(styler), styler)
         self.__style_functions_validator = StyleFunctionsValidator(self.__get_visible_data(styler), styler)
+
+    @staticmethod
+    def to_json(data: Any) -> str:
+        return json.dumps(data, cls=CustomJSONEncoder)
 
     def create_html_props_validator(self) -> HTMLPropsValidator:
         return HTMLPropsValidator(self.__visible_data, self.__styler)
@@ -77,6 +78,39 @@ class PatchedStyler:
             self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
         return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
 
+    def compute_chunk_html_props_table(self,
+                                       first_row: int,
+                                       first_col: int,
+                                       rows: int,
+                                       cols: int,
+                                       exclude_row_header: bool = False,
+                                       exclude_col_header: bool = False
+                                       ) -> HTMLPropsTable:
+        html_props = self.__html_props_generator.compute_chunk_props(
+            region=Region(first_row, first_col, rows, cols),
+            exclude_row_header=exclude_row_header,
+            exclude_col_header=exclude_col_header,
+        )
+
+        props_table_builder = HTMLPropsTableBuilder()
+        props_table_builder.append_props(
+            html_props=html_props,
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return props_table_builder.build_table()
+
+    def compute_unpatched_html_props_table(self) -> HTMLPropsTable:
+        props_table_builder = HTMLPropsTableBuilder()
+        props_table_builder.append_props(
+            html_props=self.__html_props_generator.compute_unpatched_props(),
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return props_table_builder.build_table()
+
     def render_chunk(self,
                      first_row: int,
                      first_col: int,
@@ -85,7 +119,7 @@ class PatchedStyler:
                      exclude_row_header: bool = False,
                      exclude_col_header: bool = False
                      ) -> str:
-        html_props = self.__html_props_generator.generate_props_for_chunk(
+        html_props = self.__html_props_generator.compute_chunk_props(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
@@ -118,9 +152,13 @@ class PatchedStyler:
         )
 
     def get_table_structure(self) -> TableStructure:
+        rows_count = len(self.__visible_data.index)
+        columns_count = len(self.__visible_data.columns)
+        if rows_count == 0 or columns_count == 0:
+            rows_count = columns_count = 0
         return TableStructure(
-            rows_count=len(self.__visible_data.index),
-            columns_count=len(self.__visible_data.columns),
+            rows_count=rows_count,
+            columns_count=columns_count,
             row_levels_count=self.__visible_data.index.nlevels,
             column_levels_count=self.__visible_data.columns.nlevels,
             hide_row_header=self.__styler.hide_index_,
@@ -136,10 +174,10 @@ class PatchedStyler:
                 index=i,
                 qname=StyleFunctionNameResolver.get_style_func_qname(t),
                 resolved_name=StyleFunctionNameResolver.resolve_style_func_name(t),
-                axis='' if not t.is_apply_call() else str(t.apply_args.axis),
+                axis='' if t.is_applymap() else str(t.apply_args.axis),
                 is_pandas_builtin=t.is_pandas_style_func(),
                 is_supported=TodosPatcher.is_style_function_supported(t),
-                is_apply=t.is_apply_call(),
+                is_apply=not t.is_applymap(),
                 is_chunk_parent_requested=t.should_provide_chunk_parent(),
             ))
 

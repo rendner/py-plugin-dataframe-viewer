@@ -20,13 +20,12 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvalu
 import cms.rendner.intellij.dataframe.viewer.models.chunked.utils.iterateDataFrame
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jsoup.Jsoup
-import java.io.FilterOutputStream
-import java.io.IOException
-import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
 import java.util.regex.Pattern
 
 /**
@@ -40,6 +39,10 @@ class TestCaseExporter(private val baseExportDir: Path) {
     private val pythonBridge = PythonCodeBridge()
     private val removeTrailingSpacesPattern = Pattern.compile("\\p{Blank}+$", Pattern.MULTILINE)
 
+    private val json: Json by lazy {
+        Json { ignoreUnknownKeys = true; prettyPrint = true }
+    }
+
     /**
      * Extracts information from a test case and persist these data in the [baseExportDir].
      *
@@ -52,7 +55,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
      * - the table structure info
      */
     fun export(testCase: TestCaseExportData) {
-        val patchedStyler = pythonBridge.createPatchedStyler(testCase.styler)
+        val patchedStyler = createPatchedStyler(testCase)
         try {
             val tableStructure = patchedStyler.evaluateTableStructure()
             if (tableStructure.rowsCount > 200) {
@@ -61,10 +64,20 @@ class TestCaseExporter(private val baseExportDir: Path) {
 
             println("export test case ${++exportCounter}: ${testCase.exportDirectoryPath}")
 
+            val testCaseProperties = TestCaseProperties(
+                testCase.exportChunkSize.rows,
+                testCase.exportChunkSize.columns,
+                tableStructure
+            )
+
             baseExportDir.resolve(testCase.exportDirectoryPath).let {
                 TestCasePath.createRequiredDirectories(it)
-                writePropertiesFile(testCase, it, tableStructure)
-                writeExpectedResultToFile(patchedStyler, it)
+                writeTestCasePropertiesToFile(it, testCaseProperties)
+                // create new patched styler instances for the expected results
+                // otherwise css styles are duplicated in the generated output
+                // (some pandas versions don't do a proper cleanup before generating the HTML)
+                writeExpectedJsonResultToFile(createPatchedStyler(testCase), it)
+                writeExpectedHTMLResultToFile(createPatchedStyler(testCase), it)
                 writeChunksToFile(patchedStyler, it, testCase, tableStructure)
             }
         } finally {
@@ -72,16 +85,34 @@ class TestCaseExporter(private val baseExportDir: Path) {
         }
     }
 
-    private fun writeExpectedResultToFile(
+    private fun createPatchedStyler(testCase: TestCaseExportData): IPyPatchedStylerRef {
+        return pythonBridge.createPatchedStyler(
+            testCase.createStylerFunc.evaluator.evaluate("${testCase.createStylerFunc.refExpr}()"),
+        )
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun writeExpectedJsonResultToFile(
+        patchedStyler: IPyPatchedStylerRef,
+        exportDir: Path,
+    ) {
+        val result = json.encodeToString(patchedStyler.evaluateComputeUnpatchedHTMLPropsTable())
+        Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir, "json")).use {
+            it.write(result)
+        }
+    }
+
+    private fun writeExpectedHTMLResultToFile(
         patchedStyler: IPyPatchedStylerRef,
         exportDir: Path,
     ) {
         val result = patchedStyler.evaluateRenderUnpatched()
-        Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir)).use {
+        Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir, "html")).use {
             it.write(prettifyHtmlAndReplaceRandomTableId(result))
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     private fun writeChunksToFile(
         patchedStyler: IPyPatchedStylerRef,
         exportDir: Path,
@@ -93,8 +124,17 @@ class TestCaseExporter(private val baseExportDir: Path) {
 
         iterateDataFrame(tableStructure.rowsCount, tableStructure.columnsCount, chunkSize).forEach { chunk ->
             val result = evaluator.evaluate(chunk, chunk.firstColumn > 0, chunk.firstRow > 0)
-            Files.newBufferedWriter(TestCasePath.resolveChunkResultFile(exportDir, chunk.firstRow, chunk.firstColumn)).use {
+            Files.newBufferedWriter(
+                TestCasePath.resolveChunkResultFile(exportDir, chunk.firstRow, chunk.firstColumn, "html")
+            ).use {
                 it.write(prettifyHtmlAndReplaceRandomTableId(result))
+            }
+
+            val result2 = evaluator.evaluateHTMLProps(chunk, chunk.firstColumn > 0, chunk.firstRow > 0)
+            Files.newBufferedWriter(
+                TestCasePath.resolveChunkResultFile(exportDir, chunk.firstRow, chunk.firstColumn, "json")
+            ).use {
+                it.write(json.encodeToString(result2))
             }
         }
     }
@@ -104,47 +144,19 @@ class TestCaseExporter(private val baseExportDir: Path) {
         // That id is used for the table elements and for the css styles which style the table elements.
         // To have a stable output the id is always replaced with a static one.
         val document = Jsoup.parse(html)
-        val tableId = document.selectFirst("table")!!.id()
+        val tableId = document.selectFirst("table").id()
         var prettified = document.outerHtml()
         // fix for jsoup #1689 (Pretty print leaves extra space at end of many lines)
         prettified = removeTrailingSpacesPattern.matcher(prettified).replaceAll("")
         return prettified.replace(tableId, "static_id")
     }
 
-    private fun writePropertiesFile(exportData: TestCaseExportData, exportDir: Path, tableStructure: TableStructure) {
-        // [StripFirstLineStream] omits the first line which is normally a comment containing the actual date
-        // "comments" has to be "null" otherwise the [StripFirstLineStream] doesn't work as expected, because
-        // the comments would be written before the date comment
-        StripFirstLineStream(
-            Files.newOutputStream(
-                TestCasePath.resolveTestPropertiesFile(exportDir)
-            )
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun writeTestCasePropertiesToFile(exportDir: Path, testCaseProperties: TestCaseProperties) {
+        Files.newBufferedWriter(
+            TestCasePath.resolveTestCasePropertiesFile(exportDir)
         ).use {
-            Properties().apply {
-                setProperty("rowsCount", tableStructure.rowsCount.toString())
-                setProperty("columnsCount", tableStructure.columnsCount.toString())
-                setProperty("rowLevelsCount", tableStructure.rowLevelsCount.toString())
-                setProperty("columnLevelsCount", tableStructure.columnLevelsCount.toString())
-                setProperty("hideRowHeader", tableStructure.hideRowHeader.toString())
-                setProperty("hideColumnHeader", tableStructure.hideColumnHeader.toString())
-                setProperty("rowsPerChunk", exportData.exportChunkSize.rows.toString())
-                setProperty("columnsPerChunk", exportData.exportChunkSize.columns.toString())
-                store(it, null)
-            }
-        }
-    }
-
-    private class StripFirstLineStream(out: OutputStream) : FilterOutputStream(out) {
-        private var firstLineSkipped = false
-        private val newLineValue = '\n'.toInt()
-
-        @Throws(IOException::class)
-        override fun write(b: Int) {
-            if (firstLineSkipped) {
-                super.write(b)
-            } else if (b == newLineValue) {
-                firstLineSkipped = true
-            }
+            it.write(json.encodeToString(testCaseProperties))
         }
     }
 }

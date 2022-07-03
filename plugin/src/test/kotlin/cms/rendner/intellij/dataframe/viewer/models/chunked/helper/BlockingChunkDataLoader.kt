@@ -18,24 +18,24 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.AbstractChunkConverter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AbstractChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
-import org.jsoup.nodes.Document
 import java.util.concurrent.Executor
 
 /**
  * Loads chunks of a pandas DataFrame synchronously (blocks the calling thread).
  *
  * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
- * @param chunkConverterFactory a factory to create custom chunk converters. A chunk converter is responsible
- * for providing the extracted css styling and values from the fetched HTML data.
+ * @param loadNewDataStructure flag to switch between old and new data structure.
+ * The old one is an HTML string which has to be parsed to extract the element and style information.
+ * The new one is an object which describes the required HTML properties - it is easier to process.
  */
 internal class BlockingChunkDataLoader(
     chunkEvaluator: IChunkEvaluator,
-    private val chunkConverterFactory: ((document: Document) -> AbstractChunkConverter)? = null,
+    loadNewDataStructure: Boolean,
 ) : Executor, AbstractChunkDataLoader(
-    chunkEvaluator
+    chunkEvaluator,
+    loadNewDataStructure,
 ) {
     override fun loadChunk(request: LoadRequest) {
         submitFetchChunkTask(request, this).whenComplete { _, throwable ->
@@ -57,10 +57,6 @@ internal class BlockingChunkDataLoader(
 
     override fun handleStyledValues(loadRequest: LoadRequest, chunkValues: ChunkValues) {
         myResultHandler?.onStyledValuesProcessed(loadRequest, chunkValues)
-    }
-
-    override fun createChunkConverter(document: Document): AbstractChunkConverter {
-        return chunkConverterFactory?.let { it(document) } ?: super.createChunkConverter(document)
     }
 
     override fun execute(command: Runnable) {

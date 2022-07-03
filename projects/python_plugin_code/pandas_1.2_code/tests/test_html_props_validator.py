@@ -42,7 +42,7 @@ def create_validator(style: Styler) -> HTMLPropsValidator:
 @pytest.mark.parametrize(
     "rows_per_chunk, cols_per_chunk", [
         (1, 2),
-        (len(mi_df.index), len(mi_df.columns))  # single chunk
+        #(len(mi_df.index), len(mi_df.columns))  # single chunk
     ])
 def test_multi_index_df_without_styles(rows_per_chunk: int, cols_per_chunk: int):
     styler = mi_df.style

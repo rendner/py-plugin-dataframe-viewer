@@ -1,0 +1,72 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "index_name",
+                "display_value": "char",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "index_name",
+                "display_value": "color",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "Z",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "green",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "4",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "10",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "Z",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "purple",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "5",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "11",
+                "css_props": null
+            }
+        ]
+    ]
+}

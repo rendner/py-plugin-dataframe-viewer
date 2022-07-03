@@ -195,26 +195,4 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
             assertThat(execDict.value).isEqualTo("13")
         }
     }
-
-    @Test
-    fun evaluateStringyfiedDict_shouldNotFailOnValuesWithComma() {
-        runWithPythonDebugger { valueEvaluator, _ ->
-            assertThat(
-                valueEvaluator.evaluateStringyfiedDict("{'a': 12, 'b': '123', 'c': ['a', 'b', 'c']}")
-            ).isEqualTo(
-                mapOf(Pair("a", "12"), Pair("b", "123"), Pair("c", "['a', 'b', 'c']"))
-            )
-        }
-    }
-
-    @Test
-    fun evaluateStringyfiedList_shouldNotFailOnValuesWithComma() {
-        runWithPythonDebugger { valueEvaluator, _ ->
-            assertThat(
-                valueEvaluator.evaluateStringyfiedList("[12, '123', ['a', 'b', 'c']]")
-            ).isEqualTo(
-                listOf("12", "123", "['a', 'b', 'c']")
-            )
-        }
-    }
 }

@@ -1,0 +1,557 @@
+{
+  "styles": {
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "color": "rgb(0, 0, 0)",
+    "textAlign": "start"
+  },
+  "type": "table",
+  "head": {
+    "styles": {
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "color": "rgb(0, 0, 0)",
+      "textAlign": "start"
+    },
+    "type": "thead",
+    "children": [
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "subject"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "Bob"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "Guido"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "Sue"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "type"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "HR"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "Temp"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "HR"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "Temp"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "HR"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "Temp"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "year"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "visit"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": ""
+          }
+        ]
+      }
+    ]
+  },
+  "body": {
+    "styles": {
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "color": "rgb(0, 0, 0)",
+      "textAlign": "start"
+    },
+    "type": "tbody",
+    "children": [
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "2013"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "1"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.500000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.300000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.500000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.100000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "1.200000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.200000"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "2"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.100000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.000000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.900000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-2.100000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.500000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "1.100000"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "2014"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "1"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.700000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.700000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.000000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.300000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.400000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.600000"
+          }
+        ]
+      },
+      {
+        "styles": {
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)",
+          "textAlign": "start"
+        },
+        "type": "tr",
+        "children": [
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "center"
+            },
+            "type": "th",
+            "text": "2"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.300000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.100000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-0.700000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.100000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "-1.500000"
+          },
+          {
+            "styles": {
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "color": "rgb(0, 0, 0)",
+              "textAlign": "start"
+            },
+            "type": "td",
+            "text": "0.500000"
+          }
+        ]
+      }
+    ]
+  }
+}

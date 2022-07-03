@@ -1,0 +1,28 @@
+{
+    "head": [
+    ],
+    "body": [
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "2",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.000000",
+                "css_props": {
+                    "background-color": "yellow"
+                }
+            }
+        ]
+    ]
+}

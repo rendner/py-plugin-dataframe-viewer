@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test
  * Tests that all provided methods can be called on Python side.
  * The functionality of the methods is tested in the Python plugin-code projects.
  */
-@Order(3)
+@Order(2)
 internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
@@ -108,6 +108,31 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
             assertThat(
                 it.evaluateRenderUnpatched()
             ).contains("<table", "</table>")
+        }
+    }
+
+    @Test
+    fun evaluateComputeChunkHTMLPropsTable_shouldBeCallable() {
+        runWithPatchedStyler {
+            assertThat(
+                it.evaluateComputeChunkHTMLPropsTable(
+                    0,
+                    0,
+                    2,
+                    2,
+                    excludeRowHeader = false,
+                    excludeColumnHeader = false,
+                )
+            ).matches { propsTable -> propsTable.head.isNotEmpty() && propsTable.body.isNotEmpty() }
+        }
+    }
+
+    @Test
+    fun evaluateComputeUnpatchedHTMLPropsTable_shouldBeCallable() {
+        runWithPatchedStyler {
+            assertThat(
+                it.evaluateComputeUnpatchedHTMLPropsTable()
+            ).matches { propsTable -> propsTable.head.isNotEmpty() && propsTable.body.isNotEmpty() }
         }
     }
 

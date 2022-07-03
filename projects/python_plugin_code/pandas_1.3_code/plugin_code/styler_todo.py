@@ -70,16 +70,21 @@ class StylerTodo:
 
     @staticmethod
     def _to_apply_args(todo: Tuple[Callable, tuple, dict]):
-        if getattr(todo[0], '__qualname__', '').startswith('Styler.applymap'):
+        if StylerTodo.is_applymap_tuple(todo):
             return ApplyMapArgs.from_tuple(todo[1])
         else:
             return ApplyArgs.from_tuple(todo[1])
 
-    def is_applymap_call(self) -> bool:
-        return isinstance(self.apply_args, ApplyMapArgs)
+    @classmethod
+    def is_applymap_tuple(cls, todo: Tuple[Callable, tuple, dict]):
+        return cls.__is_apply_map_func(todo[0])
 
-    def is_apply_call(self) -> bool:
-        return not self.is_applymap_call()
+    def is_applymap(self) -> bool:
+        return self.__is_apply_map_func(self.apply_func)
+
+    @staticmethod
+    def __is_apply_map_func(func: Callable) -> bool:
+        return getattr(func, '__qualname__', '').startswith('Styler.applymap')
 
     def is_pandas_style_func(self) -> bool:
         func = self.apply_args.style_func

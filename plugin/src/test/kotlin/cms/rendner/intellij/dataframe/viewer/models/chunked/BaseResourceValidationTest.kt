@@ -17,20 +17,31 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked
 
 import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
 import cms.rendner.intellij.dataframe.viewer.models.IDataFrameModel
+import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.BlockingChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.DataFrameTableImageWriter
+import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.createChunkFileEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.createExpectedFileEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.utils.iterateDataFrame
 import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCasePath
+import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCaseProperties
 import com.intellij.util.io.createDirectories
 import com.intellij.util.io.delete
 import com.intellij.util.io.exists
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.*
+
+data class ResourceTestContext(
+    val loadNewDataStructure: Boolean,
+    val expectedFileExtension: String,
+)
 
 /**
  * Requires:
@@ -45,8 +56,17 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
         errorImageSubDirName,
     )
 
-    data class TestCase(val dir: Path, val name: String) : Comparable<TestCase> {
-        override fun toString() = name
+    private val contextList = listOf(
+        ResourceTestContext(false,  "html"),
+        ResourceTestContext(true,  "json"),
+    )
+
+    protected val json: Json by lazy {
+        Json { ignoreUnknownKeys = true; prettyPrint = true }
+    }
+
+    data class TestCase(val dir: Path, val name: String, val context: ResourceTestContext) : Comparable<TestCase> {
+        override fun toString() = "$name (${context.expectedFileExtension})"
         override fun compareTo(other: TestCase): Int {
             return name.compareTo(other.name)
         }
@@ -61,20 +81,18 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
     }
 
     @Suppress("unused")
-    private fun getTestCases() = TestCaseCollector().collect(testCaseDir)
+    private fun getTestCases() = TestCaseCollector().collect(testCaseDir, contextList)
     //.filter { it.name.startsWith("pandas_1.1/") }
     //.filter { it.name.startsWith("pandas_1.3/hide_columns/columns") }
 
     @ParameterizedTest(name = "case: {0}")
     @MethodSource("getTestCases")
     fun testCollectedTestCases(testCase: TestCase) {
-        val properties = readTestProperties(testCase.dir)
-        val tableStructure = createTableStructure(properties)
-        val chunkSize = createChunkSize(properties)
+        val testCaseProperties = readTestCaseProperties(testCase.dir)
         testCollectedTestCase(
             testCase,
-            tableStructure,
-            chunkSize,
+            testCaseProperties.tableStructure,
+            ChunkSize(testCaseProperties.rowsPerChunk, testCaseProperties.colsPerChunk),
         )
     }
 
@@ -91,31 +109,14 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
         )
     }
 
-    private fun readTestProperties(testCaseDir: Path): Properties {
-        return Files.newInputStream(TestCasePath.resolveTestPropertiesFile(testCaseDir)).use {
-            Properties().apply { load(it) }
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun readTestCaseProperties(testCaseDir: Path): TestCaseProperties {
+        return Files.newBufferedReader(TestCasePath.resolveTestCasePropertiesFile(testCaseDir)).use {
+            json.decodeFromString(it.readText())
         }
     }
 
-    private fun createTableStructure(properties: Properties): TableStructure {
-        return TableStructure(
-            rowsCount = properties.getProperty("rowsCount").toInt(),
-            columnsCount = properties.getProperty("columnsCount").toInt(),
-            rowLevelsCount = properties.getProperty("rowLevelsCount").toInt(),
-            columnLevelsCount = properties.getProperty("columnLevelsCount").toInt(),
-            hideRowHeader = properties.getProperty("hideRowHeader")!!.toBoolean(),
-            hideColumnHeader = properties.getProperty("hideColumnHeader")!!.toBoolean()
-        )
-    }
-
-    private fun createChunkSize(properties: Properties): ChunkSize {
-        return ChunkSize(
-            properties.getProperty("rowsPerChunk").toInt(),
-            properties.getProperty("columnsPerChunk").toInt()
-        )
-    }
-
-    protected fun createDataFrameModel(
+    private fun createDataFrameModel(
         tableStructure: TableStructure,
         chunkLoader: IChunkDataLoader,
         chunkSize: ChunkSize,
@@ -123,6 +124,38 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
         return ChunkedDataFrameModel(tableStructure, chunkLoader, chunkSize).also {
             preloadTableValues(it, tableStructure, chunkSize)
         }
+    }
+
+    protected fun createExpectedModel(testCase: TestCase, tableStructure: TableStructure): IDataFrameModel {
+        val ctx = testCase.context
+        return createDataFrameModel(
+            tableStructure,
+            BlockingChunkDataLoader(
+                createExpectedFileEvaluator(
+                    TestCasePath.resolveExpectedResultFile(
+                        testCase.dir,
+                        ctx.expectedFileExtension
+                    )
+                ),
+                testCase.context.loadNewDataStructure,
+            ),
+            ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount),
+        )
+    }
+
+    protected fun createChunkedModel(
+        testCase: TestCase,
+        tableStructure: TableStructure,
+        chunkSize: ChunkSize
+    ): IDataFrameModel {
+        return createDataFrameModel(
+            tableStructure,
+            BlockingChunkDataLoader(
+                createChunkFileEvaluator(testCase.dir),
+                testCase.context.loadNewDataStructure,
+            ),
+            chunkSize,
+        )
     }
 
     private fun preloadTableValues(
@@ -140,23 +173,26 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
 
     class TestCaseCollector {
 
-        fun collect(baseDir: Path): List<TestCase> {
-            val finder = MyTestCaseVisitor(baseDir)
+        fun collect(baseDir: Path, contextList: List<ResourceTestContext>): List<TestCase> {
+            val finder = MyTestCaseVisitor(baseDir, contextList)
             Files.walkFileTree(baseDir, finder)
             return finder.testCases.sortedWith(naturalOrder())
         }
 
-        private class MyTestCaseVisitor(baseDir: Path) : SimpleFileVisitor<Path>() {
+        private class MyTestCaseVisitor(baseDir: Path, private val contextList: List<ResourceTestContext>) : SimpleFileVisitor<Path>() {
             val testCases = mutableListOf<TestCase>()
             val baseDirNameCount = baseDir.nameCount
             override fun preVisitDirectory(dir: Path?, attrs: BasicFileAttributes?): FileVisitResult {
-                if (dir != null && Files.exists(TestCasePath.resolveTestPropertiesFile(dir))) {
-                    testCases.add(
-                        TestCase(
-                            dir,
-                            dir.subpath(baseDirNameCount, dir.nameCount).toString()
+                if (dir != null && Files.exists(TestCasePath.resolveTestCasePropertiesFile(dir))) {
+                    contextList.forEach {
+                        testCases.add(
+                            TestCase(
+                                dir,
+                                dir.subpath(baseDirNameCount, dir.nameCount).toString(),
+                                it,
+                            )
                         )
-                    )
+                    }
                     return FileVisitResult.SKIP_SUBTREE
                 }
                 return FileVisitResult.CONTINUE

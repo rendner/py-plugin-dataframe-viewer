@@ -16,9 +16,6 @@
 package cms.rendner.intellij.dataframe.viewer.python.debugger
 
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
-import cms.rendner.intellij.dataframe.viewer.python.utils.parsePythonDictionary
-import cms.rendner.intellij.dataframe.viewer.python.utils.parsePythonList
-import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyMethodCall
 import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyString
 
 /**
@@ -82,52 +79,4 @@ interface IPluginPyValueEvaluator {
      */
     @Throws(EvaluateException::class)
     fun execute(statements: String)
-
-    /**
-     * Stringifies a Python dict, by using the provided stringify methods, and returns a map of the extracted elements.
-     *
-     * @param dictRefExpr a Python expression referring to the dict to evaluate
-     * @param stringifyValueFuncRef a Python function to stringify all dict values, default is "str"
-     * @param stringifyValueFuncRef a Python function to stringify all dict keys, default is "str"
-     * @return a map of the extracted elements. The surrounding quotes are already removed from the extracted
-     * keys and values.
-     */
-    fun evaluateStringyfiedDict(
-        dictRefExpr: String,
-        stringifyValueFuncRef: String = "str",
-        stringifyKeyFuncRef: String = "str",
-    ): Map<String, String> {
-        val delimiter = "_@@::@@_"
-        return parsePythonDictionary(
-            "{${
-                evaluate(
-                    stringifyMethodCall(stringifyString(delimiter), "join") {
-                        refParam("[f'{$stringifyKeyFuncRef(k)}:{$stringifyValueFuncRef(v)}' for k, v in $dictRefExpr.items()]")
-                    }
-                ).forcedValue
-            }}",
-            delimiter,
-        )
-    }
-
-    /**
-     * Stringifies a Python list, by using the provided stringify methods, and returns a list of the extracted elements.
-     *
-     * @param listRefExpr a Python expression referring to the list to evaluate
-     * @param stringifyValueFuncRef a Python function to stringify all list values, default is "str"
-     * @return a list of the extracted elements. The surrounding quotes are already removed from the extracted values.
-     */
-    fun evaluateStringyfiedList(listRefExpr: String, stringifyValueFuncRef: String = "str"): List<String> {
-        val delimiter = "_@@::@@_"
-        return parsePythonList(
-            "[${
-                evaluate(
-                    stringifyMethodCall(stringifyString(delimiter), "join") {
-                        refParam("map($stringifyValueFuncRef, $listRefExpr)")
-                    }
-                ).forcedValue
-            }]",
-            delimiter,
-        )
-    }
 }

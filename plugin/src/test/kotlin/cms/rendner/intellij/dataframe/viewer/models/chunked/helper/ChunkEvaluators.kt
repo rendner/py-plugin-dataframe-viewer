@@ -17,24 +17,31 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.bridge.HTMLPropsTable
 import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCasePath
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
 
+private val json: Json by lazy {
+    Json { ignoreUnknownKeys = true }
+}
 
-fun createHTMLFileEvaluator(
+fun createExpectedFileEvaluator(
     filePath: Path,
 ): IChunkEvaluator {
-    return HTMLFileEvaluator(filePath)
+    return ExpectedFileEvaluator(filePath)
 }
 
-fun createHTMLChunksEvaluator(
+fun createChunkFileEvaluator(
     testCaseDir: Path,
 ): IChunkEvaluator {
-    return HTMLChunkFileEvaluator(testCaseDir)
+    return ChunkFileEvaluator(testCaseDir)
 }
 
-private class HTMLChunkFileEvaluator(
+private class ChunkFileEvaluator(
     private val testCaseDir: Path,
 ) : IChunkEvaluator {
 
@@ -44,15 +51,29 @@ private class HTMLChunkFileEvaluator(
         excludeColumnHeaders: Boolean
     ): String {
         val file = chunkRegion.let {
-            TestCasePath.resolveChunkResultFile(testCaseDir, it.firstRow, it.firstColumn)
+            TestCasePath.resolveChunkResultFile(testCaseDir, it.firstRow, it.firstColumn, "html")
         }
         return Files.newBufferedReader(file).use {
             it.readText()
         }
     }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    override fun evaluateHTMLProps(
+        chunkRegion: ChunkRegion,
+        excludeRowHeaders: Boolean,
+        excludeColumnHeaders: Boolean
+    ): HTMLPropsTable {
+        val file = chunkRegion.let {
+            TestCasePath.resolveChunkResultFile(testCaseDir, it.firstRow, it.firstColumn, "json")
+        }
+        return Files.newBufferedReader(file).use {
+            json.decodeFromString(it.readText())
+        }
+    }
 }
 
-private class HTMLFileEvaluator(
+private class ExpectedFileEvaluator(
     private val filePath: Path,
 ) : IChunkEvaluator {
 
@@ -63,6 +84,17 @@ private class HTMLFileEvaluator(
     ): String {
         return Files.newBufferedReader(filePath).use {
             it.readText()
+        }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    override fun evaluateHTMLProps(
+        chunkRegion: ChunkRegion,
+        excludeRowHeaders: Boolean,
+        excludeColumnHeaders: Boolean
+    ): HTMLPropsTable {
+        return Files.newBufferedReader(filePath).use {
+            json.decodeFromString(it.readText())
         }
     }
 }

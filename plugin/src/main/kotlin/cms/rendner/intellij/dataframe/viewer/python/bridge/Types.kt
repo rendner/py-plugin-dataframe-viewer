@@ -21,6 +21,8 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunct
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import com.intellij.openapi.Disposable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 data class PandasVersion(val major: Int, val minor: Int, val patch: String = "") {
     companion object {
@@ -122,6 +124,38 @@ interface IPyPatchedStylerRef : Disposable {
     ): String
 
     /**
+     * Calls the "compute_chunk_html_props_table" method of the Python class "PatchedStyler".
+     *
+     * @param firstRow index of the first row of the chunk
+     * @param firstColumn index of the first column of the chunk
+     * @param numberOfRows number of rows in the chunk
+     * @param numberOfColumns number of columns in the chunk
+     * @param excludeRowHeader hides the row headers before creating the html string
+     * @param excludeColumnHeader hides the column headers before creating the html string
+     * @return returns the html props of the chunk.
+     * @throws EvaluateException in case the evaluation fails.
+     */
+    @Throws(EvaluateException::class)
+    fun evaluateComputeChunkHTMLPropsTable(
+        firstRow: Int,
+        firstColumn: Int,
+        numberOfRows: Int,
+        numberOfColumns: Int,
+        excludeRowHeader: Boolean,
+        excludeColumnHeader: Boolean
+    ): HTMLPropsTable
+
+    /**
+     * Calls the "compute_unpatched_html_props_table" method of the Python class "PatchedStyler".
+     * This method is only used to dump small DataFrames to generate test data and during integration tests.
+     *
+     * @return returns the unpatched html props of the underling DataFrame.
+     * @throws EvaluateException in case the evaluation fails.
+     */
+    @Throws(EvaluateException::class)
+    fun evaluateComputeUnpatchedHTMLPropsTable(): HTMLPropsTable
+
+    /**
      * Calls the "render_unpatched" method of the Python class "PatchedStyler".
      * This method is only used to dump small DataFrames to generate test data and during integration tests.
      *
@@ -132,4 +166,63 @@ interface IPyPatchedStylerRef : Disposable {
      */
     @Throws(EvaluateException::class)
     fun evaluateRenderUnpatched(): String
+}
+
+/**
+ * The HTML properties of a DataFrame or chunk.
+ *
+ * @param head the columns of a DataFrame. In case of multiindex the list contains more than one row of columns.
+ * @param body the values and row headers of a DataFrame.
+ */
+@Serializable
+data class HTMLPropsTable(val head: List<List<HTMLPropsRowElement>>, val body: List<List<HTMLPropsRowElement>>)
+
+/**
+ * Table header or table data element.
+ *
+ * @param type indicates if a header or data.
+ * @param kind describes what kind of element. Mostly used to describe the type of header.
+ * @param displayValue the value displayed by the element.
+ * @param cssProps the styling of the value.
+ */
+@Serializable
+data class HTMLPropsRowElement(
+    val type: RowElementType,
+    val kind: RowElementKind,
+    @SerialName("display_value") val displayValue: String,
+    @SerialName("css_props") val cssProps: Map<String, String>?,
+)
+
+@Serializable
+enum class RowElementType {
+    @SerialName("th") TH,
+    @SerialName("td") TD,
+}
+
+@Serializable
+enum class RowElementKind {
+    /**
+     * An empty table header, used for leading empty cells to align columns.
+     */
+    @SerialName("blank") BLANK,
+
+    /**
+     * A table header which contains the name of an index.
+     */
+    @SerialName("index_name") INDEX_NAME,
+
+    /**
+     * A table header which contains the name of a column.
+     */
+    @SerialName("col_heading") COL_HEADING,
+
+    /**
+     * A table header which contains the name of a row header.
+     */
+    @SerialName("row_heading") ROW_HEADING,
+
+    /**
+     * Placeholder value for all other kinds.
+     */
+    @SerialName("") UNKNOWN,
 }

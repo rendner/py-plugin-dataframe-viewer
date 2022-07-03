@@ -52,22 +52,28 @@ Running the `export_data/main.py` via the PyCharm debugger, started from the plu
 The following files are created for each pandas `Styler` instance listed in `export_test_data`:
 - `expected.html`
     - contains the HTML as returned by pandas `Styler.render()`
+- `expected.json`
+    - contains the HTML props (simplified data structure)
 - multiple `r<X>_c<Y>.html` files
-    - each one contains one chunk as fetched by the plugin
+    - each one contains the HTML of one chunk as fetched by the plugin
     - `<X>` index of first row of the chunk
     - `<Y>` index of first column of the chunk
-- `test.properties`
-    - contains some required information about the structure of the `DataFrame` represented by the HTML files
+- multiple `r<X>_c<Y>.json` files
+    - each one contains the HTML props of one chunk as fetched by the plugin
+    - `<X>` index of first row of the chunk
+    - `<Y>` index of first column of the chunk
+- `testCaseProperties.json`
+    - contains some required information about the structure of the `DataFrame` represented to process the generated files
 
 ### Directory: export_data/parsing
 The directory `export_data/parsing`contains pre-configured styled DataFrames which are automatically picked up the code when running the `export_data/main.py` file.
 
 A test file has to specify a dictionary named `test_case` with the following two keys:
 
-| key        | purpose                                                 |
-|:-----------|:--------------------------------------------------------|
-| styler     | The styler to dump. Used to generate test data from it. |
-| chunk_size | The chunk size to use when dumping the `styler`.        |
+| key           | purpose                                                                                                   |
+|:--------------|:----------------------------------------------------------------------------------------------------------|
+| create_styler | A parameterless function to create a new (configured) styler to dump. Used to generate test data from it. |
+| chunk_size    | The chunk size to use when dumping the `styler`.                                                          |
 
 Nearly all tests specify small styled `DataFrames`, because the generated data is used to validate if the HTML can be parsed and is combined correctly.
 

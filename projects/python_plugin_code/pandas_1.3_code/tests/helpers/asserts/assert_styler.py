@@ -16,6 +16,8 @@ from typing import Callable
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
+from tests.helpers.asserts.assert_html_string_values_with_html_props_values import \
+    assert_html_string_values_with_html_props_values
 from tests.helpers.asserts.assert_styler_html_props import create_and_assert_patched_styler_html_props
 from tests.helpers.asserts.assert_styler_html_string import create_and_assert_patched_styler_html_string
 
@@ -28,3 +30,4 @@ def create_and_assert_patched_styler(
 ):
     create_and_assert_patched_styler_html_props(df, init_styler_func, rows_per_chunk, cols_per_chunk)
     create_and_assert_patched_styler_html_string(df, init_styler_func, rows_per_chunk, cols_per_chunk)
+    assert_html_string_values_with_html_props_values(df, init_styler_func, rows_per_chunk, cols_per_chunk)
