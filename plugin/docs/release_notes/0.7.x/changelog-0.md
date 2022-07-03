@@ -28,7 +28,7 @@ June 2022
 Since the plugin generates the rendered output of a `DataFrame` chunk-wise, custom styling functions have to handle chunks correctly.
 You can read more about it here: [The Problem](./../../../../README.md#the-problem) 
 
-Ensuring that custom functions, registered via `Styler.apply` or `Styler.applymap`, work properly can be time-consuming and in some cases very cumbersome. 
+Ensuring that custom functions, registered via `Styler.apply`, work properly can be time-consuming and in some cases very cumbersome. 
 The plugin now offers the possibility to validate styling functions automatically in the background.
 
 The feature is currently in experimental status. Please let me know if anything is not working, feedback of any kind is welcome.
