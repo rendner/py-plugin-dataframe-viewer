@@ -61,11 +61,7 @@ class AsyncChunkDataLoader(
     private var myActiveRequest: LoadRequest? = null
     private val myPendingRequests: Deque<LoadRequest> = ArrayDeque()
     private val myExecutorService = Executors.newFixedThreadPool(2)
-    private var myMaxWaitingRequests: Int = 4
-
-    fun setMaxWaitingRequests(value: Int) {
-        myMaxWaitingRequests = value
-    }
+    private var myMaxWaitingRequests: Int = 8
 
     override fun isAlive() = myIsAliveFlag
 
@@ -76,8 +72,6 @@ class AsyncChunkDataLoader(
      *
      * Since the internal waiting queue has a limited capacity, the oldest waiting request
      * is dropped unprocessed as this limit exceeds to free space for the new one.
-     *
-     * The capacity of the internal waiting queue can be configured by using [setMaxWaitingRequests].
      *
      * Adding a load request with the same [ChunkRegion] as a previous added one:
      * - before the previous one is processed, will remove the old one unprocessed and add the new one

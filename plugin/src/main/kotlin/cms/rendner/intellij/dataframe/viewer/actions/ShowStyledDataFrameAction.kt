@@ -73,10 +73,8 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         if (project.isDisposed) return
         val frameOrStyler = getFrameOrStyler(event)
         if (frameOrStyler !== null) {
-            val settings = ApplicationSettingsService.instance.state
             val dialog = MyDialog(project)
-            // note: dialog doesn't sync on settings user has to re-open the dialog after the settings were changed
-            dialog.createModelFrom(frameOrStyler, settings.validationStrategyType, settings.fsLoadNewDataStructure)
+            dialog.createModelFrom(frameOrStyler)
             dialog.show()
         }
     }
@@ -120,21 +118,15 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             init()
         }
 
-        fun createModelFrom(
-            frameOrStyler: PyDebugValue,
-            validationStrategyType: ValidationStrategyType,
-            loadNewDataStructure: Boolean,
-        ) {
-            BackgroundTaskUtil.executeOnPooledThread(myParentDisposable) {
+        fun createModelFrom(frameOrStyler: PyDebugValue) {
+            BackgroundTaskUtil.executeOnPooledThread(disposable) {
                 var patchedStyler: IPyPatchedStylerRef? = null
                 var model: IDataFrameModel? = null
                 try {
-                    val pythonBridge = PythonCodeBridge()
-                    patchedStyler = pythonBridge.createPatchedStyler(
-                        frameOrStyler.toPluginType()
-                    )
-
-                    model = createChunkedModel(patchedStyler, validationStrategyType, loadNewDataStructure)
+                    patchedStyler = PythonCodeBridge().createPatchedStyler(frameOrStyler.toPluginType())
+                    val settings = ApplicationSettingsService.instance.state
+                    // note: model doesn't sync on settings, user has to re-open the dialog after settings were changed
+                    model = createChunkedModel(patchedStyler, settings)
 
                     ApplicationManager.getApplication().invokeLater {
                         if (!isDisposed) {
@@ -147,6 +139,8 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                         }
                     }
                 } catch (ex: Exception) {
+                    patchedStyler?.dispose()
+                    model?.dispose()
                     logger.error("Creating DataFrame model failed", ex)
 
                     ErrorNotification(
@@ -155,9 +149,6 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                         ex.localizedMessage,
                         ex
                     ).notify(project)
-
-                    patchedStyler?.dispose()
-                    model?.dispose()
                 }
             }
         }
@@ -184,16 +175,14 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
 
         private fun createChunkedModel(
             patchedStyler: IPyPatchedStylerRef,
-            validationStrategyType: ValidationStrategyType,
-            loadNewDataStructure: Boolean,
+            settings: ApplicationSettingsService.MyState,
         ): IDataFrameModel {
             val loader = AsyncChunkDataLoader(
                 ChunkEvaluator(patchedStyler),
-                loadNewDataStructure,
-                createChunkValidator(patchedStyler, validationStrategyType),
+                settings.fsLoadNewDataStructure,
+                createChunkValidator(patchedStyler, settings.validationStrategyType),
                 this,
             )
-            loader.setMaxWaitingRequests(8)
             return ChunkedDataFrameModel(
                 patchedStyler.evaluateTableStructure(),
                 loader,

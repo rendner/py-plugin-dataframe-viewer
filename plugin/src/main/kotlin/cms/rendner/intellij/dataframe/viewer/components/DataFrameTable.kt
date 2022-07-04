@@ -62,8 +62,8 @@ class DataFrameTable : JScrollPane() {
         minimumSize = Dimension(MIN_TABLE_WIDTH, 250)
     }
 
-    fun setDataFrameModel(dateFrameModel: IDataFrameModel) {
-        myValueTable.setModel(dateFrameModel.getValueDataModel())
+    fun setDataFrameModel(dataFrameModel: IDataFrameModel) {
+        myValueTable.setModel(dataFrameModel.getValueDataModel())
         myValueTable.model?.let {
             if (it.shouldHideHeaders()) {
                 setColumnHeaderView(null)
@@ -72,7 +72,7 @@ class DataFrameTable : JScrollPane() {
             }
         }
 
-        myIndexTable.setModel(dateFrameModel.getIndexDataModel())
+        myIndexTable.setModel(dataFrameModel.getIndexDataModel())
         myIndexTable.model?.let {
             if (it.columnCount == 0) {
                 setRowHeaderView(null)
