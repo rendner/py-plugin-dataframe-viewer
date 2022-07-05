@@ -24,6 +24,7 @@ import com.intellij.openapi.util.text.StringUtil
 import java.awt.Dimension
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import java.lang.Integer.min
 import javax.swing.JOptionPane
 
 /**
@@ -67,13 +68,17 @@ class ErrorNotification(
         private val throwable: Throwable,
     ) : AnAction("Show Error"), DumbAware {
         override fun actionPerformed(event: AnActionEvent) {
+            val message = StringUtil.escapeXmlEntities(throwable.stackTraceToString())
             showHtmlMessageDialog(
                 event.project,
-                "<html><h3>$content</h3><pre>${StringUtil.escapeXmlEntities(throwable.stackTraceToString())}</pre></html>",
+                "<html><h3>$content</h3><pre style='font-size: 11px'>$message</pre> </html>",
                 title,
                 JOptionPane.ERROR_MESSAGE,
             ) { messageScrollPane ->
-                messageScrollPane.preferredSize = Dimension(messageScrollPane.preferredSize.width, 250)
+                messageScrollPane.preferredSize = Dimension(
+                    min(800, messageScrollPane.preferredSize.width),
+                    250,
+                )
             }
         }
     }

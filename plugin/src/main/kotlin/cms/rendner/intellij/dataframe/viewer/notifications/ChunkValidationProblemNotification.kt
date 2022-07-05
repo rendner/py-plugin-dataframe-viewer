@@ -29,6 +29,7 @@ import com.intellij.openapi.util.text.StringUtil
 import java.awt.Dimension
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import java.lang.Integer.min
 import javax.swing.JOptionPane
 
 /**
@@ -85,7 +86,10 @@ class ChunkValidationProblemNotification(
                 "Chunk Validation Report",
                 JOptionPane.INFORMATION_MESSAGE,
             ) { messageScrollPane ->
-                messageScrollPane.preferredSize = Dimension(messageScrollPane.preferredSize.width, 250)
+                messageScrollPane.preferredSize = Dimension(
+                    min(800, messageScrollPane.preferredSize.width),
+                    250,
+                )
             }
         }
     }
