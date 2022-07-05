@@ -5,11 +5,11 @@ import java.io.ByteArrayOutputStream
 plugins {
     id("idea")
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.4.0"
+    id("org.jetbrains.intellij") version "1.6.0"
     // Kotlin JVM plugin to add support for Kotlin
     // https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library
-    kotlin("jvm") version "1.4.0" // provided by 2020.3
-    kotlin("plugin.serialization") version "1.4.0"
+    kotlin("jvm") version "1.5.20"
+    kotlin("plugin.serialization") version "1.5.20"
 }
 
 group = "cms.rendner.intellij"
@@ -20,14 +20,10 @@ repositories {
 }
 
 dependencies {
-    // is provided by the intellij instance which runs the plugin
-    compileOnly(kotlin("stdlib"))
-
     implementation("org.jsoup:jsoup:1.15.1")
     implementation("net.sourceforge.cssparser:cssparser:0.9.29")
     implementation("org.beryx:awt-color-factory:1.0.2")
-    // latest usable version for kotlin version 1.4.0
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
     // https://github.com/junit-team/junit5-samples/blob/r5.8.2/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
     testImplementation(platform("org.junit:junit-bom:5.8.2"))
@@ -338,7 +334,8 @@ tasks {
             "idea.log.debug.categories",
             "#cms.rendner",
         )
-        // systemProperty("PYCHARM_DEBUG", "True")
+        // environment["PYCHARM_DEBUG"] = "True"
+        // environment["PYDEV_DEBUG"] = "True"
         // ideDir.set(File("/snap/intellij-idea-community/current"))
     }
 
