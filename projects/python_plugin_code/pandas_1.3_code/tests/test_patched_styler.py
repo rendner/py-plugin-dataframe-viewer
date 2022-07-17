@@ -14,7 +14,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from pandas import MultiIndex, DataFrame, Series
+from pandas import MultiIndex, DataFrame
 
 from plugin_code.patched_styler import PatchedStyler, TableStructure, StyleFunctionDetails
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler

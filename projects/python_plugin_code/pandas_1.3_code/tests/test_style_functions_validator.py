@@ -37,7 +37,7 @@ df = DataFrame.from_dict({
 
 
 def _create_validator(style: Styler, validation_strategy_type: ValidationStrategyType) -> StyleFunctionsValidator:
-    validator = PatchedStyler(style)._PatchedStyler__style_functions_validator
+    validator = StyleFunctionsValidator(PatchedStyler(style).get_context())
     validator.set_validation_strategy_type(validation_strategy_type)
     return validator
 
