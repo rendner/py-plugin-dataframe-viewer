@@ -257,6 +257,10 @@ internal class ChunkedDataFrameModelTest {
             }
         }
 
+        override fun setSortCriteria(sortCriteria: SortCriteria) {
+            NotImplementedError("Sorting isn't support by this implementation.")
+        }
+
         override fun setResultHandler(resultHandler: IChunkDataResultHandler) {
             this.resultHandler = resultHandler
         }

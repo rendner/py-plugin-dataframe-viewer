@@ -20,6 +20,11 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.events.ChunkTableMod
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataResultHandler
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
+import java.awt.Rectangle
+import java.lang.Integer.min
+import javax.swing.RowSorter.SortKey
+import javax.swing.SortOrder
+import javax.swing.SwingUtilities
 import javax.swing.table.AbstractTableModel
 
 /**
@@ -34,41 +39,70 @@ class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
-) : IDataFrameModel, IChunkDataResultHandler {
+) : IDataFrameModel, IExternalSortableDataFrameModel, IChunkDataResultHandler {
 
     private val myValueModel = ValueModel(this)
     private val myIndexModel = IndexModel(this)
 
     /**
-     * Access is only allowed from event dispatch thread.
+     * The successfully loaded cell values.
      */
     private val myFetchedChunkValues: MutableMap<ChunkRegion, IChunkValues> = HashMap()
 
     /**
-     * Access is only allowed from event dispatch thread.
+     * The successfully loaded row headers.
      */
     private val myFetchedChunkRowHeaderLabels: MutableMap<Int, List<IHeaderLabel>> = HashMap()
 
     /**
-     * Access is only allowed from event dispatch thread.
+     * The successfully loaded column headers.
      */
     private val myFetchedChunkColumnHeaderLabels: MutableMap<Int, List<IHeaderLabel>> = HashMap()
 
     /**
-     * Access is only allowed from event dispatch thread.
+     * The successfully loaded legend headers.
      */
     private var myFetchedLegendHeaders: LegendHeaders? = null
 
     /**
-     * Access is only allowed from event dispatch thread.
+     * Tracks all regions which couldn't be loaded because of an error.
      */
     private val myFailedChunks: MutableSet<ChunkRegion> = HashSet()
 
+    /**
+     * Tracks all pending load requests, to send only one request per chunk region.
+     */
+    private val myPendingChunks: MutableSet<ChunkRegion> = HashSet()
+
+    /**
+     * Dummy label for the not yet loaded header.
+     */
     private val myNotYetLoadedHeaderLabel = HeaderLabel(EMPTY_TABLE_HEADER_VALUE)
+
+    /**
+     * Dummy label for the not yet loaded leveled-header.
+     */
     private val myNotYetLoadedLeveledHeaderLabel = LeveledHeaderLabel(EMPTY_TABLE_HEADER_VALUE)
+
+    /**
+     * Dummy label for the not yet loaded legend-headers.
+     */
     private val myNotYetLoadedLegendHeaders: LegendHeaders
+
+    /**
+     * Dummy label for the not yet loaded cell values.
+     */
     private val myNotYetLoadedValue = StringValue("")
+
+    /**
+     * Dummy values for the not yet loaded cell values of a chunk region.
+     */
     private val myNotYetLoadedChunkValues = ChunkValuesPlaceholder(myNotYetLoadedValue)
+
+    /**
+     * Tracks the region of rejected load requests, to re-request the loading at a later time.
+     */
+    private var myRejectedChunkRegions = Rectangle()
 
     private var disposed: Boolean = false
 
@@ -81,11 +115,34 @@ class ChunkedDataFrameModel(
         )
     }
 
+    override fun setSortKeys(sortKeys: List<SortKey>) {
+        val sortCriteria = sortKeys.fold(MutableSortCriteria()) { criteria, sortKey ->
+            criteria.byIndex.add(sortKey.column)
+            criteria.ascending.add(sortKey.sortOrder == SortOrder.ASCENDING)
+            criteria
+        }.toSortCriteria()
+        chunkDataLoader.setSortCriteria(sortCriteria)
+        clearAllFetchedData()
+    }
+
+    private fun clearAllFetchedData() {
+        // "myPendingRequests" don't have to be cleared
+        myFailedChunks.clear()
+        myFetchedChunkValues.clear()
+        myFetchedChunkRowHeaderLabels.clear()
+
+        val chunkRegion = ChunkRegion(0, 0, tableStructure.rowsCount, tableStructure.columnsCount)
+        fireIndexModelValuesUpdated(chunkRegion)
+        fireValueModelValuesUpdated(chunkRegion)
+    }
+
     override fun dispose() {
         if (!disposed) {
             disposed = true
+            // todo: should we dispose it or is this under control of the Disposer?? (maybe update class comment if we change it)
             chunkDataLoader.dispose()
             myFailedChunks.clear()
+            myPendingChunks.clear()
             myFetchedChunkValues.clear()
             myFetchedChunkRowHeaderLabels.clear()
             myFetchedChunkColumnHeaderLabels.clear()
@@ -177,11 +234,14 @@ class ChunkedDataFrameModel(
     private fun getOrFetchChunk(chunkRegion: ChunkRegion): IChunkValues {
         val values = myFetchedChunkValues[chunkRegion]
 
-        if (values != null) {
-            return values
-        }
+        if (values != null) return values
 
-        if (!disposed && chunkDataLoader.isAlive() && !myFailedChunks.contains(chunkRegion)) {
+        if (!disposed
+            && chunkDataLoader.isAlive()
+            && !myPendingChunks.contains(chunkRegion)
+            && !myFailedChunks.contains(chunkRegion)
+        ) {
+            myPendingChunks.add(chunkRegion)
             chunkDataLoader.loadChunk(
                 LoadRequest(
                     chunkRegion,
@@ -190,13 +250,14 @@ class ChunkedDataFrameModel(
                 )
             )
         }
-
         return myNotYetLoadedChunkValues
     }
 
     override fun onChunkLoaded(request: LoadRequest, chunkData: ChunkData) {
         if (disposed) return
         val chunkRegion = request.chunkRegion
+
+        myPendingChunks.remove(chunkRegion)
 
         if (myFetchedLegendHeaders == null) {
             myFetchedLegendHeaders = chunkData.headerLabels.legend
@@ -207,20 +268,14 @@ class ChunkedDataFrameModel(
         if (!myFetchedChunkColumnHeaderLabels.containsKey(chunkRegion.firstColumn)) {
             myFetchedChunkColumnHeaderLabels[chunkRegion.firstColumn] = chunkData.headerLabels.columns
             if (chunkData.headerLabels.columns.isNotEmpty()) {
-                fireValueModelHeadersUpdated(
-                    chunkRegion.firstColumn,
-                    chunkRegion.firstColumn + chunkData.headerLabels.columns.size - 1,
-                )
+                fireValueModelHeadersUpdated(chunkRegion)
             }
         }
 
         if (!myFetchedChunkRowHeaderLabels.containsKey(chunkRegion.firstRow)) {
             myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] = chunkData.headerLabels.rows
             if (chunkData.headerLabels.rows.isNotEmpty()) {
-                fireIndexModelValuesUpdated(
-                    chunkRegion.firstRow,
-                    chunkRegion.firstRow + chunkData.headerLabels.rows.size - 1,
-                )
+                fireIndexModelValuesUpdated(chunkRegion)
             }
         }
         setChunkValues(chunkRegion, chunkData.values)
@@ -231,37 +286,87 @@ class ChunkedDataFrameModel(
         setChunkValues(request.chunkRegion, chunkValues)
     }
 
+    override fun onRequestRejected(request: LoadRequest, reason: IChunkDataResultHandler.RejectReason) {
+        myPendingChunks.remove(request.chunkRegion)
+        if (reason == IChunkDataResultHandler.RejectReason.TOO_MANY_PENDING_REQUESTS) {
+            val scheduleInvokeLater = myRejectedChunkRegions.isEmpty
+            // Create a union of all rejected requests to fire only one "fireValueModelValuesUpdated" event.
+            // This reduces the amount of fired events during scrolling over many rows/columns of a huge DataFrame.
+            //
+            // The union can include regions which were not rejected. For example when combining the first and last
+            // region of a DataFrame, the union includes all rows and columns of the whole DataFrame. This is OK,
+            // because the table only repaints the visible rows anc columns.
+            myRejectedChunkRegions = myRejectedChunkRegions.union(
+                Rectangle(
+                    request.chunkRegion.firstColumn,
+                    request.chunkRegion.firstRow,
+                    request.chunkRegion.numberOfColumns,
+                    request.chunkRegion.numberOfRows,
+                )
+            )
+            if (scheduleInvokeLater) {
+                SwingUtilities.invokeLater {
+                    // Repainting a chunk region which was rejected results in an implicit refetch of the chunk data.
+                    fireValueModelValuesUpdated(
+                        ChunkRegion(
+                            myRejectedChunkRegions.y,
+                            myRejectedChunkRegions.x,
+                            myRejectedChunkRegions.height,
+                            myRejectedChunkRegions.width,
+                        )
+                    )
+                    myRejectedChunkRegions = Rectangle()
+                }
+            }
+        }
+    }
+
     override fun onError(request: LoadRequest, throwable: Throwable) {
         if (disposed) return
+        myPendingChunks.remove(request.chunkRegion)
         myFailedChunks.add(request.chunkRegion)
     }
 
     private fun setChunkValues(chunkRegion: ChunkRegion, chunkValues: ChunkValues) {
         myFetchedChunkValues[chunkRegion] = chunkValues
-
-        fireValueModelValuesUpdated(
-            chunkRegion.firstRow,
-            chunkRegion.firstRow + chunkRegion.numberOfRows - 1,
-            chunkRegion.firstColumn,
-            chunkRegion.firstColumn + chunkRegion.numberOfColumns - 1,
-        )
+        fireValueModelValuesUpdated(chunkRegion)
     }
 
-    private fun fireValueModelValuesUpdated(firstRow: Int, lastRow: Int, firstColumn: Int, lastColumn: Int) {
+    private fun fireValueModelValuesUpdated(chunkRegion: ChunkRegion) {
+        if (tableStructure.rowsCount == 0 || tableStructure.columnsCount == 0) return
         myValueModel.fireTableChanged(
-            ChunkTableModelEvent.createValuesChanged(myValueModel, firstRow, lastRow, firstColumn, lastColumn)
+            ChunkTableModelEvent.createValuesChanged(
+                myValueModel,
+                chunkRegion.firstRow,
+                min(tableStructure.rowsCount - 1, chunkRegion.firstRow + chunkRegion.numberOfRows),
+                chunkRegion.firstColumn,
+                min(tableStructure.columnsCount - 1, chunkRegion.firstColumn + chunkRegion.numberOfColumns),
+            )
         )
     }
 
-    private fun fireIndexModelValuesUpdated(firstRow: Int, lastRow: Int) {
+    private fun fireIndexModelValuesUpdated(chunkRegion: ChunkRegion) {
+        if (tableStructure.rowsCount == 0 || tableStructure.columnsCount == 0) return
         myIndexModel.fireTableChanged(
-            ChunkTableModelEvent.createValuesChanged(myIndexModel, firstRow, lastRow, 0, 0)
+            ChunkTableModelEvent.createValuesChanged(
+                myIndexModel,
+                chunkRegion.firstRow,
+                min(tableStructure.rowsCount - 1, chunkRegion.firstRow + chunkRegion.numberOfRows),
+                0,
+                0,
+            )
         )
     }
 
-    private fun fireValueModelHeadersUpdated(firstColumn: Int, lastColumn: Int) {
+    private fun fireValueModelHeadersUpdated(chunkRegion: ChunkRegion) {
+        if (tableStructure.rowsCount == 0 || tableStructure.columnsCount == 0) return
+
         myValueModel.fireTableChanged(
-            ChunkTableModelEvent.createHeaderLabelsChanged(myValueModel, firstColumn, lastColumn)
+            ChunkTableModelEvent.createHeaderLabelsChanged(
+                myValueModel,
+                chunkRegion.firstColumn,
+                min(tableStructure.columnsCount - 1, chunkRegion.firstColumn + chunkRegion.numberOfColumns),
+            )
         )
     }
 

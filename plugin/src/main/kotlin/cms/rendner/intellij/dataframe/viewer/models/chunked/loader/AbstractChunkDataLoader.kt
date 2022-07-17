@@ -18,6 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.ChunkConverter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.htmlprops.HTMLPropsChunkConverter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
@@ -57,6 +58,8 @@ abstract class AbstractChunkDataLoader(
 
     protected var myResultHandler: IChunkDataResultHandler? = null
 
+    protected data class LoadChunkContext(val request: LoadRequest, val sortCriteria: SortCriteria? = null)
+
     override fun setResultHandler(resultHandler: IChunkDataResultHandler) {
         myResultHandler = resultHandler
     }
@@ -67,34 +70,43 @@ abstract class AbstractChunkDataLoader(
      * The created task is able to run on a single thread, two threads are optimal.
      * Using more than two threads can't speed up the processing.
      *
-     * @param loadRequest the location of the data to fetch
+     * @param ctx the context, describes the sorting and the location of the data to fetch
      * @param executor to submit additional subtasks at execution time.
      * @return the fetch-chunk task.
      */
-    protected fun submitFetchChunkTask(loadRequest: LoadRequest, executor: Executor): CompletableFuture<Void> {
+    protected fun submitFetchChunkTask(ctx: LoadChunkContext, executor: Executor): CompletableFuture<Void> {
         return if (loadNewDataStructure) {
-            CompletableFuture.runAsync(createFetchAndValidateTask(loadRequest), executor)
+            CompletableFuture.runAsync(createFetchAndValidateTask(ctx), executor)
         } else {
             CompletableFuture
-                .supplyAsync(createFetchHtmlTaskOld(loadRequest), executor)
+                .supplyAsync(createFetchHtmlTaskOld(ctx), executor)
                 .thenCompose { html ->
                     val tasks = mutableListOf<CompletableFuture<Void>>()
-                    tasks.add(CompletableFuture.runAsync(createParseHtmlTaskOld(loadRequest, html), executor))
+                    tasks.add(CompletableFuture.runAsync(createParseHtmlTaskOld(ctx, html), executor))
                     chunkValidator?.let {
-                        tasks.add(CompletableFuture.runAsync(createValidateChunkTask(loadRequest), executor))
+                        tasks.add(CompletableFuture.runAsync(createValidateChunkTask(ctx.request), executor))
                     }
                     CompletableFuture.allOf(*tasks.toTypedArray())
                 }
         }
     }
 
-    private fun createFetchAndValidateTask(loadRequest: LoadRequest): Runnable {
+    private fun createFetchAndValidateTask(ctx: LoadChunkContext): Runnable {
         return Runnable {
+            try {
+                ctx.sortCriteria?.let { chunkEvaluator.setSortCriteria(it) }
+            } catch (throwable: Throwable) {
+                if (throwable is InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+                throw ChunkDataLoaderException("Setting sort criteria failed", throwable)
+            }
+
             val table = try {
                 chunkEvaluator.evaluateHTMLProps(
-                    loadRequest.chunkRegion,
-                    loadRequest.excludeRowHeaders,
-                    loadRequest.excludeColumnHeaders
+                    ctx.request.chunkRegion,
+                    ctx.request.excludeRowHeaders,
+                    ctx.request.excludeColumnHeaders
                 )
             } catch (throwable: Throwable) {
                 if (throwable is InterruptedException) {
@@ -106,10 +118,10 @@ abstract class AbstractChunkDataLoader(
             try {
                 val chunkData = HTMLPropsChunkConverter().extractData(
                     table,
-                    loadRequest.excludeRowHeaders,
-                    loadRequest.excludeColumnHeaders,
+                    ctx.request.excludeRowHeaders,
+                    ctx.request.excludeColumnHeaders,
                 )
-                handleChunkData(loadRequest, chunkData)
+                handleChunkData(ctx, chunkData)
             } catch (throwable: Throwable) {
                 if (throwable is InterruptedException) {
                     Thread.currentThread().interrupt()
@@ -119,7 +131,7 @@ abstract class AbstractChunkDataLoader(
 
             if (Thread.currentThread().isInterrupted) return@Runnable
             try {
-                chunkValidator?.validate(loadRequest.chunkRegion)
+                chunkValidator?.validate(ctx.request.chunkRegion)
             } catch (throwable: Throwable) {
                 if (throwable is InterruptedException) {
                     Thread.currentThread().interrupt()
@@ -129,13 +141,14 @@ abstract class AbstractChunkDataLoader(
         }
     }
 
-    private fun createFetchHtmlTaskOld(loadRequest: LoadRequest): Supplier<String> {
+    private fun createFetchHtmlTaskOld(ctx: LoadChunkContext): Supplier<String> {
         return Supplier {
             try {
+                ctx.sortCriteria?.let { chunkEvaluator.setSortCriteria(it) }
                 chunkEvaluator.evaluate(
-                    loadRequest.chunkRegion,
-                    loadRequest.excludeRowHeaders,
-                    loadRequest.excludeColumnHeaders
+                    ctx.request.chunkRegion,
+                    ctx.request.excludeRowHeaders,
+                    ctx.request.excludeColumnHeaders
                 )
             } catch (throwable: Throwable) {
                 if (throwable is InterruptedException) {
@@ -146,7 +159,7 @@ abstract class AbstractChunkDataLoader(
         }
     }
 
-    private fun createParseHtmlTaskOld(loadRequest: LoadRequest, html: String): Runnable {
+    private fun createParseHtmlTaskOld(ctx: LoadChunkContext, html: String): Runnable {
         return Runnable {
             try {
                 val document = Jsoup.parse(html)
@@ -154,13 +167,13 @@ abstract class AbstractChunkDataLoader(
 
                 val converter = ChunkConverter(document)
 
-                val chunkData = converter.extractData(loadRequest.excludeRowHeaders, loadRequest.excludeColumnHeaders)
+                val chunkData = converter.extractData(ctx.request.excludeRowHeaders, ctx.request.excludeColumnHeaders)
                 if (Thread.currentThread().isInterrupted) return@Runnable
-                handleChunkData(loadRequest, chunkData)
+                handleChunkData(ctx, chunkData)
 
                 val styledValues = converter.mergeWithStyles(chunkData.values)
                 if (Thread.currentThread().isInterrupted) return@Runnable
-                handleStyledValues(loadRequest, styledValues)
+                handleStyledValues(ctx, styledValues)
             } catch (throwable: Throwable) {
                 if (throwable is InterruptedException) {
                     Thread.currentThread().interrupt()
@@ -183,6 +196,6 @@ abstract class AbstractChunkDataLoader(
         }
     }
 
-    protected abstract fun handleChunkData(loadRequest: LoadRequest, chunkData: ChunkData)
-    protected abstract fun handleStyledValues(loadRequest: LoadRequest, chunkValues: ChunkValues)
+    protected abstract fun handleChunkData(ctx: LoadChunkContext, chunkData: ChunkData)
+    protected abstract fun handleStyledValues(ctx: LoadChunkContext, chunkValues: ChunkValues)
 }

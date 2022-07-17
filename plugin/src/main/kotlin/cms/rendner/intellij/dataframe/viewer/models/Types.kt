@@ -17,6 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.models
 
 import com.intellij.openapi.Disposable
 import java.awt.Color
+import javax.swing.RowSorter.SortKey
 import javax.swing.table.TableModel
 
 sealed class Value {
@@ -103,4 +104,8 @@ interface ITableValueDataModel : ITableDataModel {
 interface IDataFrameModel : Disposable {
     fun getValueDataModel(): ITableValueDataModel
     fun getIndexDataModel(): ITableIndexDataModel
+}
+
+interface IExternalSortableDataFrameModel {
+    fun setSortKeys(sortKeys: List<SortKey>)
 }

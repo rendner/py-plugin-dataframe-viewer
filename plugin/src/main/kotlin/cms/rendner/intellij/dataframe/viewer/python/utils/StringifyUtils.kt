@@ -51,6 +51,11 @@ class PythonCallBuilder(
     private var isFirst = true
 
     /**
+     * To specify the Python literal None.
+     */
+    fun noneParam() = addParam("None")
+
+    /**
      * To specify an existing Python object instance.
      */
     fun refParam(value: String) = addParam(value)

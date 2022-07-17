@@ -24,6 +24,7 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectExce
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyBool
 import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyMethodCall
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -187,6 +188,15 @@ class PythonCodeBridge {
                 @OptIn(ExperimentalSerializationApi::class)
                 json.decodeFromString(it)
             }
+        }
+
+        override fun evaluateSetSortCriteria(byColumnIndex: List<Int>?, ascending: List<Boolean>?) {
+            pythonValue.evaluator.evaluate(
+                stringifyMethodCall(pythonValue.refExpr, "set_sort_criteria") {
+                    if (byColumnIndex.isNullOrEmpty()) noneParam() else refParam(byColumnIndex.toString())
+                    if (ascending.isNullOrEmpty()) noneParam() else refParam(ascending.map { stringifyBool(it) }.toString())
+                }
+            )
         }
 
         @Throws(EvaluateException::class)

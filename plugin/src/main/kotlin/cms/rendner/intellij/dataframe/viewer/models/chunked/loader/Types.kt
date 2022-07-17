@@ -22,6 +22,11 @@ import com.intellij.openapi.Disposable
  * An interface to retrieve load results from an [IChunkDataLoader]
  */
 interface IChunkDataResultHandler {
+
+    enum class RejectReason {
+        SORT_CRITERIA_CHANGED,
+        TOO_MANY_PENDING_REQUESTS,
+    }
     /**
      * Called when the data for a load request was successfully loaded.
      * @param request the load request to which the data belongs
@@ -30,8 +35,11 @@ interface IChunkDataResultHandler {
     fun onChunkLoaded(request: LoadRequest, chunkData: ChunkData)
 
     /**
+     * Note: This method is only called when using the old data structure.
+     *
      * Called when the styled values for a load request are processed.
-     * This happens always after an initial [onChunkLoaded] for the same load request.
+     * This happens after an initial [onChunkLoaded] for the same load request.
+     * In case the sort criteria has changed after the [onChunkLoaded], this method will not be called.
      * @param request the load request to which the data belongs
      * @param chunkValues the styled values, if there were css styling in the chunk,
      * otherwise the same values are returned as in [ChunkData.values]
@@ -45,6 +53,18 @@ interface IChunkDataResultHandler {
      * @param throwable the error
      */
     fun onError(request: LoadRequest, throwable: Throwable)
+
+    /**
+     * Called when a load request is rejected.
+     * This can happen when too many requests are added to the loader which can't be handled in a short time frame.
+     * Or if the sort criteria was changed during the loading of a chunk.
+     *
+     * The requester can decide if the data is still needed and if so add the same request again.
+     *
+     * @param request the rejected load request
+     * @param reason the reason why the request was rejected
+     */
+    fun onRequestRejected(request: LoadRequest, reason: RejectReason)
 }
 
 /**
@@ -56,6 +76,17 @@ interface IChunkDataLoader : Disposable {
      * The result can be retrieved by setting a [IChunkDataResultHandler].
      */
     fun loadChunk(request: LoadRequest)
+
+    /**
+     * Sets the sort criteria for the underlying pandas DataFrame.
+     *
+     * Setting a new sort criteria results into a new sorted DataFrame.
+     * All previous loaded chunks are outdated and should be removed.
+     *
+     * Not yet started, pending, load requests are loaded with the last
+     * set sort criteria.
+     */
+    fun setSortCriteria(sortCriteria: SortCriteria)
 
     /**
      * Sets a handler to the loader that is used to return the loaded data or occurred errors for a processed load request.

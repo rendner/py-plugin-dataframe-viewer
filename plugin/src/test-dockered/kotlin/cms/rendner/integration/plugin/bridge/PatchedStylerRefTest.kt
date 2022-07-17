@@ -23,6 +23,7 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatNoException
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
@@ -133,6 +134,15 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
             assertThat(
                 it.evaluateComputeUnpatchedHTMLPropsTable()
             ).matches { propsTable -> propsTable.head.isNotEmpty() && propsTable.body.isNotEmpty() }
+        }
+    }
+
+    @Test
+    fun evaluateSetSortCriteria_shouldBeCallable() {
+        runWithPatchedStyler {
+            assertThatNoException().isThrownBy {
+                it.evaluateSetSortCriteria(listOf(0), listOf(true))
+            }
         }
     }
 

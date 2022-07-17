@@ -61,9 +61,19 @@ class AsyncChunkDataLoader(
     private var myActiveRequest: LoadRequest? = null
     private val myPendingRequests: Deque<LoadRequest> = ArrayDeque()
     private val myExecutorService = Executors.newFixedThreadPool(2)
-    private var myMaxWaitingRequests: Int = 8
+    private var myMaxWaitingRequests: Int = 4
+
+    private var mySortCriteria: SortCriteria = SortCriteria()
+    private var mySortCriteriaChanged: Boolean = false
 
     override fun isAlive() = myIsAliveFlag
+
+    override fun setSortCriteria(sortCriteria: SortCriteria) {
+        if (sortCriteria != mySortCriteria) {
+            mySortCriteria = sortCriteria
+            mySortCriteriaChanged = true
+        }
+    }
 
     /**
      * Adds a load request to an internal waiting queue.
@@ -71,18 +81,19 @@ class AsyncChunkDataLoader(
      * Entries of the waiting queue are processed as soon as the next chunk can be fetched.
      *
      * Since the internal waiting queue has a limited capacity, the oldest waiting request
-     * is dropped unprocessed as this limit exceeds to free space for the new one.
+     * is rejected as this limit exceeds to free space for the new one.
      *
      * Adding a load request with the same [ChunkRegion] as a previous added one:
-     * - before the previous one is processed, will remove the old one unprocessed and add the new one
+     * - before the previous one is processed, will replace the old one
      * - which is currently processed, will not add the new one
      * - which was already processed in the past, will add the new one
      *
      */
     override fun loadChunk(request: LoadRequest) {
         if (!myIsAliveFlag) return
+        if (myResultHandler == null) return
         when {
-            request.chunkRegion == myActiveRequest?.chunkRegion -> return
+            !mySortCriteriaChanged && request.chunkRegion == myActiveRequest?.chunkRegion -> return
             myPendingRequests.isEmpty() -> myPendingRequests.add(request)
             myPendingRequests.firstOrNull() == request -> return
             else -> {
@@ -90,8 +101,8 @@ class AsyncChunkDataLoader(
                 myPendingRequests.addFirst(request)
             }
         }
-        if (myPendingRequests.size >= myMaxWaitingRequests) {
-            myPendingRequests.pollLast()
+        if (myPendingRequests.size > myMaxWaitingRequests) {
+            myResultHandler?.onRequestRejected(myPendingRequests.pollLast(), IChunkDataResultHandler.RejectReason.TOO_MANY_PENDING_REQUESTS)
         }
 
         fetchNextChunk()
@@ -100,22 +111,39 @@ class AsyncChunkDataLoader(
     override fun dispose() {
         shutdownExecutorSilently(myExecutorService, 0, TimeUnit.SECONDS)
         myIsAliveFlag = false
+        myResultHandler = null
         myPendingRequests.clear()
-        // call loadRequestDone after shutting down the executorService
-        // in case a not yet finished request was processed
-        myActiveRequest?.let { loadRequestDone() }
         myActiveRequest = null
     }
 
-    override fun handleChunkData(loadRequest: LoadRequest, chunkData: ChunkData) {
+    override fun handleChunkData(ctx: LoadChunkContext, chunkData: ChunkData) {
         ApplicationManager.getApplication().invokeLater {
-            myResultHandler?.onChunkLoaded(loadRequest, chunkData)
+            if (mySortCriteriaChanged && ctx.sortCriteria == mySortCriteria) {
+                mySortCriteriaChanged = false
+            }
+            myResultHandler?.let { resultHandler ->
+                if (ctx.sortCriteria == null && !mySortCriteriaChanged || ctx.sortCriteria == mySortCriteria) {
+                    resultHandler.onChunkLoaded(ctx.request, chunkData)
+                } else {
+                    resultHandler.onRequestRejected(
+                        ctx.request,
+                        IChunkDataResultHandler.RejectReason.SORT_CRITERIA_CHANGED
+                    )
+                }
+            }
         }
     }
 
-    override fun handleStyledValues(loadRequest: LoadRequest, chunkValues: ChunkValues) {
+    override fun handleStyledValues(ctx: LoadChunkContext, chunkValues: ChunkValues) {
         ApplicationManager.getApplication().invokeLater {
-            myResultHandler?.onStyledValuesProcessed(loadRequest, chunkValues)
+            myResultHandler?.let { resultHandler ->
+                if (ctx.sortCriteria == null && !mySortCriteriaChanged || ctx.sortCriteria == mySortCriteria) {
+                    resultHandler.onStyledValuesProcessed(ctx.request, chunkValues)
+                }
+                // "handleStyledValues" will be removed in a feature release - therefore it is OK to not call the
+                // "request rejected" method if sort criteria was changed - the requester clears all cached values
+                // anyway on sort criteria change
+            }
         }
     }
 
@@ -133,7 +161,9 @@ class AsyncChunkDataLoader(
             myPendingRequests.pollFirst().let {
                 myActiveRequest = it
 
-                submitFetchChunkTask(it, myExecutorService).whenComplete { _, throwable ->
+                val ctx = LoadChunkContext(it, if (mySortCriteriaChanged) mySortCriteria else null)
+
+                submitFetchChunkTask(ctx, myExecutorService).whenComplete { _, throwable ->
                     if (throwable != null) {
                         val unwrapped = if (throwable is CompletionException) throwable.cause!! else throwable
                         handleFetchTaskError(it, unwrapped)
@@ -147,14 +177,11 @@ class AsyncChunkDataLoader(
     private fun handleFetchTaskError(loadRequest: LoadRequest, throwable: Throwable) {
         errorHandler.handleChunkDataError(loadRequest.chunkRegion, throwable)
         ApplicationManager.getApplication().invokeLater {
-
             if (myIsAliveFlag) {
                 if (throwable is EvaluateException && throwable.cause?.isDisconnectException() == true) {
                     myIsAliveFlag = false
-                    myPendingRequests.clear()
                     logger.info("Debugger disconnected, setting 'isAlive' to false.")
                 }
-
                 myResultHandler?.onError(loadRequest, throwable)
             }
         }
