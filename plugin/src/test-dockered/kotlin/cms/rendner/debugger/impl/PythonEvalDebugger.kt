@@ -258,7 +258,7 @@ abstract class PythonEvalDebugger {
             val separatorAfterRefId = unquotedResult.indexOf(" ", separatorAfterTypeInfo + 1)
 
             val qualifiedType =
-                unquotedResult.substring(0, separatorAfterTypeInfo).let { it.splitAtIndex(it.lastIndexOf(".")) }
+                unquotedResult.substring(0, separatorAfterTypeInfo).let { it.splitAtIndex(it.indexOf(":")) }
             val refId = unquotedResult.substring(separatorAfterTypeInfo + 1, separatorAfterRefId)
             var value = unquotedResult.substring(separatorAfterRefId + 1)
 
@@ -321,7 +321,7 @@ class __DebuggerInternals__:
         klass = getattr(o, '__class__', '')
         module = getattr(klass, '__module__', '')
         qname = getattr(klass, '__qualname__', '')
-        return f'{module}.{qname}'
+        return f'{module}:{qname}'
 
     def eval(self, expression) -> str:
         if isinstance(expression, str):
