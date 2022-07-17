@@ -12,37 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from plugin_code.patched_styler_context import PatchedStylerContext, Region
+from plugin_code.patched_styler_context import PatchedStylerContext, Region, IndexTranslator
 
 # == copy after here ==
-from abc import abstractmethod, ABC
 from typing import List, Tuple, Callable
 from collections.abc import Mapping
 from pandas.io.formats.style import Styler
-
-
-class _IndexTranslator(ABC):
-    @abstractmethod
-    def translate(self, index):
-        pass
-
-
-class _SequenceIndexTranslator(_IndexTranslator):
-    def __init__(self, seq):
-        super().__init__()
-        self.__seq = seq
-
-    def translate(self, index):
-        return self.__seq[index]
-
-
-class _OffsetIndexTranslator(_IndexTranslator):
-    def __init__(self, offset: int):
-        super().__init__()
-        self.__offset = offset
-
-    def translate(self, index):
-        return index + self.__offset
 
 
 class _TranslateKeysDict(Mapping):
@@ -81,7 +56,7 @@ class _TranslateKeysDict(Mapping):
 
 class _HTMLPropsIndexAdjuster:
 
-    def __init__(self, ri_translator: _IndexTranslator, ci_translator: _IndexTranslator):
+    def __init__(self, ri_translator: IndexTranslator, ci_translator: IndexTranslator):
         self.ri_translator = ri_translator
         self.ci_translator = ci_translator
 
@@ -142,7 +117,7 @@ class HTMLPropsGenerator:
         # -- Computing of styling
         # The plugin only renders the visible (non-hidden cols/rows) of the styled DataFrame
         # therefore the chunk is created from the visible data.
-        chunk = self.__styler_context.get_visible_data().iloc[
+        chunk = self.__styler_context.get_visible_frame().iloc[
                 region.first_row: region.first_row + region.rows,
                 region.first_col: region.first_col + region.cols,
                 ]
@@ -174,16 +149,8 @@ class HTMLPropsGenerator:
         # instead of the value.
         # To use these additional configurations, an index mapping is used to translate an chunk row/col index into a
         # row/col index of the original DataFrame.
-        styler = self.__styler_context.get_styler()
-        if len(styler.hidden_rows) == 0:
-            rit = _OffsetIndexTranslator(region.first_row)
-        else:
-            rit = _SequenceIndexTranslator(styler.index.get_indexer_for(chunk.index))
-
-        if len(styler.hidden_columns) == 0:
-            cit = _OffsetIndexTranslator(region.first_col)
-        else:
-            cit = _SequenceIndexTranslator(styler.columns.get_indexer_for(chunk.columns))
+        rit = self.__styler_context.get_row_index_translator_for_chunk(chunk, region)
+        cit = self.__styler_context.get_column_index_translator_for_chunk(chunk, region)
 
         # translate keys from "chunk_styler" into keys of "computed_styler"
         def translate_key(k):
