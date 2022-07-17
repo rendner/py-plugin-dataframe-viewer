@@ -20,22 +20,22 @@ from pandas._typing import Axis
 
 
 class ChunkParentProvider:
-    def __init__(self, style_func: Callable, axis: Optional[Axis], subset_data: DataFrame):
-        self._style_func = style_func
-        self._axis = axis
-        self._subset_data = subset_data
+    def __init__(self, style_func: Callable, axis: Optional[Axis], subset_frame: DataFrame):
+        self.__style_func = style_func
+        self.__axis = axis
+        self.__subset_frame = subset_frame
 
     def __call__(self, chunk_or_series_from_chunk: Union[DataFrame, Series], *args, **kwargs):
         if chunk_or_series_from_chunk.empty:
             return chunk_or_series_from_chunk
 
         kwargs['chunk_parent'] = self._get_parent(chunk_or_series_from_chunk)
-        return self._style_func(chunk_or_series_from_chunk, *args, **kwargs)
+        return self.__style_func(chunk_or_series_from_chunk, *args, **kwargs)
 
     def _get_parent(self, chunk_or_series_from_chunk: Union[DataFrame, Series]):
-        if self._axis == 0 or self._axis == "index":
-            return self._subset_data[chunk_or_series_from_chunk.name]
-        elif self._axis == 1 or self._axis == "columns":
-            return self._subset_data.loc[chunk_or_series_from_chunk.name]
+        if self.__axis == 0 or self.__axis == "index":
+            return self.__subset_frame[chunk_or_series_from_chunk.name]
+        elif self.__axis == 1 or self.__axis == "columns":
+            return self.__subset_frame.loc[chunk_or_series_from_chunk.name]
         else:
-            return self._subset_data
+            return self.__subset_frame

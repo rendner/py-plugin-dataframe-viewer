@@ -12,20 +12,18 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from plugin_code.custom_json_encoder import CustomJSONEncoder
-from plugin_code.html_props_generator import HTMLPropsGenerator, Region
+from plugin_code.html_props_generator import HTMLPropsGenerator
 from plugin_code.html_props_table_builder import HTMLPropsTableBuilder, HTMLPropsTable
 from plugin_code.html_props_validator import HTMLPropsValidator
+from plugin_code.patched_styler_context import PatchedStylerContext, Region
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
 from plugin_code.style_functions_validator import StyleFunctionValidationProblem, ValidationStrategyType, \
     StyleFunctionsValidator
-from plugin_code.styler_todo import StylerTodo
 from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
 import json
 from dataclasses import dataclass
-import numpy as np  # numpy is required by pandas (therefore should be available at runtime)
-from pandas import DataFrame
 from pandas.io.formats.style import Styler
 from typing import List, Optional, Any
 
@@ -55,17 +53,22 @@ class StyleFunctionDetails:
 class PatchedStyler:
 
     def __init__(self, styler: Styler):
-        self.__styler: Styler = styler
-        self.__visible_data: DataFrame = self.__get_visible_data(styler)
-        self.__html_props_generator = HTMLPropsGenerator(self.__visible_data, styler)
-        self.__style_functions_validator = StyleFunctionsValidator(self.__visible_data, styler)
+        self.__context = PatchedStylerContext(styler)
+        self.__html_props_generator = HTMLPropsGenerator(self.__context)
+        self.__style_functions_validator = StyleFunctionsValidator(self.__context)
+
+    def get_context(self) -> PatchedStylerContext:
+        return self.__context
 
     @staticmethod
     def to_json(data: Any) -> str:
         return json.dumps(data, cls=CustomJSONEncoder)
 
     def create_html_props_validator(self) -> HTMLPropsValidator:
-        return HTMLPropsValidator(self.__visible_data, self.__styler)
+        return HTMLPropsValidator(self.__context)
+
+    def create_html_props_generator(self) -> HTMLPropsGenerator:
+        return HTMLPropsGenerator(self.__context)
 
     def validate_style_functions(self,
                                  first_row: int,
@@ -125,26 +128,28 @@ class PatchedStyler:
             exclude_col_header=exclude_col_header,
         )
         # use templates of original styler
-        return self.__styler.template_html.render(
+        styler = self.__context.get_styler()
+        return styler.template_html.render(
             **html_props,
             encoding="utf-8",
             sparse_columns=False,
             sparse_index=False,
             doctype_html=True,
-            html_table_tpl=self.__styler.template_html_table,
-            html_style_tpl=self.__styler.template_html_style,
+            html_table_tpl=styler.template_html_table,
+            html_style_tpl=styler.template_html_style,
         )
 
     def render_unpatched(self) -> str:
         # This method deliberately does not use the "html_props_generator" but the original
-        # "Styler::to_html" method to create the html string.
+        # "Styler::render" method to create the html string.
         #
         # Method is only used in unit tests or to create test data for the plugin
         # therefore it is save to change potential configured values
-        self.__styler.uuid = ''
-        self.__styler.uuid_len = 0
-        self.__styler.cell_ids = False
-        return self.__styler.render(
+        styler = self.__context.get_styler()
+        styler.uuid = ''
+        styler.uuid_len = 0
+        styler.cell_ids = False
+        return styler.render(
             encoding="utf-8",
             doctype_html=True,
             sparse_columns=False,
@@ -152,42 +157,34 @@ class PatchedStyler:
         )
 
     def get_table_structure(self) -> TableStructure:
-        rows_count = len(self.__visible_data.index)
-        columns_count = len(self.__visible_data.columns)
+        visible_data = self.__context.get_visible_data()
+        styler = self.__context.get_styler()
+        rows_count = len(visible_data.index)
+        columns_count = len(visible_data.columns)
         if rows_count == 0 or columns_count == 0:
             rows_count = columns_count = 0
         return TableStructure(
             rows_count=rows_count,
             columns_count=columns_count,
-            row_levels_count=self.__visible_data.index.nlevels,
-            column_levels_count=self.__visible_data.columns.nlevels,
-            hide_row_header=self.__styler.hide_index_,
-            hide_column_header=self.__styler.hide_columns_
+            row_levels_count=visible_data.index.nlevels,
+            column_levels_count=visible_data.columns.nlevels,
+            hide_row_header=styler.hide_index_,
+            hide_column_header=styler.hide_columns_
         )
 
     def get_style_function_details(self) -> List[StyleFunctionDetails]:
         result = []
 
-        for i, todo in enumerate(self.__styler._todo):
-            t = StylerTodo.from_tuple(todo)
+        for i, todo in enumerate(self.__context.get_styler_todos()):
             result.append(StyleFunctionDetails(
                 index=i,
-                qname=StyleFunctionNameResolver.get_style_func_qname(t),
-                resolved_name=StyleFunctionNameResolver.resolve_style_func_name(t),
-                axis='' if t.is_applymap() else str(t.apply_args.axis),
-                is_pandas_builtin=t.is_pandas_style_func(),
-                is_supported=TodosPatcher.is_style_function_supported(t),
-                is_apply=not t.is_applymap(),
-                is_chunk_parent_requested=t.should_provide_chunk_parent(),
+                qname=StyleFunctionNameResolver.get_style_func_qname(todo),
+                resolved_name=StyleFunctionNameResolver.resolve_style_func_name(todo),
+                axis='' if todo.is_applymap() else str(todo.apply_args.axis),
+                is_pandas_builtin=todo.is_pandas_style_func(),
+                is_supported=TodosPatcher.is_style_function_supported(todo),
+                is_apply=not todo.is_applymap(),
+                is_chunk_parent_requested=todo.should_provide_chunk_parent(),
             ))
 
         return result
-
-    @staticmethod
-    def __get_visible_data(styler: Styler) -> DataFrame:
-        if len(styler.hidden_rows) == 0 and len(styler.hidden_columns) == 0:
-            return styler.data
-        else:
-            visible_indices = np.delete(styler.index.get_indexer_for(styler.index), styler.hidden_rows)
-            visible_columns = np.delete(styler.columns.get_indexer_for(styler.columns), styler.hidden_columns)
-            return styler.data.iloc[visible_indices, visible_columns]

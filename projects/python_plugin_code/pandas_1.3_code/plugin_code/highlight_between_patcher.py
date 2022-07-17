@@ -26,13 +26,14 @@ from pandas.io.formats.style import _validate_apply_axis_arg
 # highlight_between: https://github.com/pandas-dev/pandas/blob/v1.3.0/pandas/io/formats/style.py#L2339-L2446
 class HighlightBetweenPatcher(TodoPatcher):
 
-    def __init__(self, df: DataFrame, todo: StylerTodo):
-        super().__init__(df, todo)
+    def __init__(self, todo: StylerTodo):
+        super().__init__(todo)
 
-    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
+        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
         return self._todo.builder() \
-            .with_subset(self._calculate_chunk_subset(chunk)) \
-            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, self._subset_data)) \
+            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
+            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame)) \
             .build()
 
     def _styling_func(self,
@@ -61,13 +62,17 @@ class HighlightBetweenPatcher(TodoPatcher):
             **dict(kwargs, left=left, right=right),
         )
 
-    def _adjust_range_part(self, part, chunk, chunk_parent):
-        if isinstance(chunk, Series):
-            return part[chunk_parent.index.get_indexer_for(chunk.index)]
-        elif isinstance(chunk, DataFrame) and self._todo.apply_args.axis is None:
-            ri = chunk_parent.index.get_indexer_for(chunk.index)
-            ci = chunk_parent.columns.get_indexer_for(chunk.columns)
+    def _adjust_range_part(self,
+                           part: np.ndarray,
+                           chunk_or_series_from_chunk: Union[DataFrame, Series],
+                           chunk_parent: Union[DataFrame, Series],
+                           ) -> np.ndarray:
+        if isinstance(chunk_or_series_from_chunk, Series):
+            return part[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
+        elif isinstance(chunk_or_series_from_chunk, DataFrame) and self._todo.apply_args.axis is None:
+            ri = chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)
+            ci = chunk_parent.columns.get_indexer_for(chunk_or_series_from_chunk.columns)
             ri_slice = slice(ri[0], ri[-1] + 1)
             ci_slice = slice(ci[0], ci[-1] + 1)
             return part[ri_slice, ci_slice]
-        raise ValueError(f"Unexpected chunk type:{type(chunk)} for axis:{str(self._todo.apply_args.axis)}")
+        return part
