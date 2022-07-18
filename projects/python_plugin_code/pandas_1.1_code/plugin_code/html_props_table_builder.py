@@ -34,8 +34,8 @@ class HTMLPropsTableRowElement:
 
 @dataclass
 class HTMLPropsTable:
-    body: List[List[HTMLPropsTableRowElement]]
     head: List[List[HTMLPropsTableRowElement]]
+    body: List[List[HTMLPropsTableRowElement]]
 
 
 @dataclass

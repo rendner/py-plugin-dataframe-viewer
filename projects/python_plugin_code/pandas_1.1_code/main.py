@@ -28,6 +28,7 @@ def generate_plugin_code():
         'chunk_parent_provider.py',
         'highlight_extrema_patcher.py',
         'todos_patcher.py',
+        'patched_styler_context.py',
         'html_props_generator.py',
         'html_props_table_builder.py',
         'html_props_validator.py',

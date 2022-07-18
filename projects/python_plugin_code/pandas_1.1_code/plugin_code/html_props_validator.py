@@ -12,15 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from plugin_code.custom_json_encoder import CustomJSONEncoder
-from plugin_code.html_props_generator import HTMLPropsGenerator, Region
+from plugin_code.html_props_generator import HTMLPropsGenerator
 from plugin_code.html_props_table_builder import HTMLPropsTableBuilder, HTMLPropsTable
+from plugin_code.patched_styler_context import PatchedStylerContext, Region
 
 # == copy after here ==
 from dataclasses import dataclass
 import json
-
-from pandas import DataFrame
-from pandas.io.formats.style import Styler
 
 
 @dataclass(frozen=True)
@@ -31,19 +29,19 @@ class HTMLPropsValidationResult:
 
 
 class HTMLPropsValidator:
-    def __init__(self, visible_data: DataFrame, styler: Styler):
-        self.__html_props_generator: HTMLPropsGenerator = HTMLPropsGenerator(visible_data, styler)
-        self.__visible_region = Region(0, 0, len(visible_data.index), len(visible_data.columns))
+    def __init__(self, styler_context: PatchedStylerContext):
+        self.__styler_context: PatchedStylerContext = styler_context
+        self.__html_props_generator: HTMLPropsGenerator = HTMLPropsGenerator(styler_context)
 
     def validate(self, rows_per_chunk: int, cols_per_chunk: int) -> HTMLPropsValidationResult:
-        return self.validate_region(self.__visible_region, rows_per_chunk, cols_per_chunk)
+        return self.validate_region(self.__styler_context.get_visible_region(), rows_per_chunk, cols_per_chunk)
 
     def validate_region(self,
                         region: Region,
                         rows_per_chunk: int,
                         cols_per_chunk: int,
                         ) -> HTMLPropsValidationResult:
-        clamped_region = self.__compute_clamped_region(region)
+        clamped_region = self.__styler_context.compute_visible_intersection(region)
         if clamped_region.is_empty():
             return HTMLPropsValidationResult('', '', True)
 
@@ -54,22 +52,8 @@ class HTMLPropsValidator:
 
         return HTMLPropsValidationResult(combined_json, expected_json, combined_json == expected_json)
 
-    def __compute_clamped_region(self, region: Region) -> Region:
-        if region.is_empty():
-            return region
-        if self.__visible_region.is_empty():
-            return self.__visible_region
-        assert region.is_valid()
-        first_row = min(region.first_row, self.__visible_region.rows - 1)
-        first_col = min(region.first_col, self.__visible_region.cols - 1)
-        rows_left = self.__visible_region.rows - (first_row if first_row == 0 else first_row + 1)
-        cols_left = self.__visible_region.cols - (first_col if first_col == 0 else first_col + 1)
-        rows = min(region.rows, rows_left)
-        cols = min(region.cols, cols_left)
-        return Region(first_row, first_col, rows, cols)
-
     def __compute_expected_table(self, region: Region) -> HTMLPropsTable:
-        if region == self.__visible_region:
+        if region == self.__styler_context.get_visible_region():
             html_props = self.__html_props_generator.compute_unpatched_props()
         else:
             html_props = self.__html_props_generator.compute_chunk_props(

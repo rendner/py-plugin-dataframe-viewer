@@ -65,8 +65,7 @@ def _create_combined_html_props(
     styler = df.style
     init_styler_func(styler)
     patched_styler = PatchedStyler(styler)
-    validator = patched_styler.create_html_props_validator()
-    region = validator._HTMLPropsValidator__visible_region
+    region = patched_styler.get_context().get_visible_region()
     return patched_styler.create_html_props_validator()._HTMLPropsValidator__compute_table_from_chunks(
         region,
         rows_per_chunk,

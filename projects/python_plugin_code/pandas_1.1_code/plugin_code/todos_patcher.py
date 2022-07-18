@@ -23,48 +23,49 @@ from plugin_code.todo_patcher import TodoPatcher
 from typing import Callable, List, Tuple, Optional
 
 from pandas import DataFrame
-from pandas.io.formats.style import Styler
 
 
 class TodosPatcher:
 
-    # chunk was created by using only non-hidden rows/cols
-    def patch_todos_for_chunk(self, source: Styler, chunk: DataFrame) -> List[Tuple[Callable, tuple, dict]]:
+    def patch_todos_for_chunk(self,
+                              todos: List[StylerTodo],
+                              org_frame: DataFrame,
+                              chunk: DataFrame,
+                              ) -> List[Tuple[Callable, tuple, dict]]:
         result: List[Tuple[Callable, tuple, dict]] = []
 
-        for t in source._todo:
-            todo = StylerTodo.from_tuple(t)
+        for t in todos:
 
-            if todo.is_pandas_style_func():
-                patcher = self.__get_patcher_for_pandas_style_function(source.data, todo)
+            if t.is_pandas_style_func():
+                patcher = self.__get_patcher_for_pandas_style_function(t)
             else:
-                if todo.is_applymap():
-                    patcher = ApplyMapPatcher(source.data, todo)
+                if t.is_applymap():
+                    patcher = ApplyMapPatcher(t)
                 else:
-                    patcher = ApplyPatcher(source.data, todo)
+                    patcher = ApplyPatcher(t)
 
             if patcher is not None:
-                result.append(patcher.create_patched_todo(chunk).to_tuple())
+                result.append(patcher.create_patched_todo(org_frame, chunk).to_tuple())
 
         return result
 
     @staticmethod
     def is_style_function_supported(todo: StylerTodo) -> bool:
         if todo.is_pandas_style_func():
-            return TodosPatcher.__get_patcher_for_pandas_style_function(DataFrame(), todo) is not None
+            return TodosPatcher.__get_patcher_for_pandas_style_function(todo) is not None
         return True
 
     @staticmethod
-    def __get_patcher_for_pandas_style_function(df: DataFrame, todo: StylerTodo) -> Optional[TodoPatcher]:
+    def __get_patcher_for_pandas_style_function(todo: StylerTodo) -> Optional[TodoPatcher]:
         qname = StyleFunctionNameResolver.get_style_func_qname(todo)
         if StyleFunctionNameResolver.is_pandas_background_gradient(qname):
-            return BackgroundGradientPatcher(df, todo)
+            return BackgroundGradientPatcher(todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_min(qname, todo):
-            return HighlightExtremaPatcher(df, todo)
+            return HighlightExtremaPatcher(todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_max(qname, todo):
-            return HighlightExtremaPatcher(df, todo)
+            return HighlightExtremaPatcher(todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_null(qname):
-            return ApplyMapPatcher(df, todo)
+            return ApplyMapPatcher(todo)
         elif StyleFunctionNameResolver.is_pandas_set_properties(qname):
-            return ApplyMapPatcher(df, todo)
+            return ApplyMapPatcher(todo)
         return None
