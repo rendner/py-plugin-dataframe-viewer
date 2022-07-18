@@ -17,13 +17,13 @@ from plugin_code.html_props_table_builder import HTMLPropsTableBuilder
 
 
 def test_empty_builder_creates_empty_table():
-    table = HTMLPropsTableBuilder().build_table()
+    table = HTMLPropsTableBuilder().build()
     assert len(table.head) == 0
     assert len(table.body) == 0
 
 
 def test_resolves_rowspan_and_colspan_for_visible_head_elements():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "head": [
             [
@@ -39,8 +39,8 @@ def test_resolves_rowspan_and_colspan_for_visible_head_elements():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.head) == 2
 
@@ -56,7 +56,7 @@ def test_resolves_rowspan_and_colspan_for_visible_head_elements():
 
 
 def test_raises_exception_for_trailing_rowspan_and_colspan():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "head": [
             [
@@ -69,11 +69,11 @@ def test_raises_exception_for_trailing_rowspan_and_colspan():
 
     msg = "Trailing spans are not implemented, found 1 pending."
     with pytest.raises(AssertionError, match=msg):
-        builder.append_props(html_props, 0, True, True)
+        table_builder.append_props(html_props, 0, True, True)
 
 
 def test_ignores_rowspan_and_colspan_for_non_visible_head_elements():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "head": [
             [
@@ -89,8 +89,8 @@ def test_ignores_rowspan_and_colspan_for_non_visible_head_elements():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.head) == 2
     assert len(table.head[0]) == 2
@@ -100,7 +100,7 @@ def test_ignores_rowspan_and_colspan_for_non_visible_head_elements():
 
 
 def test_resolves_rowspan_and_colspan_for_visible_body_elements():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "body": [
             [
@@ -116,8 +116,8 @@ def test_resolves_rowspan_and_colspan_for_visible_body_elements():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.body) == 2
 
@@ -133,7 +133,7 @@ def test_resolves_rowspan_and_colspan_for_visible_body_elements():
 
 
 def test_ignores_rowspan_and_colspan_for_non_visible_body_elements():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "body": [
             [
@@ -149,8 +149,8 @@ def test_ignores_rowspan_and_colspan_for_non_visible_body_elements():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.body) == 2
     assert len(table.body[0]) == 2
@@ -160,7 +160,7 @@ def test_ignores_rowspan_and_colspan_for_non_visible_body_elements():
 
 
 def test_ignores_non_visible_elements():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "head": [
             [
@@ -178,8 +178,8 @@ def test_ignores_non_visible_elements():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.head) == 1
     assert len(table.head[0]) == 2
@@ -191,7 +191,7 @@ def test_ignores_non_visible_elements():
 
 
 def test_removes_trailing_blank_headers():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "head": [
             [
@@ -205,8 +205,8 @@ def test_removes_trailing_blank_headers():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.head) == 1
     assert len(table.head[0]) == 3
@@ -214,7 +214,7 @@ def test_removes_trailing_blank_headers():
 
 
 def test_css_is_correctly_resolved():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "cellstyle": [
             # note: selectors are without leading "#" and ".", therefore it isn't clear if they belong to class or id
@@ -231,8 +231,8 @@ def test_css_is_correctly_resolved():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.head) == 1
     assert len(table.head[0]) == 3
@@ -241,7 +241,7 @@ def test_css_is_correctly_resolved():
 
 
 def test_element_kind__blank():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "head": [
             [
@@ -250,8 +250,8 @@ def test_element_kind__blank():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.head) == 1
     assert len(table.head[0]) == 1
@@ -259,7 +259,7 @@ def test_element_kind__blank():
 
 
 def test_element_kind__index_name():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "head": [
             [
@@ -268,8 +268,8 @@ def test_element_kind__index_name():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.head) == 1
     assert len(table.head[0]) == 1
@@ -277,7 +277,7 @@ def test_element_kind__index_name():
 
 
 def test_element_kind__col_heading():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "head": [
             [
@@ -286,8 +286,8 @@ def test_element_kind__col_heading():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.head) == 1
     assert len(table.head[0]) == 1
@@ -295,7 +295,7 @@ def test_element_kind__col_heading():
 
 
 def test_element_kind__row_heading():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "body": [
             [
@@ -304,8 +304,8 @@ def test_element_kind__row_heading():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.body) == 1
     assert len(table.body[0]) == 1
@@ -313,7 +313,7 @@ def test_element_kind__row_heading():
 
 
 def test_unknown_element_kind():
-    builder = HTMLPropsTableBuilder()
+    table_builder = HTMLPropsTableBuilder()
     html_props = {
         "body": [
             [
@@ -322,8 +322,8 @@ def test_unknown_element_kind():
         ],
     }
 
-    builder.append_props(html_props, 0, True, True)
-    table = builder.build_table()
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
 
     assert len(table.body) == 1
     assert len(table.body[0]) == 1

@@ -12,8 +12,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from plugin_code.custom_json_encoder import CustomJSONEncoder
-from plugin_code.html_props_generator import HTMLPropsGenerator
-from plugin_code.html_props_table_builder import HTMLPropsTableBuilder, HTMLPropsTable
+from plugin_code.html_props_table_builder import HTMLPropsTable
+from plugin_code.html_props_table_generator import HTMLPropsTableGenerator
 from plugin_code.patched_styler_context import PatchedStylerContext, Region
 
 # == copy after here ==
@@ -31,10 +31,10 @@ class HTMLPropsValidationResult:
 class HTMLPropsValidator:
     def __init__(self, styler_context: PatchedStylerContext):
         self.__styler_context: PatchedStylerContext = styler_context
-        self.__html_props_generator: HTMLPropsGenerator = HTMLPropsGenerator(styler_context)
+        self.__table_generator: HTMLPropsTableGenerator = HTMLPropsTableGenerator(styler_context)
 
     def validate(self, rows_per_chunk: int, cols_per_chunk: int) -> HTMLPropsValidationResult:
-        return self.validate_region(self.__styler_context.get_visible_region(), rows_per_chunk, cols_per_chunk)
+        return self.validate_region(self.__styler_context.get_region_of_visible_frame(), rows_per_chunk, cols_per_chunk)
 
     def validate_region(self,
                         region: Region,
@@ -45,7 +45,7 @@ class HTMLPropsValidator:
         if clamped_region.is_empty():
             return HTMLPropsValidationResult('', '', True)
 
-        combined_table = self.__compute_table_from_chunks(clamped_region, rows_per_chunk, cols_per_chunk)
+        combined_table = self.__table_generator.compute_table_from_chunks(clamped_region, rows_per_chunk, cols_per_chunk)
         expected_table = self.__compute_expected_table(clamped_region)
         combined_json = self.__jsonify_table(combined_table)
         expected_json = self.__jsonify_table(expected_table)
@@ -53,56 +53,9 @@ class HTMLPropsValidator:
         return HTMLPropsValidationResult(combined_json, expected_json, combined_json == expected_json)
 
     def __compute_expected_table(self, region: Region) -> HTMLPropsTable:
-        if region == self.__styler_context.get_visible_region():
-            html_props = self.__html_props_generator.compute_unpatched_props()
-        else:
-            html_props = self.__html_props_generator.compute_chunk_props(
-                region=region,
-                translate_indices=False,
-            )
-        props_table_generator = HTMLPropsTableBuilder()
-        props_table_generator.append_props(
-            html_props=html_props,
-            target_row_offset=0,
-            is_part_of_first_rows_in_chunk=True,
-            is_part_of_first_cols_in_chunk=True,
-        )
-        return props_table_generator.build_table()
-
-    def __compute_table_from_chunks(self,
-                                    region: Region,
-                                    rows_per_chunk: int,
-                                    cols_per_chunk: int,
-                                    ) -> HTMLPropsTable:
-        props_table_generator = HTMLPropsTableBuilder()
-        rows_processed = 0
-        while rows_processed < region.rows:
-            rows = min(rows_per_chunk, region.rows - rows_processed)
-            cols_in_row_processed = 0
-            while cols_in_row_processed < region.cols:
-                cols = min(cols_per_chunk, region.cols - cols_in_row_processed)
-                chunk_html_props = self.__html_props_generator.compute_chunk_props(
-                    region=Region(
-                        region.first_row + rows_processed,
-                        region.first_col + cols_in_row_processed,
-                        rows,
-                        cols,
-                    ),
-                    exclude_row_header=cols_in_row_processed > 0,
-                    translate_indices=False,
-                )
-
-                props_table_generator.append_props(
-                    html_props=chunk_html_props,
-                    target_row_offset=rows_processed,
-                    is_part_of_first_rows_in_chunk=rows_processed == 0,
-                    is_part_of_first_cols_in_chunk=cols_in_row_processed == 0,
-                )
-
-                cols_in_row_processed += cols
-            rows_processed += rows
-
-        return props_table_generator.build_table()
+        if region == self.__styler_context.get_region_of_visible_frame():
+            return self.__table_generator.compute_unpatched_table()
+        return self.__table_generator.compute_chunk_table(region)
 
     @staticmethod
     def __jsonify_table(table: HTMLPropsTable) -> str:
