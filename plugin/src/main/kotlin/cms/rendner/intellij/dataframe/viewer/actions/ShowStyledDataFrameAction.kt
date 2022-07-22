@@ -16,10 +16,12 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.components.DataFrameTable
-import cms.rendner.intellij.dataframe.viewer.models.IDataFrameModel
-import cms.rendner.intellij.dataframe.viewer.models.chunked.*
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkedDataFrameModel
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AsyncChunkDataLoader
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoaderErrorHandler
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
 import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
@@ -47,7 +49,10 @@ import com.intellij.xdebugger.impl.ui.tree.actions.XDebuggerTreeActionBase
 import com.jetbrains.python.debugger.PyDebugValue
 import java.awt.Component
 import java.awt.Dimension
-import javax.swing.*
+import javax.swing.Action
+import javax.swing.BoxLayout
+import javax.swing.JComponent
+import javax.swing.JPanel
 
 /**
  * Action to open the "StyledDataFrameViewer" dialog from the PyCharm debugger.
@@ -121,26 +126,28 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         fun createModelFrom(frameOrStyler: PyDebugValue) {
             BackgroundTaskUtil.executeOnPooledThread(disposable) {
                 var patchedStyler: IPyPatchedStylerRef? = null
-                var model: IDataFrameModel? = null
                 try {
                     patchedStyler = PythonCodeBridge().createPatchedStyler(frameOrStyler.toPluginType())
+                    val tableStructure = patchedStyler.evaluateTableStructure()
                     val settings = ApplicationSettingsService.instance.state
-                    // note: model doesn't sync on settings, user has to re-open the dialog after settings were changed
-                    model = createChunkedModel(patchedStyler, settings)
+                    // note: loader doesn't sync on settings, user has to re-open the dialog after settings were changed
+                    val chunkLoader = createChunkLoader(patchedStyler, settings)
 
                     ApplicationManager.getApplication().invokeLater {
                         if (!isDisposed) {
-                            Disposer.register(disposable, model)
                             Disposer.register(disposable, patchedStyler)
-                            myDataFrameTable.setDataFrameModel(model)
+                            Disposer.register(patchedStyler, chunkLoader)
+                            ChunkedDataFrameModel(tableStructure, chunkLoader, ChunkSize(30, 20)).let {
+                                Disposer.register(chunkLoader, it)
+                                myDataFrameTable.setDataFrameModel(it)
+                            }
                         } else {
-                            patchedStyler.dispose()
-                            model.dispose()
+                            Disposer.dispose(chunkLoader)
+                            Disposer.dispose(patchedStyler)
                         }
                     }
                 } catch (ex: Exception) {
-                    patchedStyler?.dispose()
-                    model?.dispose()
+                    patchedStyler?.let { Disposer.dispose(patchedStyler) }
                     logger.error("Creating DataFrame model failed", ex)
 
                     ErrorNotification(
@@ -173,20 +180,15 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             return myDataFrameTable
         }
 
-        private fun createChunkedModel(
+        private fun createChunkLoader(
             patchedStyler: IPyPatchedStylerRef,
             settings: ApplicationSettingsService.MyState,
-        ): IDataFrameModel {
-            val loader = AsyncChunkDataLoader(
+        ): IChunkDataLoader {
+            return AsyncChunkDataLoader(
                 ChunkEvaluator(patchedStyler),
                 settings.fsLoadNewDataStructure,
                 createChunkValidator(patchedStyler, settings.validationStrategyType),
                 this,
-            )
-            return ChunkedDataFrameModel(
-                patchedStyler.evaluateTableStructure(),
-                loader,
-                ChunkSize(30, 20),
             )
         }
 

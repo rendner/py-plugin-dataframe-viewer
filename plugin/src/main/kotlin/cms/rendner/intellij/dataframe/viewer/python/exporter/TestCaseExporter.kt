@@ -20,6 +20,7 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvalu
 import cms.rendner.intellij.dataframe.viewer.models.chunked.utils.iterateDataFrame
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
+import com.intellij.openapi.util.Disposer
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -81,7 +82,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
                 writeChunksToFile(patchedStyler, it, testCase, tableStructure)
             }
         } finally {
-            patchedStyler.dispose()
+            Disposer.dispose(patchedStyler)
         }
     }
 

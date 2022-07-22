@@ -44,16 +44,6 @@ internal class ChunkedDataFrameModelTest {
     }
 
     @Test
-    fun doesCallDisposeOnLoader() {
-        var loaderDisposed = false
-        setup(createTableStructure()) { loaderDisposed = true }
-
-        model.dispose()
-
-        assertThat(loaderDisposed).isEqualTo(true)
-    }
-
-    @Test
     fun doesNotFetchChunkIfValueForIndexIsRequested() {
         setup(createTableStructure())
 

@@ -139,8 +139,6 @@ class ChunkedDataFrameModel(
     override fun dispose() {
         if (!disposed) {
             disposed = true
-            // todo: should we dispose it or is this under control of the Disposer?? (maybe update class comment if we change it)
-            chunkDataLoader.dispose()
             myFailedChunks.clear()
             myPendingChunks.clear()
             myFetchedChunkValues.clear()

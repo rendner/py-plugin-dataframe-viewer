@@ -27,6 +27,7 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.Evaluate
 import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyBool
 import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyMethodCall
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.serviceContainer.AlreadyDisposedException
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -79,6 +80,11 @@ class PythonCodeBridge {
             if (ignore.cause?.isDisconnectException() == false) {
                 logger.warn("Dispose PatchedStylerRef failed.", ignore)
             }
+        }
+        catch (ignore: AlreadyDisposedException) {
+            // can happen when PyDebugValueExecutionService was already disposed
+            // -> when user closes the IDE before terminating the debug session and closing the viewer-dialog
+            logger.info("Couldn't dispose PatchedStylerRef failed.", ignore)
         }
     }
 
@@ -140,10 +146,9 @@ class PythonCodeBridge {
      */
     class PyPatchedStylerRef(
         val pythonValue: PluginPyValue,
-        private val disposeCallback: (PyPatchedStylerRef) -> Unit,
+        private var disposeCallback: ((PyPatchedStylerRef) -> Unit)? = null,
     ) : IPyPatchedStylerRef {
 
-        private var disposed = false
         private val json: Json by lazy {
             Json { ignoreUnknownKeys = true }
         }
@@ -258,9 +263,9 @@ class PythonCodeBridge {
         }
 
         override fun dispose() {
-            if (!disposed) {
-                disposed = true
-                disposeCallback(this)
+            disposeCallback?.let {
+                disposeCallback =  null
+                it(this)
             }
         }
     }
