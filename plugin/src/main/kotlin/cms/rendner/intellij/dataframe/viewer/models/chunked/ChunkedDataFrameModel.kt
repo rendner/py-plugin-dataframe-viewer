@@ -286,35 +286,33 @@ class ChunkedDataFrameModel(
 
     override fun onRequestRejected(request: LoadRequest, reason: IChunkDataResultHandler.RejectReason) {
         myPendingChunks.remove(request.chunkRegion)
-        if (reason == IChunkDataResultHandler.RejectReason.TOO_MANY_PENDING_REQUESTS) {
-            val scheduleInvokeLater = myRejectedChunkRegions.isEmpty
-            // Create a union of all rejected requests to fire only one "fireValueModelValuesUpdated" event.
-            // This reduces the amount of fired events during scrolling over many rows/columns of a huge DataFrame.
-            //
-            // The union can include regions which were not rejected. For example when combining the first and last
-            // region of a DataFrame, the union includes all rows and columns of the whole DataFrame. This is OK,
-            // because the table only repaints the visible rows anc columns.
-            myRejectedChunkRegions = myRejectedChunkRegions.union(
-                Rectangle(
-                    request.chunkRegion.firstColumn,
-                    request.chunkRegion.firstRow,
-                    request.chunkRegion.numberOfColumns,
-                    request.chunkRegion.numberOfRows,
-                )
+        val scheduleInvokeLater = myRejectedChunkRegions.isEmpty
+        // Create a union of all rejected requests to fire only one "fireValueModelValuesUpdated" event.
+        // This reduces the amount of fired events during scrolling over many rows/columns of a huge DataFrame.
+        //
+        // The union can include regions which were not rejected. For example when combining the first and last
+        // region of a DataFrame. Such a union includes all rows and columns of the whole DataFrame. This is OK,
+        // because the table only repaints the visible rows and columns.
+        myRejectedChunkRegions = myRejectedChunkRegions.union(
+            Rectangle(
+                request.chunkRegion.firstColumn,
+                request.chunkRegion.firstRow,
+                request.chunkRegion.numberOfColumns,
+                request.chunkRegion.numberOfRows,
             )
-            if (scheduleInvokeLater) {
-                SwingUtilities.invokeLater {
-                    // Repainting a chunk region which was rejected results in an implicit refetch of the chunk data.
-                    fireValueModelValuesUpdated(
-                        ChunkRegion(
-                            myRejectedChunkRegions.y,
-                            myRejectedChunkRegions.x,
-                            myRejectedChunkRegions.height,
-                            myRejectedChunkRegions.width,
-                        )
+        )
+        if (scheduleInvokeLater) {
+            SwingUtilities.invokeLater {
+                // Repainting a region results in an implicit refetch of the chunk data.
+                fireValueModelValuesUpdated(
+                    ChunkRegion(
+                        myRejectedChunkRegions.y,
+                        myRejectedChunkRegions.x,
+                        myRejectedChunkRegions.height,
+                        myRejectedChunkRegions.width,
                     )
-                    myRejectedChunkRegions = Rectangle()
-                }
+                )
+                myRejectedChunkRegions = Rectangle()
             }
         }
     }
