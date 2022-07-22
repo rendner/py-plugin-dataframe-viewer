@@ -98,8 +98,8 @@ class DataFrameTable : JScrollPane(), RowSorterListener, PropertyChangeListener 
 
             // Whenever the sorting changes the selection has to be cleared.
             // It is unknown in which row the selected cell will be after sorting.
-            myIndexTable.clearSelection()
-            myValueTable.clearSelection()
+            myIndexTable.selectionModel?.clearSelection()
+            myValueTable.selectionModel?.clearSelection()
         }
     }
 
@@ -506,12 +506,9 @@ abstract class MyTable<M : ITableDataModel> : JBTable(null) {
         private val myNotAdjustableColumns: MutableSet<Int> = java.util.HashSet()
 
         override fun processMouseEvent(e: MouseEvent?) {
-            setRowSorterShiftKeyFlag(e?.isShiftDown ?: false)
-            try {
-                super.processMouseEvent(e)
-            } finally {
-                setRowSorterShiftKeyFlag(false)
-            }
+            if (e?.id == MouseEvent.MOUSE_RELEASED) setRowSorterShiftKeyFlag(e.isShiftDown)
+            super.processMouseEvent(e)
+            if (e?.id == MouseEvent.MOUSE_CLICKED) setRowSorterShiftKeyFlag(false)
         }
 
         private fun setRowSorterShiftKeyFlag(isDown: Boolean) {

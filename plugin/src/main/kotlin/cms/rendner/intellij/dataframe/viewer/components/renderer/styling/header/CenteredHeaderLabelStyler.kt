@@ -115,9 +115,8 @@ class CenteredHeaderLabelStyler(
         private var myCachedLabelFont: Font? = null
         private var myCachedForeground: Color? = null
         private var myCachedBackground: Color? = null
-        private var myColor: Color? = null
 
-        private data class IconInfo(val iconWidth: Int, val iconHeight: Int, val arrowPolygons: List<Polygon>)
+        private data class IconInfo(val iconWidth: Int, val iconHeight: Int, val arrowPolygons: List<Polygon>, val color: Color)
         private val myIconInfoCache: MutableMap<SortOrder, IconInfo> = mutableMapOf()
         private var myCurrentIconInfo: IconInfo? = null
 
@@ -125,19 +124,21 @@ class CenteredHeaderLabelStyler(
             if (priorityLabel.length > 1) throw java.lang.IllegalArgumentException("Only labels with max 1 char are supported.")
             mySortOrder = sortOrder
             myPriorityLabel = priorityLabel
+            var clearIconInfo = false
             if (myCachedLabelFont != component.font) {
+                clearIconInfo = true
                 myCachedLabelFont = component.font
                 myFont = component.font.deriveFont(java.lang.Float.max(11f, (component.font.size * .6).toFloat())).also {
                     mySingleDigitTextBounds = it.getStringBounds("0", myFontRenderContext).toRectangle()
                     myArrowPolygonSize = computeArrowPolygonSize()
                 }
-                myIconInfoCache.clear()
             }
             if (myCachedForeground != component.foreground && myCachedBackground != component.background) {
+                clearIconInfo = true
                 myCachedForeground = component.foreground
                 myCachedBackground = component.background
-                myColor = ColorUtil.mix(component.background, component.foreground, .6)
             }
+            if (clearIconInfo) myIconInfoCache.clear()
             myCurrentIconInfo = getIconInfo(mySortOrder)
         }
 
@@ -151,7 +152,7 @@ class CenteredHeaderLabelStyler(
                 @Suppress("NAME_SHADOWING") val y = (c.height - arrowHeight) / 2
                 @Suppress("NAME_SHADOWING") var x = x + myInsets.left
 
-                g2d.color = myColor
+                g2d.color = iconInfo.color
                 g2d.font = myFont
 
                 if (mySortOrder != SortOrder.UNSORTED) {
@@ -184,7 +185,16 @@ class CenteredHeaderLabelStyler(
         }
 
         private fun computeIconInfo(): IconInfo {
-            return IconInfo(computeIconWidth(), computeIconHeight(), computeArrowPolygons())
+            return IconInfo(
+                computeIconWidth(),
+                computeIconHeight(),
+                computeArrowPolygons(),
+                ColorUtil.mix(
+                    myCachedBackground!!,
+                    myCachedForeground!!,
+                    if (mySortOrder == SortOrder.UNSORTED) .2 else .7,
+                ),
+            )
         }
 
         private fun computeArrowPolygons(): List<Polygon> {
@@ -205,7 +215,7 @@ class CenteredHeaderLabelStyler(
         }
 
         private fun computeArrowPolygonSize(): Int {
-            var h = Integer.max(8, (mySingleDigitTextBounds.height * .5).toInt())
+            var h = Integer.max(8, (mySingleDigitTextBounds.height * .7).toInt())
             if (h and 0x01 == 1) h += 1 // make it even
             return h
         }
