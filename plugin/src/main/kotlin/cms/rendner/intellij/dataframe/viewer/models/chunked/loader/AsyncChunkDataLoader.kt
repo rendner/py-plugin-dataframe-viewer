@@ -17,7 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ChunkValidator
-import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
 import cms.rendner.intellij.dataframe.viewer.shutdownExecutorSilently
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
@@ -102,7 +102,10 @@ class AsyncChunkDataLoader(
             }
         }
         if (myPendingRequests.size > myMaxWaitingRequests) {
-            myResultHandler?.onRequestRejected(myPendingRequests.pollLast(), IChunkDataResultHandler.RejectReason.TOO_MANY_PENDING_REQUESTS)
+            myResultHandler?.onRequestRejected(
+                myPendingRequests.pollLast(),
+                IChunkDataResultHandler.RejectReason.TOO_MANY_PENDING_REQUESTS
+            )
         }
 
         fetchNextChunk()
@@ -175,15 +178,27 @@ class AsyncChunkDataLoader(
     }
 
     private fun handleFetchTaskError(loadRequest: LoadRequest, throwable: Throwable) {
-        errorHandler.handleChunkDataError(loadRequest.chunkRegion, throwable)
         ApplicationManager.getApplication().invokeLater {
             if (myIsAliveFlag) {
-                if (throwable is EvaluateException && throwable.cause?.isDisconnectException() == true) {
+                errorHandler.handleChunkDataError(loadRequest.chunkRegion, throwable)
+                if (isCausedByDisconnectException(throwable)) {
                     myIsAliveFlag = false
                     logger.info("Debugger disconnected, setting 'isAlive' to false.")
                 }
                 myResultHandler?.onError(loadRequest, throwable)
             }
+        }
+    }
+
+    private fun isCausedByDisconnectException(throwable: Throwable): Boolean {
+        val visitedExceptions = HashSet<Throwable>()
+        var current: Throwable? = throwable
+        while (true) {
+            if (current == null) return false
+            if (visitedExceptions.contains(current)) return false
+            if (current is PluginPyDebuggerException) return current.isDisconnectException()
+            visitedExceptions.add(current)
+            current = current.cause
         }
     }
 }
