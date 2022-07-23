@@ -155,6 +155,7 @@ private class MyValueTable : MyTable<ITableValueDataModel>() {
         setMaxItemsForSizeCalculation(1)
 
         registerSortKeyBindings()
+        disableProblematicKeyBindings()
     }
 
     override fun setModel(tableModel: TableModel) {
@@ -226,6 +227,17 @@ private class MyValueTable : MyTable<ITableValueDataModel>() {
             put("addColumnDescendingToMultiSort", SortColumnsAction(SortOrder.DESCENDING, true))
             put("removeColumnFromMultiSort", SortColumnsAction(SortOrder.UNSORTED, true))
         }
+    }
+
+    private fun disableProblematicKeyBindings() {
+        getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
+            put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK), "doNothing")
+        }
+        actionMap.put("doNothing", DoNothingAction())
+    }
+
+    private class DoNothingAction : AbstractAction() {
+        override fun actionPerformed(e: ActionEvent?) {}
     }
 
     private class SortColumnsAction(
