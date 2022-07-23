@@ -35,6 +35,11 @@ The following `Styler` methods are supported:
 
 > A good overview about styling `DataFrames` can be found on the pandas website: [pandas User Guide: Styling](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
 
+## Features
+- [sorting](./docs/SORTING.md)
+- [automatic detection of not chunk aware styling functions](./docs/VALIDATING_STYLE_FUNCTIONS.md)
+- [many keyboard shortcuts to work efficiently](./docs/KEYBOARD_SHORTCUTS.md)
+
 ## How Does It Work
 Generate a `DataFrame` and configure the `Styler` returned by `DataFrame.style`:
 ```python

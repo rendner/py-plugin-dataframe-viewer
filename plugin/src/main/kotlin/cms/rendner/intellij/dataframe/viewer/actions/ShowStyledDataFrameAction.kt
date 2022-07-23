@@ -112,9 +112,6 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             title = "Styled DataFrame"
 
             setOKButtonText("Close")
-            // "Alt" + "c" triggers OK action (esc also closes the window)
-            setOKButtonMnemonic('C'.toInt())
-
             setCrossClosesWindow(true)
 
             myDataFrameTable = DataFrameTable()

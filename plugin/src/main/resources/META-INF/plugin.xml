@@ -36,7 +36,9 @@
         <group id="debugActionGroup">
             <action id="cms.rendner.ShowStyledDataFrameAction"
                     class="cms.rendner.intellij.dataframe.viewer.actions.ShowStyledDataFrameAction"
-                    text="View as Styled DataFrame"/>
+                    text="View as Styled DataFrame">
+                <keyboard-shortcut keymap="$default" first-keystroke="alt shift V"/>
+            </action>
             <action id="cms.rendner.ExportDataFrameTestDataAction"
                     class="cms.rendner.intellij.dataframe.viewer.actions.ExportDataFrameTestDataAction"
                     text="Export DataFrame Test Data"/>
