@@ -23,7 +23,6 @@ These are now documented: [Keyboard Shortcuts](./docs/KEYBOARD_SHORTCUTS.md)
 - broken detection of "debugger disconnected" exception
 
 ### Other
-- documented keyboard shortcuts (./docs/KEYBOARD_SHORTCUTS.md)
 - upgrade `kotlinx-serialization-json` for better performance
 
 ## v0.7.1
