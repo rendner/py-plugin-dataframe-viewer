@@ -56,9 +56,9 @@ class ColumnHeaderLabelsExtractor {
             var columnIndex = 0
             row.headers.forEach { header ->
                 val classNames = header.classNames()
-                if (classNames.contains(HeaderCssClasses.INDEX_NAME_CLASS.value)) {
+                if (classNames.contains(HeaderCssClasses.INDEX_NAME_CLASS)) {
                     indexColumn.add(header.text().ifEmpty { "level_${indexColumn.size}" })
-                } else if (classNames.contains(HeaderCssClasses.COL_HEADING_CLASS.value)) {
+                } else if (classNames.contains(HeaderCssClasses.COL_HEADING_CLASS)) {
                     val text = header.text()
                     val colSpan = max(1, header.attr("colSpan").toIntOrNull() ?: 0)
                     for (spanIndex in 0 until colSpan) {
@@ -114,13 +114,13 @@ class ColumnHeaderLabelsExtractor {
         row.headers.forEachIndexed { index, element ->
             val classes = element.classNames()
             if (index == 0) {
-                startsWithBlankClass = classes.contains(HeaderCssClasses.BLANK_CLASS.value)
+                startsWithBlankClass = classes.contains(HeaderCssClasses.BLANK_CLASS)
             }
             if (!hasIndexNameClass) {
-                hasIndexNameClass = classes.contains(HeaderCssClasses.INDEX_NAME_CLASS.value)
+                hasIndexNameClass = classes.contains(HeaderCssClasses.INDEX_NAME_CLASS)
             }
             if (!hasColHeadingClass) {
-                hasColHeadingClass = classes.contains(HeaderCssClasses.COL_HEADING_CLASS.value)
+                hasColHeadingClass = classes.contains(HeaderCssClasses.COL_HEADING_CLASS)
             }
         }
 

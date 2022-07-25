@@ -16,12 +16,12 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked.converter
 
 // https://github.com/pandas-dev/pandas/blob/1.2.x/pandas/io/formats/style.py#L266-L272
-enum class HeaderCssClasses(val value: String) {
-    ROW_HEADING_CLASS("row_heading"),
-    COL_HEADING_CLASS("col_heading"),
-    INDEX_NAME_CLASS("index_name"),
+object HeaderCssClasses {
+    const val ROW_HEADING_CLASS = "row_heading"
+    const val COL_HEADING_CLASS = "col_heading"
+    const val INDEX_NAME_CLASS = "index_name"
 
-    DATA_CLASS("data"),
-    BLANK_CLASS("blank"),
-    // don't use the def of "BLANK_VALUE" because it has changed between 1.2.x and 1.3.x
+    const val DATA_CLASS = "data"
+    const val BLANK_CLASS = "blank"
+    // don't add/use the def of "BLANK_VALUE" because it has changed between 1.2.x and 1.3.x
 }

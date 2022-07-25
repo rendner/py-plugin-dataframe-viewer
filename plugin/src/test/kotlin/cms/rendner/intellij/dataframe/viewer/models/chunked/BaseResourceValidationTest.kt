@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
-import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
+import cms.rendner.intellij.dataframe.viewer.SystemPropertyKey
 import cms.rendner.intellij.dataframe.viewer.models.IDataFrameModel
 import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.BlockingChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.DataFrameTableImageWriter
@@ -50,9 +50,9 @@ data class ResourceTestContext(
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal abstract class BaseResourceValidationTest(errorImageSubDirName: String) {
-    private val testCaseDir = Paths.get(System.getProperty(SystemPropertyEnum.EXPORT_TEST_DATA_DIR.key))
+    private val testCaseDir = Paths.get(System.getProperty(SystemPropertyKey.EXPORT_TEST_DATA_DIR))
     private val testErrorImageDir = Paths.get(
-        System.getProperty(SystemPropertyEnum.EXPORT_TEST_ERROR_IMAGE_DIR.key),
+        System.getProperty(SystemPropertyKey.EXPORT_TEST_ERROR_IMAGE_DIR),
         errorImageSubDirName,
     )
 

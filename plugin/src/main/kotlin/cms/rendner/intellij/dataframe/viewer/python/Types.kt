@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python
 
-enum class PythonQualifiedTypes(val value: String) {
-    None("builtins.NoneType"),
-    List("builtins.list"),
-    Tuple("builtins.tuple"),
-    Dict("builtins.dict"),
-    Function("builtins.function"),
-    Int("builtins.int"),
-    Float("builtins.float"),
-    Float64("numpy.float64"),
-    Index("pandas.core.indexes.base.Index"),
-    Module("builtins.module")
+object PythonQualifiedTypes {
+    const val None = "builtins.NoneType"
+    const val List = "builtins.list"
+    const val Tuple = "builtins.tuple"
+    const val Dict = "builtins.dict"
+    const val Function = "builtins.function"
+    const val Int = "builtins.int"
+    const val Float = "builtins.float"
+    const val Float64 = "numpy.float64"
+    const val Index = "pandas.core.indexes.base.Index"
+    const val Module = "builtins.module"
 }

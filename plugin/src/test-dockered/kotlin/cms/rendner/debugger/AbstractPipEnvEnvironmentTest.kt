@@ -19,7 +19,7 @@ import cms.rendner.debugger.impl.DockeredPythonEvalDebugger
 import cms.rendner.debugger.impl.EvaluateRequest
 import cms.rendner.debugger.impl.EvaluateResponse
 import cms.rendner.debugger.impl.PythonEvalDebugger
-import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
+import cms.rendner.intellij.dataframe.viewer.SystemPropertyKey
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
@@ -35,15 +35,15 @@ import java.util.concurrent.TimeUnit
  * pip-env environment.
  *
  * The docker image to use, has to be specified via the system properties
- * [SystemPropertyEnum.DOCKERED_TEST_IMAGE.key] and [SystemPropertyEnum.DOCKERED_TEST_WORKDIR.key].
+ * [SystemPropertyKey.DOCKERED_TEST_IMAGE] and [SystemPropertyKey.DOCKERED_TEST_WORKDIR].
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal abstract class AbstractPipEnvEnvironmentTest {
     private val executorService: ExecutorService = Executors.newSingleThreadExecutor()
     private var debuggerStarted = false
     private val debugger = DockeredPythonEvalDebugger(
-        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_IMAGE.key),
-        System.getProperty(SystemPropertyEnum.DOCKERED_TEST_WORKDIR.key),
+        System.getProperty(SystemPropertyKey.DOCKERED_TEST_IMAGE),
+        System.getProperty(SystemPropertyKey.DOCKERED_TEST_WORKDIR),
     )
 
     @BeforeAll

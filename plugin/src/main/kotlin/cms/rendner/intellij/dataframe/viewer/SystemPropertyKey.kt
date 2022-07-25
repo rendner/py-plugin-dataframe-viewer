@@ -15,34 +15,34 @@
  */
 package cms.rendner.intellij.dataframe.viewer
 
-enum class SystemPropertyEnum(val key: String) {
+object SystemPropertyKey {
     /**
      * The working directory inside the docker container.
      * (used by integration tests)
      */
-    DOCKERED_TEST_WORKDIR("cms.rendner.dataframe.viewer.dockered.test.workdir"),
+    const val DOCKERED_TEST_WORKDIR = "cms.rendner.dataframe.viewer.dockered.test.workdir"
 
     /**
      * The docker image to run.
      * (used by integration tests)
      */
-    DOCKERED_TEST_IMAGE("cms.rendner.dataframe.viewer.dockered.test.image"),
+    const val DOCKERED_TEST_IMAGE = "cms.rendner.dataframe.viewer.dockered.test.image"
 
     /**
      * Enables the export-test-data action if set to "true".
      * (for local development)
      */
-    ENABLE_TEST_DATA_EXPORT_ACTION("cms.rendner.dataframe.viewer.enable.test.data.export.action"),
+    const val ENABLE_TEST_DATA_EXPORT_ACTION = "cms.rendner.dataframe.viewer.enable.test.data.export.action"
 
     /**
      * The target directory for the exported test-data.
      * (for local development)
      */
-    EXPORT_TEST_DATA_DIR("cms.rendner.dataframe.viewer.export.test.data.dir"),
+    const val EXPORT_TEST_DATA_DIR = "cms.rendner.dataframe.viewer.export.test.data.dir"
 
     /**
      * The target directory for the test screenshots in case of an error.
      * (for unit tests)
      */
-    EXPORT_TEST_ERROR_IMAGE_DIR("cms.rendner.dataframe.viewer.export.test.error.image.dir"),
+    const val EXPORT_TEST_ERROR_IMAGE_DIR = "cms.rendner.dataframe.viewer.export.test.error.image.dir"
 }

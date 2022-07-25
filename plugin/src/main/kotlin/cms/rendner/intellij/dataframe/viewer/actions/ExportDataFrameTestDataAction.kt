@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.actions
 
-import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
+import cms.rendner.intellij.dataframe.viewer.SystemPropertyKey
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.exporter.ExportTask
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
@@ -36,8 +36,8 @@ import java.nio.file.Paths
  */
 class ExportDataFrameTestDataAction : AnAction(), DumbAware {
 
-    private val exportDir = System.getProperty(SystemPropertyEnum.EXPORT_TEST_DATA_DIR.key)?.let { Paths.get(it) }
-    private var isEnabled = System.getProperty(SystemPropertyEnum.ENABLE_TEST_DATA_EXPORT_ACTION.key, "false") == "true"
+    private val exportDir = System.getProperty(SystemPropertyKey.EXPORT_TEST_DATA_DIR)?.let { Paths.get(it) }
+    private var isEnabled = System.getProperty(SystemPropertyKey.ENABLE_TEST_DATA_EXPORT_ACTION, "false") == "true"
 
     override fun update(event: AnActionEvent) {
         super.update(event)
@@ -67,7 +67,7 @@ class ExportDataFrameTestDataAction : AnAction(), DumbAware {
         if (nodes.size == 1) {
             val container = nodes.first().valueContainer
             if (container is PyDebugValue) {
-                if (container.qualifiedType == PythonQualifiedTypes.Dict.value && container.name == "export_test_data") {
+                if (container.qualifiedType == PythonQualifiedTypes.Dict && container.name == "export_test_data") {
                     return container
                 }
             }

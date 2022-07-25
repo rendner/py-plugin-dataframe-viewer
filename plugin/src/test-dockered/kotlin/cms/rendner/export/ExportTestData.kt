@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package cms.rendner.export
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
-import cms.rendner.intellij.dataframe.viewer.SystemPropertyEnum
+import cms.rendner.intellij.dataframe.viewer.SystemPropertyKey
 import cms.rendner.intellij.dataframe.viewer.python.exporter.ExportTask
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -27,7 +27,7 @@ import java.nio.file.Paths
  */
 internal class ExportTestData : AbstractPipEnvEnvironmentTest() {
 
-    private val exportDir = System.getProperty(SystemPropertyEnum.EXPORT_TEST_DATA_DIR.key)?.let { Paths.get(it) }
+    private val exportDir = System.getProperty(SystemPropertyKey.EXPORT_TEST_DATA_DIR)?.let { Paths.get(it) }
 
     @Test
     fun exportTestDataForUnitTests() {
