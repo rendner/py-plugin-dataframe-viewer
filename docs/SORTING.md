@@ -6,7 +6,7 @@ Currently, only the columns to sort and the sort direction are forwarded.
 
 >Hint: Using keyboard shortcuts, the desired sort order can be set or deleted directly without switching between different sort states.
 >
-> See the section `TableSorting` in [KEYBOARD_SHORTCUTS.md](./KEYBOARD_SHORTCUTS).
+> See the section `TableSorting` in [KEYBOARD_SHORTCUTS.md](./KEYBOARD_SHORTCUTS.md).
 
 
 >Note: The sorting of the styled `DataFrame` is done, by the plugin, before applying the styling.
