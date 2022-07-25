@@ -5,7 +5,7 @@ import java.io.ByteArrayOutputStream
 plugins {
     id("idea")
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.6.0"
+    id("org.jetbrains.intellij") version "1.7.0"
     // Kotlin JVM plugin to add support for Kotlin
     // https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library
     kotlin("jvm") version "1.6.21"
@@ -381,7 +381,7 @@ tasks {
 
     listProductsReleases {
         sinceVersion.set("2020.3")
-        untilVersion.set("222.3048.9") // 2022.2 EAP
+        untilVersion.set("222.3345.99") // 2022.2 rc
         //untilVersion.set("2022.2")
     }
 }
@@ -391,7 +391,7 @@ tasks.withType<KotlinCompile>().configureEach {
         jvmTarget = "11"
         freeCompilerArgs = listOf(
             // to allow experimental "Json.decodeFromString()"
-            "-Xopt-in=kotlin.RequiresOptIn",
+            "-opt-in=kotlin.RequiresOptIn",
         )
     }
 }
