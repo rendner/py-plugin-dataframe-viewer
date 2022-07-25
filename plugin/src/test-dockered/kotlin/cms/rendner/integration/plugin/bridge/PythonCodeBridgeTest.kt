@@ -18,6 +18,7 @@ package cms.rendner.integration.plugin.bridge
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
+import com.intellij.openapi.util.Disposer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -66,7 +67,7 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
             val styler = evaluator.evaluate("df.style")
             val patchedStylerRef = codeBridge.createPatchedStyler(styler)
 
-            patchedStylerRef.dispose()
+            Disposer.dispose(patchedStylerRef)
 
             // can only be verified by checking the internal cache
             val cacheSize = evaluator.evaluate("len(${codeBridge.getBridgeExpr(evaluator)}.patched_styler_refs)")

@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -54,3 +55,17 @@ def test_frame_can_handle_reducing_subset(subset):
         2,
         2
     )
+
+
+def test_forwards_kwargs():
+    def my_styling_func(data, **kwargs):
+        attr = f'background-color: {kwargs.get("color")}'
+        return np.where(data % 2 == 0, attr, None)
+
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.applymap(my_styling_func, color="pink"),
+        2,
+        2
+    )
+

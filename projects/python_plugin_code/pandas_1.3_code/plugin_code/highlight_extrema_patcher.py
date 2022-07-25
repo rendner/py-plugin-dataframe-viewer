@@ -25,16 +25,17 @@ from typing import Optional, Union
 # highlight_min: https://github.com/pandas-dev/pandas/blob/v1.3.0/pandas/io/formats/style.py#L2288-L2337
 class HighlightExtremaPatcher(TodoPatcher):
 
-    def __init__(self, df: DataFrame, todo: StylerTodo, op: str):
-        super().__init__(df, todo)
+    def __init__(self, todo: StylerTodo, op: str):
+        super().__init__(todo)
         self._op: str = op
         self._attribute: str = todo.style_func_kwargs.get('props', 'background-color: yellow')
 
-    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
+        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
         return self._todo.builder() \
-            .with_subset(self._calculate_chunk_subset(chunk)) \
+            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
             .with_style_func_kwargs({}) \
-            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, self._subset_data)) \
+            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame)) \
             .build()
 
     def _styling_func(self,

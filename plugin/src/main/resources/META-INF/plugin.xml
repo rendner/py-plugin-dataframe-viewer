@@ -22,9 +22,7 @@
     <idea-version since-build="203.5981.155" until-build="223.*"/>
 
     <change-notes><![CDATA[
-    <b>0.7.1</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/v0.7.1/plugin/docs/release_notes/0.7.x/changelog-1.md">changelog</a>
-    <br/>
-    <b>0.7.0</b> - <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/v0.7.0/plugin/docs/release_notes/0.7.x/changelog-0.md">changelog</a>
+    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md#v080">changelog</a>
     ]]></change-notes>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
@@ -36,7 +34,9 @@
         <group id="debugActionGroup">
             <action id="cms.rendner.ShowStyledDataFrameAction"
                     class="cms.rendner.intellij.dataframe.viewer.actions.ShowStyledDataFrameAction"
-                    text="View as Styled DataFrame"/>
+                    text="View as Styled DataFrame">
+                <keyboard-shortcut keymap="$default" first-keystroke="alt shift V"/>
+            </action>
             <action id="cms.rendner.ExportDataFrameTestDataAction"
                     class="cms.rendner.intellij.dataframe.viewer.actions.ExportDataFrameTestDataAction"
                     text="Export DataFrame Test Data"/>

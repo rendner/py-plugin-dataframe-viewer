@@ -55,7 +55,7 @@ class Element:
 
 class StyledTable:
     def __init__(self):
-        self.table: Element = None
+        self.table: Element = Element("table", {})
         self.styles: Dict[str, str] = {}
 
 

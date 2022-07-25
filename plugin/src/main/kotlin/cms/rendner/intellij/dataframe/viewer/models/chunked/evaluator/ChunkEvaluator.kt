@@ -57,4 +57,8 @@ class ChunkEvaluator(
             excludeColumnHeaders
         )
     }
+
+    override fun setSortCriteria(sortCriteria: SortCriteria) {
+        patchedStyler.evaluateSetSortCriteria(sortCriteria.byIndex, sortCriteria.ascending)
+    }
 }

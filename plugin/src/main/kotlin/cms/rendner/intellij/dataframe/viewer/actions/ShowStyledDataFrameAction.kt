@@ -16,10 +16,12 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.components.DataFrameTable
-import cms.rendner.intellij.dataframe.viewer.models.IDataFrameModel
-import cms.rendner.intellij.dataframe.viewer.models.chunked.*
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkedDataFrameModel
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AsyncChunkDataLoader
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoaderErrorHandler
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
 import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
@@ -47,7 +49,10 @@ import com.intellij.xdebugger.impl.ui.tree.actions.XDebuggerTreeActionBase
 import com.jetbrains.python.debugger.PyDebugValue
 import java.awt.Component
 import java.awt.Dimension
-import javax.swing.*
+import javax.swing.Action
+import javax.swing.BoxLayout
+import javax.swing.JComponent
+import javax.swing.JPanel
 
 /**
  * Action to open the "StyledDataFrameViewer" dialog from the PyCharm debugger.
@@ -73,10 +78,8 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         if (project.isDisposed) return
         val frameOrStyler = getFrameOrStyler(event)
         if (frameOrStyler !== null) {
-            val settings = ApplicationSettingsService.instance.state
             val dialog = MyDialog(project)
-            // note: dialog doesn't sync on settings user has to re-open the dialog after the settings were changed
-            dialog.createModelFrom(frameOrStyler, settings.validationStrategyType, settings.fsLoadNewDataStructure)
+            dialog.createModelFrom(frameOrStyler)
             dialog.show()
         }
     }
@@ -109,9 +112,6 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             title = "Styled DataFrame"
 
             setOKButtonText("Close")
-            // "Alt" + "c" triggers OK action (esc also closes the window)
-            setOKButtonMnemonic('C'.toInt())
-
             setCrossClosesWindow(true)
 
             myDataFrameTable = DataFrameTable()
@@ -120,33 +120,31 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             init()
         }
 
-        fun createModelFrom(
-            frameOrStyler: PyDebugValue,
-            validationStrategyType: ValidationStrategyType,
-            loadNewDataStructure: Boolean,
-        ) {
-            BackgroundTaskUtil.executeOnPooledThread(myParentDisposable) {
+        fun createModelFrom(frameOrStyler: PyDebugValue) {
+            BackgroundTaskUtil.executeOnPooledThread(disposable) {
                 var patchedStyler: IPyPatchedStylerRef? = null
-                var model: IDataFrameModel? = null
                 try {
-                    val pythonBridge = PythonCodeBridge()
-                    patchedStyler = pythonBridge.createPatchedStyler(
-                        frameOrStyler.toPluginType()
-                    )
-
-                    model = createChunkedModel(patchedStyler, validationStrategyType, loadNewDataStructure)
+                    patchedStyler = PythonCodeBridge().createPatchedStyler(frameOrStyler.toPluginType())
+                    val tableStructure = patchedStyler.evaluateTableStructure()
+                    val settings = ApplicationSettingsService.instance.state
+                    // note: loader doesn't sync on settings, user has to re-open the dialog after settings were changed
+                    val chunkLoader = createChunkLoader(patchedStyler, settings)
 
                     ApplicationManager.getApplication().invokeLater {
                         if (!isDisposed) {
-                            Disposer.register(disposable, model)
                             Disposer.register(disposable, patchedStyler)
-                            myDataFrameTable.setDataFrameModel(model)
+                            Disposer.register(patchedStyler, chunkLoader)
+                            ChunkedDataFrameModel(tableStructure, chunkLoader, ChunkSize(30, 20)).let {
+                                Disposer.register(chunkLoader, it)
+                                myDataFrameTable.setDataFrameModel(it)
+                            }
                         } else {
-                            patchedStyler.dispose()
-                            model.dispose()
+                            Disposer.dispose(chunkLoader)
+                            Disposer.dispose(patchedStyler)
                         }
                     }
                 } catch (ex: Exception) {
+                    patchedStyler?.let { Disposer.dispose(patchedStyler) }
                     logger.error("Creating DataFrame model failed", ex)
 
                     ErrorNotification(
@@ -155,9 +153,6 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                         ex.localizedMessage,
                         ex
                     ).notify(project)
-
-                    patchedStyler?.dispose()
-                    model?.dispose()
                 }
             }
         }
@@ -182,22 +177,15 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             return myDataFrameTable
         }
 
-        private fun createChunkedModel(
+        private fun createChunkLoader(
             patchedStyler: IPyPatchedStylerRef,
-            validationStrategyType: ValidationStrategyType,
-            loadNewDataStructure: Boolean,
-        ): IDataFrameModel {
-            val loader = AsyncChunkDataLoader(
+            settings: ApplicationSettingsService.MyState,
+        ): IChunkDataLoader {
+            return AsyncChunkDataLoader(
                 ChunkEvaluator(patchedStyler),
-                loadNewDataStructure,
-                createChunkValidator(patchedStyler, validationStrategyType),
+                settings.fsLoadNewDataStructure,
+                createChunkValidator(patchedStyler, settings.validationStrategyType),
                 this,
-            )
-            loader.setMaxWaitingRequests(8)
-            return ChunkedDataFrameModel(
-                patchedStyler.evaluateTableStructure(),
-                loader,
-                ChunkSize(30, 20),
             )
         }
 

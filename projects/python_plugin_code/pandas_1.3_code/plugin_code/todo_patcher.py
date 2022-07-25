@@ -23,23 +23,23 @@ from pandas.io.formats.style_render import Subset, non_reducing_slice
 
 class TodoPatcher(ABC):
 
-    def __init__(self, df: DataFrame, todo: StylerTodo):
+    def __init__(self, todo: StylerTodo):
         self._todo: StylerTodo = todo
-        self._subset_data: DataFrame = df if df.empty else self._get_subset_data(df, todo.apply_args.subset)
 
     @abstractmethod
-    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
         pass
 
-    def _calculate_chunk_subset(self, chunk: DataFrame) -> Subset:
-        index_intersection = chunk.index.intersection(self._subset_data.index)
-        column_intersection = chunk.columns.intersection(self._subset_data.columns)
+    @staticmethod
+    def _calculate_chunk_subset(org_subset_frame: DataFrame, chunk: DataFrame) -> Subset:
+        index_intersection = chunk.index.intersection(org_subset_frame.index)
+        column_intersection = chunk.columns.intersection(org_subset_frame.columns)
         return index_intersection, column_intersection
 
     @staticmethod
-    def _get_subset_data(df: DataFrame, subset: Optional[Subset]) -> DataFrame:
+    def _create_subset_frame(org_frame: DataFrame, subset: Optional[Subset]) -> DataFrame:
         # same steps as in pandas
         # https://github.com/pandas-dev/pandas/blob/v1.3.0/pandas/io/formats/style.py#L1051-L1053
         subset = slice(None) if subset is None else subset
         subset = non_reducing_slice(subset)
-        return df.loc[subset]
+        return org_frame.loc[subset]

@@ -20,6 +20,7 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvalu
 import cms.rendner.intellij.dataframe.viewer.models.chunked.utils.iterateDataFrame
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
+import com.intellij.openapi.util.Disposer
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -37,7 +38,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
 
     private var exportCounter = 0
     private val pythonBridge = PythonCodeBridge()
-    private val removeTrailingSpacesPattern = Pattern.compile("\\p{Blank}+$", Pattern.MULTILINE)
+    private val removeTrailingSpacesPattern = Pattern.compile("[ \\t]+$", Pattern.MULTILINE)
 
     private val json: Json by lazy {
         Json { ignoreUnknownKeys = true; prettyPrint = true }
@@ -81,7 +82,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
                 writeChunksToFile(patchedStyler, it, testCase, tableStructure)
             }
         } finally {
-            patchedStyler.dispose()
+            Disposer.dispose(patchedStyler)
         }
     }
 
@@ -144,7 +145,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
         // That id is used for the table elements and for the css styles which style the table elements.
         // To have a stable output the id is always replaced with a static one.
         val document = Jsoup.parse(html)
-        val tableId = document.selectFirst("table").id()
+        val tableId = document.selectFirst("table")!!.id()
         var prettified = document.outerHtml()
         // fix for jsoup #1689 (Pretty print leaves extra space at end of many lines)
         prettified = removeTrailingSpacesPattern.matcher(prettified).replaceAll("")

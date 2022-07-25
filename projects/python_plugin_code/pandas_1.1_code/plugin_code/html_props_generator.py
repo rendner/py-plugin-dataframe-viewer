@@ -11,40 +11,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from plugin_code.todos_patcher import TodosPatcher
+from plugin_code.patched_styler_context import PatchedStylerContext, Region, IndexTranslator
 
 # == copy after here ==
-from dataclasses import dataclass
 from typing import List, Callable, Tuple
 from collections.abc import Mapping
-from abc import ABC, abstractmethod
-
-from pandas import DataFrame
 from pandas.io.formats.style import Styler
-
-
-class _IndexTranslator(ABC):
-    @abstractmethod
-    def translate(self, index):
-        pass
-
-
-class _SequenceIndexTranslator(_IndexTranslator):
-    def __init__(self, seq):
-        super().__init__()
-        self.__seq = seq
-
-    def translate(self, index):
-        return self.__seq[index]
-
-
-class _OffsetIndexTranslator(_IndexTranslator):
-    def __init__(self, offset: int):
-        super().__init__()
-        self.__offset = offset
-
-    def translate(self, index):
-        return index + self.__offset
 
 
 class _TranslateKeysDict(Mapping):
@@ -83,7 +55,7 @@ class _TranslateKeysDict(Mapping):
 
 class _HTMLPropsIndexAdjuster:
 
-    def __init__(self, ri_translator: _IndexTranslator, ci_translator: _IndexTranslator):
+    def __init__(self, ri_translator: IndexTranslator, ci_translator: IndexTranslator):
         self.ri_translator = ri_translator
         self.ci_translator = ci_translator
 
@@ -117,29 +89,14 @@ class _HTMLPropsIndexAdjuster:
         return index
 
 
-@dataclass(frozen=True)
-class Region:
-    first_row: int = 0
-    first_col: int = 0
-    rows: int = 0
-    cols: int = 0
-
-    def is_empty(self) -> bool:
-        return self.rows == 0 or self.cols == 0
-
-    def is_valid(self) -> bool:
-        return self.first_row >= 0 and self.first_col >= 0 and self.rows >= 0 and self.cols >= 0
-
-
 class HTMLPropsGenerator:
-    def __init__(self, visible_data: DataFrame, styler: Styler):
-        self.__visible_data: DataFrame = visible_data
-        self.__styler: Styler = styler
+    def __init__(self, styler_context: PatchedStylerContext):
+        self.__styler_context: PatchedStylerContext = styler_context
 
     def compute_unpatched_props(self) -> dict:
         # can't use "styler._copy(deepcopy=True)" - pandas 1.1 only copies ctx and _todo)
         # therefore use org instead
-        copy = self.__styler
+        copy = self.__styler_context.get_styler()
         copy.uuid = ''
         copy.uuid_len = 0
         copy.cell_ids = False
@@ -158,30 +115,42 @@ class HTMLPropsGenerator:
                             exclude_row_header: bool = False,
                             translate_indices: bool = True,
                             ) -> dict:
-        # chunk contains always only non-hidden data
-        chunk = self.__visible_data.iloc[
+        # -- Computing of styling
+        # The plugin only renders the visible (non-hidden cols/rows) of the styled DataFrame
+        # therefore the chunk is created from the visible data.
+        chunk = self.__styler_context.get_visible_frame().iloc[
                 region.first_row: region.first_row + region.rows,
                 region.first_col: region.first_col + region.cols,
                 ]
 
-        # patch apply/applymap params to not operate outside of the chunk bounds
-        patched_todos = TodosPatcher().patch_todos_for_chunk(self.__styler, chunk)
+        # The apply/applymap params are patched to not operate outside the chunk bounds.
+        chunk_aware_todos = self.__styler_context.create_patched_todos(chunk)
 
-        computed_styler = self.__compute_styles(
-            patched_todos=patched_todos,
+        # Compute the styling for the chunk by operating on the original DataFrame.
+        # The computed styler contains only entries for the cells of the chunk,
+        # this is ensured by the patched todos.
+        computed_styler = self.__compute_styling(
+            chunk_aware_todos=chunk_aware_todos,
             exclude_row_header=exclude_row_header,
         )
 
-        rit = _OffsetIndexTranslator(region.first_row)
-
-        if len(self.__styler.hidden_columns) == 0:
-            cit = _OffsetIndexTranslator(region.first_col)
-        else:
-            cit = _SequenceIndexTranslator(self.__styler.columns.get_indexer_for(chunk.columns))
-
-        # prepare chunk styler
+        # -- Generating html-props
+        # pandas generates html-props into a dict for template rendering, this is done by iterating through
+        # the whole DataFrame of a styler.
+        #
+        # The styling was computed on the original DataFrame but only for the cells of the chunk. To generate only
+        # the html-props of the chunk, a styler which refers to the chunk DataFrame has to be created with the
+        # already computed styling.
         chunk_styler = chunk.style
         self.__copy_styler_state(source=computed_styler, target=chunk_styler)
+
+        # The styler of the original DataFrame can contain additional configuration for styling the rendered html table.
+        # For example display functions allow to transform DataFrame values into a string which should be rendered
+        # instead of the value.
+        # To use these additional configurations, an index mapping is used to translate an chunk row/col index into a
+        # row/col index of the original DataFrame.
+        rit = self.__styler_context.get_row_index_translator_for_chunk(chunk, region)
+        cit = self.__styler_context.get_column_index_translator_for_chunk(chunk, region)
 
         # translate keys from "chunk_styler" into keys of "computed_styler"
         def translate_key(k):
@@ -190,7 +159,7 @@ class HTMLPropsGenerator:
         chunk_styler.ctx = _TranslateKeysDict(computed_styler.ctx, translate_key)
         chunk_styler._display_funcs = _TranslateKeysDict(computed_styler._display_funcs, translate_key)
 
-        # generate html props for chunk
+        # generate html-props for chunk
         result = chunk_styler._translate()
         # filter out empty styles, every cell will have a class
         # but the list of props may just be [['', '']].
@@ -213,16 +182,19 @@ class HTMLPropsGenerator:
             props["uuid"] = ""
         return props
 
-    def __compute_styles(self,
-                         patched_todos: List[Tuple[Callable, tuple, dict]],
-                         exclude_row_header: bool = False,
-                         ) -> Styler:
-        # create a copy to not pollute original styler
-        copy = self.__styler.data.style
-        self.__copy_styler_state(source=self.__styler, target=copy)
+    def __compute_styling(self,
+                          chunk_aware_todos: List[Tuple[Callable, tuple, dict]],
+                          exclude_row_header: bool = False,
+                          ) -> Styler:
+        styler = self.__styler_context.get_styler()
 
-        # assign todos
-        copy._todo = patched_todos
+        # create a new styler which refers to the same DataFrame to not pollute original styler
+        copy = styler.data.style
+        # copy required properties (not all properties should be copied)
+        self.__copy_styler_state(source=styler, target=copy)
+
+        # assign patched todos
+        copy._todo = chunk_aware_todos
 
         # only hide if forced
         if exclude_row_header:
@@ -248,7 +220,8 @@ class HTMLPropsGenerator:
         # "_todo"
         #   - will be overwritten with the patched ones in a later step
         # "hidden_columns"
-        #   - already used to calculate "self.__visible_data" and therefore not needed any more
+        #   - already used to calculate "self.__styler_context.get_visible_frame()"
+        #     and therefore not needed any more
         # "ctx"
         #   - gets modified/filled when generating html
         #   - causes html output with wrong values when multiple targets copy the

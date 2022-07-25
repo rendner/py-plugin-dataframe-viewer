@@ -29,11 +29,13 @@ import com.intellij.ui.table.JBTable
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
-import java.awt.event.MouseEvent
-import java.awt.event.MouseListener
-import java.awt.event.MouseMotionListener
+import java.awt.event.*
+import java.beans.PropertyChangeEvent
+import java.beans.PropertyChangeListener
 import javax.swing.*
 import javax.swing.event.ChangeEvent
+import javax.swing.event.RowSorterEvent
+import javax.swing.event.RowSorterListener
 import javax.swing.event.TableModelEvent
 import javax.swing.table.*
 import kotlin.math.max
@@ -45,10 +47,9 @@ private const val MIN_TABLE_WIDTH = 350
 
 private const val MAX_AUTO_EXPAND_COLUMN_WIDTH = 350
 
-// https://stackoverflow.com/questions/1434933/jtable-row-header-implementation
-// similar to "com.jetbrains.python.debugger.array::JBTableWithRowHeader"
-class DataFrameTable : JScrollPane() {
+class DataFrameTable : JScrollPane(), RowSorterListener, PropertyChangeListener {
 
+    private var myDataFrameModel: IDataFrameModel? = null
     private val myIndexTable: MyIndexTable
     private val myValueTable: MyValueTable = MyValueTable()
 
@@ -60,34 +61,69 @@ class DataFrameTable : JScrollPane() {
 
         setViewportView(myValueTable)
         minimumSize = Dimension(MIN_TABLE_WIDTH, 250)
+
+        myValueTable.addPropertyChangeListener(this)
     }
 
-    fun setDataFrameModel(dateFrameModel: IDataFrameModel) {
-        myValueTable.setModel(dateFrameModel.getValueDataModel())
-        myValueTable.model?.let {
-            if (it.shouldHideHeaders()) {
-                setColumnHeaderView(null)
-            } else {
-                setColumnHeaderView(myValueTable.tableHeader)
-            }
+    fun setDataFrameModel(model: IDataFrameModel) {
+        if (model == myDataFrameModel) return
+        myDataFrameModel = model
+
+        model.getValueDataModel().let {
+            myValueTable.setModel(it)
+            myValueTable.rowSorter = if (model is IExternalSortableDataFrameModel) MyExternalDataRowSorter(it) else null
+            setColumnHeaderView(if (it.shouldHideHeaders()) null else myValueTable.tableHeader)
+        }
+        model.getIndexDataModel().let {
+            myIndexTable.setModel(it)
+            setRowHeaderView(if (it.columnCount == 0) null else myIndexTable)
+            setCorner(
+                ScrollPaneConstants.UPPER_LEFT_CORNER,
+                if (it.columnCount == 0 || it.shouldHideHeaders()) null else myIndexTable.tableHeader
+            )
         }
 
-        myIndexTable.setModel(dateFrameModel.getIndexDataModel())
-        myIndexTable.model?.let {
-            if (it.columnCount == 0) {
-                setRowHeaderView(null)
-                setCorner(ScrollPaneConstants.UPPER_LEFT_CORNER, null)
-            } else {
-                setRowHeaderView(myIndexTable)
-                if (!it.shouldHideHeaders()) {
-                    setCorner(ScrollPaneConstants.UPPER_LEFT_CORNER, myIndexTable.tableHeader)
-                }
+        if (myValueTable.rowCount > 0) {
+            SwingUtilities.invokeLater {
+                // to focus first cell and allow immediately to use key bindings like sort
+                myValueTable.changeSelection(0, 0, false, false)
+                myValueTable.requestFocus()
             }
         }
     }
 
     fun getRowHeight(): Int {
         return myValueTable.rowHeight
+    }
+
+    override fun sorterChanged(event: RowSorterEvent) {
+        if (event.type != RowSorterEvent.Type.SORT_ORDER_CHANGED) return
+        myDataFrameModel?.let { model ->
+            if (model !is IExternalSortableDataFrameModel) return
+            model.setSortKeys(event.source.sortKeys)
+
+            // Whenever the sorting changes the selection has to be cleared.
+            // It is unknown in which row the selected cell will be after sorting.
+            myIndexTable.selectionModel?.clearSelection()
+            myValueTable.selectionModel?.clearSelection()
+        }
+    }
+
+    override fun propertyChange(event: PropertyChangeEvent) {
+        if (event.source == myValueTable) {
+            if (event.propertyName == "rowSorter") {
+                event.oldValue?.let { if (it is RowSorter<*>) it.removeRowSorterListener(this) }
+                myDataFrameModel?.let { model ->
+                    if (model !is IExternalSortableDataFrameModel) return
+                    event.newValue?.let {
+                        if (it is RowSorter<*>) {
+                            it.addRowSorterListener(this)
+                            model.setSortKeys(it.sortKeys)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -116,7 +152,10 @@ private class MyValueTable : MyTable<ITableValueDataModel>() {
 
         // set property to 1 - to automatically determine the required row height
         // 1 because we use the same cell renderer for all cells
-        this.setMaxItemsForSizeCalculation(1)
+        setMaxItemsForSizeCalculation(1)
+
+        registerSortKeyBindings()
+        disableProblematicKeyBindings()
     }
 
     override fun setModel(tableModel: TableModel) {
@@ -137,8 +176,8 @@ private class MyValueTable : MyTable<ITableValueDataModel>() {
 
     override fun createLeveledTableHeaderRenderer(): TableCellRenderer {
         /**
-         Note:
-         each [CustomizedCellRenderer] needs an own instance of a defaultHeaderRenderer (can't be shared)
+        Note:
+        each [CustomizedCellRenderer] needs an own instance of a defaultHeaderRenderer (can't be shared)
          */
         return MultiLineCellRenderer(
             listOf(
@@ -166,6 +205,171 @@ private class MyValueTable : MyTable<ITableValueDataModel>() {
 
     override fun createDefaultDataModel(): ITableValueDataModel {
         return EmptyValueModel()
+    }
+
+    private fun registerSortKeyBindings() {
+        getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
+            put(KeyStroke.getKeyStroke(KeyEvent.VK_A, 0), "sortColumnAscending")
+            put(KeyStroke.getKeyStroke(KeyEvent.VK_D, 0), "sortColumnDescending")
+            put(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0), "clearColumnSorting")
+            (KeyEvent.ALT_DOWN_MASK).let {
+                put(KeyStroke.getKeyStroke(KeyEvent.VK_A, it), "addColumnAscendingToMultiSort")
+                put(KeyStroke.getKeyStroke(KeyEvent.VK_D, it), "addColumnDescendingToMultiSort")
+                put(KeyStroke.getKeyStroke(KeyEvent.VK_C, it), "removeColumnFromMultiSort")
+            }
+        }
+        actionMap.apply {
+            put("sortColumnAscending", SortColumnsAction(SortOrder.ASCENDING, false))
+            put("sortColumnDescending", SortColumnsAction(SortOrder.DESCENDING, false))
+            put("clearColumnSorting", SortColumnsAction(SortOrder.UNSORTED, false))
+
+            put("addColumnAscendingToMultiSort", SortColumnsAction(SortOrder.ASCENDING, true))
+            put("addColumnDescendingToMultiSort", SortColumnsAction(SortOrder.DESCENDING, true))
+            put("removeColumnFromMultiSort", SortColumnsAction(SortOrder.UNSORTED, true))
+        }
+    }
+
+    private fun disableProblematicKeyBindings() {
+        getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
+            put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK), "doNothing")
+        }
+        actionMap.put("doNothing", DoNothingAction())
+    }
+
+    private class DoNothingAction : AbstractAction() {
+        override fun actionPerformed(e: ActionEvent?) {}
+    }
+
+    private class SortColumnsAction(
+        private val sortOrder: SortOrder,
+        private val shiftKeyIsDown: Boolean
+    ) : AbstractAction() {
+        override fun accept(sender: Any?) = sender is MyValueTable
+
+        override fun actionPerformed(event: ActionEvent) {
+            (event.source as MyValueTable).let { table ->
+                val column = table.selectedColumn
+                if (column == -1) return
+                table.rowSorter?.let {
+                    if (it is MyExternalDataRowSorter) {
+                        if (sortOrder == SortOrder.UNSORTED && !shiftKeyIsDown) {
+                            it.sortKeys = emptyList()
+                        } else it.setSortOrder(column, sortOrder, shiftKeyIsDown)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private class MyExternalDataRowSorter(private val model: ITableValueDataModel) : RowSorter<ITableValueDataModel?>() {
+
+    private var mySortKeys: List<SortKey> = emptyList()
+    private var myShiftKeyIsDown: Boolean = false
+    private val myMaxSortKeys = 9
+
+    override fun getModel() = model
+
+    fun setShiftKeyIsDownDuringAction(isDown: Boolean) {
+        myShiftKeyIsDown = isDown
+    }
+
+    fun setSortOrder(column: Int, order: SortOrder, shiftKeyIsDown: Boolean) {
+        val sortKeyIndex = sortKeys.indexOfFirst { it.column == column }
+        if (sortKeyIndex == -1 && order == SortOrder.UNSORTED) return
+        if (sortKeyIndex != -1 && sortKeys[sortKeyIndex].sortOrder == order && sortKeys.size > 1 && shiftKeyIsDown) return
+        myShiftKeyIsDown = shiftKeyIsDown
+        updateSortKey(sortKeyIndex, SortKey(column, order))
+        myShiftKeyIsDown = false
+    }
+
+    override fun toggleSortOrder(column: Int) {
+        val sortKeyIndex = sortKeys.indexOfFirst { it.column == column }
+        val updatedSortKey = if (sortKeyIndex == -1) {
+            SortKey(column, SortOrder.ASCENDING)
+        } else {
+            if (myShiftKeyIsDown) {
+                toggle(sortKeys[sortKeyIndex])
+            } else {
+                if (sortKeys.size > 1) {
+                    // was multi sort - clear sort and start from scratch
+                    SortKey(column, SortOrder.ASCENDING)
+                } else {
+                    toggle(sortKeys[sortKeyIndex])
+                }
+            }
+        }
+
+        updateSortKey(sortKeyIndex, updatedSortKey)
+    }
+
+    override fun setSortKeys(keys: List<SortKey>?) {
+        val old = mySortKeys
+        mySortKeys = keys?.toList() ?: emptyList()
+        if (mySortKeys.size > myMaxSortKeys) {
+            mySortKeys = mySortKeys.subList(0, myMaxSortKeys)
+        }
+        if (mySortKeys != old) {
+            fireSortOrderChanged()
+        }
+    }
+
+    override fun convertRowIndexToModel(index: Int) = index
+    override fun convertRowIndexToView(index: Int) = index
+    override fun getSortKeys() = mySortKeys
+    override fun getViewRowCount() = model.rowCount
+    override fun getModelRowCount() = model.rowCount
+    override fun modelStructureChanged() {}
+    override fun allRowsChanged() {}
+    override fun rowsInserted(firstRow: Int, endRow: Int) {}
+    override fun rowsDeleted(firstRow: Int, endRow: Int) {}
+    override fun rowsUpdated(firstRow: Int, endRow: Int) {}
+    override fun rowsUpdated(firstRow: Int, endRow: Int, column: Int) {}
+
+    private fun toggle(key: SortKey): SortKey {
+        return if (myShiftKeyIsDown) {
+            // shift is down - only cycle between asc, desc
+            when (key.sortOrder) {
+                SortOrder.ASCENDING -> SortKey(key.column, SortOrder.DESCENDING)
+                else -> SortKey(key.column, SortOrder.ASCENDING)
+            }
+        } else {
+            when (key.sortOrder) {
+                SortOrder.ASCENDING -> SortKey(key.column, SortOrder.DESCENDING)
+                SortOrder.DESCENDING -> SortKey(key.column, SortOrder.UNSORTED)
+                else -> SortKey(key.column, SortOrder.ASCENDING)
+            }
+        }
+    }
+
+    private fun updateSortKey(sortKeyIndex: Int, updatedSortKey: SortKey) {
+        sortKeys = if (sortKeyIndex == -1) {
+            // column isn't sorted
+            if (myShiftKeyIsDown) {
+                if (sortKeys.size >= myMaxSortKeys) return
+                sortKeys.toMutableList().also { it.add(updatedSortKey) }
+            } else {
+                listOf(updatedSortKey)
+            }
+        } else {
+            // column is already sorted
+            if (myShiftKeyIsDown) {
+                sortKeys.toMutableList().also {
+                    if (updatedSortKey.sortOrder == SortOrder.UNSORTED) {
+                        it.removeAt(sortKeyIndex)
+                    } else {
+                        it[sortKeyIndex] = updatedSortKey
+                    }
+                }
+            } else {
+                if (sortKeys.size > 1) {
+                    // was multi sort - clear sort and start from scratch
+                    listOf(updatedSortKey)
+                } else {
+                    updatedSortKey.let { if (it.sortOrder == SortOrder.UNSORTED) emptyList() else listOf(it) }
+                }
+            }
+        }
     }
 }
 
@@ -232,6 +436,14 @@ private class MyIndexTable(
     override fun addColumn(column: TableColumn) {
         column.maxWidth = maxColumnWidth
         super.addColumn(column)
+    }
+
+    override fun convertRowIndexToModel(viewRowIndex: Int): Int {
+        return mainTable.convertRowIndexToModel(viewRowIndex)
+    }
+
+    override fun convertRowIndexToView(modelRowIndex: Int): Int {
+        return mainTable.convertRowIndexToView(modelRowIndex)
     }
 
     override fun addMouseListener(l: MouseListener?) {
@@ -387,6 +599,20 @@ abstract class MyTable<M : ITableDataModel> : JBTable(null) {
      */
     private inner class MyTableHeader : JBTable.JBTableHeader() {
         private val myNotAdjustableColumns: MutableSet<Int> = java.util.HashSet()
+
+        override fun processMouseEvent(e: MouseEvent?) {
+            if (e?.id == MouseEvent.MOUSE_RELEASED) setRowSorterShiftKeyFlag(e.isShiftDown)
+            super.processMouseEvent(e)
+            if (e?.id == MouseEvent.MOUSE_CLICKED) setRowSorterShiftKeyFlag(false)
+        }
+
+        private fun setRowSorterShiftKeyFlag(isDown: Boolean) {
+            table.rowSorter?.let {
+                if (it is MyExternalDataRowSorter) {
+                    it.setShiftKeyIsDownDuringAction(isDown)
+                }
+            }
+        }
 
         override fun setResizingColumn(column: TableColumn?) {
             super.setResizingColumn(column)

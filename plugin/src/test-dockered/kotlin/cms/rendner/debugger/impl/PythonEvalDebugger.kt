@@ -37,8 +37,8 @@ abstract class PythonEvalDebugger {
 
     private val pythonErrorRegex = ".*\\*{3}[ ]\\w*Error:[ ].+".toRegex()
 
-    private enum class LinePrefixes(val label: String) {
-        DEBUGGER_PROMPT("(Pdb) "),
+    private object LinePrefixes {
+        const val DEBUGGER_PROMPT = "(Pdb) "
     }
 
     /**
@@ -220,7 +220,7 @@ abstract class PythonEvalDebugger {
             // but it could also contain additional info like:
             // "(Pdb) <string>:658: FutureWarning: ..."
             // therefore use "startsWith" to check for prompt
-            if (lines.last().startsWith(LinePrefixes.DEBUGGER_PROMPT.label)) {
+            if (lines.last().startsWith(LinePrefixes.DEBUGGER_PROMPT)) {
                 return true
             }
         }
@@ -229,7 +229,7 @@ abstract class PythonEvalDebugger {
 
     private fun getEvaluationResult(lines: List<String>): String? {
         return if (lines.isNotEmpty()) {
-            if (lines.last() == LinePrefixes.DEBUGGER_PROMPT.label && lines.size > 1) {
+            if (lines.last() == LinePrefixes.DEBUGGER_PROMPT && lines.size > 1) {
                 lines[lines.size - 2]
             } else {
                 lines.joinToString(System.lineSeparator())
@@ -258,11 +258,11 @@ abstract class PythonEvalDebugger {
             val separatorAfterRefId = unquotedResult.indexOf(" ", separatorAfterTypeInfo + 1)
 
             val qualifiedType =
-                unquotedResult.substring(0, separatorAfterTypeInfo).let { it.splitAtIndex(it.lastIndexOf(".")) }
+                unquotedResult.substring(0, separatorAfterTypeInfo).let { it.splitAtIndex(it.indexOf(":")) }
             val refId = unquotedResult.substring(separatorAfterTypeInfo + 1, separatorAfterRefId)
             var value = unquotedResult.substring(separatorAfterRefId + 1)
 
-            if (value.contains(LinePrefixes.DEBUGGER_PROMPT.label)) {
+            if (value.contains(LinePrefixes.DEBUGGER_PROMPT)) {
                 throw PluginPyDebuggerException("Something went wrong, debugger prompt found in value: $value")
             }
 
@@ -321,7 +321,7 @@ class __DebuggerInternals__:
         klass = getattr(o, '__class__', '')
         module = getattr(klass, '__module__', '')
         qname = getattr(klass, '__qualname__', '')
-        return f'{module}.{qname}'
+        return f'{module}:{qname}'
 
     def eval(self, expression) -> str:
         if isinstance(expression, str):

@@ -35,6 +35,11 @@ The following `Styler` methods are supported:
 
 > A good overview about styling `DataFrames` can be found on the pandas website: [pandas User Guide: Styling](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
 
+## Features
+- [sorting](./docs/SORTING.md)
+- [automatic detection of not chunk aware styling functions](./docs/VALIDATING_STYLE_FUNCTIONS.md)
+- [many keyboard shortcuts to work efficiently](./docs/KEYBOARD_SHORTCUTS.md)
+
 ## How Does It Work
 Generate a `DataFrame` and configure the `Styler` returned by `DataFrame.style`:
 ```python
@@ -77,18 +82,6 @@ All other properties are ignored.
 
 > Inheritance of css properties is only partial implemented and may not work for all scenarios.
 This may be improved if there are major problems with it.
-
-## Version History
-| version   | changelog                                                  |
-|-----------|------------------------------------------------------------|
-| 0.7.1     | [link](./plugin/docs/release_notes/0.7.x/changelog-1.md)   |
-| 0.7.0     | [link](./plugin/docs/release_notes/0.7.x/changelog-0.md)   |
-| 0.6.0     | [link](./plugin/docs/release_notes/0.6.x/changelog-0.md)   |
-| 0.5.1     | [link](./plugin/docs/release_notes/0.5.x/changelog-1.md)   |
-| 0.5.0     | [link](./plugin/docs/release_notes/0.5.x/changelog-0.md)   |
-| 0.4.0     | [link](./plugin/docs/release_notes/0.4.x/changelog-0.md)   |
-| 0.3.1-b.1 | [link](./plugin/docs/release_notes/0.3.1-b.1/changelog.md) |
-| 0.3-b.1   | initial release                                            |
 
 ## Examples
 #### About The Code Snippets

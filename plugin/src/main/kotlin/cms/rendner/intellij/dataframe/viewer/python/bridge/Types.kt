@@ -100,6 +100,15 @@ interface IPyPatchedStylerRef : Disposable {
     ): List<StyleFunctionValidationProblem>
 
     /**
+     * Calls the "set_sort_criteria" method of the Python class "PatchedStyler".
+     *
+     * @param byColumnIndex list of column indices to be sorted, <code>null</code> for no sorting.
+     * @param ascending the sort order for each specified column, must match the length of [byColumnIndex]
+     */
+    @Throws(EvaluateException::class)
+    fun evaluateSetSortCriteria(byColumnIndex: List<Int>? = null, ascending: List<Boolean>? = null)
+
+    /**
      * Calls the "render_chunk" method of the Python class "PatchedStyler".
      *
      * @param firstRow index of the first row of the chunk

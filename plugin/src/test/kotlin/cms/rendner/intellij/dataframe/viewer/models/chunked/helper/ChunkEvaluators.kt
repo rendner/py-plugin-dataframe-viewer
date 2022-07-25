@@ -17,6 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.python.bridge.HTMLPropsTable
 import cms.rendner.intellij.dataframe.viewer.python.exporter.TestCasePath
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -44,6 +45,9 @@ fun createChunkFileEvaluator(
 private class ChunkFileEvaluator(
     private val testCaseDir: Path,
 ) : IChunkEvaluator {
+    override fun setSortCriteria(sortCriteria: SortCriteria) {
+        NotImplementedError("Sorting isn't support by this implementation.")
+    }
 
     override fun evaluate(
         chunkRegion: ChunkRegion,
@@ -76,6 +80,9 @@ private class ChunkFileEvaluator(
 private class ExpectedFileEvaluator(
     private val filePath: Path,
 ) : IChunkEvaluator {
+    override fun setSortCriteria(sortCriteria: SortCriteria) {
+        NotImplementedError("Sorting isn't support by this implementation.")
+    }
 
     override fun evaluate(
         chunkRegion: ChunkRegion,

@@ -18,6 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AbstractChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
 import java.util.concurrent.Executor
@@ -38,7 +39,7 @@ internal class BlockingChunkDataLoader(
     loadNewDataStructure,
 ) {
     override fun loadChunk(request: LoadRequest) {
-        submitFetchChunkTask(request, this).whenComplete { _, throwable ->
+        submitFetchChunkTask(LoadChunkContext(request), this).whenComplete { _, throwable ->
             if (throwable != null) {
                 myResultHandler?.onError(request, throwable)
                 throw throwable
@@ -46,17 +47,21 @@ internal class BlockingChunkDataLoader(
         }
     }
 
+    override fun setSortCriteria(sortCriteria: SortCriteria) {
+        NotImplementedError("Sorting isn't support by this implementation.")
+    }
+
     override fun isAlive() = true
     override fun dispose() {
         // do nothing
     }
 
-    override fun handleChunkData(loadRequest: LoadRequest, chunkData: ChunkData) {
-        myResultHandler?.onChunkLoaded(loadRequest, chunkData)
+    override fun handleChunkData(ctx: LoadChunkContext, chunkData: ChunkData) {
+        myResultHandler?.onChunkLoaded(ctx.request, chunkData)
     }
 
-    override fun handleStyledValues(loadRequest: LoadRequest, chunkValues: ChunkValues) {
-        myResultHandler?.onStyledValuesProcessed(loadRequest, chunkValues)
+    override fun handleStyledValues(ctx: LoadChunkContext, chunkValues: ChunkValues) {
+        myResultHandler?.onStyledValuesProcessed(ctx.request, chunkValues)
     }
 
     override fun execute(command: Runnable) {

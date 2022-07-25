@@ -34,8 +34,8 @@ class HTMLPropsTableRowElement:
 
 @dataclass
 class HTMLPropsTable:
-    body: List[List[HTMLPropsTableRowElement]]
     head: List[List[HTMLPropsTableRowElement]]
+    body: List[List[HTMLPropsTableRowElement]]
 
 
 @dataclass
@@ -55,7 +55,7 @@ class HTMLPropsTableBuilder:
     def __init__(self):
         self.__table = HTMLPropsTable([], [])
 
-    def build_table(self) -> HTMLPropsTable:
+    def build(self) -> HTMLPropsTable:
         table = self.__table
         self.__table = HTMLPropsTable([], [])
         return table

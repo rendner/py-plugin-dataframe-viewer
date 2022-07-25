@@ -44,16 +44,6 @@ internal class ChunkedDataFrameModelTest {
     }
 
     @Test
-    fun doesCallDisposeOnLoader() {
-        var loaderDisposed = false
-        setup(createTableStructure()) { loaderDisposed = true }
-
-        model.dispose()
-
-        assertThat(loaderDisposed).isEqualTo(true)
-    }
-
-    @Test
     fun doesNotFetchChunkIfValueForIndexIsRequested() {
         setup(createTableStructure())
 
@@ -255,6 +245,10 @@ internal class ChunkedDataFrameModelTest {
             chunkDataProvider.getData(request)?.let {
                 resultHandler?.onChunkLoaded(request, it)
             }
+        }
+
+        override fun setSortCriteria(sortCriteria: SortCriteria) {
+            NotImplementedError("Sorting isn't support by this implementation.")
         }
 
         override fun setResultHandler(resultHandler: IChunkDataResultHandler) {

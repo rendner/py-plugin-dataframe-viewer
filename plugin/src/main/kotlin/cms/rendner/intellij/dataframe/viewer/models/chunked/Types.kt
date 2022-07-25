@@ -54,6 +54,11 @@ interface IChunkEvaluator {
      * @return returns a table like structure, of HTML properties, similar to the evaluated chunk.
      */
     fun evaluateHTMLProps(chunkRegion: ChunkRegion, excludeRowHeaders: Boolean, excludeColumnHeaders: Boolean): HTMLPropsTable
+
+    /**
+     * Applies the sort criteria to the styled pandas DataFrame.
+     */
+    fun setSortCriteria(sortCriteria: SortCriteria)
 }
 
 interface IChunkValues {
@@ -119,6 +124,8 @@ data class ChunkData(
 data class ChunkSize(val rows: Int, val columns: Int)
 
 /**
+ * Describes the table structure of a pandas DataFrame.
+ *
  * @param rowsCount number of rows
  * @param columnsCount number of columns
  * @param rowLevelsCount number of headers which build the label/index of a row, number >= 0.
@@ -135,3 +142,25 @@ data class TableStructure(
     @SerialName("hide_row_header") val hideRowHeader: Boolean,
     @SerialName("hide_column_header") val hideColumnHeader: Boolean
 )
+
+class MutableSortCriteria(
+    val byIndex: MutableList<Int> = mutableListOf(),
+    val ascending: MutableList<Boolean> = mutableListOf(),
+) {
+    fun toSortCriteria() = SortCriteria(byIndex, ascending)
+}
+
+/**
+ * Describes the sort criteria for a pandas DataFrame.
+ *
+ * @param byIndex list of column indices to be sorted
+ * @param ascending the sort order for each specified column, must match the length of [byIndex]
+ */
+data class SortCriteria(
+    val byIndex: List<Int> = emptyList(),
+    val ascending: List<Boolean> = emptyList(),
+) {
+    init {
+        require(byIndex.size == ascending.size) { "The length of 'byIndex' and 'ascending' must match." }
+    }
+}

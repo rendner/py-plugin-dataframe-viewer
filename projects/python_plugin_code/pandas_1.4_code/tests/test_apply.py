@@ -14,6 +14,7 @@
 import pandas as pd
 import pytest
 
+from tests.helpers.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 from tests.helpers.custom_styler_functions import highlight_even_numbers, highlight_max_values
 
@@ -107,4 +108,11 @@ def test_no_chunk_parent_is_provided_for_lambda(axis):
         lambda styler: styler.apply(highlighter, axis=axis),
         2,
         2
+    )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.apply,
+        ['axis', 'subset', 'func', 'kwargs']
     )

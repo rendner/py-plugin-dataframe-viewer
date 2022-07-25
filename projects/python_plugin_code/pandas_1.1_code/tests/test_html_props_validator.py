@@ -14,7 +14,7 @@
 from datetime import datetime
 import numpy as np
 import pytest
-from pandas import MultiIndex, DataFrame, IndexSlice, Series
+from pandas import MultiIndex, DataFrame, Series
 from pandas.io.formats.style import Styler
 
 from plugin_code.html_props_validator import HTMLPropsValidator
@@ -36,7 +36,7 @@ df = DataFrame.from_dict({
 
 
 def create_validator(style: Styler) -> HTMLPropsValidator:
-    return PatchedStyler(style).create_html_props_validator()
+    return HTMLPropsValidator(PatchedStyler(style).get_context())
 
 
 @pytest.mark.parametrize(

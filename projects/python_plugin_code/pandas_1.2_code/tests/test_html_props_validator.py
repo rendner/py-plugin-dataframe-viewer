@@ -36,7 +36,7 @@ df = DataFrame.from_dict({
 
 
 def create_validator(style: Styler) -> HTMLPropsValidator:
-    return PatchedStyler(style).create_html_props_validator()
+    return HTMLPropsValidator(PatchedStyler(style).get_context())
 
 
 @pytest.mark.parametrize(

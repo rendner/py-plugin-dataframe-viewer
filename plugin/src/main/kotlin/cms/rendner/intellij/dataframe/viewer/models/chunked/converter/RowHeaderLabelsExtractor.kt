@@ -31,7 +31,7 @@ class RowHeaderLabelsExtractor {
         // the cache is used to reduce the amount of used lists
         val levelsCache = mutableMapOf<List<String>, List<String>>()
         return SmartList(bodyRows.mapNotNull { row ->
-            val headerRows = row.headers.filter { header -> header.hasClass(HeaderCssClasses.ROW_HEADING_CLASS.value) }
+            val headerRows = row.headers.filter { header -> header.hasClass(HeaderCssClasses.ROW_HEADING_CLASS) }
             when (headerRows.isEmpty()) {
                 true -> null
                 false -> {

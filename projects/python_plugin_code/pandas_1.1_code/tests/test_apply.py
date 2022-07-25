@@ -13,6 +13,7 @@
 #  limitations under the License.
 import pandas as pd
 import pytest
+import numpy as np
 
 from tests.helpers.asserts.assert_styler import create_and_assert_patched_styler
 from tests.helpers.custom_styler_functions import highlight_even_numbers, highlight_max_values
@@ -108,3 +109,17 @@ def test_no_chunk_parent_is_provided_for_lambda(axis):
         2,
         2
     )
+
+
+def test_forwards_kwargs():
+    def my_styling_func(data, **kwargs):
+        attr = f'background-color: {kwargs.get("color")}'
+        return np.where(data % 2 == 0, attr, None)
+
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.applymap(my_styling_func, color="pink"),
+        2,
+        2
+    )
+

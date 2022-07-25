@@ -16,7 +16,6 @@
 package cms.rendner.intellij.dataframe.viewer.python.pycharm
 
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
-import com.intellij.openapi.util.text.StringUtil
 import com.jetbrains.python.debugger.PyDebuggerException
 
 /**
@@ -27,10 +26,7 @@ fun PyDebuggerException.toPluginType(): PluginPyDebuggerException {
         // https://docs.python.org/3/library/traceback.html#traceback-examples
         val lastTracebackIndex = it.lastIndexOf("Traceback (most recent call last):")
         if (lastTracebackIndex != -1) {
-            // truncate evaluated code (could be too many lines which are not required to have in the error)
-            val blankLineIndex = it.indexOf("\n\n", lastTracebackIndex)
-            val maxLength = if (blankLineIndex > -1) blankLineIndex else lastTracebackIndex + 200
-            StringUtil.first(it, maxLength, true)
+            it.substring(lastTracebackIndex)
         } else {
             it
         }
