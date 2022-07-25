@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.8.0
+- `Released`: 2022-07-25
+- `Supported pandas Versions`: 1.1.x - 1.4.x (was tested with 1.4.3)
+- `Min Required IntelliJ Version`: 2020.3
+
+### Added
+#### Table Sorting
+The table columns are now sortable. The multi-column sorting supports up to 9 columns.
+Sorting can be performed by mouse click on the table column headers or by keyboard shortcuts.
+
+A more detailed description about sorting can be found [here](./docs/SORTING.md)
+
+#### Documentation of Keyboard Shortcuts
+The plugin already had some very useful keyboard shortcuts.
+These are now documented: [Keyboard Shortcuts](./docs/KEYBOARD_SHORTCUTS.md)
+
+### Fixed
+- use `Disposer.dispose` instead of calling directly `dispose`
+- restrict width of error message dialog
+- wrong truncated python error message
+- broken detection of "debugger disconnected" exception
+
+### Other
+- documented keyboard shortcuts (./docs/KEYBOARD_SHORTCUTS.md)
+- upgrade `kotlinx-serialization-json` for better performance
+
 ## v0.7.1
 - `Released`: 2022-07-03
 - `Supported pandas Versions`: 1.1.x - 1.4.x (was tested with 1.4.3)
