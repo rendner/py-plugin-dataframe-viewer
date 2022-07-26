@@ -33,8 +33,11 @@ The following keys allow navigation within the table.
 | `Ctrl` + `Page Down`   | Moves the focus one page right, stops at last cell.                                                             |
 | `Ctrl` + `Page Up`     | Moves the focus one page left, stops at first cell.                                                             |
 
-### Dialog Actions
-The following keys allow to interact with the dialog.
+### Window Actions
+The following keys allow to interact with the dialog window.
+>*Note:* These shortcuts depend on the used keymap and IntelliJ version.
+>
+> Please check your current [keymap](https://www.jetbrains.com/help/idea/settings-keymap.html) and search for `Active Tool WIndow Resize`.
 
 | Shortcut                         | Action                     |
 |----------------------------------|----------------------------|
