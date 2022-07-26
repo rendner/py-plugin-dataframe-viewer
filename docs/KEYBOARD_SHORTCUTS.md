@@ -35,9 +35,9 @@ The following keys allow navigation within the table.
 
 ### Window Actions
 The following keys allow to interact with the dialog window.
->*Note:* These shortcuts depend on the used keymap and IntelliJ version.
+>**Note:** These shortcuts depend on the used keymap and IntelliJ version.
 >
-> Please check your current [keymap](https://www.jetbrains.com/help/idea/settings-keymap.html) and search for `Active Tool WIndow Resize`.
+> Please check your current [keymap](https://www.jetbrains.com/help/idea/settings-keymap.html) and search for `Active Tool Window Resize`.
 
 | Shortcut                         | Action                     |
 |----------------------------------|----------------------------|
