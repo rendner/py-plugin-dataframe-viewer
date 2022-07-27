@@ -24,7 +24,7 @@ To do this, open the plugin project (located in the root folder) and run the `ru
 Then open one of these projects, if it is the first time, you have to configure a Python interpreter (use the correct Python version). 
 
 >**Note:** The project can be executed with any PyCharm instance, therefore it doesn't need to be started by the `runIde` gradle-task of the plugin project.
->But using the PyCharm instance, started by the plugin project, allows you to use the latest state of the plugin in case you want to do a quick tests
+>But using the PyCharm instance, started by the plugin project, allows you to use the latest state of the plugin in case you want to do a quick test
 > with the plugin.
 
 ## Configure Python Interpreter (PyCharm)

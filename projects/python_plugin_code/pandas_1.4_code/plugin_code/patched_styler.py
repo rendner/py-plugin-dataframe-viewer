@@ -24,12 +24,17 @@ from plugin_code.todos_patcher import TodosPatcher
 # == copy after here ==
 import json
 from dataclasses import dataclass
-from pandas.io.formats.style import Styler
 from typing import List, Optional, Any
+import numpy as np
+from pandas import DataFrame
+from hashlib import blake2b
 
 
 @dataclass(frozen=True)
 class TableStructure:
+    data_source_fingerprint: str
+    org_rows_count: int
+    org_columns_count: int
     rows_count: int
     columns_count: int
     row_levels_count: int
@@ -51,15 +56,18 @@ class StyleFunctionDetails:
 
 
 class PatchedStyler:
-
-    def __init__(self, styler: Styler):
-        self.__context = PatchedStylerContext(styler)
+    def __init__(self, context: PatchedStylerContext):
+        self.__context: PatchedStylerContext = context
         self.__html_props_generator = HTMLPropsGenerator(self.__context)
         self.__table_generator = HTMLPropsTableGenerator(self.__context)
         self.__style_functions_validator = StyleFunctionsValidator(self.__context)
 
     def get_context(self) -> PatchedStylerContext:
         return self.__context
+
+    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> str:
+        part = self.__context.get_org_indices_of_visible_columns(part_start, max_columns)
+        return np.array2string(part, separator=', ').replace('\n', '')
 
     @staticmethod
     def to_json(data: Any) -> str:
@@ -144,11 +152,16 @@ class PatchedStyler:
     def get_table_structure(self) -> TableStructure:
         visible_frame = self.__context.get_visible_frame()
         styler = self.__context.get_styler()
+        org_rows_count = len(styler.data.index)
+        org_columns_count = len(styler.data.columns)
         rows_count = len(visible_frame.index)
         columns_count = len(visible_frame.columns)
         if rows_count == 0 or columns_count == 0:
             rows_count = columns_count = 0
         return TableStructure(
+            data_source_fingerprint=self.__create_fingerprint(self.__context.get_styler().data),
+            org_rows_count=org_rows_count,
+            org_columns_count=org_columns_count,
             rows_count=rows_count,
             columns_count=columns_count,
             row_levels_count=visible_frame.index.nlevels - styler.hide_index_.count(True),
@@ -173,3 +186,18 @@ class PatchedStyler:
             ))
 
         return result
+
+    @staticmethod
+    def __create_fingerprint(frame: DataFrame) -> str:
+        # A "fingerprint" is generated to help to identify if two patched styler instances are created with the
+        # same data source. Two objects with non-overlapping lifetimes may have the same id() value.
+        # Such a scenario can be simulated with the following minimal example:
+        #
+        # for x in range(100):
+        #   assert id(pd.DataFrame()) != id(pd.DataFrame())
+        #
+        # Therefore, additional data is included to create a better fingerprint.
+        #
+        # dtypes also include the column labels - therefore, we don't have to include frame.columns[:60]
+        fingerprint_input = [id(frame), frame.shape, frame.index[:60], frame.dtypes[:60]]
+        return blake2b('-'.join(str(x) for x in fingerprint_input).encode(), digest_size=16).hexdigest()

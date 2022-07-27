@@ -505,11 +505,12 @@ class TodosPatcher:
         return None
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple, Callable, Any
+from typing import List, Optional, Tuple, Callable, Any, Union
 from dataclasses import dataclass
 import numpy as np
-from pandas import DataFrame
+from pandas import DataFrame, Index
 from pandas.io.formats.style import Styler
+from pandas.io.formats.style_render import non_reducing_slice
 
 
 class IndexTranslator(ABC):
@@ -563,31 +564,83 @@ class Region:
             rows_processed += rows
 
 
-class PatchedStylerContext:
-    def __init__(self, styler: Styler, org_context: Any = None):
-        self.__styler: Styler = styler
-        self.__styler_todos: Optional[List[StylerTodo]] = None
-        self.__sort_by_column_index: Optional[List[int]] = None
-        self.__sort_ascending: Optional[List[bool]] = None
+@dataclass(frozen=True)
+class SortCriteria:
+    by_column: Optional[List[int]] = None
+    ascending: Optional[List[bool]] = None
 
-        if isinstance(org_context, PatchedStylerContext):
-            self.__visible_frame: DataFrame = org_context.__visible_frame
-            self.__visible_region = org_context.__visible_region
-            self.__sort_by_column_index = org_context.__sort_by_column_index
-            self.__sort_ascending = org_context.__sort_ascending
+    def is_empty(self) -> bool:
+        return self.by_column is None or len(self.by_column) == 0
+
+    def __eq__(self, other):
+        if isinstance(other, SortCriteria):
+            def _equals(s: Optional[List[Any]], o: Optional[List[Any]]) -> bool:
+                s_len = 0 if s is None else len(s)
+                o_len = 0 if o is None else len(o)
+                return (s_len + o_len == 0) or s == o
+            return _equals(self.by_column, other.by_column) and _equals(self.ascending, other.ascending)
+        return False
+
+
+@dataclass(frozen=True)
+class FilterCriteria:
+    index: Optional[Index] = None
+    columns: Optional[Index] = None
+
+    @staticmethod
+    def from_frame(frame: Optional[DataFrame]):
+        return None if frame is None else FilterCriteria(frame.index, frame.columns)
+
+    def is_empty(self) -> bool:
+        return self.index is None and self.columns is None
+
+    def __eq__(self, other):
+        if isinstance(other, FilterCriteria):
+            def _equals(s: Optional[Index], o: Optional[Index]) -> bool:
+                if s is None and o is None:
+                    return True
+                return s is not None and o is not None and s.equals(o)
+            return _equals(self.columns, other.columns) and _equals(self.index, other.index)
+        return False
+
+
+class PatchedStylerContext:
+    __SENTINEL = object()
+
+    def __init__(self, source: Union[Styler, Any], sentinel: object):
+        if self.__SENTINEL is not sentinel:
+            raise ValueError("Sentinel doesn't match.")
+        if isinstance(source, PatchedStylerContext):
+            self.__styler: Styler = source.__styler.data.style._copy(deepcopy=True)
+            self.__styler_todos: Optional[List[StylerTodo]] = None
+            self.__sort_criteria: SortCriteria = source.__sort_criteria
+            self.__filter_criteria: FilterCriteria = source.__filter_criteria
+            self.__visible_frame: DataFrame = source.__visible_frame
+            self.__visible_region: Region = source.__visible_region
         else:
-            self.__visible_frame: DataFrame = self.__sort_frame(self.__calculate_visible_frame(styler))
-            self.__visible_region = Region(0, 0, len(self.__visible_frame.index), len(self.__visible_frame.columns))
+            self.__styler: Styler = source
+            self.__styler_todos: Optional[List[StylerTodo]] = None
+            self.__sort_criteria: SortCriteria = SortCriteria()
+            self.__filter_criteria: FilterCriteria = FilterCriteria()
+
+    @staticmethod
+    def create(styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
+        instance = PatchedStylerContext(styler, PatchedStylerContext.__SENTINEL)
+        if filter_criteria is not None:
+            instance.__filter_criteria = filter_criteria
+        instance.__recompute_visible_frame()
+        return instance
 
     def new_context_with_copied_styler(self):
-        styler_copy = self.__styler.data.style._copy(deepcopy=True)
-        return PatchedStylerContext(styler_copy, self)
+        return PatchedStylerContext(self, self.__SENTINEL)
 
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
-        if self.__sort_by_column_index != sort_by_column_index or self.__sort_ascending != sort_ascending:
-            self.__sort_by_column_index = sort_by_column_index
-            self.__sort_ascending = sort_ascending
-            self.__visible_frame = self.__sort_frame(self.__calculate_visible_frame(self.__styler))
+        self.__sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
+        self.__recompute_visible_frame()
+
+    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> np.ndarray:
+        part = self.__visible_frame.columns[part_start:part_start + max_columns]
+        return self.__styler.columns.get_indexer_for(part)
 
     def get_region_of_visible_frame(self) -> Region:
         return self.__visible_region
@@ -621,26 +674,43 @@ class PatchedStylerContext:
         return TodosPatcher().patch_todos_for_chunk(self.get_styler_todos(), self.__styler.data, chunk)
 
     def get_row_index_translator_for_chunk(self, chunk: DataFrame, chunk_region: Region) -> IndexTranslator:
-        if self.__sort_by_column_index is None and len(self.__styler.hidden_rows) == 0:
+        if self.__sort_criteria.is_empty() and self.__filter_criteria.index is None and len(
+                self.__styler.hidden_rows) == 0:
             return _OffsetIndexTranslator(chunk_region.first_row)
         return _SequenceIndexTranslator(self.__styler.index.get_indexer_for(chunk.index))
 
     def get_column_index_translator_for_chunk(self, chunk: DataFrame, chunk_region: Region) -> IndexTranslator:
-        if self.__sort_by_column_index is None and len(self.__styler.hidden_columns) == 0:
+        if self.__filter_criteria.columns is None and len(self.__styler.hidden_columns) == 0:
             return _OffsetIndexTranslator(chunk_region.first_col)
         return _SequenceIndexTranslator(self.__styler.columns.get_indexer_for(chunk.columns))
 
+    def __recompute_visible_frame(self):
+        self.__visible_frame = self.__sort_frame(self.__filter_frame(self.__frame_without_hidden_rows_and_cols(self.__styler)))
+        self.__visible_region = Region(0, 0, len(self.__visible_frame.index), len(self.__visible_frame.columns))
+
     def __sort_frame(self, frame: DataFrame) -> DataFrame:
-        if self.__sort_by_column_index is None:
+        if self.__sort_criteria.is_empty():
             return frame
-        ascending = True if self.__sort_ascending is None else self.__sort_ascending
+        sc = self.__sort_criteria
         return frame.sort_values(
-            by=[frame.columns[i] for i in self.__sort_by_column_index],
-            ascending=ascending,
+            by=[frame.columns[i] for i in sc.by_column],
+            ascending=True if sc.ascending is None or len(sc.ascending) == 0 else sc.ascending,
         )
 
+    def __filter_frame(self, frame: DataFrame) -> DataFrame:
+        if self.__filter_criteria.is_empty():
+            return frame
+        else:
+            fc = self.__filter_criteria
+            index_intersection = frame.index if fc.index is None else frame.index.intersection(fc.index)
+            column_intersection = frame.columns if fc.columns is None else frame.columns.intersection(fc.columns)
+            subset = index_intersection, column_intersection
+            subset = slice(None) if subset is None else subset
+            subset = non_reducing_slice(subset)
+            return frame.loc[subset]
+
     @staticmethod
-    def __calculate_visible_frame(styler: Styler) -> DataFrame:
+    def __frame_without_hidden_rows_and_cols(styler: Styler) -> DataFrame:
         if len(styler.hidden_rows) == 0 and len(styler.hidden_columns) == 0:
             return styler.data
         else:
@@ -1305,12 +1375,17 @@ class StyleFunctionsValidator:
 
 import json
 from dataclasses import dataclass
-from pandas.io.formats.style import Styler
 from typing import List, Optional, Any
+import numpy as np
+from pandas import DataFrame
+from hashlib import blake2b
 
 
 @dataclass(frozen=True)
 class TableStructure:
+    data_source_fingerprint: str
+    org_rows_count: int
+    org_columns_count: int
     rows_count: int
     columns_count: int
     row_levels_count: int
@@ -1332,15 +1407,18 @@ class StyleFunctionDetails:
 
 
 class PatchedStyler:
-
-    def __init__(self, styler: Styler):
-        self.__context = PatchedStylerContext(styler)
+    def __init__(self, context: PatchedStylerContext):
+        self.__context: PatchedStylerContext = context
         self.__html_props_generator = HTMLPropsGenerator(self.__context)
         self.__table_generator = HTMLPropsTableGenerator(self.__context)
         self.__style_functions_validator = StyleFunctionsValidator(self.__context)
 
     def get_context(self) -> PatchedStylerContext:
         return self.__context
+
+    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> str:
+        part = self.__context.get_org_indices_of_visible_columns(part_start, max_columns)
+        return np.array2string(part, separator=', ').replace('\n', '')
 
     @staticmethod
     def to_json(data: Any) -> str:
@@ -1419,11 +1497,16 @@ class PatchedStyler:
     def get_table_structure(self) -> TableStructure:
         visible_frame = self.__context.get_visible_frame()
         styler = self.__context.get_styler()
+        org_rows_count = len(styler.data.index)
+        org_columns_count = len(styler.data.columns)
         rows_count = len(visible_frame.index)
         columns_count = len(visible_frame.columns)
         if rows_count == 0 or columns_count == 0:
             rows_count = columns_count = 0
         return TableStructure(
+            data_source_fingerprint=self.__create_fingerprint(self.__context.get_styler().data),
+            org_rows_count=org_rows_count,
+            org_columns_count=org_columns_count,
             rows_count=rows_count,
             columns_count=columns_count,
             row_levels_count=visible_frame.index.nlevels - styler.hide_index_.count(True),
@@ -1449,29 +1532,30 @@ class PatchedStyler:
 
         return result
 
-from typing import Union
+    @staticmethod
+    def __create_fingerprint(frame: DataFrame) -> str:
+        fingerprint_input = [id(frame), frame.shape, frame.index[:60], frame.dtypes[:60]]
+        return blake2b('-'.join(str(x) for x in fingerprint_input).encode(), digest_size=16).hexdigest()
+
+from typing import Union, Optional
 
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
 
 class StyledDataFrameViewerBridge:
-    patched_styler_refs = []
 
     @classmethod
-    def create_patched_styler(cls, frame_or_styler: Union[DataFrame, Styler]) -> PatchedStyler:
-        p = PatchedStyler(frame_or_styler.style) if isinstance(frame_or_styler, DataFrame) else PatchedStyler(
-            frame_or_styler)
-        cls.patched_styler_refs.append(p)
-        return p
+    def create_patched_styler(cls,
+                              frame_or_styler: Union[DataFrame, Styler],
+                              filter_frame: Optional[DataFrame] = None,
+                              ) -> PatchedStyler:
+        if isinstance(frame_or_styler, DataFrame):
+            styler: Styler = frame_or_styler.style
+        else:
+            styler: Styler = frame_or_styler
 
-    @classmethod
-    def delete_patched_styler(cls, patched_styler: PatchedStyler):
-        cls.patched_styler_refs.remove(patched_styler)
-
-    @classmethod
-    def delete_all(cls):
-        cls.patched_styler_refs.clear()
+        return PatchedStyler(PatchedStylerContext.create(styler, FilterCriteria.from_frame(filter_frame)))
 
     @staticmethod
     def check() -> bool:
