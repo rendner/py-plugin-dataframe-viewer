@@ -15,6 +15,4 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions
 
-import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
-
-class InjectException(message: String, override val cause: EvaluateException? = null) : Exception(message, cause)
+class InjectException(message: String, override val cause: Throwable? = null) : Exception(message, cause)

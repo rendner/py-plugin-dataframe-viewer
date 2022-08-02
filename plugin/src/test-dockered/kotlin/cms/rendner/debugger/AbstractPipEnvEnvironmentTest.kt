@@ -15,11 +15,11 @@
  */
 package cms.rendner.debugger
 
+import cms.rendner.TestSystemPropertyKey
 import cms.rendner.debugger.impl.DockeredPythonEvalDebugger
 import cms.rendner.debugger.impl.EvaluateRequest
 import cms.rendner.debugger.impl.EvaluateResponse
 import cms.rendner.debugger.impl.PythonEvalDebugger
-import cms.rendner.intellij.dataframe.viewer.SystemPropertyKey
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
@@ -35,15 +35,16 @@ import java.util.concurrent.TimeUnit
  * pip-env environment.
  *
  * The docker image to use, has to be specified via the system properties
- * [SystemPropertyKey.DOCKERED_TEST_IMAGE] and [SystemPropertyKey.DOCKERED_TEST_WORKDIR].
+ * [TestSystemPropertyKey.DOCKER_IMAGE] and [TestSystemPropertyKey.DOCKER_WORKDIR].
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal abstract class AbstractPipEnvEnvironmentTest {
     private val executorService: ExecutorService = Executors.newSingleThreadExecutor()
     private var debuggerStarted = false
     private val debugger = DockeredPythonEvalDebugger(
-        System.getProperty(SystemPropertyKey.DOCKERED_TEST_IMAGE),
-        System.getProperty(SystemPropertyKey.DOCKERED_TEST_WORKDIR),
+        System.getProperty(TestSystemPropertyKey.DOCKER_IMAGE),
+        System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR),
+        System.getProperty(TestSystemPropertyKey.DOCKER_VOLUMES)?.let { if (it.isEmpty()) null else it.split(";") },
     )
 
     @BeforeAll
@@ -69,24 +70,27 @@ internal abstract class AbstractPipEnvEnvironmentTest {
         debugger.shutdown()
     }
 
-    protected fun runWithPythonDebugger(
-        block: (valueEvaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+    protected open fun runPythonDebuggerWithCodeSnippet(
+        codeSnippet: String,
+        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
     ) {
         checkAndSetDebuggerStarted()
-        executorService.submit {
-            debugger.startWithCodeSnippet("breakpoint()")
-        }
+        executorService.submit { debugger.startWithCodeSnippet(codeSnippet) }
         block(MyValueEvaluator(debugger), debugger)
     }
 
-    protected fun runWithPythonDebugger(
+    protected fun runPythonDebugger(
+        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+    ) {
+        runPythonDebuggerWithCodeSnippet("breakpoint()", block)
+    }
+
+    protected open fun runPythonDebuggerWithSourceFile(
         sourceFile: String,
-        block: (valueEvaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
     ) {
         checkAndSetDebuggerStarted()
-        executorService.submit {
-            debugger.startWithSourceFile(sourceFile)
-        }
+        executorService.submit { debugger.startWithSourceFile(sourceFile) }
         block(MyValueEvaluator(debugger), debugger)
     }
 
@@ -127,7 +131,8 @@ internal abstract class AbstractPipEnvEnvironmentTest {
 
         private fun createPluginPyValue(response: EvaluateResponse, fallbackErrorMessage: String): PluginPyValue {
             if (response.isError) {
-                throw EvaluateException(response.value ?: fallbackErrorMessage)
+                val msg = if (response.value == null) fallbackErrorMessage else "{${response.type}} ${response.value}"
+                throw EvaluateException(msg)
             }
             return PluginPyValue(
                 response.value,

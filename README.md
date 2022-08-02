@@ -70,9 +70,9 @@ This opens a new window which shows the styled output of the `DataFrame` `df` us
 You can also right-click on the `df` in the `Debugger` and select `View as Styled DataFrame`. In that case all values are displayed without applied styles.
 
 ### Supported CSS Properties
-The following css-properties are supported by the plugin:
+The following CSS properties are supported by the plugin:
 
-| css-property       | mapping                                                              |
+| CSS property       | mapping                                                              |
 |--------------------|----------------------------------------------------------------------|
 | `color`            | table cell text color                                                |
 | `background-color` | table cell background color                                          |
@@ -80,8 +80,7 @@ The following css-properties are supported by the plugin:
 
 All other properties are ignored.
 
-> Inheritance of css properties is only partial implemented and may not work for all scenarios.
-This may be improved if there are major problems with it.
+> Inheritance of CSS properties is not supported because it would require to implement a complete CSS engine which can also handle partial results (chunks).
 
 ## Examples
 #### About The Code Snippets
@@ -210,8 +209,3 @@ Depending on the complexity of a custom styling function it can be hard to deter
 
 The plugin can do some of the work for you and automatically try to detect problems in the background.
 Check [Validating Style Functions](./docs/VALIDATING_STYLE_FUNCTIONS.md)
-
-## Used Libraries
-- AWT Color Factory (https://github.com/beryx/awt-color-factory)
-- jsoup: Java HTML Parser (https://github.com/jhy/jsoup)
-- CSS Parser (http://cssparser.sourceforge.net/)

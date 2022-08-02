@@ -21,7 +21,8 @@ import javax.swing.JTable
 interface IRendererComponentStyler {
     fun applyStyle(
         component: Component,
-        table: JTable?, value: Any?,
+        table: JTable?,
+        value: Any?,
         isSelected: Boolean,
         hasFocus: Boolean,
         row: Int, column: Int

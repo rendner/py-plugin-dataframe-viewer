@@ -16,7 +16,9 @@
 package cms.rendner.integration.plugin
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
+import cms.rendner.debugger.impl.PythonEvalDebugger
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
 /**
@@ -33,16 +35,45 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
      * [IPluginPyValueEvaluator] are provided by the caller.
      */
     protected fun runWithPluginCodeBridge(
-        pythonCodeToRun: String?,
-        block: (codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator) -> Unit
+        pythonCodeToRun: String,
+        block: (codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit
     ) {
-        runWithPythonDebugger { valueEvaluator, _ ->
-
-            if (!pythonCodeToRun.isNullOrEmpty()) {
-                valueEvaluator.execute(pythonCodeToRun)
-            }
-
-            block(PythonCodeBridge(), valueEvaluator)
+        runPythonDebuggerWithCodeSnippet(pythonCodeToRun) { evaluator, debugger ->
+            block(PythonCodeBridge(), evaluator, debugger)
         }
+    }
+
+    override fun runPythonDebuggerWithSourceFile(
+        sourceFile: String,
+        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+    ) {
+        super.runPythonDebuggerWithSourceFile(sourceFile) { evaluator, debugger ->
+            PythonPluginCodeInjector.injectIfRequired(evaluator, ::pluginCodeEscaper)
+            block(evaluator, debugger)
+        }
+    }
+
+    override fun runPythonDebuggerWithCodeSnippet(
+        codeSnippet: String,
+        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+    ) {
+        super.runPythonDebuggerWithCodeSnippet(codeSnippet) { evaluator, debugger ->
+            PythonPluginCodeInjector.injectIfRequired(evaluator, ::pluginCodeEscaper)
+            block(evaluator, debugger)
+        }
+    }
+
+    fun runPythonDebuggerWithoutPluginCode(
+        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+    ) {
+        super.runPythonDebuggerWithCodeSnippet("breakpoint()") { evaluator, debugger ->
+            block(evaluator, debugger)
+        }
+    }
+
+    protected fun pluginCodeEscaper(code: String): String {
+        return code
+            .replace("\\n", "\\\n")
+            .replace("\\t", "\\\t")
     }
 }

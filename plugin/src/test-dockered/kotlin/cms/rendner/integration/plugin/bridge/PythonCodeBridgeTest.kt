@@ -15,32 +15,20 @@
  */
 package cms.rendner.integration.plugin.bridge
 
+import cms.rendner.debugger.impl.PythonEvalDebugger
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
-import com.intellij.openapi.util.Disposer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
-@Order(1)
+@Order(2)
 internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
 
     @Test
-    fun check_shouldBeCallable() {
-        runWithPluginCodeBridge { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator ->
-            val styler = evaluator.evaluate("df.style")
-
-            // plugin code is automatically injected on first use
-            codeBridge.createPatchedStyler(styler)
-
-            assertThat(evaluator.evaluate("${codeBridge.getBridgeExpr(evaluator)}.check()").value).isEqualTo("True")
-        }
-    }
-
-    @Test
     fun createPatchedStyler_shouldBeCallableWithAStyler() {
-        runWithPluginCodeBridge { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator ->
+        runWithPluginCodeBridge { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator, _ ->
 
             val styler = evaluator.evaluate("df.style")
             val patchedStylerRef = codeBridge.createPatchedStyler(styler)
@@ -51,7 +39,7 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
 
     @Test
     fun createPatchedStyler_shouldBeCallableWithADataFrame() {
-        runWithPluginCodeBridge { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator ->
+        runWithPluginCodeBridge { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator, _ ->
 
             val frame = evaluator.evaluate("df")
             val patchedStylerRef = codeBridge.createPatchedStyler(frame)
@@ -61,30 +49,74 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun createPatchedStyler_shouldBeCallable() {
-        runWithPluginCodeBridge { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator ->
+    fun createPatchedStyler_shouldBeCallableWithAFilterFrame() {
+        runWithPluginCodeBridge { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator, _ ->
 
             val styler = evaluator.evaluate("df.style")
-            val patchedStylerRef = codeBridge.createPatchedStyler(styler)
+            val filterFrame = evaluator.evaluate("df.filter(items=[1, 2], axis='index')")
+            val patchedStylerRef = codeBridge.createPatchedStyler(styler, filterFrame)
 
-            Disposer.dispose(patchedStylerRef)
-
-            // can only be verified by checking the internal cache
-            val cacheSize = evaluator.evaluate("len(${codeBridge.getBridgeExpr(evaluator)}.patched_styler_refs)")
-            assertThat(cacheSize.value).isEqualTo("0")
+            assertThat(patchedStylerRef).isNotNull
         }
     }
 
-    private fun runWithPluginCodeBridge(block: (codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator) -> Unit) {
+    @Test
+    fun pluginCode_shouldBeAccessibleInEveryStackFrameWithoutReInjection() {
+        runWithPluginCodeBridge("""
+                from pandas import DataFrame
+                
+                df1 = DataFrame()
+                x = 1
+                breakpoint()
+                
+                def method_a():
+                    df2 = DataFrame()
+                    x = 2
+                    breakpoint()
+                
+                def method_b():
+                    method_a()
+                    df3 = DataFrame()
+                    x = 3
+                    breakpoint()
+                
+                method_b()
+                breakpoint()
+            """.trimIndent()
+        ) { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator, debugger ->
+
+            assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("1")
+            assertThat(codeBridge.createPatchedStyler(evaluator.evaluate("df1"))).isNotNull
+
+            debugger.submitContinue()
+
+            assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("2")
+            assertThat(codeBridge.createPatchedStyler(evaluator.evaluate("df2"))).isNotNull
+
+            debugger.submitContinue()
+
+            assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("3")
+            assertThat(codeBridge.createPatchedStyler(evaluator.evaluate("df3"))).isNotNull
+
+            debugger.submitContinue()
+
+            assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("1")
+            assertThat(codeBridge.createPatchedStyler(evaluator.evaluate("df1"))).isNotNull
+        }
+    }
+
+    private fun runWithPluginCodeBridge(block: (codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit) {
         runWithPluginCodeBridge(createDataFrameSnippet(), block)
     }
 
     private fun createDataFrameSnippet() = """
-                import pandas as pd
+                from pandas import DataFrame
                 
-                df = pd.DataFrame.from_dict({
+                df = DataFrame.from_dict({
                     "col_0": [0, 1],
                     "col_1": [2, 3],
                 })
+                
+                breakpoint()
             """.trimIndent()
 }

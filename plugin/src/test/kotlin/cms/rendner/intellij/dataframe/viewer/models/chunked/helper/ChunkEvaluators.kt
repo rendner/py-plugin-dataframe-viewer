@@ -49,19 +49,6 @@ private class ChunkFileEvaluator(
         NotImplementedError("Sorting isn't support by this implementation.")
     }
 
-    override fun evaluate(
-        chunkRegion: ChunkRegion,
-        excludeRowHeaders: Boolean,
-        excludeColumnHeaders: Boolean
-    ): String {
-        val file = chunkRegion.let {
-            TestCasePath.resolveChunkResultFile(testCaseDir, it.firstRow, it.firstColumn, "html")
-        }
-        return Files.newBufferedReader(file).use {
-            it.readText()
-        }
-    }
-
     @OptIn(ExperimentalSerializationApi::class)
     override fun evaluateHTMLProps(
         chunkRegion: ChunkRegion,
@@ -69,7 +56,7 @@ private class ChunkFileEvaluator(
         excludeColumnHeaders: Boolean
     ): HTMLPropsTable {
         val file = chunkRegion.let {
-            TestCasePath.resolveChunkResultFile(testCaseDir, it.firstRow, it.firstColumn, "json")
+            TestCasePath.resolveChunkResultFile(testCaseDir, it.firstRow, it.firstColumn)
         }
         return Files.newBufferedReader(file).use {
             json.decodeFromString(it.readText())
@@ -82,16 +69,6 @@ private class ExpectedFileEvaluator(
 ) : IChunkEvaluator {
     override fun setSortCriteria(sortCriteria: SortCriteria) {
         NotImplementedError("Sorting isn't support by this implementation.")
-    }
-
-    override fun evaluate(
-        chunkRegion: ChunkRegion,
-        excludeRowHeaders: Boolean,
-        excludeColumnHeaders: Boolean
-    ): String {
-        return Files.newBufferedReader(filePath).use {
-            it.readText()
-        }
     }
 
     @OptIn(ExperimentalSerializationApi::class)

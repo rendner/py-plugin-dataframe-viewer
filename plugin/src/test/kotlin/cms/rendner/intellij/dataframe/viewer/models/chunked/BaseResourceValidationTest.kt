@@ -38,11 +38,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 
-data class ResourceTestContext(
-    val loadNewDataStructure: Boolean,
-    val expectedFileExtension: String,
-)
-
 /**
  * Requires:
  * Generated test data in the folder "test/resources/generated".
@@ -56,17 +51,12 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
         errorImageSubDirName,
     )
 
-    private val contextList = listOf(
-        ResourceTestContext(false,  "html"),
-        ResourceTestContext(true,  "json"),
-    )
-
-    protected val json: Json by lazy {
+    private val json: Json by lazy {
         Json { ignoreUnknownKeys = true; prettyPrint = true }
     }
 
-    data class TestCase(val dir: Path, val name: String, val context: ResourceTestContext) : Comparable<TestCase> {
-        override fun toString() = "$name (${context.expectedFileExtension})"
+    data class TestCase(val dir: Path, val name: String) : Comparable<TestCase> {
+        override fun toString() = name
         override fun compareTo(other: TestCase): Int {
             return name.compareTo(other.name)
         }
@@ -81,7 +71,7 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
     }
 
     @Suppress("unused")
-    private fun getTestCases() = TestCaseCollector().collect(testCaseDir, contextList)
+    private fun getTestCases() = TestCaseCollector().collect(testCaseDir)
     //.filter { it.name.startsWith("pandas_1.1/") }
     //.filter { it.name.startsWith("pandas_1.3/hide_columns/columns") }
 
@@ -121,23 +111,17 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
         chunkLoader: IChunkDataLoader,
         chunkSize: ChunkSize,
     ): IDataFrameModel {
-        return ChunkedDataFrameModel(tableStructure, chunkLoader, chunkSize).also {
-            preloadTableValues(it, tableStructure, chunkSize)
+        val frameColumnIndexList = List(tableStructure.columnsCount) { it + 1 }
+        return ChunkedDataFrameModel(tableStructure, frameColumnIndexList, chunkLoader, chunkSize).also {
+            preloadTableValues(it, chunkSize)
         }
     }
 
     protected fun createExpectedModel(testCase: TestCase, tableStructure: TableStructure): IDataFrameModel {
-        val ctx = testCase.context
         return createDataFrameModel(
             tableStructure,
             BlockingChunkDataLoader(
-                createExpectedFileEvaluator(
-                    TestCasePath.resolveExpectedResultFile(
-                        testCase.dir,
-                        ctx.expectedFileExtension
-                    )
-                ),
-                testCase.context.loadNewDataStructure,
+                createExpectedFileEvaluator(TestCasePath.resolveExpectedResultFile(testCase.dir)),
             ),
             ChunkSize(tableStructure.rowsCount, tableStructure.columnsCount),
         )
@@ -150,49 +134,38 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
     ): IDataFrameModel {
         return createDataFrameModel(
             tableStructure,
-            BlockingChunkDataLoader(
-                createChunkFileEvaluator(testCase.dir),
-                testCase.context.loadNewDataStructure,
-            ),
+            BlockingChunkDataLoader(createChunkFileEvaluator(testCase.dir)),
             chunkSize,
         )
     }
 
-    private fun preloadTableValues(
-        dateFrameModel: IDataFrameModel,
-        tableStructure: TableStructure,
-        chunkSize: ChunkSize
-    ) {
+    private fun preloadTableValues(dateFrameModel: IDataFrameModel, chunkSize: ChunkSize) {
         val valueModel = dateFrameModel.getValueDataModel()
         if (valueModel.columnCount == 0 && valueModel.rowCount == 0) return
 
-        iterateDataFrame(tableStructure.rowsCount, tableStructure.columnsCount, chunkSize).forEach {
+        valueModel.enableDataFetching(true)
+        iterateDataFrame(valueModel.rowCount, valueModel.columnCount, chunkSize).forEach {
             valueModel.getValueAt(it.firstRow, it.firstColumn)
         }
+        valueModel.enableDataFetching(false)
     }
 
     class TestCaseCollector {
 
-        fun collect(baseDir: Path, contextList: List<ResourceTestContext>): List<TestCase> {
-            val finder = MyTestCaseVisitor(baseDir, contextList)
+        fun collect(baseDir: Path): List<TestCase> {
+            val finder = MyTestCaseVisitor(baseDir)
             Files.walkFileTree(baseDir, finder)
             return finder.testCases.sortedWith(naturalOrder())
         }
 
-        private class MyTestCaseVisitor(baseDir: Path, private val contextList: List<ResourceTestContext>) : SimpleFileVisitor<Path>() {
+        private class MyTestCaseVisitor(baseDir: Path) : SimpleFileVisitor<Path>() {
             val testCases = mutableListOf<TestCase>()
             val baseDirNameCount = baseDir.nameCount
             override fun preVisitDirectory(dir: Path?, attrs: BasicFileAttributes?): FileVisitResult {
                 if (dir != null && Files.exists(TestCasePath.resolveTestCasePropertiesFile(dir))) {
-                    contextList.forEach {
-                        testCases.add(
-                            TestCase(
-                                dir,
-                                dir.subpath(baseDirNameCount, dir.nameCount).toString(),
-                                it,
-                            )
-                        )
-                    }
+                    testCases.add(
+                        TestCase(dir, dir.subpath(baseDirNameCount, dir.nameCount).toString())
+                    )
                     return FileVisitResult.SKIP_SUBTREE
                 }
                 return FileVisitResult.CONTINUE

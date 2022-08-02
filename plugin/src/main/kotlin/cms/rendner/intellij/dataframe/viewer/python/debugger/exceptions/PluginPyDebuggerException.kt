@@ -15,10 +15,22 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions
 
+import com.jetbrains.python.PyBundle
+
 class PluginPyDebuggerException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     fun isDisconnectException(): Boolean {
         // In PyCharm a "PyDebuggerException" with the message "Disconnected"
         // is thrown in case the debugger was disconnected.
         return message == "Disconnected"
+    }
+
+    fun isProcessIsRunningException(): Boolean {
+        // In PyCharm a "PyDebuggerException" with the message "Process is running"
+        // is thrown when XDebugSession::getCurrentStackFrame returns null in PyDebugProcess::currentFrame.
+        // This can happen when jumping very fast between breakpoints while in the background data is evaluated.
+        // In such a scenario the frame of the previous breakpoint is cleared and the new one is set after
+        // the position of the new breakpoint is reached. Between these two breakpoints the frame is always
+        // null and therefore no expression can be evaluated.
+        return message == "Process is running" || message == PyBundle.message("debugger.debug.process.running")
     }
 }

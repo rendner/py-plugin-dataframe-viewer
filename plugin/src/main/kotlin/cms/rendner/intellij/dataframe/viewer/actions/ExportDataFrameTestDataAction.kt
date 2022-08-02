@@ -27,7 +27,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
-import com.intellij.xdebugger.impl.ui.tree.actions.XDebuggerTreeActionBase
+import com.intellij.xdebugger.XDebuggerUtil
 import com.jetbrains.python.debugger.PyDebugValue
 import java.nio.file.Paths
 
@@ -63,12 +63,10 @@ class ExportDataFrameTestDataAction : AnAction(), DumbAware {
     }
 
     private fun getExportDataValue(e: AnActionEvent): PyDebugValue? {
-        val nodes = XDebuggerTreeActionBase.getSelectedNodes(e.dataContext)
-        if (nodes.size == 1) {
-            val container = nodes.first().valueContainer
-            if (container is PyDebugValue) {
-                if (container.qualifiedType == PythonQualifiedTypes.Dict && container.name == "export_test_data") {
-                    return container
+        XDebuggerUtil.getInstance().getValueContainer(e.dataContext)?.let {
+            if (it is PyDebugValue) {
+                if (it.qualifiedType == PythonQualifiedTypes.Dict && it.name == "export_test_data") {
+                    return it
                 }
             }
         }

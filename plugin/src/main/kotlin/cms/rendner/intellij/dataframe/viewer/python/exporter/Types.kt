@@ -67,20 +67,16 @@ class TestCaseProperties(
  */
 class TestCasePath {
     companion object {
-        fun resolveChunkResultFile(testCaseDir: Path, row: Int, column: Int, fileExtension: String): Path {
-            return testCaseDir.resolve("chunks/r${row}_c${column}.$fileExtension")
+        fun resolveChunkResultFile(testCaseDir: Path, row: Int, column: Int): Path {
+            return testCaseDir.resolve("chunks/r${row}_c${column}.json")
         }
 
         fun resolveTestCasePropertiesFile(testCaseDir: Path): Path {
             return testCaseDir.resolve("testCaseProperties.json")
         }
 
-        fun resolveExpectedResultFile(testCaseDir: Path, fileExtension: String): Path {
-            return testCaseDir.resolve("expected.$fileExtension")
-        }
-
-        fun resolveComputedCSSFile(testCaseDir: Path): Path {
-            return testCaseDir.resolve("expected.css.json")
+        fun resolveExpectedResultFile(testCaseDir: Path): Path {
+            return testCaseDir.resolve("expected.json")
         }
 
         fun createRequiredDirectories(testCaseDir: Path) {

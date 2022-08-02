@@ -16,6 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
 import com.intellij.openapi.Disposable
 
 /**
@@ -35,24 +36,10 @@ interface IChunkDataResultHandler {
     fun onChunkLoaded(request: LoadRequest, chunkData: ChunkData)
 
     /**
-     * Note: This method is only called when using the old data structure.
-     *
-     * Called when the styled values for a load request are processed.
-     * This happens after an initial [onChunkLoaded] for the same load request.
-     * In case the sort criteria has changed after the [onChunkLoaded], this method will not be called.
-     * @param request the load request to which the data belongs
-     * @param chunkValues the styled values, if there were css styling in the chunk,
-     * otherwise the same values are returned as in [ChunkData.values]
-     * from [onChunkLoaded] for the same load request.
+     * Called when an error happened during the loading or processing of a loaded chunk.
+     * @param request the load request which failed.
      */
-    fun onStyledValuesProcessed(request: LoadRequest, chunkValues: ChunkValues)
-
-    /**
-     * Called when an error happens during the loading ar processing of a loaded chunk.
-     * @param request the load request to which the error belongs
-     * @param throwable the error
-     */
-    fun onError(request: LoadRequest, throwable: Throwable)
+    fun onChunkFailed(request: LoadRequest)
 
     /**
      * Called when a load request is rejected.
@@ -106,7 +93,7 @@ interface IChunkDataLoader : Disposable {
  * An interface to handle errors during the loading/processing of chunk data.
  */
 interface IChunkDataLoaderErrorHandler {
-    fun handleChunkDataError(region: ChunkRegion, throwable: Throwable)
+    fun handleChunkDataError(region: ChunkRegion, exception: ChunkDataLoaderException)
 }
 
 /**

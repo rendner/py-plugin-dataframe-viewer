@@ -20,22 +20,96 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
-// linebreak substitution adapted from PyCharm: https://github.com/JetBrains/intellij-community/search?q=%40_%40NEW_LINE_CHAR%40_%40
-private const val NEW_LINE_CHAR = "@_@NEW_LINE_CHAR@_@"
+private const val NEW_LINE_MARKER = "@_@NL@_@"
+private const val RESULT_MARKER = "@_@RESULT@_@"
+private const val EXC_MARKER = "@_@EXC@_@"
 
+/**
+ * Allows to evaluate and execute code inside a Python interpreter.
+ * Only the functionalities required by the plugin are implemented.
+ *
+ * Requirement:
+ * The "/resources/python_helpers" of the resources have to be in the "sys.path" of the running python interpreter
+ * to allow import of the "debugger_helpers".
+ */
 abstract class PythonEvalDebugger {
 
-    private data class OpenTask(val request: EvaluateRequest, val result: CompletableFuture<EvaluateResponse>)
+    private interface Task {
+        val result: CompletableFuture<*>
+        fun completeWithResult(result: MarkedResult?)
 
-    private val openTasks = ArrayBlockingQueue<OpenTask>(1)
+        fun completeWithError(throwable: Throwable) {
+            if (throwable is PluginPyDebuggerException) {
+                result.completeExceptionally(throwable)
+            } else {
+                result.completeExceptionally(PluginPyDebuggerException("Unknown error occurred.", throwable))
+            }
+        }
+    }
+
+    private data class MarkedResult(val value: String, val marker: String) {
+        companion object {
+            fun parseToValue(result: MarkedResult, trimResult: Boolean): ResultValue {
+                val separatorAfterTypeInfo = result.value.indexOf(" ")
+                val separatorAfterRefId = result.value.indexOf(" ", separatorAfterTypeInfo + 1)
+
+                val qualifiedType = result.value.substring(0, separatorAfterTypeInfo).let {
+                    it.splitAtIndex(it.indexOf(":"))
+                }
+                val refId = result.value.substring(separatorAfterTypeInfo + 1, separatorAfterRefId)
+                var value = result.value.substring(separatorAfterRefId + 1)
+
+                if (trimResult && value.length > 100) {
+                    value = "${value.substring(0, 100)}..."
+                }
+
+                return ResultValue(
+                    value,
+                    qualifiedType.second,
+                    qualifiedType.first,
+                    refId,
+                )
+            }
+
+            fun parseToError(result: MarkedResult): ResultError {
+                val separatorAfterTypeInfo = result.value.indexOf(" ")
+                val qualifiedType = result.value.substring(0, separatorAfterTypeInfo).let {
+                    it.splitAtIndex(it.indexOf(":"))
+                }
+                val reason = result.value.substring(separatorAfterTypeInfo + 1)
+                return ResultError(
+                    reason,
+                    qualifiedType.second,
+                    qualifiedType.first,
+                )
+            }
+
+            private fun String.splitAtIndex(index: Int): Pair<String, String> {
+                return Pair(this.substring(0, index), this.substring(index + 1))
+            }
+        }
+    }
+
+    private data class ResultError(
+        val cause: String?,
+        val type: String?,
+        val typeQualifier: String?,
+    )
+
+    private data class ResultValue(
+        val value: String?,
+        val type: String?,
+        val typeQualifier: String?,
+        val refId: String?,
+    )
+
+    private val openTasks = ArrayBlockingQueue<Task>(1)
 
     @Volatile
     private var shutdownRequested: Boolean = false
 
     @Volatile
     private var isRunning: Boolean = false
-
-    private val pythonErrorRegex = ".*\\*{3}[ ]\\w*Error:[ ].+".toRegex()
 
     private object LinePrefixes {
         const val DEBUGGER_PROMPT = "(Pdb) "
@@ -47,7 +121,16 @@ abstract class PythonEvalDebugger {
      */
     fun submit(request: EvaluateRequest): Future<EvaluateResponse> {
         val result = CompletableFuture<EvaluateResponse>()
-        openTasks.put(OpenTask(request, result))
+        openTasks.put(EvaluateTask(request, result))
+        return result
+    }
+
+    /**
+     * Submits a "continue" request to continue from the current breakpoint.
+     */
+    fun submitContinue(): Future<Unit> {
+        val result = CompletableFuture<Unit>()
+        openTasks.put(ContinueTask(result))
         return result
     }
 
@@ -86,9 +169,7 @@ abstract class PythonEvalDebugger {
             throw PluginPyDebuggerException("Can't re-start an already running debugger")
         }
         try {
-            if (findEntryPointAndInjectDebuggerInternals(pythonProcess)) {
-                processOpenTasks(pythonProcess)
-            }
+            processOpenTasks(pythonProcess)
             openTasks.forEach { it.result.cancel(false) }
         } catch (ex: Throwable) {
             openTasks.forEach { it.result.completeExceptionally(ex) }
@@ -105,34 +186,9 @@ abstract class PythonEvalDebugger {
         }
     }
 
-    private fun findEntryPointAndInjectDebuggerInternals(pythonProcess: PythonProcess): Boolean {
-        var checkCounter = 60
-
-        while (checkCounter-- > 0) {
-            checkProcessIsAlive(pythonProcess)
-            if (pythonProcess.canRead()) {
-                val lines = unescapeDebuggerOutput(pythonProcess.readLinesNonBlocking())
-                if (lastLineIsPrompt(lines)) {
-                    pythonProcess.writeLine(
-                        "!exec(${escapeDebugHelperCode(createDebuggerInternalsInstanceSnippet())})"
-                    )
-                    return true
-                } else {
-                    if (lines.isNotEmpty()) {
-                        throw PluginPyDebuggerException(lines.joinToString(System.lineSeparator()))
-                    }
-                }
-            } else {
-                Thread.sleep(100)
-            }
-        }
-
-        throw PluginPyDebuggerException("Couldn't find entry point 'breakpoint()'.")
-    }
-
     private fun processOpenTasks(pythonProcess: PythonProcess) {
 
-        var activeTask: OpenTask? = null
+        var activeTask: Task? = null
         var lines: List<String> = emptyList()
         var stoppedAtInputPrompt = false
         var checkForInputPrompt = true
@@ -153,17 +209,24 @@ abstract class PythonEvalDebugger {
                     var nextDebugCommand: String? = null
 
                     if (activeTask != null) {
-                        completeTaskWithProcessOutput(activeTask, lines)
+                        activeTask.completeWithResult(getMarkedResult(lines))
                         activeTask = null
                     }
 
                     if (openTasks.isNotEmpty()) {
-                        activeTask = openTasks.take()
-                        val expression = escapeDebuggerInput(activeTask.request.expression)
-                        nextDebugCommand = if (activeTask.request.execute) {
-                            "!__debugger_internals__.exec($expression)"
-                        } else {
-                            "!__debugger_internals__.eval($expression)"
+                        activeTask = openTasks.take().also { task ->
+                            nextDebugCommand = if (task is EvaluateTask) {
+                                escapeDebuggerInput(task.request.expression).let {
+                                    if (task.request.execute) {
+                                        "!__import__('debugger_helpers').DebuggerInternals.exec($it)"
+                                    } else {
+                                        "!__import__('debugger_helpers').DebuggerInternals.eval($it)"
+                                    }
+                                }
+
+                            } else {
+                                "continue"
+                            }
                         }
                     }
 
@@ -175,13 +238,9 @@ abstract class PythonEvalDebugger {
                 }
             }
 
-            activeTask?.let {
-                completeTaskWithError(it, PluginPyDebuggerException("Evaluation was canceled."))
-            }
+            activeTask?.completeWithError(PluginPyDebuggerException("Task was canceled."))
         } catch (e: Throwable) {
-            activeTask?.let {
-                completeTaskWithError(it, e)
-            }
+            activeTask?.completeWithError(e)
             if (e is InterruptedException) {
                 Thread.currentThread().interrupt()
             }
@@ -189,192 +248,103 @@ abstract class PythonEvalDebugger {
         }
     }
 
-    private fun completeTaskWithProcessOutput(task: OpenTask, processOutput: List<String>) {
-        val result = createEvaluateResponse(getEvaluationResult(processOutput), task.request)
-        if (result.isError && task.request.execute) {
-            completeTaskWithError(task, PluginPyDebuggerException(result.value ?: "Error occurred during exec." ))
-        } else {
-            task.result.complete(result)
-        }
-    }
-
-    private fun completeTaskWithError(task: OpenTask, throwable: Throwable) {
-        if (throwable is PluginPyDebuggerException) {
-            task.result.completeExceptionally(throwable)
-        } else {
-            task.result.completeExceptionally(PluginPyDebuggerException("Unknown error occurred.", throwable))
-        }
-    }
-
     private fun checkProcessIsAlive(pythonProcess: PythonProcess) {
         if (!pythonProcess.isAlive()) {
             // In PyCharm a "PyDebuggerException" with the message "Disconnected"
-            // is thrown in case the debugger was disconnected.
+            // is thrown in case the debugger is disconnected.
             throw PluginPyDebuggerException("Disconnected")
         }
     }
 
     private fun lastLineIsPrompt(lines: List<String>): Boolean {
-        if (lines.isNotEmpty()) {
-            // mostly the last line, if prompt, only contains "(Pdb) "
-            // but it could also contain additional info like:
-            // "(Pdb) <string>:658: FutureWarning: ..."
-            // therefore use "startsWith" to check for prompt
-            if (lines.last().startsWith(LinePrefixes.DEBUGGER_PROMPT)) {
-                return true
+        // The last line, if prompt, only contains "(Pdb) ".
+        // But in the past I had a case where the last lines was:
+        // "(Pdb) <string>:658: FutureWarning: ..."
+        // To be safe, use "startsWith" to check for prompt.
+        return lines.lastOrNull()?.startsWith(LinePrefixes.DEBUGGER_PROMPT) == true
+    }
+
+    private fun getMarkedResult(lines: List<String>): MarkedResult? {
+        // Sometimes the output is polluted with additional info messages.
+        // For example pipenv prints a "Loading .env environment variables...": https://github.com/pypa/pipenv/issues/4027
+        // To extract the right data, the result is surrounded with a marker.
+        // This also allows to add temporary debug logs inside the "debugger_helpers"
+        // without breaking the detection of the results.
+
+        // The marked result may consist of multiple columns. For example a pandas DataFrame prints the first n rows.
+        var marker: String? = null
+        val markedLines = StringBuilder()
+        for (line in lines) {
+            if (marker != null) {
+                markedLines.appendLine(line)
+                if (line.contains(marker)) break
+            } else {
+                if (line.contains(RESULT_MARKER)) marker = RESULT_MARKER
+                else if (line.contains(EXC_MARKER)) marker = EXC_MARKER
+                if (marker != null) {
+                    markedLines.appendLine(line)
+                    if (line.substringAfter(marker, "").contains(marker)) {
+                        break
+                    }
+                }
             }
         }
-        return false
-    }
-
-    private fun getEvaluationResult(lines: List<String>): String? {
-        return if (lines.isNotEmpty()) {
-            if (lines.last() == LinePrefixes.DEBUGGER_PROMPT && lines.size > 1) {
-                lines[lines.size - 2]
-            } else {
-                lines.joinToString(System.lineSeparator())
-            }
-        } else null
-    }
-
-    private fun String.splitAtIndex(index: Int): Pair<String, String> {
-        return Pair(this.substring(0, index), this.substring(index + 1))
-    }
-
-    private fun createEvaluateResponse(result: String?, request: EvaluateRequest): EvaluateResponse {
-        return if (result != null && pythonErrorRegex.matches(result)) {
-            return EvaluateResponse(value = result, isError = true)
-        } else if (request.execute || result == null) {
-            EvaluateResponse()
-        } else {
-            val unquotedResult = if (result.startsWith("'")) {
-                result.removeSurrounding("'")
-            } else {
-                // result which contains a stringified dict with string keys as value is surrounded by "
-                result.removeSurrounding("\"")
-            }
-
-            val separatorAfterTypeInfo = unquotedResult.indexOf(" ")
-            val separatorAfterRefId = unquotedResult.indexOf(" ", separatorAfterTypeInfo + 1)
-
-            val qualifiedType =
-                unquotedResult.substring(0, separatorAfterTypeInfo).let { it.splitAtIndex(it.indexOf(":")) }
-            val refId = unquotedResult.substring(separatorAfterTypeInfo + 1, separatorAfterRefId)
-            var value = unquotedResult.substring(separatorAfterRefId + 1)
-
-            if (value.contains(LinePrefixes.DEBUGGER_PROMPT)) {
-                throw PluginPyDebuggerException("Something went wrong, debugger prompt found in value: $value")
-            }
-
-            if (request.trimResult && value.length > 100) {
-                value = "${value.substring(0, 100)}..."
-            }
-
-            EvaluateResponse(
-                value = value,
-                type = qualifiedType.second,
-                typeQualifier = qualifiedType.first,
-                refId = refId,
+        return marker?.let{
+            MarkedResult(
+                markedLines.toString().trim().removeSurrounding(marker),
+                it,
             )
         }
     }
 
-    /*
-    All helper methods are put into a single class to not pollute the globals.
-    The class and the created instance are visible after injection and therefore
-    accessible from outside the debugger (unwanted behavior, but OK for the integration tests).
-
-    Visible means, an evaluator could also evaluate something like this:
-
-    evaluator.evaluate("__debugger_internals__.eval('1')")
-
-    Note:
-        Linebreaks in strings passed to "eval"/"exec" have to be escaped.
-
-        Examples:
-
-        default string behavior:
-            "a\nb".split("\n")              => ['a', 'b']
-            "a\\nb".split("\n")             => ['a\\nb']
-
-        eval:
-            eval("'a\nb'").split("\n")      => {SyntaxError}EOL while scanning string literal (<string>, line 1)
-            eval("'a\\nb'").split("\n")     => ['a', 'b']
-
-        exec:
-            exec("a = 'a\nb'")              => {SyntaxError}EOL while scanning string literal (<string>, line 1)
-            exec("a = 'a\\nb'")             => a is 'a\\nb'
-     */
-    private fun createDebuggerInternalsInstanceSnippet(): String {
-        return """
-import inspect
-
-
-class __DebuggerInternals__:
-
-    def __init__(self):
-        self.id_counter = 0
-        self.excluded_result_types = (int, float, str, bool)
-
-    @staticmethod
-    def __full_type(o) -> str:
-        klass = getattr(o, '__class__', '')
-        module = getattr(klass, '__module__', '')
-        qname = getattr(klass, '__qualname__', '')
-        return f'{module}:{qname}'
-
-    def eval(self, expression) -> str:
-        if isinstance(expression, str):
-            expression = self._unescape(expression)
-            
-        # get the caller's frame
-        previous_frame = inspect.currentframe().f_back
-        result = eval(expression, previous_frame.f_globals, previous_frame.f_locals)
-
-        if isinstance(result, str):
-            result = self._escape(result)
-
-        ref_key = None
-        if result is not None and not isinstance(result, self.excluded_result_types):
-            # store created object and make it accessible
-            ref_key = f'__dbg_ref_id_{self.id_counter}'
-            previous_frame.f_locals[ref_key] = result
-            self.id_counter += 1
-        return f'{self.__full_type(result)} {ref_key} {result}'
-
-    def exec(self, value) -> None:
-        if isinstance(value, str):
-            value = self._unescape(value)
-        # get the caller's frame
-        previous_frame = inspect.currentframe().f_back
-        exec(value, previous_frame.f_globals, previous_frame.f_locals)
-        
-    @staticmethod
-    def _unescape(value: str) -> str:
-        return value.replace("$NEW_LINE_CHAR", "\\n")
-
-    @staticmethod
-    def _escape(value: str) -> str:
-        return value.replace("\\n", "$NEW_LINE_CHAR")
-
-__debugger_internals__ = __DebuggerInternals__()
-"""
-    }
-
     private fun unescapeDebuggerOutput(output: List<String>): List<String> {
-        return output.map { it.replace(NEW_LINE_CHAR, "\n") }
+        return output.map { it.replace(NEW_LINE_MARKER, "\n") }
     }
 
-    private fun escapeDebuggerInput(input: String) = escapeInput(input, NEW_LINE_CHAR)
-
-    private fun escapeDebugHelperCode(code: String) = escapeInput(code, "\\n")
-
-    private fun escapeInput(input: String, escapedNewLine: String): String {
+    private fun escapeDebuggerInput(input: String): String {
         val sanitizedInput = input
             // new lines have to be escaped to forward multiline expressions as a single line
-            .replace("\n", escapedNewLine)
+            .replace("\n", NEW_LINE_MARKER)
             // single quotes have to be escaped to be able to surround the expression with ''
             .replace("'", "\\'")
         return "'$sanitizedInput'"
+    }
+
+    private data class EvaluateTask(
+        val request: EvaluateRequest,
+        override val result: CompletableFuture<EvaluateResponse>
+    ) : Task {
+        override fun completeWithResult(result: MarkedResult?) {
+            this.result.complete(createResponse(result))
+        }
+
+        private fun createResponse(result: MarkedResult?): EvaluateResponse {
+            return if (result?.marker == EXC_MARKER) {
+                MarkedResult.parseToError(result).let {
+                    EvaluateResponse(
+                        value = it.cause,
+                        type = it.type,
+                        typeQualifier = it.typeQualifier,
+                        isError = true,
+                    )
+                }
+            } else if (result == null || request.execute) {
+                EvaluateResponse(null, null, null, false, null)
+            } else MarkedResult.parseToValue(result, request.trimResult).let {
+                EvaluateResponse(
+                    value = it.value,
+                    type = it.type,
+                    typeQualifier = it.typeQualifier,
+                    isError = false,
+                    refId = it.refId,
+                )
+            }
+        }
+    }
+
+    private class ContinueTask(override val result: CompletableFuture<Unit>) : Task {
+        override fun completeWithResult(result: MarkedResult?) {
+            this.result.complete(null)
+        }
     }
 }

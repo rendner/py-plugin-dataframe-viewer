@@ -19,7 +19,9 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.Validation
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.border.IdeaTitledBorder
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
+import com.intellij.util.ui.UIUtil
 import java.awt.Insets
 import javax.swing.Box
 import javax.swing.JComponent
@@ -30,35 +32,48 @@ import javax.swing.JPanel
  */
 class SettingsComponent {
 
-    private val myValidationStrategyComboBox = MyValidationStrategyComboBox(ValidationStrategyType.DISABLED)
-    private val myFSLoadNewDataStructureCheckBox = JBCheckBox("Use new data structure when loading chunks", true)
+    private val myValidationStrategyComboBox = ComboBox(ValidationStrategyType.values())
+    private val myFSUseFilterInputFromInternalApiCheckBox =
+        JBCheckBox("Filter input: use editor from internal IntelliJ API")
 
     private val myPanel: JPanel
 
     var validationStrategyType: ValidationStrategyType
         get() = myValidationStrategyComboBox.item
-        set(value) { myValidationStrategyComboBox.item = value }
+        set(value) {
+            myValidationStrategyComboBox.item = value
+        }
 
-    var fsLoadNewDataStructure: Boolean
-        get() = myFSLoadNewDataStructureCheckBox.isSelected
-        set(value) { myFSLoadNewDataStructureCheckBox.isSelected = value }
+    var fsUseFilterInputFromInternalApi: Boolean
+        get() = myFSUseFilterInputFromInternalApiCheckBox.isSelected
+        set(value) {
+            myFSUseFilterInputFromInternalApiCheckBox.isSelected = value
+        }
 
 
     init {
-        val defaultSettingsPanel = FormBuilder.createFormBuilder()
+        val dataFetchingSettingsPanel = FormBuilder.createFormBuilder()
             .addLabeledComponent("Validation strategy: ", myValidationStrategyComboBox)
             .addTooltip("Automatic validation of used styling functions")
             .panel
-        defaultSettingsPanel.border = createTitleBorder("Settings")
+        dataFetchingSettingsPanel.border = createTitleBorder("Data fetching")
 
         val featureSwitchPanel = FormBuilder.createFormBuilder()
-            .addComponent(myFSLoadNewDataStructureCheckBox)
-            .addTooltip("New one uses JSON instead of HTML")
+            .addComponent(myFSUseFilterInputFromInternalApiCheckBox)
+            .addTooltip("Stores the filter history. May not be available due to internal API changes.")
             .panel
-        featureSwitchPanel.border = createTitleBorder("Feature Switches")
+        featureSwitchPanel.border = createTitleBorder("Feature switches")
 
         myPanel = FormBuilder.createFormBuilder()
-            .addComponent(defaultSettingsPanel)
+            .addComponent(
+                JBLabel(
+                    "Changed settings are only applied to newly opened dialogs.",
+                    UIUtil.ComponentStyle.SMALL,
+                    UIUtil.FontColor.BRIGHTER,
+                )
+            )
+            .addVerticalGap(10)
+            .addComponent(dataFetchingSettingsPanel)
             .addComponent(featureSwitchPanel)
             .addComponentFillVertically(Box.createVerticalGlue() as JComponent, 0)
             .panel
@@ -74,13 +89,5 @@ class SettingsComponent {
 
     fun getPreferredFocusedComponent(): JComponent {
         return myValidationStrategyComboBox
-    }
-
-    private class MyValidationStrategyComboBox(selectedValue: ValidationStrategyType) :
-        ComboBox<ValidationStrategyType>() {
-        init {
-            ValidationStrategyType.values().forEach { addItem(it) }
-            item = selectedValue
-        }
     }
 }

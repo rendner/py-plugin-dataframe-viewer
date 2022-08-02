@@ -17,18 +17,6 @@ package cms.rendner.intellij.dataframe.viewer
 
 object SystemPropertyKey {
     /**
-     * The working directory inside the docker container.
-     * (used by integration tests)
-     */
-    const val DOCKERED_TEST_WORKDIR = "cms.rendner.dataframe.viewer.dockered.test.workdir"
-
-    /**
-     * The docker image to run.
-     * (used by integration tests)
-     */
-    const val DOCKERED_TEST_IMAGE = "cms.rendner.dataframe.viewer.dockered.test.image"
-
-    /**
      * Enables the export-test-data action if set to "true".
      * (for local development)
      */

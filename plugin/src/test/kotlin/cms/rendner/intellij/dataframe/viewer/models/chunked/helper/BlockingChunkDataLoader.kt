@@ -16,7 +16,6 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AbstractChunkDataLoader
@@ -26,22 +25,15 @@ import java.util.concurrent.Executor
 /**
  * Loads chunks of a pandas DataFrame synchronously (blocks the calling thread).
  *
- * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
- * @param loadNewDataStructure flag to switch between old and new data structure.
- * The old one is an HTML string which has to be parsed to extract the element and style information.
- * The new one is an object which describes the required HTML properties - it is easier to process.
+ * @param chunkEvaluator the evaluator to fetch the data for a chunk of the pandas DataFrame
  */
 internal class BlockingChunkDataLoader(
     chunkEvaluator: IChunkEvaluator,
-    loadNewDataStructure: Boolean,
-) : Executor, AbstractChunkDataLoader(
-    chunkEvaluator,
-    loadNewDataStructure,
-) {
+) : Executor, AbstractChunkDataLoader(chunkEvaluator) {
     override fun loadChunk(request: LoadRequest) {
         submitFetchChunkTask(LoadChunkContext(request), this).whenComplete { _, throwable ->
             if (throwable != null) {
-                myResultHandler?.onError(request, throwable)
+                myResultHandler?.onChunkFailed(request)
                 throw throwable
             }
         }
@@ -58,10 +50,6 @@ internal class BlockingChunkDataLoader(
 
     override fun handleChunkData(ctx: LoadChunkContext, chunkData: ChunkData) {
         myResultHandler?.onChunkLoaded(ctx.request, chunkData)
-    }
-
-    override fun handleStyledValues(ctx: LoadChunkContext, chunkValues: ChunkValues) {
-        myResultHandler?.onStyledValuesProcessed(ctx.request, chunkValues)
     }
 
     override fun execute(command: Runnable) {

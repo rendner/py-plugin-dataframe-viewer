@@ -23,7 +23,10 @@ object PythonQualifiedTypes {
     const val Function = "builtins.function"
     const val Int = "builtins.int"
     const val Float = "builtins.float"
-    const val Float64 = "numpy.float64"
-    const val Index = "pandas.core.indexes.base.Index"
     const val Module = "builtins.module"
+}
+
+object PandasTypes {
+    fun isDataFrame(qualifiedType: String?): Boolean = qualifiedType == "pandas.core.frame.DataFrame"
+    fun isStyler(qualifiedType: String?): Boolean = qualifiedType == "pandas.io.formats.style.Styler"
 }

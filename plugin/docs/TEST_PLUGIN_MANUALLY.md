@@ -36,7 +36,7 @@ After the HTML was successfully exported, it is already verified that:
 ### 3) Plugin Can Parse HTML From Pandas Styler
 After all files are re-exported run the unit tests (gradle-task `test` under group `verification`) of the plugin project to check if everything is OK.
 
-The generated resources are used by the unit tests `ChunkValidationTest` and `CSSValidationTest`. 
+The generated resources are used by the unit tests `ChunkValidationTest`. 
 These are the most important ones of the plugin project.
 
 #### ChunkValidationTest
@@ -50,12 +50,3 @@ ensures:
 
 In case the combined chunked HTML does not match the expected HTML, a screenshot is taken of the rendered DataFrame tables.
 The screenshots are created in a folder named by the failed test case under `src/test/resources/generated-error-images/chunk-validation`.
-
-#### CSSValidationTest
-Loads for all supported pandas versions the generated data from the `src/test/resources/generated/` folder.
-
-ensures:
-- computed CSS values match with the ones computed by a web browser
-
-In case the calculated CSS does not match the expected CSS, a screenshot is taken of the rendered DataFrame tables.
-The screenshots are created in a folder named by the failed test case under `src/test/resources/generated-error-images/css-validation`.

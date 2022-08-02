@@ -79,6 +79,23 @@ interface ITableDataModel : TableModel {
     fun shouldHideHeaders(): Boolean
     fun getLegendHeader(): IHeaderLabel
     fun getLegendHeaders(): LegendHeaders
+    fun getDataSourceFingerprint(): String
+
+    /**
+     * Enables or disables data fetching.
+     * Data fetching should only be temporarily enabled during the painting process of a table.
+     *
+     * JTables instantiate renderers to measure all kind of things.
+     * Values for these renderers are read from the model of the table.
+     * In case of an async table model, the data has to be fetched from an underlying data source.
+     * Such a model usually returns a temporary value (maybe empty string) until the data is loaded.
+     * This leads to wrong calculated values, because an empty string was returned, and the
+     * "fetch data"-requests block the loading of required data, because the requests are mostly
+     * processed in the order in which they are received.
+     *
+     * @param enabled indicates if data fetching should be enabled or not.
+     */
+    fun enableDataFetching(enabled: Boolean)
 }
 
 interface ITableIndexDataModel : ITableDataModel {
@@ -99,13 +116,21 @@ interface ITableIndexDataModel : ITableDataModel {
 interface ITableValueDataModel : ITableDataModel {
     override fun getValueAt(rowIndex: Int, columnIndex: Int): Value
     fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel
+    fun setSortKeys(sortKeys: List<SortKey>)
+
+    /**
+     * Returns the index for a column in the original DataFrame.
+     * The index of a column from the data model cannot be mapped one-to-one to
+     * the index of the column in the DataFrame. Because some columns could be
+     * filtered out by the model. And a pandas styler can hide columns
+     * which nevertheless exist in the DataFrame.
+     *
+     * @return the index of the column in the original DataFrame.
+     */
+    fun convertToFrameColumnIndex(columnIndex: Int): Int
 }
 
 interface IDataFrameModel : Disposable {
     fun getValueDataModel(): ITableValueDataModel
     fun getIndexDataModel(): ITableIndexDataModel
-}
-
-interface IExternalSortableDataFrameModel {
-    fun setSortKeys(sortKeys: List<SortKey>)
 }

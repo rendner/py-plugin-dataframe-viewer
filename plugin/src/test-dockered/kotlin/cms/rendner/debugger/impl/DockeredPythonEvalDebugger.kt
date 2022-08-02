@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2022 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,10 +33,12 @@ import java.util.concurrent.TimeUnit
  * Otherwise, the command to start the Python interpreter will
  * create a new pipenv environment instead of starting the Python interpreter.
  * Therefore, a debugger can't be started.
+ * @param volumes volumes to map.
  */
 class DockeredPythonEvalDebugger(
     private val dockerImage: String,
     private val workdir: String,
+    private val volumes: List<String>?,
 ) : PythonEvalDebugger() {
 
     companion object {
@@ -52,11 +54,17 @@ class DockeredPythonEvalDebugger(
      */
     fun startContainer() {
 
-        val command = "tail -f /dev/null" // to keep the container running
+        val processArgs = mutableListOf<String>().apply{
+            add("docker")
+            add("run")
+            volumes?.forEach { add("-v"); add(it) }
+            add("-d")
+            add(dockerImage)
+            // command to keep the container running
+            addAll("tail -f /dev/null".split(" "))
+        }
 
-        ProcessBuilder(
-            "docker run -d $dockerImage $command".split(" ")
-        )
+        ProcessBuilder(processArgs)
             .redirectErrorStream(true)
             .start().also {
                 val reader = BufferedReader(InputStreamReader(it.inputStream, StandardCharsets.UTF_8))
@@ -89,7 +97,7 @@ class DockeredPythonEvalDebugger(
      * evaluation requests.
      */
     fun startWithSourceFile(sourceFilePath: String) {
-        start(sourceFilePath)
+        start(listOf(sourceFilePath))
     }
 
     /**
@@ -98,23 +106,29 @@ class DockeredPythonEvalDebugger(
      * into debug mode. The interpreter will stop at this line and process all submitted evaluation requests.
      */
     fun startWithCodeSnippet(codeSnippet: String) {
-        start("-c $codeSnippet")
+        start(listOf("-c", codeSnippet))
     }
 
-    private fun start(commandSuffix: String) {
+    private fun start(additionalPythonArgs: List<String>) {
         if (containerId == null) {
             throw IllegalStateException("No container available.")
         }
 
         val process = PythonProcess("\n", printOutput = false, printInput = false)
 
-        // "workdir" has to be one of the already existing pipenv environments
-        // otherwise "pipenv run" creates a new pipenv environment in the specified "workdir"
-        val command = "pipenv run python $commandSuffix"
+        val processArgs = mutableListOf<String>().apply {
+            add("docker")
+            add("exec")
+            // "workdir" has to be one of the already existing pipenv environments
+            // otherwise "pipenv run" creates a new pipenv environment in the specified "workdir"
+            add("--workdir=$workdir")
+            add("-i")
+            add(containerId!!)
+            addAll("pipenv run python".split(" "))
+            addAll(additionalPythonArgs)
+        }
 
-        process.start(
-            "docker exec -i --workdir=$workdir $containerId $command".split(" ")
-        )
+        process.start(processArgs)
 
         try {
             start(process)

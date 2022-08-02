@@ -15,7 +15,7 @@
  */
 package cms.rendner.export
 
-import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
+import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.SystemPropertyKey
 import cms.rendner.intellij.dataframe.viewer.python.exporter.ExportTask
 import org.assertj.core.api.Assertions.assertThat
@@ -25,16 +25,16 @@ import java.nio.file.Paths
 /**
  * The class exports the test-data used by the unit test [ChunkValidationTest].
  */
-internal class ExportTestData : AbstractPipEnvEnvironmentTest() {
+internal class ExportTestData : AbstractPluginCodeTest() {
 
     private val exportDir = System.getProperty(SystemPropertyKey.EXPORT_TEST_DATA_DIR)?.let { Paths.get(it) }
 
     @Test
     fun exportTestDataForUnitTests() {
         assertThat(exportDir).isNotNull
-        runWithPythonDebugger("export_data/main.py") { valueEvaluator, _ ->
+        runPythonDebuggerWithSourceFile("export_data/main.py") { evaluator, _ ->
 
-            val exportTestDataValue = valueEvaluator.evaluate("export_test_data")
+            val exportTestDataValue = evaluator.evaluate("export_test_data")
 
             ExportTask(exportDir!!, exportTestDataValue).run()
         }

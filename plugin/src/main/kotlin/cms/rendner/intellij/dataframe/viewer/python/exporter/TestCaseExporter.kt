@@ -20,25 +20,21 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvalu
 import cms.rendner.intellij.dataframe.viewer.models.chunked.utils.iterateDataFrame
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
-import com.intellij.openapi.util.Disposer
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.jsoup.Jsoup
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.regex.Pattern
 
 /**
  * Exports test data, used by unit-tests.
  *
- * @param baseExportDir the base directory for the HTML files generated from the test cases.
+ * @param baseExportDir the base directory for the JSON files generated from the test cases.
  */
 class TestCaseExporter(private val baseExportDir: Path) {
 
     private var exportCounter = 0
     private val pythonBridge = PythonCodeBridge()
-    private val removeTrailingSpacesPattern = Pattern.compile("[ \\t]+$", Pattern.MULTILINE)
 
     private val json: Json by lazy {
         Json { ignoreUnknownKeys = true; prettyPrint = true }
@@ -51,38 +47,33 @@ class TestCaseExporter(private val baseExportDir: Path) {
      * each test case should have a unique name specified via [TestCaseExportData.exportDirectoryPath].
      *
      * The following data is extracted and stored:
-     * - the expected HTML file (extracted from the original DataFrame)
-     * - the HTML file from multiple chunks
+     * - the expected JSON file (extracted from the original DataFrame)
+     * - the JSON file for each chunk
      * - the table structure info
      */
     fun export(testCase: TestCaseExportData) {
         val patchedStyler = createPatchedStyler(testCase)
-        try {
-            val tableStructure = patchedStyler.evaluateTableStructure()
-            if (tableStructure.rowsCount > 200) {
-                throw IllegalArgumentException("DataFrame has to many rows (${tableStructure.rowsCount}), can't generate test data from it. Please use a DataFrame with max 200 rows.")
-            }
+        val tableStructure = patchedStyler.evaluateTableStructure()
+        if (tableStructure.rowsCount > 200) {
+            throw IllegalArgumentException("DataFrame has to many rows (${tableStructure.rowsCount}), can't generate test data from it. Please use a DataFrame with max 200 rows.")
+        }
 
-            println("export test case ${++exportCounter}: ${testCase.exportDirectoryPath}")
+        println("export test case ${++exportCounter}: ${testCase.exportDirectoryPath}")
 
-            val testCaseProperties = TestCaseProperties(
-                testCase.exportChunkSize.rows,
-                testCase.exportChunkSize.columns,
-                tableStructure
-            )
+        val testCaseProperties = TestCaseProperties(
+            testCase.exportChunkSize.rows,
+            testCase.exportChunkSize.columns,
+            tableStructure
+        )
 
-            baseExportDir.resolve(testCase.exportDirectoryPath).let {
-                TestCasePath.createRequiredDirectories(it)
-                writeTestCasePropertiesToFile(it, testCaseProperties)
-                // create new patched styler instances for the expected results
-                // otherwise css styles are duplicated in the generated output
-                // (some pandas versions don't do a proper cleanup before generating the HTML)
-                writeExpectedJsonResultToFile(createPatchedStyler(testCase), it)
-                writeExpectedHTMLResultToFile(createPatchedStyler(testCase), it)
-                writeChunksToFile(patchedStyler, it, testCase, tableStructure)
-            }
-        } finally {
-            Disposer.dispose(patchedStyler)
+        baseExportDir.resolve(testCase.exportDirectoryPath).let {
+            TestCasePath.createRequiredDirectories(it)
+            writeTestCasePropertiesToFile(it, testCaseProperties)
+            // create new patched styler instances for the expected results
+            // otherwise css styles are duplicated in the generated output
+            // (some pandas versions don't do a proper cleanup before generating the output)
+            writeExpectedJsonResultToFile(createPatchedStyler(testCase), it)
+            writeChunksToFile(patchedStyler, it, testCase, tableStructure)
         }
     }
 
@@ -98,18 +89,8 @@ class TestCaseExporter(private val baseExportDir: Path) {
         exportDir: Path,
     ) {
         val result = json.encodeToString(patchedStyler.evaluateComputeUnpatchedHTMLPropsTable())
-        Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir, "json")).use {
+        Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir)).use {
             it.write(result)
-        }
-    }
-
-    private fun writeExpectedHTMLResultToFile(
-        patchedStyler: IPyPatchedStylerRef,
-        exportDir: Path,
-    ) {
-        val result = patchedStyler.evaluateRenderUnpatched()
-        Files.newBufferedWriter(TestCasePath.resolveExpectedResultFile(exportDir, "html")).use {
-            it.write(prettifyHtmlAndReplaceRandomTableId(result))
         }
     }
 
@@ -124,40 +105,29 @@ class TestCaseExporter(private val baseExportDir: Path) {
         val evaluator = ChunkEvaluator(patchedStyler)
 
         iterateDataFrame(tableStructure.rowsCount, tableStructure.columnsCount, chunkSize).forEach { chunk ->
-            val result = evaluator.evaluate(chunk, chunk.firstColumn > 0, chunk.firstRow > 0)
+            val result = evaluator.evaluateHTMLProps(chunk, chunk.firstColumn > 0, chunk.firstRow > 0)
             Files.newBufferedWriter(
-                TestCasePath.resolveChunkResultFile(exportDir, chunk.firstRow, chunk.firstColumn, "html")
+                TestCasePath.resolveChunkResultFile(exportDir, chunk.firstRow, chunk.firstColumn)
             ).use {
-                it.write(prettifyHtmlAndReplaceRandomTableId(result))
-            }
-
-            val result2 = evaluator.evaluateHTMLProps(chunk, chunk.firstColumn > 0, chunk.firstRow > 0)
-            Files.newBufferedWriter(
-                TestCasePath.resolveChunkResultFile(exportDir, chunk.firstRow, chunk.firstColumn, "json")
-            ).use {
-                it.write(json.encodeToString(result2))
+                it.write(json.encodeToString(result))
             }
         }
     }
 
-    private fun prettifyHtmlAndReplaceRandomTableId(html: String): String {
-        // The exported table has a random id, if not a static one was specified on the styler.
-        // That id is used for the table elements and for the css styles which style the table elements.
-        // To have a stable output the id is always replaced with a static one.
-        val document = Jsoup.parse(html)
-        val tableId = document.selectFirst("table")!!.id()
-        var prettified = document.outerHtml()
-        // fix for jsoup #1689 (Pretty print leaves extra space at end of many lines)
-        prettified = removeTrailingSpacesPattern.matcher(prettified).replaceAll("")
-        return prettified.replace(tableId, "static_id")
-    }
-
     @OptIn(ExperimentalSerializationApi::class)
-    private fun writeTestCasePropertiesToFile(exportDir: Path, testCaseProperties: TestCaseProperties) {
+    private fun writeTestCasePropertiesToFile(exportDir: Path, properties: TestCaseProperties) {
         Files.newBufferedWriter(
             TestCasePath.resolveTestCasePropertiesFile(exportDir)
         ).use {
-            it.write(json.encodeToString(testCaseProperties))
+            it.write(
+                json.encodeToString(
+                    TestCaseProperties(
+                        properties.rowsPerChunk,
+                        properties.colsPerChunk,
+                        properties.tableStructure.withDummyFingerprint(),
+                    )
+                )
+            )
         }
     }
 }

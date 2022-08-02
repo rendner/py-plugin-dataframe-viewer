@@ -28,37 +28,19 @@ class ChunkEvaluator(
     private val patchedStyler: IPyPatchedStylerRef,
 ) : IChunkEvaluator {
 
-    override fun evaluate(
-        chunkRegion: ChunkRegion,
-        excludeRowHeaders: Boolean,
-        excludeColumnHeaders: Boolean
-    ): String {
-        return patchedStyler.evaluateRenderChunk(
-            chunkRegion.firstRow,
-            chunkRegion.firstColumn,
-            chunkRegion.numberOfRows,
-            chunkRegion.numberOfColumns,
-            excludeRowHeaders,
-            excludeColumnHeaders
-        )
-    }
-
     override fun evaluateHTMLProps(
         chunkRegion: ChunkRegion,
         excludeRowHeaders: Boolean,
         excludeColumnHeaders: Boolean
     ): HTMLPropsTable {
         return patchedStyler.evaluateComputeChunkHTMLPropsTable(
-            chunkRegion.firstRow,
-            chunkRegion.firstColumn,
-            chunkRegion.numberOfRows,
-            chunkRegion.numberOfColumns,
+            chunkRegion,
             excludeRowHeaders,
             excludeColumnHeaders
         )
     }
 
     override fun setSortCriteria(sortCriteria: SortCriteria) {
-        patchedStyler.evaluateSetSortCriteria(sortCriteria.byIndex, sortCriteria.ascending)
+        patchedStyler.evaluateSetSortCriteria(sortCriteria)
     }
 }
