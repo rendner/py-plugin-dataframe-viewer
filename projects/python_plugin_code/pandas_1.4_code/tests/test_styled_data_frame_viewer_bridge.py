@@ -22,10 +22,6 @@ df = pd.DataFrame.from_dict({
 })
 
 
-def test_check_returns_true():
-    assert StyledDataFrameViewerBridge.check()
-
-
 def test_create_patched_styler_for_df():
     assert isinstance(StyledDataFrameViewerBridge.create_patched_styler(df), PatchedStyler)
 

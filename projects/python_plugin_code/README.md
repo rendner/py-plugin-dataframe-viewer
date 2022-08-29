@@ -60,7 +60,7 @@ Is used to generate the script file `generated/plugin_code` (used by the plugin)
 All explicit listed py-files are taken into account.
 
 ### Directory: plugin_code
-The directory contains all the code to extract the HTML output of a styled `DataFrame`. 
+The directory contains all the code required by the plugin to fetch data from a styled `DataFrame`. 
 All files from this directory, which are explict listed in the `main.py` file, are copied into `generated/plugin_code`.
 
 Each file has to contain the marker line: ```# == copy after here ==```
@@ -97,14 +97,12 @@ Short overview about the public methods of the class:
 | get_context                        |         -          | Required for unit tests.                                                                    |
 | get_style_function_details         |         X          | To extract information about used styling functions.                                        |
 | get_table_structure                |         X          | To extract initial information about a DataFrame.                                           |
-| render_chunk                       |         X          | To extract HTML data of a chunk.                                                            |
-| render_unpatched                   |         -          | To extract unmodified HTML output. Used to generated test data or during integration tests. |
 | set_sort_criteria                  |         X          | To set the sort criteria for the styled DataFrame.                                          |
 | to_json                            |         X          | To convert method results into JSON. Simplifies the parsing of the results in the plugin.   |
 | validate_style_functions           |         X          | To validate styling functions.                                                              |
 
 #### StyledDataFrameViewerBridge.py
-This class is used by the plugin (Kotlin part) to create and maintain `PatchedStyler` instances.
+This class is used by the plugin (Kotlin part) to create `PatchedStyler` instances.
 Therefore, it is mandatory that the method signatures of this class match those used by the `PythonCodeBridge` counterpart of the plugin project.
 
 Short overview about the public methods of the class:
@@ -112,11 +110,9 @@ Short overview about the public methods of the class:
 | Method                | used by the plugin | purpose                                                              |
 |:----------------------|:------------------:|:---------------------------------------------------------------------|
 | create_patched_styler |         X          | To create a `PatchedStyler` instance.                                |
-| delete_patched_styler |         X          | To delete an obsolete `PatchedStyler` instance.                      |
-| check                 |         X          | To check if the Python-specific plugin code was already initialized. |
 
 ### Directory: test
-The directory `tests` contains unit tests to guarantee that the combined HTML chunks give the same result as the original output taken from pandas `Styler.render()`.
+The directory `tests` contains the unit tests for the Python plugin code.
 Therefore, each supported builtin style implementation has its own set of tests.
 
 It is also possible to write unit tests that will only be executed when run with a specific Pandas version (currently only in `pandas_1.3_code`):
