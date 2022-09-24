@@ -328,3 +328,23 @@ def test_unknown_element_kind():
     assert len(table.body) == 1
     assert len(table.body[0]) == 1
     assert table.body[0][0].kind == ""
+
+
+def test_truncates_too_long_display_values():
+    table_builder = HTMLPropsTableBuilder()
+    value = "abc" * HTMLPropsTableBuilder.APPROX_DISPLAY_VALUE_LENGTH
+    html_props = {
+        "body": [
+            [
+                {"type": "td", "is_visible": True, "display_value": value},
+            ],
+        ],
+    }
+
+    table_builder.append_props(html_props, 0, True, True)
+    table = table_builder.build()
+
+    assert len(table.body) == 1
+    assert len(table.body[0]) == 1
+    assert len(table.body[0][0].display_value) < len(value)
+
