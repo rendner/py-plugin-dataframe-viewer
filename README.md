@@ -36,9 +36,11 @@ The following `Styler` methods are supported:
 > A good overview about styling `DataFrames` can be found on the pandas website: [pandas User Guide: Styling](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
 
 ## Features
+- [filtering](./docs/FILTERING.md)
 - [sorting](./docs/SORTING.md)
 - [automatic detection of not chunk aware styling functions](./docs/VALIDATING_STYLE_FUNCTIONS.md)
 - [many keyboard shortcuts to work efficiently](./docs/KEYBOARD_SHORTCUTS.md)
+- [settings to configure plugin behavior](./docs/SETTINGS.md)
 
 ## How Does It Work
 Generate a `DataFrame` and configure the `Styler` returned by `DataFrame.style`:
@@ -140,7 +142,7 @@ In general, you pass your custom style function into one of the following method
 Both of those methods take a function (and some other keyword arguments) and applies your function to the `DataFrame` in 
 a certain way. `Styler.applymap` works through the `DataFrame` elementwise, therefore it is safe to use in combination with chunks. 
 
-`Styler.apply` passes each column or row into your `DataFrame` one-at-a-time or the entire `DataFrame` at once, depending on the axis keyword argument.
+`Styler.apply` passes each column or row of your `DataFrame` one-at-a-time or the entire `DataFrame` at once, depending on the axis keyword argument.
 In case of chunks, a passed row or column is taken from the chunk and not from the original `DataFrame`. 
 Same for `axis=None`, here the chunk is passed instead of the original `DataFrame`.
 This leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. 

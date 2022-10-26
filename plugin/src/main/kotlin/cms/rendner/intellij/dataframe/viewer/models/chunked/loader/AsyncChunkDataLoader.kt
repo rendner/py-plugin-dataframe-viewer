@@ -73,6 +73,8 @@ class AsyncChunkDataLoader(
 
     /**
      * Adds a load request to an internal waiting queue.
+     * Load requests are ignored if already disposed or if no [IChunkDataResultHandler] is registered.
+     *
      * The added requests are processed according to the LIFO principle (last-in-first-out).
      * Entries of the waiting queue are processed as soon as the next chunk can be fetched.
      *
