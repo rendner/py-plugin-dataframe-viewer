@@ -16,8 +16,7 @@ import pytest
 from pandas import MultiIndex, DataFrame, Series
 from pandas.io.formats.style import Styler
 
-from plugin_code.patched_styler import PatchedStyler
-from plugin_code.patched_styler_context import Region
+from plugin_code.patched_styler_context import Region, PatchedStylerContext
 from plugin_code.style_functions_validator import StyleFunctionValidationProblem, StyleFunctionsValidator, \
     ValidationStrategyType
 
@@ -37,7 +36,7 @@ df = DataFrame.from_dict({
 
 
 def _create_validator(style: Styler, validation_strategy_type: ValidationStrategyType) -> StyleFunctionsValidator:
-    validator = StyleFunctionsValidator(PatchedStyler(style).get_context())
+    validator = StyleFunctionsValidator(PatchedStylerContext.create(style))
     validator.set_validation_strategy_type(validation_strategy_type)
     return validator
 
