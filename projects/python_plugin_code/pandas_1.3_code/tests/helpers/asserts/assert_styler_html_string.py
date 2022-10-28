@@ -17,7 +17,9 @@ from typing import Callable
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
+from plugin_code.html_props_generator import HTMLPropsGenerator
 from plugin_code.patched_styler import PatchedStyler
+from plugin_code.patched_styler_context import PatchedStylerContext, Region
 from plugin_code.styled_data_frame_viewer_bridge import StyledDataFrameViewerBridge
 from tests.helpers.asserts.table_extractor import StyledTable, TableExtractor
 
@@ -57,7 +59,9 @@ def create_combined_html_string(
 
 def _assert_render(styler: Styler, patched_styler: PatchedStyler, rows_per_chunk: int, cols_per_chunk: int):
     actual_table = _create_render_result_for_chunks(patched_styler, rows_per_chunk, cols_per_chunk)
-    expected_table = _convert_to_styled_table(StyledDataFrameViewerBridge.create_patched_styler(styler).render_unpatched())
+    expected_table = _convert_to_styled_table(
+        _render_unpatched(StyledDataFrameViewerBridge.create_patched_styler(styler))
+    )
 
     if actual_table is None:
         table_structure = patched_styler.get_table_structure()
@@ -95,11 +99,9 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
             exclude_col_header = rows_processed > 0
             # fetch row header only for first col-block (all others have the same row header)
             exclude_row_header = cols_in_row_processed > 0
-            chunk_html = patched_styler.render_chunk(
-                rows_processed,
-                cols_in_row_processed,
-                rows,
-                cols,
+            chunk_html = _render_chunk(
+                patched_styler,
+                Region(rows_processed, cols_in_row_processed, rows, cols),
                 exclude_row_header,
                 exclude_col_header
             )
@@ -115,6 +117,39 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
         rows_processed += rows
 
     return result
+
+
+def _render_chunk(patched_styler: PatchedStyler, chunk_region: Region, exclude_row_header, exclude_col_header):
+    psc = patched_styler.get_context()
+    html_props = HTMLPropsGenerator(psc).compute_chunk_props(
+        region=chunk_region,
+        exclude_row_header=exclude_row_header,
+        exclude_col_header=exclude_col_header,
+    )
+    # use templates of original styler
+    styler = psc.get_styler()
+    return styler.template_html.render(
+        **html_props,
+        encoding="utf-8",
+        doctype_html=True,
+        sparse_columns=False,
+        sparse_index=False,
+        html_table_tpl=styler.template_html_table,
+        html_style_tpl=styler.template_html_style,
+    )
+
+
+def _render_unpatched(patched_styler: PatchedStyler):
+    # This method deliberately does not use the "html_props_generator" but the original
+    # "Styler::to_html" method to create the html string.
+    styler = patched_styler.get_context().get_styler()
+    styler.uuid = ''
+    styler.uuid_len = 0
+    styler.cell_ids = False
+    return styler.to_html(
+        encoding="utf-8",
+        doctype_html=True,
+    )
 
 
 def _merge_tables(target_styled_table: StyledTable, source_styled_table: StyledTable, row_offset: int,

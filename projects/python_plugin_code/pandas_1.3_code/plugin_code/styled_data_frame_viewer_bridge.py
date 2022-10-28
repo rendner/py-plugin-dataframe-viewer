@@ -21,10 +21,6 @@ from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
 
-# This bridge hides all created "patchedStyler" instances, to not pollute the PyCharm
-# debugger view, by collecting them in an internal list.
-
-
 class StyledDataFrameViewerBridge:
 
     @classmethod
@@ -38,7 +34,3 @@ class StyledDataFrameViewerBridge:
             styler: Styler = frame_or_styler
 
         return PatchedStyler(PatchedStylerContext.create(styler, FilterCriteria.from_frame(filter_frame)))
-
-    @staticmethod
-    def check() -> bool:
-        return True
