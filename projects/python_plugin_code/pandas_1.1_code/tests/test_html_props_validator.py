@@ -18,7 +18,7 @@ from pandas import MultiIndex, DataFrame, Series
 from pandas.io.formats.style import Styler
 
 from plugin_code.html_props_validator import HTMLPropsValidator
-from plugin_code.patched_styler import PatchedStyler
+from plugin_code.patched_styler_context import PatchedStylerContext
 
 np.random.seed(123456)
 
@@ -36,7 +36,7 @@ df = DataFrame.from_dict({
 
 
 def create_validator(style: Styler) -> HTMLPropsValidator:
-    return HTMLPropsValidator(PatchedStyler(style).get_context())
+    return HTMLPropsValidator(PatchedStylerContext.create(style))
 
 
 @pytest.mark.parametrize(

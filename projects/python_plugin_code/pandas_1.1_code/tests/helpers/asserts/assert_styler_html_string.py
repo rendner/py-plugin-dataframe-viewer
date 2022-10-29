@@ -18,6 +18,7 @@ from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
 from plugin_code.patched_styler import PatchedStyler
+from plugin_code.styled_data_frame_viewer_bridge import StyledDataFrameViewerBridge
 from tests.helpers.asserts.table_extractor import StyledTable, TableExtractor
 
 
@@ -37,7 +38,7 @@ def create_and_assert_patched_styler_html_string(
 
     patched_styler_styler = df.style
     init_styler_func(patched_styler_styler)
-    patched_styler = PatchedStyler(patched_styler_styler)
+    patched_styler = StyledDataFrameViewerBridge.create_patched_styler(patched_styler_styler)
 
     _assert_render(styler, patched_styler, rows_per_chunk, cols_per_chunk)
 
@@ -50,13 +51,13 @@ def create_combined_html_string(
 ) -> StyledTable:
     patched_styler_styler = df.style
     init_styler_func(patched_styler_styler)
-    patched_styler = PatchedStyler(patched_styler_styler)
+    patched_styler = StyledDataFrameViewerBridge.create_patched_styler(patched_styler_styler)
     return _create_render_result_for_chunks(patched_styler, rows_per_chunk, cols_per_chunk)
 
 
 def _assert_render(styler: Styler, patched_styler: PatchedStyler, rows_per_chunk: int, cols_per_chunk: int):
     actual_table = _create_render_result_for_chunks(patched_styler, rows_per_chunk, cols_per_chunk)
-    expected_table = _convert_to_styled_table(PatchedStyler(styler).render_unpatched())
+    expected_table = _convert_to_styled_table(StyledDataFrameViewerBridge.create_patched_styler(styler).render_unpatched())
 
     if actual_table is None:
         table_structure = patched_styler.get_table_structure()
