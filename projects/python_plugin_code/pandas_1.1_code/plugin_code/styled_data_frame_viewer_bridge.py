@@ -34,7 +34,3 @@ class StyledDataFrameViewerBridge:
             styler: Styler = frame_or_styler
 
         return PatchedStyler(PatchedStylerContext.create(styler, FilterCriteria.from_frame(filter_frame)))
-
-    @staticmethod
-    def check() -> bool:
-        return True
