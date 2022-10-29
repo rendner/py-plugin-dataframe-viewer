@@ -107,43 +107,6 @@ class PatchedStyler:
     def compute_unpatched_html_props_table(self) -> HTMLPropsTable:
         return self.__table_generator.compute_unpatched_table()
 
-    def render_chunk(self,
-                     first_row: int,
-                     first_col: int,
-                     rows: int,
-                     cols: int,
-                     exclude_row_header: bool = False,
-                     exclude_col_header: bool = False,  # unused in this version
-                     ) -> str:
-        html_props = self.__html_props_generator.compute_chunk_props(
-            region=Region(first_row, first_col, rows, cols),
-            exclude_row_header=exclude_row_header,
-        )
-        # use template of original styler
-        styler = self.__context.get_styler()
-        return styler.template.render(
-            **html_props,
-            encoding="utf-8",
-            sparse_columns=False,
-            sparse_index=False,
-        )
-
-    def render_unpatched(self) -> str:
-        # This method deliberately does not use the "html_props_generator" but the original
-        # "Styler::render" method to create the html string.
-        #
-        # Method is only used in unit tests or to create test data for the plugin
-        # therefore it is save to change potential configured values
-        styler = self.__context.get_styler()
-        styler.uuid = ''
-        styler.uuid_len = 0
-        styler.cell_ids = False
-        return styler.render(
-            encoding="utf-8",
-            sparse_columns=False,
-            sparse_index=False,
-        )
-
     def get_table_structure(self) -> TableStructure:
         visible_frame = self.__context.get_visible_frame()
         styler = self.__context.get_styler()
