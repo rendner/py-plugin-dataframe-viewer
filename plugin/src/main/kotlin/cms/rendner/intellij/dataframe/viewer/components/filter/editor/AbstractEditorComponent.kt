@@ -196,12 +196,37 @@ abstract class AbstractEditorComponent : KeyAdapter() {
 
             The comment in the snippet is a description for the user in case the user navigates
             to the definition of injected identifier.
-             */
+
+            The strange looking import for pandas is mandatory. The import has to be different from the import
+            used in the file specified by "sourcePosition".
+            Examples:
+                A)
+                - "sourcePosition" has the import statement "from pandas import DataFrame"
+                - "syntheticCode" has the import statement "from pandas import DataFrame"
+                - "_df" is created by "_df = DataFrame()"
+                => auto resolve for fields of "_df" DOESN'T work.
+
+                B)
+                - "sourcePosition" has the import statement "from pandas import DataFrame"
+                - "syntheticCode" has the import statement "import pandas as pd"
+                - "_df" is created by "_df = pd.DataFrame()"
+                => auto resolve for fields of "_df" DOES work.
+
+                C)
+                - "sourcePosition" has the import statement "import pandas as pd"
+                - "syntheticCode" has the import statement "from pandas import DataFrame"
+                - "_df" is created by "_df = DataFrame()"
+                => auto resolve for fields of "_df" DOES work.
+
+
+             Since it is unknown which import statement was used in the file specified
+             by the "sourcePosition", a custom import is used.
+            */
             val syntheticCode = """
                 |# plugin: "Styled DataFrame Viewer"
                 |# helper for providing the synthetic identifier "$SYNTHETIC_DATAFRAME_IDENTIFIER"
-                |import pandas as pd
-                |$SYNTHETIC_DATAFRAME_IDENTIFIER = pd.DataFrame()
+                |import pandas as sdvf_plugin_pd
+                |$SYNTHETIC_DATAFRAME_IDENTIFIER = sdvf_plugin_pd.DataFrame()
                 |breakpoint()
             """.trimMargin()
             val syntheticCodeExpr = debuggerUtil.createExpression(
@@ -218,7 +243,7 @@ abstract class AbstractEditorComponent : KeyAdapter() {
             It doesn't make sense to shadow a user defined variable with the same name us the synthetic identifier.
             Because, the code editor shows a popup when the user hovers over an identifier.
             The popup displays the evaluated fields and values for the identifier.
-            It seems that the content of the popup is taken from the current source position of the debugger and
+            It seems that the content of the popup is taken from the current sourcePosition of the debugger and
             not resolved from the hovered element.
 
             The user-code defined variable could point to another DataFrame or be of another type.
