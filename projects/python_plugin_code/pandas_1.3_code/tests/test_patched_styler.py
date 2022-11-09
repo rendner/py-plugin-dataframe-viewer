@@ -37,7 +37,6 @@ other_df = pd.DataFrame.from_dict({
 
 def test_table_structure():
     ts = PatchedStyler(PatchedStylerContext.create(df.style)).get_table_structure()
-    assert ts.data_source_fingerprint is not None
     assert ts.org_rows_count == len(df.index)
     assert ts.org_columns_count == len(df.columns)
     assert ts.rows_count == len(df.index)
