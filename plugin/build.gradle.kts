@@ -229,8 +229,12 @@ tasks {
     pythonDockerImages.forEach { entry ->
         entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
 
-            val deleteTestData by register<Delete>("deleteTestData_$pipEnvEnvironment") {
-                delete("$exportTestDataPath$pipEnvEnvironment")
+            val deleteTestData by register<DefaultTask>("deleteTestData_$pipEnvEnvironment") {
+                doLast {
+                    file("$exportTestDataPath$pipEnvEnvironment").let {
+                        if (it.exists()) project.delete(files(it.listFiles()))
+                    }
+                }
             }
 
             val exportTestData by register<Test>("exportTestData_$pipEnvEnvironment") {
@@ -252,14 +256,14 @@ tasks {
                 useJUnitPlatform {
                     include("**/export/**")
                 }
-                shouldRunAfter(deleteTestData)
+                mustRunAfter(deleteTestData)
             }
 
             val addFilesToGit by register<Exec>("addTestDataToGit_$pipEnvEnvironment") {
                 workingDir = project.file("$exportTestDataPath$pipEnvEnvironment")
                 executable = "git"
                 args("add", ".")
-                shouldRunAfter(exportTestData)
+                mustRunAfter(exportTestData)
             }
 
             register<DefaultTask>("generateTestData_$pipEnvEnvironment") {
