@@ -128,7 +128,6 @@ data class ChunkSize(val rows: Int, val columns: Int)
 /**
  * Describes the table structure of a pandas DataFrame.
  *
- * @param dataSourceFingerprint fingerprint of the data source to determine if they could be the same
  * @param orgRowsCount number of rows of the original unfiltered DataFrame
  * @param orgColumnsCount number of visible columns of the original unfiltered DataFrame
  * @param rowsCount number of rows in the DataFrame
@@ -140,7 +139,6 @@ data class ChunkSize(val rows: Int, val columns: Int)
  */
 @Serializable
 data class TableStructure(
-    @SerialName("data_source_fingerprint") val dataSourceFingerprint: String,
     @SerialName("org_rows_count") val orgRowsCount: Int,
     @SerialName("org_columns_count") val orgColumnsCount: Int,
     @SerialName("rows_count") val rowsCount: Int,
@@ -149,21 +147,7 @@ data class TableStructure(
     @SerialName("column_levels_count") val columnLevelsCount: Int,
     @SerialName("hide_row_header") val hideRowHeader: Boolean,
     @SerialName("hide_column_header") val hideColumnHeader: Boolean
-) {
-    fun withDummyFingerprint(fingerprint: String = "0"): TableStructure {
-        return TableStructure(
-            fingerprint,
-            orgRowsCount,
-            orgColumnsCount,
-            rowsCount,
-            columnsCount,
-            rowLevelsCount,
-            columnLevelsCount,
-            hideRowHeader,
-            hideColumnHeader,
-        )
-    }
-}
+)
 
 /**
  * Describes the sort criteria for a pandas DataFrame.

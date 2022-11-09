@@ -23,11 +23,15 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
 
 class TableModelFactory(private val chunkSize: ChunkSize) {
 
-    fun createModel(tableStructure: TableStructure, frameColumnOrgIndexList: List<Int>? = null): RecordingModel {
+    fun createModel(
+        tableStructure: TableStructure,
+        dataSourceFingerprint: String,
+        frameColumnOrgIndexList: List<Int>? = null): RecordingModel {
         val loader = RecordingLoader()
         val model = ChunkedDataFrameModel(
             tableStructure,
             frameColumnOrgIndexList ?: List(tableStructure.columnsCount) { it },
+            dataSourceFingerprint,
             loader,
             chunkSize,
         )
@@ -39,10 +43,8 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
         hideColumnHeader: Boolean = false,
         rowCount: Int = chunkSize.rows * 4,
         columnCount: Int = chunkSize.columns * 4,
-        dataSourceFingerprint: String = "0",
     ): TableStructure {
         return TableStructure(
-            dataSourceFingerprint,
             rowCount,
             columnCount,
             rowCount,

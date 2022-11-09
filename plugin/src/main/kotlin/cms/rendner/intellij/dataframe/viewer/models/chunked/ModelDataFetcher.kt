@@ -39,13 +39,15 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
      * @param dataSource a patched styler instance to interop with the PatchedStyler created in Python by the plugin
      * @param tableStructure the table structure of the dataSource (pandas DataFrame)
      * @param frameColumnIndexList indices of the visible columns in the unfiltered dataSource (pandas DataFrame)
+     * @param dataSourceFingerprint fingerprint of the data source.
      *
      */
     data class Result(
         val updatedDataSourceExpr: PyDebugValueEvalExpr,
         val dataSource: IPyPatchedStylerRef,
         val tableStructure: TableStructure,
-        val frameColumnIndexList: List<Int>
+        val frameColumnIndexList: List<Int>,
+        val dataSourceFingerprint: String,
     )
 
     /**
@@ -54,11 +56,14 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
      * @param dataSourceExpr expression to refer to the variable in Python (the pandas DataFrame or Styler)
      * @param filterExprBuilder to create a filter expression to filter the dataSource
      * @param reEvaluateDataSource true if the dataSource has to be re-evaluated (e.g. after a stack frame change)
+     * @param oldDataSourceFingerprint if not null, value is compared against actual fingerprint.
+     * In case they don't match the request is aborted and [handleNonMatchingFingerprint] is called.
      */
     data class Request(
         val dataSourceExpr: PyDebugValueEvalExpr,
         val filterExprBuilder: IFilterEvalExprBuilder,
         val reEvaluateDataSource: Boolean,
+        val oldDataSourceFingerprint: String? = null,
     )
 
     /**
@@ -67,7 +72,15 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
      * @param request the initial request.
      * @param ex the exception.
      */
-    abstract fun handleReEvaluateDataSourceException(request: Request, ex: Exception)
+    protected abstract fun handleReEvaluateDataSourceException(request: Request, ex: Exception)
+
+    /**
+     * Called if the underlying DataFrame or Styler has another fingerprint as expected.
+     *
+     * @param request the initial request.
+     * @param fingerprint the new non-matching fingerprint.
+     */
+    protected abstract fun handleNonMatchingFingerprint(request: Request, fingerprint: String)
 
     /**
      * Called if the filter expression can't be evaluated.
@@ -75,7 +88,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
      * @param request the initial request.
      * @param ex the exception.
      */
-    abstract fun handleFilterFrameEvaluateException(request: Request, ex: Exception)
+    protected abstract fun handleFilterFrameEvaluateException(request: Request, ex: Exception)
 
     /**
      * Called if the initial data, to build the data model, can't be fetched from the DataFrame/Styler.
@@ -83,7 +96,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
      * @param request the initial request.
      * @param ex the exception.
      */
-    abstract fun handleEvaluateModelDataException(request: Request, ex: Exception)
+    protected abstract fun handleEvaluateModelDataException(request: Request, ex: Exception)
 
     /**
      * Called after all required data is successfully fetched from the DataFrame/Styler.
@@ -92,7 +105,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
      * @param result the result to create a data model.
      * @param fetcher the used fetcher instance to check if the fetched result is outdated or not.
      */
-    abstract fun handleEvaluateModelDataSuccess(request: Request, result: Result, fetcher: ModelDataFetcher)
+    protected abstract fun handleEvaluateModelDataSuccess(request: Request, result: Result, fetcher: ModelDataFetcher)
 
     /**
      * Starts the data fetching.
@@ -102,14 +115,30 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
     fun fetchModelData(request: Request) {
         ProgressManager.checkCanceled()
         var updatedDataSourceEvalExpr = request.dataSourceExpr
-        try {
-            if (request.reEvaluateDataSource) {
+        if (request.reEvaluateDataSource) {
+            try {
                 updatedDataSourceEvalExpr = evaluator.evaluate(request.dataSourceExpr.reEvalExpr).let {
                     if (request.dataSourceExpr.qualifiedType != it.qualifiedType) {
-                        throw IllegalStateException("Re-evaluated data source is of another type: ${it.qualifiedType} (was: ${request.dataSourceExpr.qualifiedType})")
+                        throw IllegalStateException(
+                            "Re-evaluated data source is of another type: ${it.qualifiedType} (was: ${request.dataSourceExpr.qualifiedType})",
+                        )
                     }
                     request.dataSourceExpr.withUpdatedRefExpr(it.refExpr)
                 }
+            } catch (ex: Exception) {
+                handleReEvaluateDataSourceException(request, ex)
+                return
+            }
+            ProgressManager.checkCanceled()
+        }
+
+        val dataSourceFingerprint = try {
+            PythonCodeBridge.createFingerprint(evaluator, updatedDataSourceEvalExpr.currentFrameRefExpr).let {
+                if (request.oldDataSourceFingerprint != null && it != request.oldDataSourceFingerprint) {
+                    handleNonMatchingFingerprint(request, it)
+                    return
+                }
+                it
             }
         } catch (ex: Exception) {
             handleReEvaluateDataSourceException(request, ex)
@@ -140,7 +169,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
 
         ProgressManager.checkCanceled()
         try {
-            val dataSource = PythonCodeBridge().createPatchedStyler(
+            val dataSource = PythonCodeBridge.createPatchedStyler(
                 evaluator,
                 updatedDataSourceEvalExpr.currentFrameRefExpr,
                 filterFrame?.refExpr,
@@ -148,7 +177,8 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
 
             ProgressManager.checkCanceled()
             val tableStructure = dataSource.evaluateTableStructure()
-
+            // in case of same unfiltered dataSource the data is the same as fetched for the previous model
+            // could be restructured to not fetch the same data
             val frameColumnIndexList = mutableListOf<Int>()
             if (tableStructure.columnsCount > 0) {
                 var entryOffset = 0
@@ -169,6 +199,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
                     dataSource,
                     tableStructure,
                     frameColumnIndexList,
+                    dataSourceFingerprint,
                 ),
                 this
             )

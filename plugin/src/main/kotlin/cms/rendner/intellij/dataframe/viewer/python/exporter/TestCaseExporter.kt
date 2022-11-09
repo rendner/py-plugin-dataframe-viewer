@@ -34,7 +34,6 @@ import java.nio.file.Path
 class TestCaseExporter(private val baseExportDir: Path) {
 
     private var exportCounter = 0
-    private val pythonBridge = PythonCodeBridge()
 
     private val json: Json by lazy {
         Json { ignoreUnknownKeys = true; prettyPrint = true }
@@ -78,8 +77,9 @@ class TestCaseExporter(private val baseExportDir: Path) {
     }
 
     private fun createPatchedStyler(testCase: TestCaseExportData): IPyPatchedStylerRef {
-        return pythonBridge.createPatchedStyler(
-            testCase.createStylerFunc.evaluator.evaluate("${testCase.createStylerFunc.refExpr}()"),
+        return PythonCodeBridge.createPatchedStyler(
+            testCase.createStylerFunc.evaluator,
+            "${testCase.createStylerFunc.refExpr}()",
         )
     }
 
@@ -121,11 +121,7 @@ class TestCaseExporter(private val baseExportDir: Path) {
         ).use {
             it.write(
                 json.encodeToString(
-                    TestCaseProperties(
-                        properties.rowsPerChunk,
-                        properties.colsPerChunk,
-                        properties.tableStructure.withDummyFingerprint(),
-                    )
+                    TestCaseProperties(properties.rowsPerChunk, properties.colsPerChunk, properties.tableStructure)
                 )
             )
         }

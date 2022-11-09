@@ -33,12 +33,14 @@ import javax.swing.table.AbstractTableModel
  *
  * @param tableStructure describes the structure of the model.
  * @param frameColumnOrgIndexList indices of the visible columns in the unfiltered DataFrame.
+ * @param dataSourceFingerprint fingerprint of the data source.
  * @param chunkDataLoader used for lazy data loading.
  * @param chunkSize size of the chunks to load.
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
     private val frameColumnOrgIndexList: List<Int>,
+    private val dataSourceFingerprint: String,
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
 ) : IDataFrameModel, IChunkDataResultHandler {
@@ -161,6 +163,8 @@ class ChunkedDataFrameModel(
     override fun getIndexDataModel(): ITableIndexDataModel {
         return myIndexModel
     }
+
+    override fun getDataSourceFingerprint() = dataSourceFingerprint
 
     private fun enableDataFetching(enabled: Boolean) {
         myDataFetchingEnabled = enabled
@@ -389,7 +393,6 @@ class ChunkedDataFrameModel(
         override fun getColumnName(columnIndex: Int) = getColumnHeaderAt(columnIndex).text()
         override fun getLegendHeader() = source.getColumnLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
-        override fun getDataSourceFingerprint() = source.tableStructure.dataSourceFingerprint + "_" + source.tableStructure.orgRowsCount + "_" + source.tableStructure.orgColumnsCount
         override fun convertToFrameColumnIndex(columnIndex: Int) = source.frameColumnOrgIndexList[columnIndex]
         override fun isLeveled() = source.tableStructure.columnLevelsCount > 1
         override fun shouldHideHeaders() = source.tableStructure.hideColumnHeader
@@ -405,7 +408,6 @@ class ChunkedDataFrameModel(
         override fun getColumnName() = getLegendHeader().text()
         override fun getLegendHeader() = source.getRowLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
-        override fun getDataSourceFingerprint() = source.tableStructure.dataSourceFingerprint
         override fun isLeveled() = source.tableStructure.rowLevelsCount > 1
         override fun shouldHideHeaders() = source.tableStructure.hideRowHeader
     }

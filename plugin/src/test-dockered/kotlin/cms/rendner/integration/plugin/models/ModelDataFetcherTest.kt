@@ -159,7 +159,7 @@ internal class ModelDataFetcherTest : AbstractPluginCodeTest() {
 
             assertThat(fetcher.result).isNull()
             assertThat(fetcher.exception).isNotNull
-            assertThat(fetcher.calledExceptionHandler).isEqualTo(ExceptionHandlerEnum.RE_EVALUATION)
+            assertThat(fetcher.calledFetchHandler).isEqualTo(FetchHandlerEnum.RE_EVALUATE_EXCEPTION)
         }
     }
 
@@ -180,7 +180,29 @@ internal class ModelDataFetcherTest : AbstractPluginCodeTest() {
 
             assertThat(fetcher.result).isNull()
             assertThat(fetcher.exception).isNotNull
-            assertThat(fetcher.calledExceptionHandler).isEqualTo(ExceptionHandlerEnum.FILTER_EVALUATION)
+            assertThat(fetcher.calledFetchHandler).isEqualTo(FetchHandlerEnum.EVALUATE_FILTER_EXCEPTION)
+        }
+    }
+
+    @Test
+    fun shouldCallHandlerIfFingerprintDoesNotMatch() {
+        runPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { evaluator: IPluginPyValueEvaluator, _: PythonEvalDebugger ->
+
+            val dataSource = evaluator.evaluate("df")
+
+            val fetcher = MyTestFetcher(evaluator)
+            fetcher.fetchModelData(
+                ModelDataFetcher.Request(
+                    dataSource.toValueEvalExpr(),
+                    MyTestFilterEvalExprBuilder(),
+                    false,
+                    "fingerprint"
+                )
+            )
+
+            assertThat(fetcher.result).isNull()
+            assertThat(fetcher.exception).isNull()
+            assertThat(fetcher.calledFetchHandler).isEqualTo(FetchHandlerEnum.NON_MATCHING_FINGERPRINT)
         }
     }
 
@@ -188,10 +210,19 @@ internal class ModelDataFetcherTest : AbstractPluginCodeTest() {
     fun shouldCallHandlerIfModelDataEvaluationFails() {
         runPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { evaluator: IPluginPyValueEvaluator, _: PythonEvalDebugger ->
 
-            val dataSource = evaluator.evaluate("df")
-            evaluator.execute("del df")
+            val patchedEvaluator = object: IPluginPyValueEvaluator {
+                override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
+                    if (expression.contains("create_patched_styler")) {
+                        return evaluator.evaluate("invalidExpression!!!!", trimResult)
+                    }
+                    return evaluator.evaluate(expression, trimResult)
+                }
 
-            val fetcher = MyTestFetcher(evaluator)
+                override fun execute(statements: String) = evaluator.execute(statements)
+            }
+            val dataSource = evaluator.evaluate("df")
+
+            val fetcher = MyTestFetcher(patchedEvaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(
                     dataSource.toValueEvalExpr(),
@@ -202,7 +233,7 @@ internal class ModelDataFetcherTest : AbstractPluginCodeTest() {
 
             assertThat(fetcher.result).isNull()
             assertThat(fetcher.exception).isNotNull
-            assertThat(fetcher.calledExceptionHandler).isEqualTo(ExceptionHandlerEnum.MODEL_DATA_EVALUATION)
+            assertThat(fetcher.calledFetchHandler).isEqualTo(FetchHandlerEnum.EVALUATE_MODEL_DATA_EXCEPTION)
         }
     }
 
@@ -233,9 +264,9 @@ internal class ModelDataFetcherTest : AbstractPluginCodeTest() {
             assertThat(fetcher2.result).isNotNull
 
             assertThat(
-                fetcher1.result!!.tableStructure.dataSourceFingerprint
+                fetcher1.result!!.dataSourceFingerprint
             ).isEqualTo(
-                fetcher2.result!!.tableStructure.dataSourceFingerprint
+                fetcher2.result!!.dataSourceFingerprint
             )
         }
     }
@@ -267,9 +298,9 @@ internal class ModelDataFetcherTest : AbstractPluginCodeTest() {
             assertThat(fetcher2.result).isNotNull
 
             assertThat(
-                fetcher1.result!!.tableStructure.dataSourceFingerprint
+                fetcher1.result!!.dataSourceFingerprint
             ).isNotEqualTo(
-                fetcher2.result!!.tableStructure.dataSourceFingerprint
+                fetcher2.result!!.dataSourceFingerprint
             )
         }
     }
@@ -294,28 +325,35 @@ private class MyTestFilterEvalExprBuilder(private val result: String = "") : IFi
     override fun build(dataFrameRefExpr: String?) = result
 }
 
-private enum class ExceptionHandlerEnum {
-    RE_EVALUATION, FILTER_EVALUATION, MODEL_DATA_EVALUATION
+private enum class FetchHandlerEnum {
+    RE_EVALUATE_EXCEPTION,
+    EVALUATE_FILTER_EXCEPTION,
+    EVALUATE_MODEL_DATA_EXCEPTION,
+    NON_MATCHING_FINGERPRINT,
 }
 
 private class MyTestFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator) {
     var result: Result? = null
     var exception: Exception? = null
-    var calledExceptionHandler: ExceptionHandlerEnum? = null
+    var calledFetchHandler: FetchHandlerEnum? = null
 
     override fun handleReEvaluateDataSourceException(request: Request, ex: Exception) {
         exception = ex
-        calledExceptionHandler = ExceptionHandlerEnum.RE_EVALUATION
+        calledFetchHandler = FetchHandlerEnum.RE_EVALUATE_EXCEPTION
+    }
+
+    override fun handleNonMatchingFingerprint(request: Request, fingerprint: String) {
+        calledFetchHandler = FetchHandlerEnum.NON_MATCHING_FINGERPRINT
     }
 
     override fun handleFilterFrameEvaluateException(request: Request, ex: Exception) {
         exception = ex
-        calledExceptionHandler = ExceptionHandlerEnum.FILTER_EVALUATION
+        calledFetchHandler = FetchHandlerEnum.EVALUATE_FILTER_EXCEPTION
     }
 
     override fun handleEvaluateModelDataException(request: Request, ex: Exception) {
         exception = ex
-        calledExceptionHandler = ExceptionHandlerEnum.MODEL_DATA_EVALUATION
+        calledFetchHandler = FetchHandlerEnum.EVALUATE_MODEL_DATA_EXCEPTION
     }
 
     override fun handleEvaluateModelDataSuccess(

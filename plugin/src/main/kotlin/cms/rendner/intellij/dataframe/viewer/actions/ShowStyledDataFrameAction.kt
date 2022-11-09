@@ -171,7 +171,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                                 }
                             })
                             myDebugSession.addSessionListener(this)
-                            fetchModelData(myDebugValueEvalExpr, myFilterEvalExprBuilder, false)
+                            fetchModelData(false)
                         }
                     }
                 }
@@ -221,18 +221,14 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                     setErrorText("Can't re-evaluate '${myDebugValueEvalExpr.reEvalExpr}'")
                 } else {
                     myDebugSession.currentPosition.let { myFilterInput.setSourcePosition(it) }
-                    fetchModelData(
-                        myDebugValueEvalExpr,
-                        myFilterEvalExprBuilder,
-                        myDebugValueEvalExpr.reEvalExpr != myDebugValueEvalExpr.currentFrameRefExpr,
-                    )
+                    fetchModelData(myDebugValueEvalExpr.reEvalExpr != myDebugValueEvalExpr.currentFrameRefExpr)
                 }
             }
         }
 
         override fun doOKAction() {
             myFilterEvalExprBuilder = myFilterInput.createFilterExprBuilder()
-            fetchModelData(myDebugValueEvalExpr, myFilterEvalExprBuilder, false)
+            fetchModelData(false)
         }
 
         private fun isShouldAbortDataFetchingSilentlyException(throwable: Throwable?): Boolean {
@@ -242,22 +238,20 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             return throwable is EvaluateException && throwable.isCausedByProcessIsRunningException()
         }
 
-        private fun fetchModelData(
-            dataSourceExpr: PyDebugValueEvalExpr,
-            filterExprBuilder: IFilterEvalExprBuilder,
-            reEvaluateDataSource: Boolean,
-        ) {
+        private fun fetchModelData(reEvaluateDataSource:Boolean) {
             disableApplyFilterButton()
             myFilterInput.hideErrorMessage()
             disposeLastStartedModelDataFetcherAndModel()
 
             myLastStartedModelDataFetcher = MyModelDataFetcher(myEvaluator).also {
                 Disposer.register(disposable, it)
-                BackgroundTaskUtil.executeOnPooledThread(it) {
-                    it.fetchModelData(
-                        ModelDataFetcher.Request(dataSourceExpr, filterExprBuilder, reEvaluateDataSource)
-                    )
-                }
+                val request = ModelDataFetcher.Request(
+                    myDebugValueEvalExpr,
+                    myFilterEvalExprBuilder,
+                    reEvaluateDataSource,
+                    myDataFrameTable.getDataFrameModel().getDataSourceFingerprint(),
+                )
+                BackgroundTaskUtil.executeOnPooledThread(it) { it.fetchModelData(request) }
             }
         }
 
@@ -359,6 +353,14 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                 }
             }
 
+            override fun handleNonMatchingFingerprint(request: Request, fingerprint: String) {
+                ApplicationManager.getApplication().invokeLater {
+                    if (this == myLastStartedModelDataFetcher && !isDisposed) {
+                        close(CANCEL_EXIT_CODE)
+                    }
+                }
+            }
+
             override fun handleFilterFrameEvaluateException(request: Request, ex: Exception) {
                 if (ex is ProcessCanceledException || isShouldAbortDataFetchingSilentlyException(ex)) return
                 ApplicationManager.getApplication().invokeLater {
@@ -402,8 +404,9 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                         ChunkedDataFrameModel(
                             result.tableStructure,
                             result.frameColumnIndexList,
+                            result.dataSourceFingerprint,
                             chunkLoader,
-                            ChunkSize(30, 20)
+                            ChunkSize(30, 20),
                         ).let { model ->
                             myLastDataModelDisposable = Disposer.newDisposable(disposable, "modelDisposable").also {
                                 Disposer.register(it, model)

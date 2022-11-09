@@ -27,7 +27,9 @@ internal class ChunkedDataFrameModelTest {
     private lateinit var model: TableModelFactory.RecordingModel
 
     private fun setup(tableStructure: TableStructure, frameColumnOrgIndexList: List<Int>? = null) {
-        model = tableModelFactory.createModel(tableStructure, frameColumnOrgIndexList).apply { enableDataFetching(true) }
+        model = tableModelFactory.createModel(tableStructure, "0", frameColumnOrgIndexList).apply {
+            enableDataFetching(true)
+        }
     }
 
     @Test

@@ -79,7 +79,6 @@ interface ITableDataModel : TableModel {
     fun shouldHideHeaders(): Boolean
     fun getLegendHeader(): IHeaderLabel
     fun getLegendHeaders(): LegendHeaders
-    fun getDataSourceFingerprint(): String
 
     /**
      * Enables or disables data fetching.
@@ -133,4 +132,13 @@ interface ITableValueDataModel : ITableDataModel {
 interface IDataFrameModel : Disposable {
     fun getValueDataModel(): ITableValueDataModel
     fun getIndexDataModel(): ITableIndexDataModel
+
+    /**
+     * Fingerprint of the underlying data source from where the data was/is retrieved from.
+     * The fingerprint will be used to decide if some table state will be kept when
+     * exchanging the model.
+     *
+     * Should return null if no table state should be kept.
+     */
+    fun getDataSourceFingerprint(): String?
 }

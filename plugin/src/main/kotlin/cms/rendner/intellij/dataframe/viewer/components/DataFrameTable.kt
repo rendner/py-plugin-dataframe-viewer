@@ -51,14 +51,15 @@ data class CellPosition(val rowIndex: Int, val columnIndex: Int)
 
 class DataFrameTable : JScrollPane() {
 
-    private var myDataFrameModel: IDataFrameModel? = null
+    private var myDataFrameModel: IDataFrameModel = EmptyDataFrameModel()
     private val myIndexTable: MyIndexTable
-    private val myValueTable: MyValueTable = MyValueTable()
+    private val myValueTable: MyValueTable = MyValueTable(myDataFrameModel.getValueDataModel())
 
     init {
         myIndexTable = MyIndexTable(
             myValueTable,
-            max(MIN_COLUMN_WIDTH, MIN_TABLE_WIDTH - MIN_COLUMN_WIDTH)
+            max(MIN_COLUMN_WIDTH, MIN_TABLE_WIDTH - MIN_COLUMN_WIDTH),
+            myDataFrameModel.getIndexDataModel(),
         )
 
         setViewportView(myValueTable)
@@ -75,8 +76,14 @@ class DataFrameTable : JScrollPane() {
 
     fun getColumnCount() = myValueTable.columnCount
 
+    fun getDataFrameModel() = myDataFrameModel
+
     fun setDataFrameModel(model: IDataFrameModel) {
         if (model == myDataFrameModel) return
+
+        val oldFingerprint = myDataFrameModel.getDataSourceFingerprint()
+        val newFingerprint = model.getDataSourceFingerprint()
+        val isSameDataSource = newFingerprint != null && oldFingerprint == newFingerprint
 
         myDataFrameModel = model
 
@@ -103,8 +110,6 @@ class DataFrameTable : JScrollPane() {
             - keep selection as it is
             - clear the selection
          */
-        val valueModel = model.getValueDataModel()
-        val isSameDataSource = valueModel.getDataSourceFingerprint() == myValueTable.model?.getDataSourceFingerprint()
         val cellToFocus = if (isSameDataSource) getFocusedCell() else CellPosition(0, 0)
 
         model.getIndexDataModel().let {
@@ -117,7 +122,11 @@ class DataFrameTable : JScrollPane() {
         }
 
         model.getValueDataModel().let {
-            myValueTable.setModel(it)
+            if (isSameDataSource) {
+                myValueTable.setModelWithSameDataSource(it)
+            } else {
+                myValueTable.setModel(it)
+            }
             setColumnHeaderView(if (it.shouldHideHeaders()) null else myValueTable.tableHeader)
         }
 
@@ -175,7 +184,7 @@ interface ITableColumnExpander {
     fun isFixed(viewColumnIndex: Int): Boolean
 }
 
-class MyValueTable : MyTable<ITableValueDataModel>(), PropertyChangeListener {
+class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(model), PropertyChangeListener {
     /**
     This flag is needed to guarantee that we don't access not yet initialized class properties.
     This is required because [JTable.setModel] is called in the JTable constructor.
@@ -190,6 +199,7 @@ class MyValueTable : MyTable<ITableValueDataModel>(), PropertyChangeListener {
     private var myColumnExpander = MyTableColumnAutoExpander()
     private var myResizingColumnWasFixed: Boolean = false
     private var myResizingColumnStartWidth: Int = -1
+    private var myModelHasSameDataSource: Boolean = false
 
     init {
         autoCreateColumnsFromModel = false
@@ -274,18 +284,23 @@ class MyValueTable : MyTable<ITableValueDataModel>(), PropertyChangeListener {
         return result
     }
 
+    fun setModelWithSameDataSource(tableModel: ITableValueDataModel) {
+        myModelHasSameDataSource = true
+        setModel(tableModel)
+        myModelHasSameDataSource = false
+    }
+
     override fun setModel(tableModel: TableModel) {
         if (tableModel !is ITableValueDataModel) throw IllegalArgumentException("The model has to implement ITableValueDataModel.")
 
         val prevTableColumnCache = mutableMapOf<ColumnCacheKey, MyValueTableColumn>()
-        val isSameDataSource = tableModel.getDataSourceFingerprint() == model?.getDataSourceFingerprint()
-        val translateSortKeys = rowSorter?.sortKeys?.isNotEmpty() == true
+        val keepSortKeyState = myModelHasSameDataSource && rowSorter?.sortKeys?.isNotEmpty() == true
 
-        if (isSameDataSource) {
+        if (myModelHasSameDataSource) {
             for (column in columnModel.columns) {
                 if (column !is MyValueTableColumn) continue
                 prevTableColumnCache[ColumnCacheKey.orgFrameIndex(column.orgFrameIndex)] = column
-                if (translateSortKeys) prevTableColumnCache[ColumnCacheKey.modelIndex(column.modelIndex)] = column
+                if (keepSortKeyState) prevTableColumnCache[ColumnCacheKey.modelIndex(column.modelIndex)] = column
             }
         }
 
@@ -296,7 +311,7 @@ class MyValueTable : MyTable<ITableValueDataModel>(), PropertyChangeListener {
         newColumns.forEach { addColumn(it) }
 
         rowSorter = MyExternalDataRowSorter(tableModel).apply {
-            if (isSameDataSource && translateSortKeys) {
+            if (keepSortKeyState) {
                 rowSorter?.sortKeys?.let { oldSortKeys ->
                     val newTableColumnCache = newColumns.associateBy { ColumnCacheKey.orgFrameIndex(it.orgFrameIndex) }
                     sortKeys = oldSortKeys.mapNotNull {
@@ -310,11 +325,7 @@ class MyValueTable : MyTable<ITableValueDataModel>(), PropertyChangeListener {
 
         if (myBaseClassIsFullyInitialized) {
             myColumnExpander.ensureLastColumnIsNotFixed()
-            emptyText.text = if (tableModel.rowCount > 0) {
-                "loading DataFrame"
-            } else {
-                "DataFrame is empty"
-            }
+            emptyText.text = if (rowCount > 0) "loading DataFrame" else "DataFrame is empty"
         }
     }
 
@@ -385,10 +396,6 @@ class MyValueTable : MyTable<ITableValueDataModel>(), PropertyChangeListener {
             DefaultHeaderTextProvider(),
             CenteredHeaderLabelStyler()
         )
-    }
-
-    override fun createDefaultDataModel(): ITableValueDataModel {
-        return MyEmptyValueModel()
     }
 
     private fun registerSortKeyBindings() {
@@ -776,8 +783,9 @@ class MyExternalDataRowSorter(private val model: ITableValueDataModel) : RowSort
 
 class MyIndexTable(
     private val mainTable: MyValueTable,
-    private val maxColumnWidth: Int
-) : MyTable<ITableIndexDataModel>() {
+    private val maxColumnWidth: Int,
+    model:ITableIndexDataModel,
+) : MyTable<ITableIndexDataModel>(model) {
 
     init {
         // disable automatic row height adjustment - use the value from the mainTable
@@ -820,10 +828,6 @@ class MyIndexTable(
     override fun setModel(tableModel: TableModel) {
         super.setModel(tableModel)
         adjustPreferredScrollableViewportSize()
-    }
-
-    override fun createDefaultDataModel(): ITableIndexDataModel {
-        return MyEmptyIndexModel()
     }
 
     override fun getRowHeight(row: Int): Int {
@@ -887,7 +891,7 @@ class MyIndexTable(
 
 }
 
-abstract class MyTable<M : ITableDataModel> : JBTable(null) {
+abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
 
     init {
         emptyText.text = ""
@@ -1115,78 +1119,5 @@ abstract class MyTable<M : ITableDataModel> : JBTable(null) {
         public override fun createDefaultRenderer(): TableCellRenderer {
             return super.createDefaultRenderer()
         }
-    }
-}
-
-private class MyEmptyValueModel(
-    private val dataSourceFingerprint: String = UUID.randomUUID().toString(),
-) : AbstractTableModel(), ITableValueDataModel {
-
-    override fun getRowCount() = 0
-    override fun getColumnCount() = 0
-    override fun isLeveled() = false
-    override fun shouldHideHeaders() = false
-    override fun enableDataFetching(enabled: Boolean) {}
-    override fun getDataSourceFingerprint() = dataSourceFingerprint
-
-    override fun getValueAt(rowIndex: Int, columnIndex: Int): Value {
-        throw UnsupportedOperationException("Operation 'getValueAt' isn't supported.")
-    }
-
-    override fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel {
-        throw UnsupportedOperationException("Operation 'getColumnHeaderAt' isn't supported.")
-    }
-
-    override fun setSortKeys(sortKeys: List<SortKey>) {
-        throw UnsupportedOperationException("Operation 'setSortKeys' isn't supported.")
-    }
-
-    override fun convertToFrameColumnIndex(columnIndex: Int): Int {
-        throw UnsupportedOperationException("Operation 'convertToFrameColumnIndex' isn't supported.")
-    }
-
-    override fun getColumnName(columnIndex: Int): String {
-        throw UnsupportedOperationException("Operation 'getColumnName' isn't supported.")
-    }
-
-    override fun getLegendHeader(): IHeaderLabel {
-        throw UnsupportedOperationException("Operation 'getLegendHeader' isn't supported.")
-    }
-
-    override fun getLegendHeaders(): LegendHeaders {
-        throw UnsupportedOperationException("Operation 'getLegendHeaders' isn't supported.")
-    }
-}
-
-private class MyEmptyIndexModel(
-    private val dataSourceFingerprint: String = UUID.randomUUID().toString(),
-) : AbstractTableModel(), ITableIndexDataModel {
-
-    override fun getRowCount() = 0
-    override fun getColumnCount() = 0
-    override fun getColumnName(columnIndex: Int) = getColumnName()
-    override fun isLeveled() = false
-    override fun shouldHideHeaders() = false
-    override fun enableDataFetching(enabled: Boolean) {}
-    override fun getDataSourceFingerprint() = dataSourceFingerprint
-
-    override fun getValueAt(rowIndex: Int): IHeaderLabel {
-        throw UnsupportedOperationException("Operation 'getValueAt' isn't supported.")
-    }
-
-    override fun getColumnHeader(): IHeaderLabel {
-        throw UnsupportedOperationException("Operation 'getColumnHeader' isn't supported.")
-    }
-
-    override fun getColumnName(): String {
-        throw UnsupportedOperationException("Operation 'getColumnName' isn't supported.")
-    }
-
-    override fun getLegendHeader(): IHeaderLabel {
-        throw UnsupportedOperationException("Operation 'getLegendHeader' isn't supported.")
-    }
-
-    override fun getLegendHeaders(): LegendHeaders {
-        throw UnsupportedOperationException("Operation 'getLegendHeaders' isn't supported.")
     }
 }

@@ -17,7 +17,6 @@ package cms.rendner.integration.plugin
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import cms.rendner.debugger.impl.PythonEvalDebugger
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
@@ -26,22 +25,6 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvalu
  * The plugin code
  */
 internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest() {
-
-    /**
-     * Injects the [pythonCodeToRun] and calls afterwards the [block].
-     *
-     * @param pythonCodeToRun Python code without plugin related code.
-     * @param block callable to run afterwards. The [PythonCodeBridge] and
-     * [IPluginPyValueEvaluator] are provided by the caller.
-     */
-    protected fun runWithPluginCodeBridge(
-        pythonCodeToRun: String,
-        block: (codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit
-    ) {
-        runPythonDebuggerWithCodeSnippet(pythonCodeToRun) { evaluator, debugger ->
-            block(PythonCodeBridge(), evaluator, debugger)
-        }
-    }
 
     override fun runPythonDebuggerWithSourceFile(
         sourceFile: String,

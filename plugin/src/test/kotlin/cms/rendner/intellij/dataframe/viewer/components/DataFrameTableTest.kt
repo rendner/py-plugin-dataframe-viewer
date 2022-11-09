@@ -30,9 +30,12 @@ internal class DataFrameTableTest {
 
     private fun createModel(
         tableStructure: TableStructure,
+        dataSourceFingerprint: String = "0",
         frameColumnOrgIndexList: List<Int>? = null
     ): TableModelFactory.RecordingModel {
-        return tableModelFactory.createModel(tableStructure, frameColumnOrgIndexList).apply { enableDataFetching(true) }
+        return tableModelFactory.createModel(tableStructure, dataSourceFingerprint, frameColumnOrgIndexList).apply {
+            enableDataFetching(true)
+        }
     }
 
     @Test
@@ -61,7 +64,7 @@ internal class DataFrameTableTest {
         val oldColumn = tableComponent.getValueTable().columnModel.getColumn(1)
 
         val lastIndex = tableStructure.columnsCount - 1
-        tableComponent.setDataFrameModel(createModel(tableStructure, IntRange(0, lastIndex).toList().reversed()))
+        tableComponent.setDataFrameModel(createModel(tableStructure, frameColumnOrgIndexList = IntRange(0, lastIndex).toList().reversed()))
         val newColumn = tableComponent.getValueTable().columnModel.getColumn(lastIndex - 1)
         tableComponent.getValueTable().getColumnExpander().let {
             assertThat(newColumn.identifier).isEqualTo(oldColumn.identifier)
@@ -223,8 +226,9 @@ internal class DataFrameTableTest {
 
     @Test
     fun valueTable_rowSorter_shouldKeepSortStateOnModelChangeIfSameDataSource() {
-        val tsA = tableModelFactory.createTableStructure(dataSourceFingerprint = "X")
-        val modelA = createModel(tsA, List(tsA.columnsCount) { it })
+        val dataSourceFingerprint = "X"
+        val tsA = tableModelFactory.createTableStructure()
+        val modelA = createModel(tsA, dataSourceFingerprint, List(tsA.columnsCount) { it })
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
         tableComponent.getValueTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.DESCENDING, true)
@@ -235,15 +239,15 @@ internal class DataFrameTableTest {
         // the first column 0 of "modelA" is filtered out and the column order is reversed
         val expectedSortCriteria = SortCriteria(listOf(7, 6), listOf(false, false))
 
-        val tsB = tableModelFactory.createTableStructure(dataSourceFingerprint = "X")
-        val modelB = createModel(tsB, List(tsB.columnsCount) { if (it == 0) 0 else it + 1 }.reversed())
+        val tsB = tableModelFactory.createTableStructure()
+        val modelB = createModel(tsB, dataSourceFingerprint, List(tsB.columnsCount) { if (it == 0) 0 else it + 1 }.reversed())
         tableComponent.setDataFrameModel(modelB)
         assertThat(modelB.recordedSortCriteria).isEqualTo(expectedSortCriteria)
     }
 
     @Test
     fun valueTable_rowSorter_shouldClearSortStateOnModelChangeIfDifferentDataSource() {
-        val modelA = createModel(tableModelFactory.createTableStructure(dataSourceFingerprint = "A"))
+        val modelA = createModel(tableModelFactory.createTableStructure(), "A")
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
         tableComponent.getValueTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.ASCENDING, true)
@@ -251,15 +255,17 @@ internal class DataFrameTableTest {
             it.setSortOrder(2, SortOrder.ASCENDING, true)
         }
 
-        val modelB = createModel(tableModelFactory.createTableStructure(dataSourceFingerprint = "B"))
+        val modelB = createModel(tableModelFactory.createTableStructure(), "B")
         tableComponent.setDataFrameModel(modelB)
         assertThat(modelB.recordedSortCriteria).isEqualTo(SortCriteria())
     }
 
     @Test
     fun valueTable_columns_shouldKeepColumnStateIfSameDataSource() {
-        val tsA = tableModelFactory.createTableStructure(dataSourceFingerprint = "X")
-        val modelA = createModel(tsA, List(tsA.columnsCount) { it })
+        val dataSourceFingerprint = "X"
+
+        val tsA = tableModelFactory.createTableStructure()
+        val modelA = createModel(tsA, dataSourceFingerprint, List(tsA.columnsCount) { it })
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
         tableComponent.getValueTable().columnModel.getColumn(0).let { c ->
                 c.width = 123
@@ -268,8 +274,8 @@ internal class DataFrameTableTest {
 
         val oldColumn = tableComponent.getValueTable().columnModel.getColumn(0)
 
-        val tsB = tableModelFactory.createTableStructure(dataSourceFingerprint = "X")
-        val modelB = createModel(tsB, List(tsB.columnsCount) { if (it == 0) 0 else it + 1 }.reversed())
+        val tsB = tableModelFactory.createTableStructure()
+        val modelB = createModel(tsB, dataSourceFingerprint, List(tsB.columnsCount) { if (it == 0) 0 else it + 1 }.reversed())
         tableComponent.setDataFrameModel(modelB)
         tableComponent.getValueTable().columnModel.getColumn(7).let { c ->
             assertThat(c.identifier).isEqualTo(oldColumn.identifier)
@@ -280,7 +286,7 @@ internal class DataFrameTableTest {
 
     @Test
     fun valueTable_columns_shouldIgnoreColumnStateIfDifferentDataSource() {
-        val modelA = createModel(tableModelFactory.createTableStructure(dataSourceFingerprint = "A"))
+        val modelA = createModel(tableModelFactory.createTableStructure(), "A")
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
         tableComponent.getValueTable().columnModel.getColumn(0).let { c ->
             c.width = 123
@@ -289,7 +295,7 @@ internal class DataFrameTableTest {
 
         val oldColumn = tableComponent.getValueTable().columnModel.getColumn(0)
 
-        val modelB = createModel(tableModelFactory.createTableStructure(dataSourceFingerprint = "B"))
+        val modelB = createModel(tableModelFactory.createTableStructure(), "B")
         tableComponent.setDataFrameModel(modelB)
         tableComponent.getValueTable().columnModel.getColumn(0).let { c ->
             assertThat(c.identifier).isEqualTo(oldColumn.identifier)
@@ -300,24 +306,26 @@ internal class DataFrameTableTest {
 
     @Test
     fun valueTable_focusedCell_shouldBeKeptIfSameDataSource() {
-        val modelA = createModel(tableModelFactory.createTableStructure(dataSourceFingerprint = "X"))
+        val dataSourceFingerprint = "X"
+
+        val modelA = createModel(tableModelFactory.createTableStructure(), dataSourceFingerprint)
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
         tableComponent.setFocusedCell(CellPosition(2, 2))
         assertThat(tableComponent.getFocusedCell()).isEqualTo(CellPosition(2, 2))
 
-        val modelB = createModel(tableModelFactory.createTableStructure(dataSourceFingerprint = "X"))
+        val modelB = createModel(tableModelFactory.createTableStructure(), dataSourceFingerprint)
         tableComponent.setDataFrameModel(modelB)
         assertThat(tableComponent.getFocusedCell()).isEqualTo(CellPosition(2, 2))
     }
 
     @Test
-    fun valueTable_focusedCell_shouldBeResetedIfDifferentDataSource() {
-        val modelA = createModel(tableModelFactory.createTableStructure(dataSourceFingerprint = "A"))
+    fun valueTable_focusedCell_shouldBeResetIfDifferentDataSource() {
+        val modelA = createModel(tableModelFactory.createTableStructure(), "A")
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
         tableComponent.setFocusedCell(CellPosition(2, 2))
         assertThat(tableComponent.getFocusedCell()).isEqualTo(CellPosition(2, 2))
 
-        val modelB = createModel(tableModelFactory.createTableStructure(dataSourceFingerprint = "B"))
+        val modelB = createModel(tableModelFactory.createTableStructure(), "B")
         tableComponent.setDataFrameModel(modelB)
         assertThat(tableComponent.getFocusedCell()).isEqualTo(CellPosition(0, 0))
     }

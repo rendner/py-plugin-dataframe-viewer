@@ -36,36 +36,36 @@ import kotlinx.serialization.json.Json
  *
  * This class calls methods of the injected "StyledDataFrameViewerBridge" Python class.
  * Therefore, the method signatures of the Python class "StyledDataFrameViewerBridge"
- * have to match with the ones used by this class.
+ * have to match with the ones called by this class.
  */
 class PythonCodeBridge {
 
-    private fun getBridgeExpr(): String {
-        return PythonPluginCodeInjector.getFromPluginModuleExpr("StyledDataFrameViewerBridge")
-    }
+    companion object {
+        private fun getBridgeExpr(): String {
+            return PythonPluginCodeInjector.getFromPluginModuleExpr("StyledDataFrameViewerBridge")
+        }
 
-    fun createPatchedStyler(frameOrStyler: PluginPyValue, filterFrame: PluginPyValue? = null): IPyPatchedStylerRef {
-        val patchedStyler = frameOrStyler.evaluator.evaluate(
-            stringifyMethodCall(getBridgeExpr(), "create_patched_styler") {
-                refParam(frameOrStyler.refExpr)
-                if (filterFrame == null) noneParam() else refParam(filterFrame.refExpr)
-            }
-        )
-        return PyPatchedStylerRef(patchedStyler)
-    }
+        fun createFingerprint(evaluator: IPluginPyValueEvaluator, frameOrStylerRefExpr: String): String {
+            return evaluator.evaluate(
+                stringifyMethodCall(getBridgeExpr(), "create_fingerprint") {
+                    refParam(frameOrStylerRefExpr)
+                }
+            ).value!!
+        }
 
-    fun createPatchedStyler(
-        evaluator: IPluginPyValueEvaluator,
-        frameOrStylerRefExpr: String,
-        filterFrameRefExpr: String? = null
-    ): IPyPatchedStylerRef {
-        val patchedStyler = evaluator.evaluate(
-            stringifyMethodCall(getBridgeExpr(), "create_patched_styler") {
-                refParam(frameOrStylerRefExpr)
-                if (filterFrameRefExpr == null) noneParam() else refParam(filterFrameRefExpr)
-            }
-        )
-        return PyPatchedStylerRef(patchedStyler)
+        fun createPatchedStyler(
+            evaluator: IPluginPyValueEvaluator,
+            frameOrStylerRefExpr: String,
+            filterFrameRefExpr: String? = null
+        ): IPyPatchedStylerRef {
+            val patchedStyler = evaluator.evaluate(
+                stringifyMethodCall(getBridgeExpr(), "create_patched_styler") {
+                    refParam(frameOrStylerRefExpr)
+                    if (filterFrameRefExpr == null) noneParam() else refParam(filterFrameRefExpr)
+                }
+            )
+            return PyPatchedStylerRef(patchedStyler)
+        }
     }
 
     /**

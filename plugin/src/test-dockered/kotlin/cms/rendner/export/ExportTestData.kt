@@ -33,10 +33,7 @@ internal class ExportTestData : AbstractPluginCodeTest() {
     fun exportTestDataForUnitTests() {
         assertThat(exportDir).isNotNull
         runPythonDebuggerWithSourceFile("export_data/main.py") { evaluator, _ ->
-
-            val exportTestDataValue = evaluator.evaluate("export_test_data")
-
-            ExportTask(exportDir!!, exportTestDataValue).run()
+            ExportTask(exportDir!!, evaluator.evaluate("export_test_data")).run()
         }
     }
 }

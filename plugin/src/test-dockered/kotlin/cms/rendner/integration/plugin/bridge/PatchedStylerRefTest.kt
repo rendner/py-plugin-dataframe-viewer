@@ -118,9 +118,11 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     private fun runWithPatchedStyler(block: (patchedStyler: IPyPatchedStylerRef) -> Unit) {
-        runWithPluginCodeBridge(createDataFrameSnippet()) { codeBridge: PythonCodeBridge, evaluator: IPluginPyValueEvaluator, _ ->
-            val styler = evaluator.evaluate("df.style.applymap(lambda x: 'color: red')")
-            block(codeBridge.createPatchedStyler(styler))
+        runPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { evaluator: IPluginPyValueEvaluator, _ ->
+            block(PythonCodeBridge.createPatchedStyler(
+                evaluator,
+                "df.style.applymap(lambda x: 'color: red')",
+            ))
         }
     }
 
