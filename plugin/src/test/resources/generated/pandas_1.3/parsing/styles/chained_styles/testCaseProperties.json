@@ -2,7 +2,6 @@
     "rowsPerChunk": 5,
     "colsPerChunk": 5,
     "tableStructure": {
-        "data_source_fingerprint": "0",
         "org_rows_count": 12,
         "org_columns_count": 12,
         "rows_count": 12,
