@@ -26,13 +26,10 @@ import json
 from dataclasses import dataclass
 from typing import Optional, List, Any
 import numpy as np
-from pandas import DataFrame
-from hashlib import blake2b
 
 
 @dataclass(frozen=True)
 class TableStructure:
-    data_source_fingerprint: str
     org_rows_count: int
     org_columns_count: int
     rows_count: int
@@ -117,7 +114,6 @@ class PatchedStyler:
         if rows_count == 0 or columns_count == 0:
             rows_count = columns_count = 0
         return TableStructure(
-            data_source_fingerprint=self.__create_fingerprint(self.__context.get_styler().data),
             org_rows_count=org_rows_count,
             org_columns_count=org_columns_count,
             rows_count=rows_count,
@@ -143,18 +139,3 @@ class PatchedStyler:
             ))
 
         return result
-
-    @staticmethod
-    def __create_fingerprint(frame: DataFrame) -> str:
-        # A "fingerprint" is generated to help to identify if two patched styler instances are created with the
-        # same data source. Two objects with non-overlapping lifetimes may have the same id() value.
-        # Such a scenario can be simulated with the following minimal example:
-        #
-        # for x in range(100):
-        #   assert id(pd.DataFrame()) != id(pd.DataFrame())
-        #
-        # Therefore, additional data is included to create a better fingerprint.
-        #
-        # dtypes also include the column labels - therefore, we don't have to include frame.columns[:60]
-        fingerprint_input = [id(frame), frame.shape, frame.index[:60], frame.dtypes[:60]]
-        return blake2b('-'.join(str(x) for x in fingerprint_input).encode(), digest_size=16).hexdigest()

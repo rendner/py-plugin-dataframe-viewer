@@ -19,7 +19,7 @@ from pandas.io.formats.style import Styler
 
 from plugin_code.html_props_generator import HTMLPropsGenerator
 from plugin_code.patched_styler import PatchedStyler
-from plugin_code.patched_styler_context import PatchedStylerContext, Region
+from plugin_code.patched_styler_context import Region
 from plugin_code.styled_data_frame_viewer_bridge import StyledDataFrameViewerBridge
 from tests.helpers.asserts.table_extractor import StyledTable, TableExtractor
 
