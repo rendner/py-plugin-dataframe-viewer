@@ -30,42 +30,35 @@ def test_create_patched_styler_for_styler():
     assert isinstance(StyledDataFrameViewerBridge.create_patched_styler(df.style), PatchedStyler)
 
 
-def test_create_patched_styler_two_different_styler_but_same_df_have_same_fingerprint():
-    ts1 = StyledDataFrameViewerBridge.create_patched_styler(df.style.highlight_max()).get_table_structure()
-    ts2 = StyledDataFrameViewerBridge.create_patched_styler(df.style.highlight_min()).get_table_structure()
-    assert ts1.data_source_fingerprint == ts2.data_source_fingerprint
+def test_create_fingerprint_two_different_styler_but_same_df_have_same_fingerprint():
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(df.style.highlight_max())
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(df.style.highlight_min())
+    assert f1 == f2
 
-    ts1 = StyledDataFrameViewerBridge.create_patched_styler(df.style).get_table_structure()
-    ts2 = StyledDataFrameViewerBridge.create_patched_styler(df.style).get_table_structure()
-    assert ts1.data_source_fingerprint == ts2.data_source_fingerprint
-
-
-def test_create_patched_styler_same_df_have_same_fingerprint():
-    ts1 = StyledDataFrameViewerBridge.create_patched_styler(df).get_table_structure()
-    ts2 = StyledDataFrameViewerBridge.create_patched_styler(df).get_table_structure()
-    assert ts1.data_source_fingerprint == ts2.data_source_fingerprint
-
-    ts1 = StyledDataFrameViewerBridge.create_patched_styler(df).get_table_structure()
-    ts2 = StyledDataFrameViewerBridge.create_patched_styler(df.style.data).get_table_structure()
-    assert ts1.data_source_fingerprint == ts2.data_source_fingerprint
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(df.style)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(df.style)
+    assert f1 == f2
 
 
-def test_create_patched_styler_different_df_have_different_fingerprint():
+def test_create_fingerprint_same_df_have_same_fingerprint():
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(df)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(df)
+    assert f1 == f2
+
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(df)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(df.style.data)
+    assert f1 == f2
+
+
+def test_create_fingerprint_different_df_have_different_fingerprint():
     a = pd.DataFrame.from_dict({"A": [1]})
     b = pd.DataFrame.from_dict({"A": [1]})
-    ts1 = StyledDataFrameViewerBridge.create_patched_styler(a).get_table_structure()
-    ts2 = StyledDataFrameViewerBridge.create_patched_styler(b).get_table_structure()
-    assert ts1.data_source_fingerprint != ts2.data_source_fingerprint
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(a)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(b)
+    assert f1 != f2
 
     a = pd.DataFrame.from_dict({"A": [1]})
     b = pd.DataFrame.from_dict({"A": [1]}).style
-    ts1 = StyledDataFrameViewerBridge.create_patched_styler(a).get_table_structure()
-    ts2 = StyledDataFrameViewerBridge.create_patched_styler(b).get_table_structure()
-    assert ts1.data_source_fingerprint != ts2.data_source_fingerprint
-
-
-def test_create_patched_with_filter_does_not_affect_fingerprint():
-    filter_df = df.filter(items=['col_1'])
-    ts1 = StyledDataFrameViewerBridge.create_patched_styler(df, filter_df).get_table_structure()
-    ts2 = StyledDataFrameViewerBridge.create_patched_styler(df).get_table_structure()
-    assert ts1.data_source_fingerprint == ts2.data_source_fingerprint
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(a)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(b)
+    assert f1 != f2
