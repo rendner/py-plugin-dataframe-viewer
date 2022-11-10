@@ -4,15 +4,16 @@ import java.io.ByteArrayOutputStream
 plugins {
     id("idea")
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.7.0"
+    // https://github.com/JetBrains/gradle-intellij-plugin
+    id("org.jetbrains.intellij") version "1.9.0"
     // Kotlin JVM plugin to add support for Kotlin
-    // https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library
+    // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#kotlin-standard-library
     kotlin("jvm") version "1.6.21"
     kotlin("plugin.serialization") version "1.6.21"
 }
 
 group = "cms.rendner.intellij"
-version = "0.8.0"
+version = "0.9.0"
 
 repositories {
     mavenCentral()
@@ -20,6 +21,7 @@ repositories {
 
 dependencies {
     implementation("org.beryx:awt-color-factory:1.0.2")
+    // https://github.com/Kotlin/kotlinx.serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
 
     // https://github.com/junit-team/junit5-samples/blob/r5.8.2/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
@@ -365,15 +367,15 @@ tasks {
     }
 
     runPluginVerifier {
-        // See https://github.com/JetBrains/gradle-intellij-plugin#plugin-verifier-dsl
+        // See https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#tasks-runpluginverifier
         // See https://data.services.jetbrains.com/products?fields=code,name,releases.version,releases.build,releases.type&code=PC
         //ideVersions.addAll(listOf("PC-2021.3", "PC-2021.3.2", "PC-2022.1"))
     }
 
     listProductsReleases {
         sinceVersion.set("2021.3")
-        untilVersion.set("222.3345.99") // 2022.2 rc
-        //untilVersion.set("2022.2")
+        //untilVersion.set("2022.2.3")
+        untilVersion.set("223.7571.64") // 2022.3 rc
     }
 }
 
