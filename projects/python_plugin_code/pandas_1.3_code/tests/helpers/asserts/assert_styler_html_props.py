@@ -28,7 +28,7 @@ def create_and_assert_patched_styler_html_props(
 ):
     styler = df.style
     init_styler_func(styler)
-    ctx = PatchedStylerContext.create(styler)
+    ctx = PatchedStylerContext(styler)
 
-    result = HTMLPropsValidator(ctx).validate(rows_per_chunk, cols_per_chunk)
+    result = HTMLPropsValidator(ctx).test_only_validate(rows_per_chunk, cols_per_chunk)
     assert result.actual == result.expected

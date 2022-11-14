@@ -54,7 +54,7 @@ def create_and_assert_patched_styler_sorting(
     styler = df.style
     init_styler_func(styler)
     patched_styler = StyledDataFrameViewerBridge.create_patched_styler(styler)
-    styled_table = patched_styler.compute_unpatched_html_props_table()
+    styled_table = patched_styler.internal_compute_unpatched_html_props_table()
     expected_styled_dict = _map_cell_elements_by_unique_display_value(styled_table)
 
     # create: expected sorted
@@ -63,7 +63,7 @@ def create_and_assert_patched_styler_sorting(
         init_expected_sorted_styler_func(sorted_styler)
     sorted_patched_styler = StyledDataFrameViewerBridge.create_patched_styler(sorted_styler)
     expected_sorted_dict = _map_cell_elements_by_unique_display_value(
-        sorted_patched_styler.compute_unpatched_html_props_table(),
+        sorted_patched_styler.internal_compute_unpatched_html_props_table(),
     )
 
     # create: actual styled and sorted
@@ -131,7 +131,7 @@ def _build_combined_chunk_table(
         cols_per_chunk: int,
 ):
     combined_table: Optional[HTMLPropsTable] = None
-    region = patched_chunk_styler.get_context().get_region_of_visible_frame()
+    region = patched_chunk_styler.internal_get_context().get_region_of_visible_frame()
 
     for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
         chunk_props_table = patched_chunk_styler.compute_chunk_html_props_table(

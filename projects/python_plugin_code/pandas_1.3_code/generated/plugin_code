@@ -506,7 +506,7 @@ class TodosPatcher:
         return None
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple, Callable, Any, Union
+from typing import List, Optional, Tuple, Callable, Any
 from dataclasses import dataclass
 import numpy as np
 from pandas import DataFrame, Index
@@ -579,6 +579,7 @@ class SortCriteria:
                 s_len = 0 if s is None else len(s)
                 o_len = 0 if o is None else len(o)
                 return (s_len + o_len == 0) or s == o
+
             return _equals(self.by_column, other.by_column) and _equals(self.ascending, other.ascending)
         return False
 
@@ -606,34 +607,16 @@ class FilterCriteria:
 
 
 class PatchedStylerContext:
-    __SENTINEL = object()
+    def __init__(self, styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
+        self.__styler: Styler = styler
+        self.__styler_todos: List[StylerTodo] = [StylerTodo.from_tuple(t) for t in styler._todo]
+        self.__sort_criteria: SortCriteria = SortCriteria()
+        self.__filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
 
-    def __init__(self, source: Union[Styler, Any], sentinel: object):
-        if self.__SENTINEL is not sentinel:
-            raise ValueError("Sentinel doesn't match.")
-        if isinstance(source, PatchedStylerContext):
-            self.__styler: Styler = source.__styler.data.style._copy(deepcopy=True)
-            self.__styler_todos: Optional[List[StylerTodo]] = None
-            self.__sort_criteria: SortCriteria = source.__sort_criteria
-            self.__filter_criteria: FilterCriteria = source.__filter_criteria
-            self.__visible_frame: DataFrame = source.__visible_frame
-            self.__visible_region: Region = source.__visible_region
-        else:
-            self.__styler: Styler = source
-            self.__styler_todos: Optional[List[StylerTodo]] = None
-            self.__sort_criteria: SortCriteria = SortCriteria()
-            self.__filter_criteria: FilterCriteria = FilterCriteria()
+        self.__recompute_visible_frame()
 
-    @staticmethod
-    def create(styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
-        instance = PatchedStylerContext(styler, PatchedStylerContext.__SENTINEL)
-        if filter_criteria is not None:
-            instance.__filter_criteria = filter_criteria
-        instance.__recompute_visible_frame()
-        return instance
-
-    def new_context_with_copied_styler(self):
-        return PatchedStylerContext(self, self.__SENTINEL)
+    def is_filtered(self):
+        return not self.__filter_criteria.is_empty()
 
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
         self.__sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
@@ -671,8 +654,13 @@ class PatchedStylerContext:
             self.__styler_todos = [StylerTodo.from_tuple(t) for t in self.__styler._todo]
         return self.__styler_todos
 
-    def create_patched_todos(self, chunk: DataFrame) -> List[Tuple[Callable, tuple, dict]]:
-        return TodosPatcher().patch_todos_for_chunk(self.get_styler_todos(), self.__styler.data, chunk)
+    def create_patched_todos(self,
+                             chunk: DataFrame,
+                             todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
+                             ) -> List[Tuple[Callable, tuple, dict]]:
+        all_todos = self.get_styler_todos()
+        filtered_todos = all_todos if todos_filter is None else list(filter(todos_filter, all_todos))
+        return TodosPatcher().patch_todos_for_chunk(filtered_todos, self.__styler.data, chunk)
 
     def get_row_index_translator_for_chunk(self, chunk: DataFrame, chunk_region: Region) -> IndexTranslator:
         if self.__sort_criteria.is_empty() and self.__filter_criteria.index is None and len(
@@ -687,7 +675,8 @@ class PatchedStylerContext:
 
     def __recompute_visible_frame(self):
         self.__visible_frame = self.__sort_frame(
-            self.__filter_frame(self.__frame_without_hidden_rows_and_cols(self.__styler)))
+            self.__filter_frame(self.__frame_without_hidden_rows_and_cols(self.__styler)),
+        )
         self.__visible_region = Region(0, 0, len(self.__visible_frame.index), len(self.__visible_frame.columns))
 
     def __sort_frame(self, frame: DataFrame) -> DataFrame:
@@ -1066,74 +1055,7 @@ class HTMLPropsTableBuilder:
             return attributes_dict
         return None
 
-
-
-class HTMLPropsTableGenerator:
-    def __init__(self, styler_context: PatchedStylerContext):
-        self.__styler_context: PatchedStylerContext = styler_context
-        self.__html_props_generator: HTMLPropsGenerator = HTMLPropsGenerator(styler_context)
-
-    def compute_unpatched_table(self) -> HTMLPropsTable:
-        table_builder = HTMLPropsTableBuilder()
-        table_builder.append_props(
-            html_props=self.__html_props_generator.compute_unpatched_props(),
-            target_row_offset=0,
-            is_part_of_first_rows_in_chunk=True,
-            is_part_of_first_cols_in_chunk=True,
-        )
-        return table_builder.build()
-
-    def compute_chunk_table(self,
-                            region: Region,
-                            exclude_row_header: bool = False,
-                            exclude_col_header: bool = False
-                            ) -> HTMLPropsTable:
-        html_props = self.__html_props_generator.compute_chunk_props(
-            region=region,
-            exclude_row_header=exclude_row_header,
-            exclude_col_header=exclude_col_header,
-            translate_indices=False,
-        )
-
-        table_builder = HTMLPropsTableBuilder()
-        table_builder.append_props(
-            html_props=html_props,
-            target_row_offset=0,
-            is_part_of_first_rows_in_chunk=True,
-            is_part_of_first_cols_in_chunk=True,
-        )
-        return table_builder.build()
-
-    def compute_table_from_chunks(self,
-                                  region: Region,
-                                  rows_per_chunk: int,
-                                  cols_per_chunk: int,
-                                  ) -> HTMLPropsTable:
-        table_builder = HTMLPropsTableBuilder()
-
-        for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
-            chunk_html_props = self.__html_props_generator.compute_chunk_props(
-                region=Region(
-                    region.first_row + chunk_region.first_row,
-                    region.first_col + chunk_region.first_col,
-                    chunk_region.rows,
-                    chunk_region.cols,
-                ),
-                exclude_row_header=chunk_region.first_col > 0,
-                exclude_col_header=chunk_region.first_row > 0,
-                translate_indices=False,
-            )
-
-            table_builder.append_props(
-                html_props=chunk_html_props,
-                target_row_offset=chunk_region.first_row,
-                is_part_of_first_rows_in_chunk=chunk_region.first_row == 0,
-                is_part_of_first_cols_in_chunk=chunk_region.first_col == 0,
-            )
-
-        return table_builder.build()
-
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Optional
 from collections.abc import Mapping
 from pandas.io.formats.style import Styler
 
@@ -1209,16 +1131,30 @@ class _HTMLPropsIndexAdjuster:
 
 
 class HTMLPropsGenerator:
-    def __init__(self, styler_context: PatchedStylerContext):
+    def __init__(self,
+                 styler_context: PatchedStylerContext,
+                 todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
+                 ):
         self.__styler_context: PatchedStylerContext = styler_context
+        self.__todos_filter: Optional[Callable[[StylerTodo], bool]] = todos_filter
 
-    def compute_unpatched_props(self) -> dict:
+    def internal_compute_unpatched_props(self) -> dict:
+
+        if self.__styler_context.is_filtered():
+            raise NotImplementedError("Context has a filter criteria defined. Unpatched props are not filtered.")
+
         copy = self.__styler_context.get_styler()
+        old_values = [copy.uuid, copy.uuid_len, copy.cell_ids]
         copy.uuid = ''
         copy.uuid_len = 0
         copy.cell_ids = False
-        copy._compute()
-        return copy._translate(sparse_index=False, sparse_cols=False)
+        try:
+            copy._compute()
+            return copy._translate(sparse_index=False, sparse_cols=False)
+        finally:
+            copy.uuid = old_values[0]
+            copy.uuid_len = old_values[1]
+            copy.cell_ids = old_values[2]
 
     def compute_chunk_props(self,
                             region: Region,
@@ -1231,7 +1167,7 @@ class HTMLPropsGenerator:
                 region.first_col: region.first_col + region.cols,
                 ]
 
-        chunk_aware_todos = self.__styler_context.create_patched_todos(chunk)
+        chunk_aware_todos = self.__styler_context.create_patched_todos(chunk, self.__todos_filter)
 
         computed_styler = self.__compute_styling(
             chunk_aware_todos=chunk_aware_todos,
@@ -1292,6 +1228,73 @@ class HTMLPropsGenerator:
         target.cell_context = source.cell_context
         target._display_funcs = source._display_funcs
 
+
+
+class HTMLPropsTableGenerator:
+    def __init__(self, props_generator: HTMLPropsGenerator):
+        self.__props_generator: HTMLPropsGenerator = props_generator
+
+    def internal_compute_unpatched_table(self) -> HTMLPropsTable:
+        table_builder = HTMLPropsTableBuilder()
+        table_builder.append_props(
+            html_props=self.__props_generator.internal_compute_unpatched_props(),
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return table_builder.build()
+
+    def compute_chunk_table(self,
+                            region: Region,
+                            exclude_row_header: bool = False,
+                            exclude_col_header: bool = False
+                            ) -> HTMLPropsTable:
+        html_props = self.__props_generator.compute_chunk_props(
+            region=region,
+            exclude_row_header=exclude_row_header,
+            exclude_col_header=exclude_col_header,
+            translate_indices=False,
+        )
+
+        table_builder = HTMLPropsTableBuilder()
+        table_builder.append_props(
+            html_props=html_props,
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return table_builder.build()
+
+    def compute_table_from_chunks(self,
+                                  region: Region,
+                                  rows_per_chunk: int,
+                                  cols_per_chunk: int,
+                                  ) -> HTMLPropsTable:
+        table_builder = HTMLPropsTableBuilder()
+
+        for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
+            chunk_html_props = self.__props_generator.compute_chunk_props(
+                region=Region(
+                    region.first_row + chunk_region.first_row,
+                    region.first_col + chunk_region.first_col,
+                    chunk_region.rows,
+                    chunk_region.cols,
+                ),
+                exclude_row_header=chunk_region.first_col > 0,
+                exclude_col_header=chunk_region.first_row > 0,
+                translate_indices=False,
+            )
+
+            table_builder.append_props(
+                html_props=chunk_html_props,
+                target_row_offset=chunk_region.first_row,
+                is_part_of_first_rows_in_chunk=chunk_region.first_row == 0,
+                is_part_of_first_cols_in_chunk=chunk_region.first_col == 0,
+            )
+
+        return table_builder.build()
+
+from typing import Optional
 from dataclasses import dataclass
 import json
 
@@ -1304,33 +1307,39 @@ class HTMLPropsValidationResult:
 
 
 class HTMLPropsValidator:
-    def __init__(self, styler_context: PatchedStylerContext):
+    def __init__(self, styler_context: PatchedStylerContext, props_generator: Optional[HTMLPropsGenerator] = None):
         self.__styler_context: PatchedStylerContext = styler_context
-        self.__table_generator: HTMLPropsTableGenerator = HTMLPropsTableGenerator(styler_context)
+        self.__table_generator: HTMLPropsTableGenerator = HTMLPropsTableGenerator(
+            props_generator if props_generator is not None else HTMLPropsGenerator(styler_context),
+        )
 
-    def validate(self, rows_per_chunk: int, cols_per_chunk: int) -> HTMLPropsValidationResult:
-        return self.validate_region(self.__styler_context.get_region_of_visible_frame(), rows_per_chunk, cols_per_chunk)
+    def test_only_validate(self, rows_per_chunk: int, cols_per_chunk: int) -> HTMLPropsValidationResult:
+        region = self.__styler_context.get_region_of_visible_frame()
+        if region.is_empty():
+            return HTMLPropsValidationResult('', '', True)
+        combined_table = self.__table_generator.compute_table_from_chunks(region, rows_per_chunk, cols_per_chunk)
+        expected_table = self.__table_generator.internal_compute_unpatched_table()
+        return self.__compare_tables(combined_table, expected_table)
 
-    def validate_region(self,
-                        region: Region,
-                        rows_per_chunk: int,
-                        cols_per_chunk: int,
-                        ) -> HTMLPropsValidationResult:
-        clamped_region = self.__styler_context.compute_visible_intersection(region)
+    def validate_chunk_region(self,
+                              chunk_region: Region,
+                              rows_per_chunk: int,
+                              cols_per_chunk: int,
+                              ) -> HTMLPropsValidationResult:
+        clamped_region = self.__styler_context.compute_visible_intersection(chunk_region)
         if clamped_region.is_empty():
             return HTMLPropsValidationResult('', '', True)
-
         combined_table = self.__table_generator.compute_table_from_chunks(clamped_region, rows_per_chunk, cols_per_chunk)
-        expected_table = self.__compute_expected_table(clamped_region)
+        expected_table = self.__table_generator.compute_chunk_table(clamped_region)
+        return self.__compare_tables(combined_table, expected_table)
+
+    def __compare_tables(self,
+                         combined_table: HTMLPropsTable,
+                         expected_table: HTMLPropsTable,
+                         ) -> HTMLPropsValidationResult:
         combined_json = self.__jsonify_table(combined_table)
         expected_json = self.__jsonify_table(expected_table)
-
         return HTMLPropsValidationResult(combined_json, expected_json, combined_json == expected_json)
-
-    def __compute_expected_table(self, region: Region) -> HTMLPropsTable:
-        if region == self.__styler_context.get_region_of_visible_frame():
-            return self.__table_generator.compute_unpatched_table()
-        return self.__table_generator.compute_chunk_table(region)
 
     @staticmethod
     def __jsonify_table(table: HTMLPropsTable) -> str:
@@ -1338,7 +1347,7 @@ class HTMLPropsValidator:
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from abc import ABC, abstractmethod
 
 
@@ -1400,18 +1409,10 @@ class _FastValidationStrategy(_AbstractValidationStrategy):
 
 
 class StyleFunctionsValidator:
-    def __init__(self, styler_context: PatchedStylerContext):
+    def __init__(self, styler_context: PatchedStylerContext, strategy_type: Optional[ValidationStrategyType] = None):
         self.__styler_context: PatchedStylerContext = styler_context
         self.__apply_todos_count: int = self.__count_apply_todos(styler_context.get_styler_todos())
-        self.__validation_strategy: _AbstractValidationStrategy = _FastValidationStrategy()
-
-    def set_validation_strategy_type(self, strategy_type: ValidationStrategyType):
-        if self.__validation_strategy.strategy_type is strategy_type:
-            return
-        if strategy_type is ValidationStrategyType.FAST:
-            self.__validation_strategy = _FastValidationStrategy()
-        else:
-            self.__validation_strategy = _PrecisionValidationStrategy()
+        self.__validation_strategy: _AbstractValidationStrategy = self.__create_validation_strategy(strategy_type)
 
     def validate(self, region: Region) -> List[StyleFunctionValidationProblem]:
 
@@ -1421,33 +1422,31 @@ class StyleFunctionsValidator:
         rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(region.rows, region.cols)
 
         if self.__apply_todos_count == 1:
-            return self.__validate_single_todos(region, rows_per_chunk, cols_per_chunk)
+            return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
 
         try:
             validator = HTMLPropsValidator(self.__styler_context)
-            if validator.validate_region(region, rows_per_chunk, cols_per_chunk).is_equal:
+            if validator.validate_chunk_region(region, rows_per_chunk, cols_per_chunk).is_equal:
                 return []
         except Exception:
             pass
 
-        return self.__validate_single_todos(region, rows_per_chunk, cols_per_chunk)
+        return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
 
-    def __validate_single_todos(self,
+    def __validate_todos_separately(self,
                                 region: Region,
                                 rows_per_chunk: int,
                                 cols_per_chunk: int,
                                 ) -> List[StyleFunctionValidationProblem]:
         validation_result = []
 
-        todos = self.__styler_context.get_styler_todos()
-        for i, todo in enumerate(todos):
+        ctx = self.__styler_context
+        for i, todo in enumerate(ctx.get_styler_todos()):
             try:
                 if todo.is_applymap():
                     continue
-                context_copy = self.__styler_context.new_context_with_copied_styler()
-                context_copy.get_styler()._todo = [todo.to_tuple()]
-                validator = HTMLPropsValidator(context_copy)
-                result = validator.validate_region(region, rows_per_chunk, cols_per_chunk)
+                validator = HTMLPropsValidator(ctx, HTMLPropsGenerator(ctx, lambda x: x is todo))
+                result = validator.validate_chunk_region(region, rows_per_chunk, cols_per_chunk)
                 if not result.is_equal:
                     validation_result.append(StyleFunctionValidationProblem(i, "NOT_EQUAL"))
             except Exception as e:
@@ -1460,6 +1459,13 @@ class StyleFunctionsValidator:
         if len(todos) == 0:
             return 0
         return len([not t.is_applymap() for t in todos])
+
+    @staticmethod
+    def __create_validation_strategy(strategy_type: Optional[ValidationStrategyType] = None):
+        if strategy_type is ValidationStrategyType.PRECISION:
+            return _PrecisionValidationStrategy()
+        else:
+            return _FastValidationStrategy()
 
 import json
 from dataclasses import dataclass
@@ -1495,11 +1501,8 @@ class PatchedStyler:
 
     def __init__(self, context: PatchedStylerContext):
         self.__context: PatchedStylerContext = context
-        self.__html_props_generator = HTMLPropsGenerator(self.__context)
-        self.__table_generator = HTMLPropsTableGenerator(self.__context)
-        self.__style_functions_validator = StyleFunctionsValidator(self.__context)
 
-    def get_context(self) -> PatchedStylerContext:
+    def internal_get_context(self) -> PatchedStylerContext:
         return self.__context
 
     def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> str:
@@ -1517,9 +1520,8 @@ class PatchedStyler:
                                  cols: int,
                                  validation_strategy: Optional[ValidationStrategyType] = None,
                                  ) -> List[StyleFunctionValidationProblem]:
-        if validation_strategy is not None:
-            self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
-        return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
+        return StyleFunctionsValidator(self.__context, validation_strategy) \
+            .validate(Region(first_row, first_col, rows, cols))
 
     def set_sort_criteria(self,
                           by_column_index: Optional[List[int]] = None,
@@ -1535,14 +1537,14 @@ class PatchedStyler:
                                        exclude_row_header: bool = False,
                                        exclude_col_header: bool = False
                                        ) -> HTMLPropsTable:
-        return self.__table_generator.compute_chunk_table(
+        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).compute_chunk_table(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
         )
 
-    def compute_unpatched_html_props_table(self) -> HTMLPropsTable:
-        return self.__table_generator.compute_unpatched_table()
+    def internal_compute_unpatched_html_props_table(self) -> HTMLPropsTable:
+        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).internal_compute_unpatched_table()
 
     def get_table_structure(self) -> TableStructure:
         visible_frame = self.__context.get_visible_frame()
@@ -1598,7 +1600,7 @@ class StyledDataFrameViewerBridge:
         else:
             styler: Styler = frame_or_styler
 
-        return PatchedStyler(PatchedStylerContext.create(styler, FilterCriteria.from_frame(filter_frame)))
+        return PatchedStyler(PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame)))
 
     @staticmethod
     def create_fingerprint(frame_or_styler: Union[DataFrame, Styler]) -> str:
