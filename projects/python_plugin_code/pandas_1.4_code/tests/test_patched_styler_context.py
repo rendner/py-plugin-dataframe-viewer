@@ -25,7 +25,7 @@ df = DataFrame.from_dict({
 
 
 def test_previous_sort_criteria_does_not_affect_later_sort_criteria():
-    ctx = PatchedStylerContext.create(df.style)
+    ctx = PatchedStylerContext(df.style)
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[True])
     index_after_first_sort = ctx.get_visible_frame().index
 
@@ -40,7 +40,7 @@ def test_previous_sort_criteria_does_not_affect_later_sort_criteria():
 
 
 def test_get_org_indices_of_visible_columns():
-    ctx = PatchedStylerContext.create(df.style)
+    ctx = PatchedStylerContext(df.style)
 
     actual = ctx.get_org_indices_of_visible_columns(0, 2)
     assert list(actual) == [0, 1]
@@ -55,7 +55,7 @@ def test_get_org_indices_of_visible_columns():
 def test_get_org_indices_of_visible_columns_with_filter():
     # include only two columns of org df - but change the order of these columns
     fc = FilterCriteria.from_frame(df[['col_4', 'col_1']])
-    ctx = PatchedStylerContext.create(df.style, fc)
+    ctx = PatchedStylerContext(df.style, fc)
 
     actual = ctx.get_org_indices_of_visible_columns(0, 2)
     assert list(actual) == [1, 4]

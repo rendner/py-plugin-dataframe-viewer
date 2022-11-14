@@ -14,6 +14,7 @@
 import pytest
 from pandas import Index, DataFrame, IndexSlice
 
+from plugin_code.html_props_generator import HTMLPropsGenerator
 from plugin_code.html_props_table_generator import HTMLPropsTableGenerator
 from plugin_code.patched_styler_context import PatchedStylerContext, FilterCriteria
 from tests.helpers.asserts.assert_styler_filtering import create_and_assert_patched_styler_filtering
@@ -42,10 +43,11 @@ def test_combined_chunks_do_not_include_a_highlighted_min_after_filtering_min_va
 
     # filter out the min value
     filter_frame = df.filter(items=[1, 3, 4], axis='index')
-    ctx = PatchedStylerContext.create(styler, FilterCriteria.from_frame(filter_frame))
+    ctx = PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame))
 
     # expect: no styled min value
-    props_table = HTMLPropsTableGenerator(ctx).compute_table_from_chunks(ctx.get_region_of_visible_frame(), 2, 2)
+    props_table = HTMLPropsTableGenerator(HTMLPropsGenerator(ctx))\
+        .compute_table_from_chunks(ctx.get_region_of_visible_frame(), 2, 2)
     for row in props_table.body:
         for entry in row:
             assert entry.css_props is None
@@ -57,9 +59,10 @@ def test_combined_chunks_do_include_highlighted_min_values_after_filtering():
 
     # filter, but include min values
     filter_frame = df.filter(items=[1, 2], axis='index')
-    ctx = PatchedStylerContext.create(styler, FilterCriteria.from_frame(filter_frame))
+    ctx = PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame))
 
-    props_table = HTMLPropsTableGenerator(ctx).compute_table_from_chunks(ctx.get_region_of_visible_frame(), 2, 2)
+    props_table = HTMLPropsTableGenerator(HTMLPropsGenerator(ctx)) \
+        .compute_table_from_chunks(ctx.get_region_of_visible_frame(), 2, 2)
 
     highlighted_values_found = 0
     for row in props_table.body:
@@ -75,7 +78,7 @@ def test_combined_chunks_do_include_highlighted_min_values_after_filtering():
 
 def test_filter_by_columns():
     filter_frame = df[['col_0', 'col_4']]
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria(None, filter_frame.columns))
+    ctx = PatchedStylerContext(df.style, FilterCriteria(None, filter_frame.columns))
 
     expected = filter_frame.columns
     actual = ctx.get_visible_frame().columns
@@ -84,7 +87,7 @@ def test_filter_by_columns():
 
 def test_filter_by_rows():
     filter_frame = df[df['col_0'] < 3]
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria(filter_frame.index, None))
+    ctx = PatchedStylerContext(df.style, FilterCriteria(filter_frame.index, None))
 
     expected = filter_frame.index
     actual = ctx.get_visible_frame().index
@@ -93,7 +96,7 @@ def test_filter_by_rows():
 
 def test_filter_by_rows_and_columns():
     filter_frame = df.loc[df['col_0'] < 3, ['col_0', 'col_4']]
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria.from_frame(filter_frame))
+    ctx = PatchedStylerContext(df.style, FilterCriteria.from_frame(filter_frame))
     visible_frame = ctx.get_visible_frame()
 
     expected_index = filter_frame.index
@@ -107,7 +110,7 @@ def test_filter_by_rows_and_columns():
 
 def test_filter_with_empty_rows():
     filter_frame = DataFrame()
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria(filter_frame.index, None))
+    ctx = PatchedStylerContext(df.style, FilterCriteria(filter_frame.index, None))
 
     actual = ctx.get_visible_frame().index
     assert list(actual) == []
@@ -115,7 +118,7 @@ def test_filter_with_empty_rows():
 
 def test_filter_with_empty_columns():
     filter_frame = DataFrame()
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria(None, filter_frame.columns))
+    ctx = PatchedStylerContext(df.style, FilterCriteria(None, filter_frame.columns))
 
     actual = ctx.get_visible_frame().columns
     assert list(actual) == []
@@ -123,7 +126,7 @@ def test_filter_with_empty_columns():
 
 def test_filter_with_empty_rows_and_columns():
     filter_frame = DataFrame()
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria.from_frame(filter_frame))
+    ctx = PatchedStylerContext(df.style, FilterCriteria.from_frame(filter_frame))
     visible_frame = ctx.get_visible_frame()
 
     actual_index = visible_frame.index
@@ -135,7 +138,7 @@ def test_filter_with_empty_rows_and_columns():
 
 def test_filter_with_non_existing_rows_and_columns():
     filter_frame = DataFrame(index=[7, 8, 9], columns=["col_7", "col_8", "col_9"])
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria.from_frame(filter_frame))
+    ctx = PatchedStylerContext(df.style, FilterCriteria.from_frame(filter_frame))
     visible_frame = ctx.get_visible_frame()
 
     actual_index = visible_frame.index
@@ -147,7 +150,7 @@ def test_filter_with_non_existing_rows_and_columns():
 
 def test_filter_with_non_intersecting_hidden_columns():
     filter_frame = df[['col_0', 'col_4']]
-    ctx = PatchedStylerContext.create(
+    ctx = PatchedStylerContext(
         df.style.hide(axis="columns", subset=["col_2"]),
         FilterCriteria(None, filter_frame.columns),
     )
@@ -159,7 +162,7 @@ def test_filter_with_non_intersecting_hidden_columns():
 
 def test_filter_with_intersecting_hidden_columns():
     filter_frame = df[['col_0', 'col_4']]
-    ctx = PatchedStylerContext.create(
+    ctx = PatchedStylerContext(
         df.style.hide(axis="columns", subset=["col_4"]),
         FilterCriteria(None, filter_frame.columns),
     )
@@ -171,7 +174,7 @@ def test_filter_with_intersecting_hidden_columns():
 
 def test_filter_with_non_intersecting_hidden_rows():
     filter_frame = df[df['col_0'] < 3]
-    ctx = PatchedStylerContext.create(
+    ctx = PatchedStylerContext(
         df.style.hide(axis="index", subset=[4]),
         FilterCriteria(filter_frame.index, None),
     )
@@ -183,7 +186,7 @@ def test_filter_with_non_intersecting_hidden_rows():
 
 def test_filter_with_intersecting_hidden_rows():
     filter_frame = df[df['col_0'] < 3]
-    ctx = PatchedStylerContext.create(
+    ctx = PatchedStylerContext(
         df.style.hide(axis="index", subset=[1]),
         FilterCriteria(filter_frame.index, None),
     )
@@ -195,7 +198,7 @@ def test_filter_with_intersecting_hidden_rows():
 
 def test_filter_with_df_filter():
     filter_frame = df.filter(items=['col_0', 'col_4'])
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria(None, filter_frame.columns))
+    ctx = PatchedStylerContext(df.style, FilterCriteria(None, filter_frame.columns))
 
     expected = filter_frame.columns
     actual = ctx.get_visible_frame().columns
@@ -206,7 +209,7 @@ def test_filtered_frame_keeps_index_and_column_order():
     # The filter has the same cols and rows as df, but in reversed order.
     # Therefore, the filter doesn't filter out any row or col.
     filter_frame = df.copy().iloc[::-1, ::-1]
-    ctx = PatchedStylerContext.create(df.style, FilterCriteria(None, filter_frame.columns))
+    ctx = PatchedStylerContext(df.style, FilterCriteria(None, filter_frame.columns))
 
     expected_rows = df.index
     actual_rows = ctx.get_visible_frame().index

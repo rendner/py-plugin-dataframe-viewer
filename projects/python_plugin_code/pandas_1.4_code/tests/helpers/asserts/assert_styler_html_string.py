@@ -115,7 +115,7 @@ def _create_render_result_for_chunks(patched_styler: PatchedStyler, rows_per_chu
 
 
 def _render_chunk(patched_styler: PatchedStyler, chunk_region: Region, exclude_row_header, exclude_col_header):
-    psc = patched_styler.get_context()
+    psc = patched_styler.internal_get_context()
     html_props = HTMLPropsGenerator(psc).compute_chunk_props(
         region=chunk_region,
         exclude_row_header=exclude_row_header,
@@ -137,10 +137,7 @@ def _render_chunk(patched_styler: PatchedStyler, chunk_region: Region, exclude_r
 def _render_unpatched(patched_styler: PatchedStyler):
     # This method deliberately does not use the "html_props_generator" but the original
     # "Styler::to_html" method to create the html string.
-    #
-    # Method is only used in unit tests or to create test data for the plugin
-    # therefore it is save to change potential configured values
-    styler = patched_styler.get_context().get_styler()
+    styler = patched_styler.internal_get_context().get_styler()
     styler.uuid = ''
     styler.uuid_len = 0
     styler.cell_ids = False
