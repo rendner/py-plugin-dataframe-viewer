@@ -152,7 +152,7 @@ class PythonCodeBridge {
 
         override fun evaluateComputeUnpatchedHTMLPropsTable(): HTMLPropsTable {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(pythonValue.refExpr, "compute_unpatched_html_props_table")
+                stringifyMethodCall(pythonValue.refExpr, "internal_compute_unpatched_html_props_table")
             )
         }
 

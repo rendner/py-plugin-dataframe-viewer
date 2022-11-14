@@ -107,7 +107,7 @@ interface IPyPatchedStylerRef {
     ): HTMLPropsTable
 
     /**
-     * Calls the "compute_unpatched_html_props_table" method of the Python class "PatchedStyler".
+     * Calls the "internal_compute_unpatched_html_props_table" method of the Python class "PatchedStyler".
      * This method is only used to dump small DataFrames to generate test data and during integration tests.
      *
      * @return returns the unpatched html props of the underling DataFrame.
