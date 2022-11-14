@@ -36,7 +36,7 @@ other_df = pd.DataFrame.from_dict({
 
 
 def test_table_structure():
-    ts = PatchedStyler(PatchedStylerContext.create(df.style)).get_table_structure()
+    ts = PatchedStyler(PatchedStylerContext(df.style)).get_table_structure()
     assert ts.org_rows_count == len(df.index)
     assert ts.org_columns_count == len(df.columns)
     assert ts.rows_count == len(df.index)
@@ -49,14 +49,14 @@ def test_table_structure():
 
 def test_table_structure_hide_row_header():
     styler = df.style.hide_index()
-    ts = PatchedStyler(PatchedStylerContext.create(styler)).get_table_structure()
+    ts = PatchedStyler(PatchedStylerContext(styler)).get_table_structure()
     assert ts.hide_row_header is True
     assert ts.hide_column_header is False
 
 
 def test_table_structure_columns_count_hide_all_columns():
     styler = df.style.hide_columns(subset=df.columns)
-    ts = PatchedStyler(PatchedStylerContext.create(styler)).get_table_structure()
+    ts = PatchedStyler(PatchedStylerContext(styler)).get_table_structure()
     assert ts.org_columns_count == len(styler.data.columns)
     assert ts.columns_count == 0
     assert ts.hide_column_header is False
@@ -65,7 +65,7 @@ def test_table_structure_columns_count_hide_all_columns():
 def test_table_structure_diff_matches_hidden_rows():
     styler = other_df.style\
         .hide_columns(subset=["col_1", "col_3"])
-    ts = PatchedStyler(PatchedStylerContext.create(styler)).get_table_structure()
+    ts = PatchedStyler(PatchedStylerContext(styler)).get_table_structure()
 
     actual_row_diff = ts.org_rows_count - ts.rows_count
     actual_col_diff = ts.org_columns_count - ts.columns_count
@@ -78,7 +78,7 @@ def test_table_structure_diff_matches_hidden_cols_and_filtering():
         .hide_columns(subset=["col_1", "col_3"])
     filter_frame = DataFrame(index=other_df.index[1:], columns=other_df.columns[1:])
     ts = PatchedStyler(
-        PatchedStylerContext.create(styler, FilterCriteria.from_frame(filter_frame)),
+        PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame)),
     ).get_table_structure()
 
     actual_row_diff = ts.org_rows_count - ts.rows_count
@@ -119,13 +119,13 @@ def test_render_chunk_translates_display_funcs_correct_also_with_hidden_cols(
 
 def test_get_style_function_details_df_no_styles():
     styler = df.style
-    details = PatchedStyler(PatchedStylerContext.create(styler)).get_style_function_details()
+    details = PatchedStyler(PatchedStylerContext(styler)).get_style_function_details()
     assert len(details) == 0
 
 
 def test_get_style_function_details_df():
     styler = df.style.bar().highlight_min(axis='columns').applymap(lambda x: "color: red")
-    details = PatchedStyler(PatchedStylerContext.create(styler)).get_style_function_details()
+    details = PatchedStyler(PatchedStylerContext(styler)).get_style_function_details()
     assert len(details) == 3
     assert details[0] == StyleFunctionDetails(
         index=0,
@@ -160,15 +160,15 @@ def test_get_style_function_details_df():
 
 
 def test_to_json():
-    ts = PatchedStyler(PatchedStylerContext.create(df.style)).to_json({"a": 12, "b": (True, False)})
+    ts = PatchedStyler(PatchedStylerContext(df.style)).to_json({"a": 12, "b": (True, False)})
     assert ts == '{"a": 12, "b": [true, false]}'
 
 
 def test_get_org_indices_of_visible_columns():
-    ps = PatchedStyler(PatchedStylerContext.create(df.style))
+    ps = PatchedStyler(PatchedStylerContext(df.style))
     actual = ps.get_org_indices_of_visible_columns(0, 2)
     assert actual == str([0, 1])
 
-    num_cols = len(ps.get_context().get_styler().data.columns)
+    num_cols = len(ps.internal_get_context().get_styler().data.columns)
     actual = ps.get_org_indices_of_visible_columns(0, num_cols)
     assert actual == str(list(range(0, num_cols)))

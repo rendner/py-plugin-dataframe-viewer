@@ -19,14 +19,13 @@ from plugin_code.patched_styler_context import Region, PatchedStylerContext
 
 
 class HTMLPropsTableGenerator:
-    def __init__(self, styler_context: PatchedStylerContext):
-        self.__styler_context: PatchedStylerContext = styler_context
-        self.__html_props_generator: HTMLPropsGenerator = HTMLPropsGenerator(styler_context)
+    def __init__(self, props_generator: HTMLPropsGenerator):
+        self.__props_generator: HTMLPropsGenerator = props_generator
 
-    def compute_unpatched_table(self) -> HTMLPropsTable:
+    def internal_compute_unpatched_table(self) -> HTMLPropsTable:
         table_builder = HTMLPropsTableBuilder()
         table_builder.append_props(
-            html_props=self.__html_props_generator.compute_unpatched_props(),
+            html_props=self.__props_generator.internal_compute_unpatched_props(),
             target_row_offset=0,
             is_part_of_first_rows_in_chunk=True,
             is_part_of_first_cols_in_chunk=True,
@@ -37,7 +36,7 @@ class HTMLPropsTableGenerator:
                             region: Region,
                             exclude_row_header: bool = False,
                             ) -> HTMLPropsTable:
-        html_props = self.__html_props_generator.compute_chunk_props(
+        html_props = self.__props_generator.compute_chunk_props(
             region=region,
             exclude_row_header=exclude_row_header,
             translate_indices=False,
@@ -60,7 +59,7 @@ class HTMLPropsTableGenerator:
         table_builder = HTMLPropsTableBuilder()
 
         for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
-            chunk_html_props = self.__html_props_generator.compute_chunk_props(
+            chunk_html_props = self.__props_generator.compute_chunk_props(
                 region=Region(
                     region.first_row + chunk_region.first_row,
                     region.first_col + chunk_region.first_col,

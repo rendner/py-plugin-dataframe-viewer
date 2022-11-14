@@ -16,7 +16,7 @@ from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple, Callable, Any, Union
+from typing import List, Optional, Tuple, Callable, Any
 from dataclasses import dataclass
 import numpy as np
 from pandas import DataFrame, Index
@@ -90,6 +90,7 @@ class SortCriteria:
                 s_len = 0 if s is None else len(s)
                 o_len = 0 if o is None else len(o)
                 return (s_len + o_len == 0) or s == o
+
             return _equals(self.by_column, other.by_column) and _equals(self.ascending, other.ascending)
         return False
 
@@ -117,35 +118,16 @@ class FilterCriteria:
 
 
 class PatchedStylerContext:
-    __SENTINEL = object()
+    def __init__(self, styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
+        self.__styler: Styler = styler
+        self.__styler_todos: List[StylerTodo] = [StylerTodo.from_tuple(t) for t in styler._todo]
+        self.__sort_criteria: SortCriteria = SortCriteria()
+        self.__filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
 
-    def __init__(self, source: Union[Styler, Any], sentinel: object):
-        if self.__SENTINEL is not sentinel:
-            raise ValueError("Sentinel doesn't match.")
-        if isinstance(source, PatchedStylerContext):
-            self.__styler: Styler = source.__styler.data.style._copy(deepcopy=True)
-            # don't copy "self.__styler_todos" (it's on purpose)
-            self.__styler_todos: Optional[List[StylerTodo]] = None
-            self.__sort_criteria: SortCriteria = source.__sort_criteria
-            self.__filter_criteria: FilterCriteria = source.__filter_criteria
-            self.__visible_frame: DataFrame = source.__visible_frame
-            self.__visible_region: Region = source.__visible_region
-        else:
-            self.__styler: Styler = source
-            self.__styler_todos: Optional[List[StylerTodo]] = None
-            self.__sort_criteria: SortCriteria = SortCriteria()
-            self.__filter_criteria: FilterCriteria = FilterCriteria()
+        self.__recompute_visible_frame()
 
-    @staticmethod
-    def create(styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
-        instance = PatchedStylerContext(styler, PatchedStylerContext.__SENTINEL)
-        if filter_criteria is not None:
-            instance.__filter_criteria = filter_criteria
-        instance.__recompute_visible_frame()
-        return instance
-
-    def new_context_with_copied_styler(self):
-        return PatchedStylerContext(self, self.__SENTINEL)
+    def is_filtered(self):
+        return not self.__filter_criteria.is_empty()
 
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
         self.__sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
@@ -183,8 +165,13 @@ class PatchedStylerContext:
             self.__styler_todos = [StylerTodo.from_tuple(t) for t in self.__styler._todo]
         return self.__styler_todos
 
-    def create_patched_todos(self, chunk: DataFrame) -> List[Tuple[Callable, tuple, dict]]:
-        return TodosPatcher().patch_todos_for_chunk(self.get_styler_todos(), self.__styler.data, chunk)
+    def create_patched_todos(self,
+                             chunk: DataFrame,
+                             todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
+                             ) -> List[Tuple[Callable, tuple, dict]]:
+        all_todos = self.get_styler_todos()
+        filtered_todos = all_todos if todos_filter is None else list(filter(todos_filter, all_todos))
+        return TodosPatcher().patch_todos_for_chunk(filtered_todos, self.__styler.data, chunk)
 
     def get_row_index_translator_for_chunk(self, chunk: DataFrame, chunk_region: Region) -> IndexTranslator:
         if self.__sort_criteria.is_empty() and self.__filter_criteria.index is None:
@@ -198,7 +185,8 @@ class PatchedStylerContext:
 
     def __recompute_visible_frame(self):
         self.__visible_frame = self.__sort_frame(
-            self.__filter_frame(self.__frame_without_hidden_rows_and_cols(self.__styler)))
+            self.__filter_frame(self.__frame_without_hidden_rows_and_cols(self.__styler)),
+        )
         self.__visible_region = Region(0, 0, len(self.__visible_frame.index), len(self.__visible_frame.columns))
 
     def __sort_frame(self, frame: DataFrame) -> DataFrame:

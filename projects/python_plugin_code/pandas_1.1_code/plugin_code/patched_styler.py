@@ -56,11 +56,8 @@ class PatchedStyler:
 
     def __init__(self, context: PatchedStylerContext):
         self.__context: PatchedStylerContext = context
-        self.__html_props_generator = HTMLPropsGenerator(self.__context)
-        self.__table_generator = HTMLPropsTableGenerator(self.__context)
-        self.__style_functions_validator = StyleFunctionsValidator(self.__context)
 
-    def get_context(self) -> PatchedStylerContext:
+    def internal_get_context(self) -> PatchedStylerContext:
         return self.__context
 
     def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> str:
@@ -78,9 +75,8 @@ class PatchedStyler:
                                  cols: int,
                                  validation_strategy: Optional[ValidationStrategyType] = None,
                                  ) -> List[StyleFunctionValidationProblem]:
-        if validation_strategy is not None:
-            self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
-        return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
+        return StyleFunctionsValidator(self.__context, validation_strategy) \
+            .validate(Region(first_row, first_col, rows, cols))
 
     def set_sort_criteria(self,
                           by_column_index: Optional[List[int]] = None,
@@ -96,13 +92,13 @@ class PatchedStyler:
                                        exclude_row_header: bool = False,
                                        exclude_col_header: bool = False,  # unused in this version
                                        ) -> HTMLPropsTable:
-        return self.__table_generator.compute_chunk_table(
+        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).compute_chunk_table(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
         )
 
-    def compute_unpatched_html_props_table(self) -> HTMLPropsTable:
-        return self.__table_generator.compute_unpatched_table()
+    def internal_compute_unpatched_html_props_table(self) -> HTMLPropsTable:
+        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).internal_compute_unpatched_table()
 
     def get_table_structure(self) -> TableStructure:
         visible_frame = self.__context.get_visible_frame()
