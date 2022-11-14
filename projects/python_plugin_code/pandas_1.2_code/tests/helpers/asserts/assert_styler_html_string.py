@@ -125,7 +125,7 @@ def _render_chunk(
         exclude_row_header: bool = False,
         exclude_col_header: bool = False,  # unused in pandas 1.2 plugin code
 ) -> str:
-    psc = patched_styler.get_context()
+    psc = patched_styler.internal_get_context()
     html_props = HTMLPropsGenerator(psc).compute_chunk_props(
         region=chunk_region,
         exclude_row_header=exclude_row_header,
@@ -143,7 +143,7 @@ def _render_chunk(
 def _render_unpatched(patched_styler: PatchedStyler) -> str:
     # This method deliberately does not use the "html_props_generator" but the original
     # "Styler::render" method to create the html string.
-    styler = patched_styler.get_context().get_styler()
+    styler = patched_styler.internal_get_context().get_styler()
     styler.uuid = ''
     styler.uuid_len = 0
     styler.cell_ids = False

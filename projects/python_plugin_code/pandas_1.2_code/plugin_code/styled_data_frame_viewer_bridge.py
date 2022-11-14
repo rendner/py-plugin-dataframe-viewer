@@ -32,7 +32,7 @@ class StyledDataFrameViewerBridge:
         else:
             styler: Styler = frame_or_styler
 
-        return PatchedStyler(PatchedStylerContext.create(styler, FilterCriteria.from_frame(filter_frame)))
+        return PatchedStyler(PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame)))
 
     @staticmethod
     def create_fingerprint(frame_or_styler: Union[DataFrame, Styler]) -> str:
