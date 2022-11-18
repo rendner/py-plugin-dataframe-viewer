@@ -42,7 +42,7 @@ internal class DataFrameTableTest {
     fun valueTable_shouldMarkColumnFixed() {
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableModelFactory.createTableStructure()))
-        tableComponent.getValueTable().getColumnExpander().let {
+        tableComponent.getValueTable().getColumnResizeBehavior().let {
             assertThat(it.isFixed(0)).isFalse
             it.markFixed(0)
             assertThat(it.isFixed(0)).isTrue
@@ -55,7 +55,7 @@ internal class DataFrameTableTest {
 
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableStructure))
-        tableComponent.getValueTable().getColumnExpander().let {
+        tableComponent.getValueTable().getColumnResizeBehavior().let {
             assertThat(it.isFixed(1)).isFalse
             it.markFixed(1)
             assertThat(it.isFixed(1)).isTrue
@@ -66,7 +66,7 @@ internal class DataFrameTableTest {
         val lastIndex = tableStructure.columnsCount - 1
         tableComponent.setDataFrameModel(createModel(tableStructure, frameColumnOrgIndexList = IntRange(0, lastIndex).toList().reversed()))
         val newColumn = tableComponent.getValueTable().columnModel.getColumn(lastIndex - 1)
-        tableComponent.getValueTable().getColumnExpander().let {
+        tableComponent.getValueTable().getColumnResizeBehavior().let {
             assertThat(newColumn.identifier).isEqualTo(oldColumn.identifier)
             assertThat(it.isFixed(lastIndex - 1)).isTrue
         }
@@ -76,7 +76,7 @@ internal class DataFrameTableTest {
     fun valueTable_shouldToggleColumnFixedState() {
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableModelFactory.createTableStructure()))
-        tableComponent.getValueTable().getColumnExpander().let {
+        tableComponent.getValueTable().getColumnResizeBehavior().let {
             it.markFixed(0)
             it.toggleFixed(0)
             it.toggleFixed(1)
@@ -89,7 +89,7 @@ internal class DataFrameTableTest {
     fun valueTable_shouldClearColumnFixedState() {
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableModelFactory.createTableStructure()))
-        tableComponent.getValueTable().getColumnExpander().let {
+        tableComponent.getValueTable().getColumnResizeBehavior().let {
             it.markFixed(0)
             it.clearFixed(0)
             assertThat(it.isFixed(0)).isFalse
@@ -106,7 +106,7 @@ internal class DataFrameTableTest {
     fun valueTable_lastColumnCantMarkedAsFixed() {
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableModelFactory.createTableStructure()))
-        tableComponent.getValueTable().getColumnExpander().let {
+        tableComponent.getValueTable().getColumnResizeBehavior().let {
             val lastColIndex = tableComponent.getValueTable().columnCount - 1
             assertThat(it.isFixed(lastColIndex)).isFalse
             it.markFixed(lastColIndex)

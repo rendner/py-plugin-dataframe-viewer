@@ -43,6 +43,7 @@ import kotlin.math.min
 
 // see styleguide: https://jetbrains.github.io/ui/controls/table/
 private const val MIN_COLUMN_WIDTH = 65
+private const val MAX_COLUMN_WIDTH = Int.MAX_VALUE
 private const val MIN_TABLE_WIDTH = 350
 
 private const val MAX_AUTO_EXPAND_COLUMN_WIDTH = 350
@@ -176,7 +177,7 @@ class DataFrameTable : JScrollPane() {
     }
 }
 
-interface ITableColumnExpander {
+interface IColumnResizeBehavior {
     fun markFixed(viewColumnIndex: Int)
     fun clearFixed(viewColumnIndex: Int)
     fun clearAllFixed()
@@ -184,21 +185,19 @@ interface ITableColumnExpander {
     fun isFixed(viewColumnIndex: Int): Boolean
 }
 
-class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(model), PropertyChangeListener {
+class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(model) {
     /**
     This flag is needed to guarantee that we don't access not yet initialized class properties.
     This is required because [JTable.setModel] is called in the JTable constructor.
     Code inside [setModel] has to take care to not access not yet initialized non-nullable properties.
 
     Example:
-        - The private property "myEmptyText" from [JBTable] is not initialized at this time.
-          The getter of "emptyText" does a "not null"-check before returning the property.
+    - The private property "myEmptyText" from [JBTable] is not initialized at this time.
+    The getter of "emptyText" does a "not null"-check before returning the property.
      */
     private val myBaseClassIsFullyInitialized: Boolean = true
 
-    private var myColumnExpander = MyTableColumnAutoExpander()
-    private var myResizingColumnWasFixed: Boolean = false
-    private var myResizingColumnStartWidth: Int = -1
+    private var myColumnResizeBehavior = MyColumnResizeBehavior()
     private var myModelHasSameDataSource: Boolean = false
 
     init {
@@ -221,37 +220,15 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
 
         registerSortKeyBindings()
         disableProblematicKeyBindings()
-        tableHeader.addPropertyChangeListener(this)
     }
 
-    override fun propertyChange(event: PropertyChangeEvent) {
-        if (event.source == tableHeader) {
-            if (event.propertyName == "resizingColumn") {
-                val newColumn = event.newValue as MyValueTableColumn?
-                val oldColumn = event.oldValue as MyValueTableColumn?
-                if (newColumn == null) {
-                    if (oldColumn != null && (myResizingColumnWasFixed || oldColumn.width != myResizingColumnStartWidth)) {
-                        myColumnExpander.markFixed(convertColumnIndexToView(oldColumn.modelIndex))
-                    }
-                } else {
-                    convertColumnIndexToView(newColumn.modelIndex).let {
-                        myResizingColumnWasFixed = myColumnExpander.isFixed(it)
-                        if (myResizingColumnWasFixed) {
-                            myColumnExpander.clearFixed(it)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fun getColumnExpander(): ITableColumnExpander {
-        return myColumnExpander
+    fun getColumnResizeBehavior(): IColumnResizeBehavior {
+        return myColumnResizeBehavior
     }
 
     override fun prepareRenderer(renderer: TableCellRenderer, row: Int, column: Int): Component {
         return super.prepareRenderer(renderer, row, column).also {
-            myColumnExpander.updateColumnWidthByPreparedRendererComponent(it, column)
+            myColumnResizeBehavior.updateColumnWidthByPreparedRendererComponent(it, column)
         }
     }
 
@@ -262,7 +239,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         }
     }
 
-    private fun createTableColumns(
+    private fun createColumns(
         valueModel: ITableValueDataModel,
         prevTableColumnCache: Map<ColumnCacheKey, MyValueTableColumn>,
     ): List<MyValueTableColumn> {
@@ -271,13 +248,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
             val frameColumnIndex = valueModel.convertToFrameColumnIndex(modelIndex)
             result.add(MyValueTableColumn(modelIndex, frameColumnIndex).apply {
                 prevTableColumnCache[ColumnCacheKey.orgFrameIndex(frameColumnIndex)]?.let { prevColumn ->
-                    headerValue = prevColumn.headerValue
-                    cellRenderer = prevColumn.cellRenderer
-                    hasFixedWidth = prevColumn.hasFixedWidth
-                    width = prevColumn.width
-                    minWidth = prevColumn.minWidth
-                    maxWidth = prevColumn.maxWidth
-                    preferredWidth = prevColumn.preferredWidth
+                    this.copyStateFrom(prevColumn)
                 }
             })
         }
@@ -293,30 +264,32 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     override fun setModel(tableModel: TableModel) {
         if (tableModel !is ITableValueDataModel) throw IllegalArgumentException("The model has to implement ITableValueDataModel.")
 
-        val prevTableColumnCache = mutableMapOf<ColumnCacheKey, MyValueTableColumn>()
+        val prevColumnCache = mutableMapOf<ColumnCacheKey, MyValueTableColumn>()
         val keepSortKeyState = myModelHasSameDataSource && rowSorter?.sortKeys?.isNotEmpty() == true
 
         if (myModelHasSameDataSource) {
             for (column in columnModel.columns) {
                 if (column !is MyValueTableColumn) continue
-                prevTableColumnCache[ColumnCacheKey.orgFrameIndex(column.orgFrameIndex)] = column
-                if (keepSortKeyState) prevTableColumnCache[ColumnCacheKey.modelIndex(column.modelIndex)] = column
+                prevColumnCache[ColumnCacheKey.orgFrameIndex(column.orgFrameIndex)] = column
+                if (keepSortKeyState) prevColumnCache[ColumnCacheKey.modelIndex(column.modelIndex)] = column
             }
         }
 
         super.setModel(tableModel)
 
-        val newColumns = createTableColumns(tableModel, prevTableColumnCache)
+        val newColumns = createColumns(tableModel, prevColumnCache)
         while (columnCount > 0) removeColumn(columnModel.getColumn(0))
         newColumns.forEach { addColumn(it) }
 
         rowSorter = MyExternalDataRowSorter(tableModel).apply {
             if (keepSortKeyState) {
                 rowSorter?.sortKeys?.let { oldSortKeys ->
-                    val newTableColumnCache = newColumns.associateBy { ColumnCacheKey.orgFrameIndex(it.orgFrameIndex) }
+                    val newColumnCache = newColumns.associateBy { ColumnCacheKey.orgFrameIndex(it.orgFrameIndex) }
                     sortKeys = oldSortKeys.mapNotNull {
-                        val orgFrameIndex = prevTableColumnCache[ColumnCacheKey.modelIndex(it.column)]?.orgFrameIndex ?: return@mapNotNull null
-                        val newModelIndex = newTableColumnCache[ColumnCacheKey.orgFrameIndex(orgFrameIndex)]?.modelIndex ?: return@mapNotNull null
+                        val orgFrameIndex = prevColumnCache[ColumnCacheKey.modelIndex(it.column)]?.orgFrameIndex
+                            ?: return@mapNotNull null
+                        val newModelIndex = newColumnCache[ColumnCacheKey.orgFrameIndex(orgFrameIndex)]?.modelIndex
+                            ?: return@mapNotNull null
                         if (newModelIndex == -1) null else SortKey(newModelIndex, it.sortOrder)
                     }
                 }
@@ -324,7 +297,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         }
 
         if (myBaseClassIsFullyInitialized) {
-            myColumnExpander.ensureLastColumnIsNotFixed()
+            myColumnResizeBehavior.ensureLastColumnIsNotFixed()
             emptyText.text = if (rowCount > 0) "loading DataFrame" else "DataFrame is empty"
         }
     }
@@ -351,22 +324,20 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     }
 
     override fun doLayout() {
-        // https://stackoverflow.com/questions/15234691/enabling-auto-resize-of-jtable-only-if-it-fit-viewport
-        if (tableHeader.resizingColumn == null) {
-            autoResizeMode = JTable.AUTO_RESIZE_ALL_COLUMNS
-            super.doLayout()
-            autoResizeMode = JTable.AUTO_RESIZE_OFF
-        } else {
-            // update resized column
-            tableHeader.resizingColumn?.let { it.preferredWidth = it.width }
+        myColumnResizeBehavior.beforeColumnLayout()
 
-            if (scrollableTracksViewportWidth) {
-                // proportionately resize all columns to fit viewport width
-                autoResizeMode = JTable.AUTO_RESIZE_ALL_COLUMNS
+        if (scrollableTracksViewportWidth) {
+            // if the width of all columns is less than the width of the viewport - fill viewport
+            autoResizeMode.let {
+                autoResizeMode = JTable.AUTO_RESIZE_LAST_COLUMN
                 super.doLayout()
-                autoResizeMode = JTable.AUTO_RESIZE_OFF
+                autoResizeMode = it
             }
+        } else {
+            super.doLayout()
         }
+
+        myColumnResizeBehavior.afterColumnLayout()
     }
 
     override fun createLeveledTableHeaderRenderer(): TableCellRenderer {
@@ -398,6 +369,10 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         )
     }
 
+    private fun castedColumnAt(viewColumnIndex: Int): MyValueTableColumn {
+        return columnModel.getColumn(viewColumnIndex) as MyValueTableColumn
+    }
+
     private fun registerSortKeyBindings() {
         getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
             put(KeyStroke.getKeyStroke(KeyEvent.VK_A, 0), "sortColumnAscending")
@@ -421,9 +396,10 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     }
 
     private fun disableProblematicKeyBindings() {
-        getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
-            put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK), "doNothing")
-        }
+        getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+            KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK),
+            "doNothing",
+        )
         actionMap.put("doNothing", DoNothingAction())
     }
 
@@ -456,45 +432,59 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         }
     }
 
-    private inner class MyTableColumnAutoExpander : ITableColumnExpander {
+    private inner class MyColumnResizeBehavior : IColumnResizeBehavior, PropertyChangeListener {
+        private var myResizingColumnWasFixed: Boolean = false
+        private var myResizingColumnStartWidth: Int = -1
 
-        init { installActions() }
+        init {
+            installActions()
+            tableHeader.addPropertyChangeListener(this)
+        }
+
+        fun beforeColumnLayout() {
+            if (columnCount < 1) return
+
+            castedColumnAt(columnCount - 1).let {
+                // try to reduce width of last column
+                // (to shrink back after window width was reduced or when shrinking a large column)
+                it.setMinMaxPreferredWidth(it.autoFitPreferredWidth, it.maxWidth, it.autoFitPreferredWidth)
+            }
+
+            (tableHeader.resizingColumn as MyValueTableColumn?)?.let {
+                // set minWidth temporary to current width to prevent jumping column width during resizing of the viewport
+                // (can happen when width of columns exceed width of viewport and a horizontal scrollbar should be displayed)
+                it.setMinMaxPreferredWidth(it.width, MAX_COLUMN_WIDTH, it.width)
+            }
+        }
+
+        fun afterColumnLayout() {
+            if (columnCount < 1) return
+            (tableHeader.resizingColumn as MyValueTableColumn?)?.let {
+                // remove temporary minWidth
+                it.setMinMaxPreferredWidth(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH, it.width)
+            }
+        }
 
         override fun markFixed(viewColumnIndex: Int) {
-            /*
-            Last column can't be fixed.
-
-            There has to be at least one column which can't be set to a fixed width. That column is used
-            as a buffer to which the remaining width will be applied in case all other columns have a
-            fixed width.
-
-            Otherwise, the fixed columns would not fill the available width of the viewport if the user
-            makes the width of the window wider than the total width of the fixed columns. There would
-            be an empty space to the right side. The same problem occurs when no horizontal scroll bar
-            is visible and the user shrinks one of the fixed columns. Since all columns are fixed, none
-            of the other columns would take the freed space.
-             */
+            // last column can't be adjusted
             if (viewColumnIndex == columnCount - 1) return
-            columnAt(viewColumnIndex).let {
+            castedColumnAt(viewColumnIndex).let {
                 if (!it.hasFixedWidth) {
                     it.hasFixedWidth = true
-                    it.minWidth = it.width
-                    it.maxWidth = it.width
-                    it.preferredWidth = it.width
+                    it.setMinMaxPreferredWidth(it.width, it.width, it.width)
+                    // to repaint the fixed-column indicator
                     tableHeader.repaint()
-                    repaint()
                 }
             }
         }
 
         override fun clearFixed(viewColumnIndex: Int) {
-            columnAt(viewColumnIndex).let {
+            castedColumnAt(viewColumnIndex).let {
                 if (it.hasFixedWidth) {
                     it.hasFixedWidth = false
-                    it.minWidth = MIN_COLUMN_WIDTH
-                    it.maxWidth = Int.MAX_VALUE
+                    it.setMinMaxPreferredWidth(it.autoFitPreferredWidth, MAX_COLUMN_WIDTH, it.autoFitPreferredWidth)
+                    // to repaint the fixed-column indicator
                     tableHeader.repaint()
-                    repaint()
                 }
             }
         }
@@ -512,7 +502,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         }
 
         override fun isFixed(viewColumnIndex: Int): Boolean {
-            return columnAt(viewColumnIndex).hasFixedWidth
+            return castedColumnAt(viewColumnIndex).hasFixedWidth
         }
 
         fun ensureLastColumnIsNotFixed() {
@@ -522,9 +512,8 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         }
 
         fun updateColumnWidthByPreparedRendererComponent(component: Component, viewColumnIndex: Int) {
-            val resizingColumn = tableHeader.resizingColumn
-            if (resizingColumn == null && !isFixed(viewColumnIndex)) {
-                val tableColumn = columnModel.getColumn(viewColumnIndex)
+            if (tableHeader.resizingColumn == null) {
+                val tableColumn = castedColumnAt(viewColumnIndex)
                 val renderer = tableColumn.headerRenderer ?: tableHeader.defaultRenderer
                 val columnHeaderWidth = renderer.getTableCellRendererComponent(
                     this@MyValueTable,
@@ -534,79 +523,119 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
                     -1,
                     viewColumnIndex,
                 ).preferredSize.width + 4
-                tableColumn.preferredWidth = min(
-                    // only expand column - never shrink back
-                    max(
-                        max(columnHeaderWidth, component.preferredSize.width) + 2 * intercellSpacing.width,
-                        tableColumn.preferredWidth,
-                    ),
-                    MAX_AUTO_EXPAND_COLUMN_WIDTH,
+                // only expand column - never shrink back
+                val autoFitPreferredWidth = max(
+                    max(columnHeaderWidth, component.preferredSize.width) + 2 * intercellSpacing.width,
+                    tableColumn.autoFitPreferredWidth,
                 )
+
+                tableColumn.autoFitPreferredWidth = min(autoFitPreferredWidth, MAX_AUTO_EXPAND_COLUMN_WIDTH)
+
+                if (!tableColumn.hasFixedWidth) {
+                    tableColumn.minWidth = tableColumn.autoFitPreferredWidth
+                }
             }
         }
 
-        private fun columnAt(viewColumnIndex: Int): MyValueTableColumn {
-            return columnModel.getColumn(viewColumnIndex) as MyValueTableColumn
+        override fun propertyChange(event: PropertyChangeEvent) {
+            if (event.source == tableHeader) {
+                if (event.propertyName == "resizingColumn") {
+                    val newColumn = event.newValue as MyValueTableColumn?
+                    if (newColumn == null) {
+                        val oldColumn = event.oldValue as MyValueTableColumn? ?: return
+                        if (oldColumn.width != myResizingColumnStartWidth) {
+                            markFixed(convertColumnIndexToView(oldColumn.modelIndex))
+                        } else if (!myResizingColumnWasFixed) {
+                            castedColumnAt(convertColumnIndexToView(oldColumn.modelIndex)).let {
+                                it.setMinMaxPreferredWidth(
+                                    it.autoFitPreferredWidth,
+                                    MAX_COLUMN_WIDTH,
+                                    it.autoFitPreferredWidth
+                                )
+                            }
+                        }
+                    } else {
+                        castedColumnAt(convertColumnIndexToView(newColumn.modelIndex)).let {
+                            myResizingColumnWasFixed = it.hasFixedWidth
+                            // allow to reduce and increase the width
+                            it.setMinMaxPreferredWidth(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH, it.width)
+                        }
+                    }
+                }
+            }
         }
 
         private fun installActions() {
+            val fixedKeyCodes = listOf(KeyEvent.VK_PERIOD)
             installAction(
                 MyToggleFixedForFocusedColumnAction(),
                 "toggleFixedForFocusedColumn",
-                KeyEvent.VK_PERIOD,
-                KeyEvent.SHIFT_DOWN_MASK,
+                fixedKeyCodes,
+                0,
             )
             installAction(
                 MyInvertFixedAction(),
                 "invertFixed",
-                KeyEvent.VK_PERIOD,
-                KeyEvent.CTRL_DOWN_MASK,
+                fixedKeyCodes,
+                KeyEvent.ALT_DOWN_MASK,
             )
             installAction(
                 MyClearAllFixedAction(),
                 "clearAllFixed",
-                KeyEvent.VK_PERIOD,
-                KeyEvent.CTRL_DOWN_MASK or KeyEvent.SHIFT_DOWN_MASK,
+                fixedKeyCodes,
+                KeyEvent.ALT_DOWN_MASK or KeyEvent.CTRL_DOWN_MASK,
             )
+
             val expandBy = 10
+            /*
+            An us-keyboard can't generate a key event for VK_PLUS.
+            A "+" on an us-keyboard is generated by pressing "Shift" + "=".
+            Therefore, the action is also mapped to "=".
+            */
+            val expandKeyCodes = listOf(KeyEvent.VK_PLUS, KeyEvent.VK_EQUALS)
             installAction(
                 MyAdjustFixedWidthAction { min(it + expandBy, MAX_AUTO_EXPAND_COLUMN_WIDTH) },
                 "expandWidthForFocusedColumn",
-                KeyEvent.VK_PLUS,
-                KeyEvent.SHIFT_DOWN_MASK,
+                expandKeyCodes,
+                0,
             )
             installAction(
                 MyAdjustFixedWidthAction { MAX_AUTO_EXPAND_COLUMN_WIDTH },
                 "expandWidthMaxForFocusedColumn",
-                KeyEvent.VK_PLUS,
-                KeyEvent.SHIFT_DOWN_MASK or KeyEvent.CTRL_DOWN_MASK,
+                expandKeyCodes,
+                KeyEvent.ALT_DOWN_MASK,
             )
 
+            /*
+            An us-keyboard can't generate a key event for VK_MINUS.
+            A "-" on an us-keyboard is generated by pressing "Shift" + "_".
+            Therefore, the action is also mapped to "_".
+            */
+            val shrinkKeyCodes = listOf(KeyEvent.VK_MINUS, KeyEvent.VK_UNDERSCORE)
             installAction(
                 MyAdjustFixedWidthAction { max(it - expandBy, MIN_COLUMN_WIDTH) },
                 "shrinkWidthForFocusedColumn",
-                KeyEvent.VK_MINUS,
-                KeyEvent.SHIFT_DOWN_MASK,
+                shrinkKeyCodes,
+                0,
             )
             installAction(
                 MyAdjustFixedWidthAction { MIN_COLUMN_WIDTH },
                 "shrinkWidthMinForFocusedColumn",
-                KeyEvent.VK_MINUS,
-                KeyEvent.SHIFT_DOWN_MASK or KeyEvent.CTRL_DOWN_MASK,
+                shrinkKeyCodes,
+                KeyEvent.ALT_DOWN_MASK,
             )
         }
 
         private fun installAction(
             action: Action,
             key: String,
-            keyCode: Int,
+            keyCodes: List<Int>,
             @MagicConstant(flagsFromClass = java.awt.event.InputEvent::class)
             modifiers: Int,
         ) {
-            getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-                KeyStroke.getKeyStroke(keyCode, modifiers),
-                key,
-            )
+            getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).let { inputMap ->
+                keyCodes.forEach { inputMap.put(KeyStroke.getKeyStroke(it, modifiers), key) }
+            }
             actionMap.put(key, action)
         }
 
@@ -632,21 +661,19 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
             private val newWidthProducer: (width: Int) -> Int,
         ) : AbstractAction() {
             override fun actionPerformed(e: ActionEvent?) {
+                if (columnCount < 1) return
                 columnModel.selectionModel.leadSelectionIndex.let { index ->
-                    if (index != -1) {
-                        val column = columnModel.getColumn(index)
-                        val newWidth = newWidthProducer(column.width)
-                        if (isFixed(index)) {
-                            column.minWidth = newWidth
-                            column.maxWidth = newWidth
+                    if (index >= 0 && index != columnCount - 1) {
+                        castedColumnAt(index).let { column ->
+                            if (column.hasFixedWidth) {
+                                newWidthProducer(column.width).let { column.setMinMaxPreferredWidth(it, it, it) }
+                            } else {
+                                newWidthProducer(column.autoFitPreferredWidth).let {
+                                    column.autoFitPreferredWidth = it
+                                    column.setMinMaxPreferredWidth(it, column.maxWidth, it)
+                                }
+                            }
                         }
-                        // In case of a non-fixed column, the autoFit behavior will automatically
-                        // adjust the width at a later time.
-                        // But it is OK to allow the user to modify it in that case. It can
-                        // be useful when the user has filtered out large values of a specific
-                        // column and wants to shrink the width of a column without setting a fixed width
-                        // to not lose the autoFit feature.
-                        column.preferredWidth = newWidth
                     }
                 }
             }
@@ -658,13 +685,36 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         orgFrameIndex: Int,
         var hasFixedWidth: Boolean = false,
     ) : TableColumn(modelIndex) {
-        init { super.identifier = orgFrameIndex }
+
+        var autoFitPreferredWidth: Int = preferredWidth
+
+        init {
+            super.identifier = orgFrameIndex
+        }
 
         val orgFrameIndex: Int
             get() = getIdentifier() as Int
 
         override fun setIdentifier(identifier: Any?) {
             throw UnsupportedOperationException("Identifier can't be overwritten.")
+        }
+
+        fun setMinMaxPreferredWidth(min: Int, max: Int, preferred: Int) {
+            minWidth = min
+            maxWidth = max
+            preferredWidth = preferred
+            if (width > max || width < min) {
+               setWidth(width)
+            }
+        }
+
+        fun copyStateFrom(source: MyValueTableColumn) {
+            headerValue = source.headerValue
+            cellRenderer = source.cellRenderer
+            hasFixedWidth = source.hasFixedWidth
+            autoFitPreferredWidth = source.autoFitPreferredWidth
+            setMinMaxPreferredWidth(source.minWidth, source.maxWidth, source.preferredWidth)
+            width = source.width
         }
     }
 }
@@ -784,7 +834,7 @@ class MyExternalDataRowSorter(private val model: ITableValueDataModel) : RowSort
 class MyIndexTable(
     private val mainTable: MyValueTable,
     private val maxColumnWidth: Int,
-    model:ITableIndexDataModel,
+    model: ITableIndexDataModel,
 ) : MyTable<ITableIndexDataModel>(model) {
 
     init {

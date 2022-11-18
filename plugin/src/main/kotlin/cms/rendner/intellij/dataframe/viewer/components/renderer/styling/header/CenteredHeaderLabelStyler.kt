@@ -91,7 +91,7 @@ class CenteredHeaderLabelStyler(
 
     private fun paintFixedColumnIndicator(component: Component, table: JTable?, column: Int) {
         if (component is JComponent && table is MyValueTable) {
-            if (table.getColumnExpander().isFixed(column)) {
+            if (table.getColumnResizeBehavior().isFixed(column)) {
                 myFixedColumnIndicator.updateColor(component.foreground)
                 component.border = myFixedColumnIndicator
             }
