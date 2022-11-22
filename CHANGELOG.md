@@ -1,8 +1,49 @@
 # Changelog
 
+## v0.9.0
+- `Released`: 2022-11-22
+- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.4)
+- `Min Required IntelliJ Version`: 2021.3
+
+### Added
+#### Table Filtering
+The table can now be filtered by specifying a Python filter expression.
+A detailed description about filtering can be found [here](./docs/FILTERING.md).
+
+#### Auto Closing
+The dialog is now automatically closed when the debug session is terminated or the viewed `DataFrame` isn't
+reachable anymore by the plugin.
+
+#### Fixed Column Width
+The column width can be changed via shortcuts or by resizing the column.
+You can also mark a column as fixed.
+Marked columns keep their width even if the content would need more space or the width of the table is changed.
+
+#### Truncated Cell Values
+Cell values are now truncated in case they are longer than 300 chars.
+In the past the full cell value was displayed.
+
+Truncated values can be longer than 300 chars.
+Their length depends on the data type of the value. 
+Lists, for example, always have a closing `]`, even if the shortened value exceeds 300 characters.
+
+### Removed
+- deprecated way of data fetching (HTML string) and the feature switch to re-enable it
+- dependencies to parse HTML and CSS strings
+- internal helper project `projects/extract_computed_css` used to validate computed css
+
+### Fixed
+- no data fetching from `DataFrame` after continue from breakpoint
+- false positive when validating styling functions in combination with hidden rows/columns
+
+### Other
+- plugin logo added to the notifications sent by the plugin
+- name of viewed variable is displayed as dialog title
+- number of rows and columns of the `DataFrame` are displayed below the table
+
 ## v0.8.0
 - `Released`: 2022-07-25
-- `Supported pandas Versions`: 1.1.x - 1.4.x (was tested with 1.4.3)
+- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.3)
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added
@@ -10,7 +51,7 @@
 The table columns are now sortable. The multi-column sorting supports up to 9 columns.
 Sorting can be performed by mouse click on the table column headers or by keyboard shortcuts.
 
-A more detailed description about sorting can be found [here](./docs/SORTING.md)
+A detailed description about sorting can be found [here](./docs/SORTING.md).
 
 #### Documentation of Keyboard Shortcuts
 The plugin already had some very useful keyboard shortcuts.
@@ -27,7 +68,7 @@ These are now documented: [Keyboard Shortcuts](./docs/KEYBOARD_SHORTCUTS.md)
 
 ## v0.7.1
 - `Released`: 2022-07-03
-- `Supported pandas Versions`: 1.1.x - 1.4.x (was tested with 1.4.3)
+- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.3)
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Changed
@@ -48,6 +89,9 @@ Alternatively, press `Ctrl+Alt+S`.
 Under the section `Tools` you will find the entry `Styled DataFrame Viewer`.
 The feature switch is called: `Use new data structure when loading chunks`
 
+### Deprecated
+- fetching data from Python as HTML strings
+
 ### Fixed
 - exclude custom styling functions registered via `Styler.applymap` from styling-function validation
   - these styling functions take a scalar and do not get a chunk at runtime
@@ -55,7 +99,7 @@ The feature switch is called: `Use new data structure when loading chunks`
 
 ## v0.7.0
 - `Released`: 2022-06-24
-- `Supported pandas Versions`: 1.1.x - 1.4.x (was tested with 1.4.3)
+- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.3)
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added
@@ -71,7 +115,7 @@ The feature is currently in experimental status. Please let me know if anything 
 Curious? [Here we go](./docs/VALIDATING_STYLE_FUNCTIONS.md)
 
 ### Fixed
-- small table cell height (cells now have an extra to and bottom padding)
+- small table cell height (cells now have an extra top and bottom padding)
 
 ### Other
 - fix Intellij-Plugin-API warnings
@@ -79,7 +123,7 @@ Curious? [Here we go](./docs/VALIDATING_STYLE_FUNCTIONS.md)
 
 ## v0.6.0
 - `Released`: 2022-02-23
-- `Supported pandas Versions`: 1.1.x - 1.4.x (was tested with 1.4.1)
+- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.1)
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added
@@ -124,7 +168,7 @@ In case of an incompatibility problem I will release a new version.
 
 ## v0.5.1
 - `Released`: 2021-12-01
-- `Supported pandas Versions`: 1.1.x - 1.3.x (was tested with 1.3.4)
+- `Supported pandas Versions`: 1.1.x - 1.3.x (tested with 1.3.4)
 - `Min Required IntelliJ Version`: 2020.3
 
 The source code of the plugin is finally available.
@@ -135,7 +179,7 @@ This was planned for quite a while, but it took some time to improve the testabi
 - upgrade dependency `jsoup` to 1.14.3
 ## v0.5.0
 - `Released`: 2021-09-19
-- `Supported pandas Versions`: 1.1.x - 1.3.x (was tested with 1.3.3)
+- `Supported pandas Versions`: 1.1.x - 1.3.x (tested with 1.3.3)
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added

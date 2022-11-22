@@ -16,9 +16,10 @@ from typing import Callable, List
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
+from plugin_code.html_props_generator import HTMLPropsGenerator
 from plugin_code.html_props_table_builder import HTMLPropsTableRowElement, HTMLPropsTable
 from plugin_code.html_props_table_generator import HTMLPropsTableGenerator
-from plugin_code.patched_styler import PatchedStyler
+from plugin_code.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_styler_html_string import create_combined_html_string
 from tests.helpers.asserts.table_extractor import Element
 
@@ -65,10 +66,9 @@ def _create_combined_html_props(
 ) -> HTMLPropsTable:
     styler = df.style
     init_styler_func(styler)
-    patched_styler = PatchedStyler(styler)
-    region = patched_styler.get_context().get_region_of_visible_frame()
-    return HTMLPropsTableGenerator(patched_styler.get_context()).compute_table_from_chunks(
-        region,
+    ctx = PatchedStylerContext(styler)
+    return HTMLPropsTableGenerator(HTMLPropsGenerator(ctx)).compute_table_from_chunks(
+        ctx.get_region_of_visible_frame(),
         rows_per_chunk,
         cols_per_chunk,
     )

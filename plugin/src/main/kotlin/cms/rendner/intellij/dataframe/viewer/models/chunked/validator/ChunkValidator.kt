@@ -41,18 +41,10 @@ class ChunkValidator(
     private var details: List<StyleFunctionDetails>? = null
 
     fun validate(region: ChunkRegion) {
-        val result = patchedStyler.evaluateValidateStyleFunctions(
-            region.firstRow,
-            region.firstColumn,
-            region.numberOfRows,
-            region.numberOfColumns,
-            validationStrategy,
-        )
+        val result = patchedStyler.evaluateValidateStyleFunctions(region, validationStrategy)
         if (result.isNotEmpty()) {
             ensureDetails()
-            details?.let {
-                problemHandler.handleValidationProblems(region, validationStrategy, result, it)
-            }
+            details?.let { problemHandler.handleValidationProblems(region, validationStrategy, result, it) }
         }
     }
 

@@ -108,7 +108,6 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
 
     private fun assertTableModels(actual: ITableDataModel, expected: ITableDataModel) {
         assertThat(actual.rowCount).isEqualTo(expected.rowCount)
-        assertThat(actual.rowCount).isEqualTo(expected.rowCount)
         assertThat(actual.columnCount).isEqualTo(expected.columnCount)
         assertThat(actual.getLegendHeaders()).isEqualTo(expected.getLegendHeaders())
         assertThat(actual.isLeveled()).isEqualTo(expected.isLeveled())

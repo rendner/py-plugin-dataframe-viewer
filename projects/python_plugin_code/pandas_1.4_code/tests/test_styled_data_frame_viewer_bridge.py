@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2022 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -16,58 +16,50 @@ import pandas as pd
 from plugin_code.patched_styler import PatchedStyler
 from plugin_code.styled_data_frame_viewer_bridge import StyledDataFrameViewerBridge
 
-df = pd.DataFrame()
-
-
-def test_check_returns_true():
-    assert StyledDataFrameViewerBridge.check()
+df = pd.DataFrame.from_dict({
+    "col_0": [4, 4, 4, 1, 4],
+    "col_1": [1, 4, 4, 1, 2],
+})
 
 
 def test_create_patched_styler_for_df():
-    try:
-        assert isinstance(StyledDataFrameViewerBridge.create_patched_styler(df), PatchedStyler)
-    finally:
-        StyledDataFrameViewerBridge.delete_all()
+    assert isinstance(StyledDataFrameViewerBridge.create_patched_styler(df), PatchedStyler)
 
 
 def test_create_patched_styler_for_styler():
-    try:
-        assert isinstance(StyledDataFrameViewerBridge.create_patched_styler(df.style), PatchedStyler)
-    finally:
-        StyledDataFrameViewerBridge.delete_all()
+    assert isinstance(StyledDataFrameViewerBridge.create_patched_styler(df.style), PatchedStyler)
 
 
-def test_created_patched_styler_are_added_to_internal_cache():
-    refs = [
-        StyledDataFrameViewerBridge.create_patched_styler(df),
-        StyledDataFrameViewerBridge.create_patched_styler(df.style),
-    ]
-    try:
-        assert len(StyledDataFrameViewerBridge.patched_styler_refs) == len(refs)
-    finally:
-        StyledDataFrameViewerBridge.delete_all()
+def test_create_fingerprint_two_different_styler_but_same_df_have_same_fingerprint():
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(df.style.highlight_max())
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(df.style.highlight_min())
+    assert f1 == f2
+
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(df.style)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(df.style)
+    assert f1 == f2
 
 
-def test_deleted_patched_styler_are_removed_from_internal_cache():
-    refs = [
-        StyledDataFrameViewerBridge.create_patched_styler(df),
-        StyledDataFrameViewerBridge.create_patched_styler(df.style),
-    ]
-    [StyledDataFrameViewerBridge.delete_patched_styler(ref) for ref in refs]
-    try:
-        assert len(StyledDataFrameViewerBridge.patched_styler_refs) == 0
-    finally:
-        StyledDataFrameViewerBridge.delete_all()
+def test_create_fingerprint_same_df_have_same_fingerprint():
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(df)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(df)
+    assert f1 == f2
+
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(df)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(df.style.data)
+    assert f1 == f2
 
 
-def test_delete_all_clears_internal_cache():
-    refs = [
-        StyledDataFrameViewerBridge.create_patched_styler(df),
-        StyledDataFrameViewerBridge.create_patched_styler(df.style),
-    ]
-    try:
-        assert len(StyledDataFrameViewerBridge.patched_styler_refs) == len(refs)
-        StyledDataFrameViewerBridge.delete_all()
-        assert len(StyledDataFrameViewerBridge.patched_styler_refs) == 0
-    finally:
-        StyledDataFrameViewerBridge.delete_all()
+def test_create_fingerprint_different_df_have_different_fingerprint():
+    a = pd.DataFrame.from_dict({"A": [1]})
+    b = pd.DataFrame.from_dict({"A": [1]})
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(a)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(b)
+    assert f1 != f2
+
+    a = pd.DataFrame.from_dict({"A": [1]})
+    b = pd.DataFrame.from_dict({"A": [1]}).style
+    f1 = StyledDataFrameViewerBridge.create_fingerprint(a)
+    f2 = StyledDataFrameViewerBridge.create_fingerprint(b)
+    assert f1 != f2
+

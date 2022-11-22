@@ -64,7 +64,10 @@ def test_should_not_fail_if_same_styling_and_value():
     )
 
 
-@pytest.mark.xfail(reason=f"create_and_assert_patched_styler_html_string can't unroll rowspan/colspan")
+# Test is only present to document that this can't be tested because unrolling of rowspan/colspan
+# isn't implemented in create_and_assert_patched_styler_html_string.
+# Existing implementation from pandas 1.3 plugin code can't be used because pandas 1.2 generates another html string.
+@pytest.mark.xfail(reason=f"unrolling of rowspan/colspan not implemented in create_and_assert_patched_styler_html_string")
 @pytest.mark.parametrize(
     "rows_per_chunk, cols_per_chunk", [
         (1, 2),

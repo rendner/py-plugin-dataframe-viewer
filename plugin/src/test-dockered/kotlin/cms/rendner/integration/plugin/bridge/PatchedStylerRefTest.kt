@@ -16,8 +16,10 @@
 package cms.rendner.integration.plugin.bridge
 
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
-import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
+import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionDetails
+import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionValidationProblem
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
@@ -31,22 +33,22 @@ import org.junit.jupiter.api.Test
  * Tests that all provided methods can be called on Python side.
  * The functionality of the methods is tested in the Python plugin-code projects.
  */
-@Order(2)
+@Order(3)
 internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
     fun evaluateTableStructure_shouldBeCallable() {
         runWithPatchedStyler {
-            assertThat(it.evaluateTableStructure()).isEqualTo(
-                TableStructure(
-                    rowsCount = 2,
-                    columnsCount = 2,
-                    rowLevelsCount = 1,
-                    columnLevelsCount = 1,
-                    hideRowHeader = false,
-                    hideColumnHeader = false,
-                )
-            )
+            it.evaluateTableStructure().let { ts ->
+                assertThat(ts.orgRowsCount).isEqualTo(2)
+                assertThat(ts.orgColumnsCount).isEqualTo(2)
+                assertThat(ts.rowsCount).isEqualTo(2)
+                assertThat(ts.columnsCount).isEqualTo(2)
+                assertThat(ts.rowLevelsCount).isEqualTo(1)
+                assertThat(ts.columnLevelsCount).isEqualTo(1)
+                assertThat(ts.hideRowHeader).isEqualTo(false)
+                assertThat(ts.hideColumnHeader).isEqualTo(false)
+            }
         }
     }
 
@@ -75,40 +77,12 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
         runWithPatchedStyler {
             assertThat(
                 it.evaluateValidateStyleFunctions(
-                    0,
-                    0,
-                    2,
-                    2,
+                    ChunkRegion(0, 0, 2, 2),
                     ValidationStrategyType.DISABLED,
                 )
             ).isEqualTo(
-                emptyList<StyleFunctionDetails>()
+                emptyList<StyleFunctionValidationProblem>()
             )
-        }
-    }
-
-    @Test
-    fun evaluateRenderChunk_shouldBeCallable() {
-        runWithPatchedStyler {
-            assertThat(
-                it.evaluateRenderChunk(
-                    0,
-                    0,
-                    2,
-                    2,
-                    excludeRowHeader = false,
-                    excludeColumnHeader = false,
-                )
-            ).contains("<table", "</table>")
-        }
-    }
-
-    @Test
-    fun evaluateRenderUnpatched_shouldBeCallable() {
-        runWithPatchedStyler {
-            assertThat(
-                it.evaluateRenderUnpatched()
-            ).contains("<table", "</table>")
         }
     }
 
@@ -117,10 +91,7 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
         runWithPatchedStyler {
             assertThat(
                 it.evaluateComputeChunkHTMLPropsTable(
-                    0,
-                    0,
-                    2,
-                    2,
+                    ChunkRegion(0, 0, 2, 2),
                     excludeRowHeader = false,
                     excludeColumnHeader = false,
                 )
@@ -141,15 +112,17 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     fun evaluateSetSortCriteria_shouldBeCallable() {
         runWithPatchedStyler {
             assertThatNoException().isThrownBy {
-                it.evaluateSetSortCriteria(listOf(0), listOf(true))
+                it.evaluateSetSortCriteria(SortCriteria(listOf(0), listOf(true)))
             }
         }
     }
 
     private fun runWithPatchedStyler(block: (patchedStyler: IPyPatchedStylerRef) -> Unit) {
-        runWithPluginCodeBridge(createDataFrameSnippet()) { codeBridge: PythonCodeBridge, valueEvaluator: IPluginPyValueEvaluator ->
-            val styler = valueEvaluator.evaluate("df.style.applymap(lambda x: 'color: red')")
-            block(codeBridge.createPatchedStyler(styler))
+        runPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { evaluator: IPluginPyValueEvaluator, _ ->
+            block(PythonCodeBridge.createPatchedStyler(
+                evaluator,
+                "df.style.applymap(lambda x: 'color: red')",
+            ))
         }
     }
 
@@ -160,5 +133,7 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
                     "col_0": [0, 1],
                     "col_1": [2, 3],
                 })
+                
+                breakpoint()
             """.trimIndent()
 }

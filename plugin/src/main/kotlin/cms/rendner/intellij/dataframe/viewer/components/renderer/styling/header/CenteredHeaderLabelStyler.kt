@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header
 
+import cms.rendner.intellij.dataframe.viewer.components.MyValueTable
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.IRendererComponentStyler
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.ExpandableItemsHandler
@@ -23,12 +24,15 @@ import java.awt.*
 import java.awt.font.FontRenderContext
 import java.awt.geom.Rectangle2D
 import javax.swing.*
+import javax.swing.border.Border
+import javax.swing.border.MatteBorder
 
 class CenteredHeaderLabelStyler(
     private val isRowHeader: Boolean = false
 ) : IRendererComponentStyler {
 
     private val mySortArrowIconRenderer = MyFastSortArrowIconRenderer()
+    private val myFixedColumnIndicator = MyFixedColumnBorder()
 
     override fun applyStyle(
         component: Component,
@@ -78,13 +82,25 @@ class CenteredHeaderLabelStyler(
         if (rowOrColumnSelected) {
             try {
                 UIManager.getColor("TableHeader.separatorColor")?.let { component.background = it }
-            } catch(ignore: NullPointerException) {}
+            } catch (ignore: NullPointerException) {
+            }
+        }
+
+        paintFixedColumnIndicator(component, table, column)
+    }
+
+    private fun paintFixedColumnIndicator(component: Component, table: JTable?, column: Int) {
+        if (component is JComponent && table is MyValueTable) {
+            if (table.getColumnResizeBehavior().isFixed(column)) {
+                myFixedColumnIndicator.updateColor(component.foreground)
+                component.border = myFixedColumnIndicator
+            }
         }
     }
 
     private fun getPreparedSortArrowIconRenderer(component: Component, table: JTable?, column: Int): Icon {
         table?.rowSorter.let {
-            if(it == null) mySortArrowIconRenderer.setValues(component, SortOrder.UNSORTED)
+            if (it == null) mySortArrowIconRenderer.setValues(component, SortOrder.UNSORTED)
             else {
                 val modelIndex = table?.convertColumnIndexToModel(column) ?: column
                 val sortKeyIndex = it.sortKeys.indexOfFirst { k -> k.column == modelIndex }
@@ -102,7 +118,42 @@ class CenteredHeaderLabelStyler(
         return mySortArrowIconRenderer
     }
 
-    private class MyFastSortArrowIconRenderer: Icon {
+    private class MyFixedColumnBorder : Border {
+
+        private var myOrgColor: Color? = null
+        private val myEmptyInsets = Insets(0, 0, 0, 0)
+        private val myDelegate = MutableMatteBorder(1, 0, 0, 0, Color.PINK)
+
+        fun updateColor(color: Color) {
+            if (myOrgColor != color) {
+                myOrgColor = color
+                myDelegate.updateColor(ColorUtil.withAlpha(color, .7))
+            }
+        }
+
+        override fun paintBorder(c: Component?, g: Graphics?, x: Int, y: Int, width: Int, height: Int) {
+            // make it 1 pixel shorter to not paint over the vertical grid lines between the columns
+            myDelegate.paintBorder(c, g, x, y, width - 1, height)
+        }
+
+        override fun getBorderInsets(c: Component?): Insets {
+            // exclude border from component height
+            return myEmptyInsets
+        }
+
+        override fun isBorderOpaque(): Boolean {
+            return myDelegate.isBorderOpaque
+        }
+
+        private class MutableMatteBorder(top: Int, left: Int, bottom: Int, right: Int, matteColor: Color) :
+            MatteBorder(top, left, bottom, right, matteColor) {
+            fun updateColor(color: Color) {
+                this.color = color
+            }
+        }
+    }
+
+    private class MyFastSortArrowIconRenderer : Icon {
         private val myInsets = Insets(2, 4, 2, 4)
         private val myGapBetweenTextAndArrow = 2
         private val myFontRenderContext = FontRenderContext(null, true, false)
@@ -116,7 +167,13 @@ class CenteredHeaderLabelStyler(
         private var myCachedForeground: Color? = null
         private var myCachedBackground: Color? = null
 
-        private data class IconInfo(val iconWidth: Int, val iconHeight: Int, val arrowPolygons: List<Polygon>, val color: Color)
+        private data class IconInfo(
+            val iconWidth: Int,
+            val iconHeight: Int,
+            val arrowPolygons: List<Polygon>,
+            val color: Color
+        )
+
         private val myIconInfoCache: MutableMap<SortOrder, IconInfo> = mutableMapOf()
         private var myCurrentIconInfo: IconInfo? = null
 
@@ -128,10 +185,11 @@ class CenteredHeaderLabelStyler(
             if (myCachedLabelFont != component.font) {
                 clearIconInfo = true
                 myCachedLabelFont = component.font
-                myFont = component.font.deriveFont(java.lang.Float.max(11f, (component.font.size * .6).toFloat())).also {
-                    mySingleDigitTextBounds = it.getStringBounds("0", myFontRenderContext).toRectangle()
-                    myArrowPolygonSize = computeArrowPolygonSize()
-                }
+                myFont =
+                    component.font.deriveFont(java.lang.Float.max(11f, (component.font.size * .6).toFloat())).also {
+                        mySingleDigitTextBounds = it.getStringBounds("0", myFontRenderContext).toRectangle()
+                        myArrowPolygonSize = computeArrowPolygonSize()
+                    }
             }
             if (myCachedForeground != component.foreground && myCachedBackground != component.background) {
                 clearIconInfo = true
@@ -163,9 +221,9 @@ class CenteredHeaderLabelStyler(
                 x += mySingleDigitTextBounds.width + myGapBetweenTextAndArrow
 
                 iconInfo.arrowPolygons.forEach {
-                    it.translate(x , y)
+                    it.translate(x, y)
                     g2d.fillPolygon(it)
-                    it.translate(-x , -y)
+                    it.translate(-x, -y)
                 }
             } finally {
                 g2d.dispose()

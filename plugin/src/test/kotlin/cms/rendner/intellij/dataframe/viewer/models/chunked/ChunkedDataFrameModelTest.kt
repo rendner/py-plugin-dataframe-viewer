@@ -15,13 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
-import cms.rendner.intellij.dataframe.viewer.models.HeaderLabel
-import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
-import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
-import cms.rendner.intellij.dataframe.viewer.models.StringValue
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataResultHandler
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
+import cms.rendner.intellij.dataframe.viewer.models.chunked.helper.TableModelFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
@@ -29,99 +23,107 @@ import org.junit.jupiter.api.Test
 internal class ChunkedDataFrameModelTest {
 
     private val chunkSize = ChunkSize(2, 2)
+    private val tableModelFactory = TableModelFactory(chunkSize)
+    private lateinit var model: TableModelFactory.RecordingModel
 
-    private lateinit var model: ChunkedDataFrameModel
-    private lateinit var dataProvider: ChunkDataProvider
+    private fun setup(tableStructure: TableStructure, frameColumnOrgIndexList: List<Int>? = null) {
+        model = tableModelFactory.createModel(tableStructure, "0", frameColumnOrgIndexList).apply {
+            enableDataFetching(true)
+        }
+    }
 
+    @Test
+    fun doesNotFetchIfDataFetchingIsDisabled() {
+        setup(tableModelFactory.createTableStructure())
 
-    private fun setup(tableStructure: TableStructure, loaderDisposeCallback: (() -> Unit)? = null) {
-        dataProvider = ChunkDataProvider(ChunkDataAnswerBuilder())
-        model = ChunkedDataFrameModel(
-            tableStructure,
-            FakeChunkLoader(dataProvider, loaderDisposeCallback),
-            chunkSize,
-        )
+        model.getValueDataModel().enableDataFetching(false)
+        model.getIndexDataModel().enableDataFetching(false)
+
+        model.getValueDataModel().getValueAt(0, 0)
+        model.getIndexDataModel().getValueAt(0)
+
+        assertThat(model.recordedLoadRequests.size).isEqualTo(0)
     }
 
     @Test
     fun doesNotFetchChunkIfValueForIndexIsRequested() {
-        setup(createTableStructure())
+        setup(tableModelFactory.createTableStructure())
 
         model.getIndexDataModel().getValueAt(0)
 
         // only "model.getValueDataModel().getValueAt(r, c)" fetches data
-        assertThat(dataProvider.recordedRequests.size).isEqualTo(0)
+        assertThat(model.recordedLoadRequests.size).isEqualTo(0)
     }
 
     @Test
     fun doesFetchChunkIfValueIsRequested() {
-        setup(createTableStructure())
+        setup(tableModelFactory.createTableStructure())
 
         model.getValueDataModel().getValueAt(0, 0)
 
-        assertThat(dataProvider.recordedRequests.size).isEqualTo(1)
+        assertThat(model.recordedLoadRequests.size).isEqualTo(1)
     }
 
     @Test
     fun doesNotRefetchChunkIfValueIsRequestedTwice() {
-        setup(createTableStructure())
+        setup(tableModelFactory.createTableStructure())
 
         model.getValueDataModel().getValueAt(0, 0)
         model.getValueDataModel().getValueAt(0, 0)
 
-        assertThat(dataProvider.recordedRequests.size).isEqualTo(1)
+        assertThat(model.recordedLoadRequests.size).isEqualTo(1)
     }
 
     @Test
     fun doesNotRefetchChunkIfValueFromSameChunkIsRequested() {
-        setup(createTableStructure())
+        setup(tableModelFactory.createTableStructure())
 
         model.getValueDataModel().getValueAt(0, 0)
         model.getValueDataModel().getValueAt(chunkSize.rows - 1, chunkSize.columns - 1)
 
-        assertThat(dataProvider.recordedRequests.size).isEqualTo(1)
+        assertThat(model.recordedLoadRequests.size).isEqualTo(1)
     }
 
     @Test
     fun doesFetchHeadersIfNotHidden() {
-        setup(createTableStructure())
+        setup(tableModelFactory.createTableStructure())
 
         model.getValueDataModel().getValueAt(0, 0)
 
-        val loadRequest = dataProvider.recordedRequests.first()
+        val loadRequest = model.recordedLoadRequests.first()
         assertThat(loadRequest.excludeRowHeaders).isFalse
         assertThat(loadRequest.excludeColumnHeaders).isFalse
     }
 
     @Test
     fun doesNotFetchRowHeadersIfRowHeaderIsHidden() {
-        setup(createTableStructure(hideRowHeader = true))
+        setup(tableModelFactory.createTableStructure(hideRowHeader = true))
 
         model.getValueDataModel().getValueAt(0, 0)
 
-        val loadRequest = dataProvider.recordedRequests.first()
+        val loadRequest = model.recordedLoadRequests.first()
         assertThat(loadRequest.excludeRowHeaders).isTrue
         assertThat(loadRequest.excludeColumnHeaders).isFalse
     }
 
     @Test
     fun doesNotFetchColumnHeadersIfColumnHeaderIsHidden() {
-        setup(createTableStructure(hideColumnHeader = true))
+        setup(tableModelFactory.createTableStructure(hideColumnHeader = true))
 
         model.getValueDataModel().getValueAt(0, 0)
 
-        val loadRequest = dataProvider.recordedRequests.first()
+        val loadRequest = model.recordedLoadRequests.first()
         assertThat(loadRequest.excludeRowHeaders).isFalse
         assertThat(loadRequest.excludeColumnHeaders).isTrue
     }
 
     @Test
     fun doesNotFetchHeadersIfAllHeadersAreHidden() {
-        setup(createTableStructure(hideRowHeader = true, hideColumnHeader = true))
+        setup(tableModelFactory.createTableStructure(hideRowHeader = true, hideColumnHeader = true))
 
         model.getValueDataModel().getValueAt(0, 0)
 
-        val loadRequest = dataProvider.recordedRequests.first()
+        val loadRequest = model.recordedLoadRequests.first()
         assertThat(loadRequest.excludeRowHeaders).isTrue
         assertThat(loadRequest.excludeColumnHeaders).isTrue
     }
@@ -129,7 +131,7 @@ internal class ChunkedDataFrameModelTest {
     @Test
     fun doesThrowIndexOutOfBoundsExceptionForInvalidIndices() {
         setup(
-            createTableStructure(
+            tableModelFactory.createTableStructure(
                 hideRowHeader = false,
                 hideColumnHeader = false,
                 rowCount = 0,
@@ -151,7 +153,7 @@ internal class ChunkedDataFrameModelTest {
 
     @Test
     fun doesOnlyLoadHeadersWhenHeadersAreNotAlreadyLoaded() {
-        val tableStructure = createTableStructure()
+        val tableStructure = tableModelFactory.createTableStructure()
         setup(tableStructure)
 
         // fetch all values
@@ -162,7 +164,7 @@ internal class ChunkedDataFrameModelTest {
             }
         }
 
-        dataProvider.recordedRequests.let { requests ->
+        model.recordedLoadRequests.let { requests ->
             assertThat(requests).isNotEmpty
 
             requests.forEach {
@@ -183,7 +185,7 @@ internal class ChunkedDataFrameModelTest {
 
     @Test
     fun doesIncludeHeadersIfNoOtherChunkHasLoadedHeadersBefore() {
-        val tableStructure = createTableStructure()
+        val tableStructure = tableModelFactory.createTableStructure()
         setup(tableStructure)
 
         // load only the last chunk
@@ -192,8 +194,8 @@ internal class ChunkedDataFrameModelTest {
             tableStructure.columnsCount - 1
         )
 
-        assertThat(dataProvider.recordedRequests).hasSize(1)
-        dataProvider.recordedRequests.first().let {
+        assertThat(model.recordedLoadRequests).hasSize(1)
+        model.recordedLoadRequests.first().let {
             assertThat(it.excludeRowHeaders).isFalse
             assertThat(it.excludeColumnHeaders).isFalse
         }
@@ -201,7 +203,7 @@ internal class ChunkedDataFrameModelTest {
 
     @Test
     fun doesExcludeHeadersIfConfigured() {
-        val tableStructure = createTableStructure(hideRowHeader = true, hideColumnHeader = true)
+        val tableStructure = tableModelFactory.createTableStructure(hideRowHeader = true, hideColumnHeader = true)
         setup(tableStructure)
 
         // fetch all values
@@ -212,92 +214,10 @@ internal class ChunkedDataFrameModelTest {
             }
         }
 
-        assertThat(dataProvider.recordedRequests).isNotEmpty
-        dataProvider.recordedRequests.forEach {
+        assertThat(model.recordedLoadRequests).isNotEmpty
+        model.recordedLoadRequests.forEach {
             assertThat(it.excludeRowHeaders).isTrue
             assertThat(it.excludeColumnHeaders).isTrue
-        }
-    }
-
-    private fun createTableStructure(
-        hideRowHeader: Boolean = false,
-        hideColumnHeader: Boolean = false,
-        rowCount: Int = chunkSize.rows * 4,
-        columnCount: Int = chunkSize.columns * 4,
-    ): TableStructure {
-        return TableStructure(
-            rowCount,
-            columnCount,
-            1,
-            1,
-            hideRowHeader,
-            hideColumnHeader,
-        )
-    }
-
-    private class FakeChunkLoader(
-        val chunkDataProvider: ChunkDataProvider,
-        val disposeCallback: (() -> Unit)?
-    ) : IChunkDataLoader {
-        private var resultHandler: IChunkDataResultHandler? = null
-
-        override fun loadChunk(request: LoadRequest) {
-            chunkDataProvider.getData(request)?.let {
-                resultHandler?.onChunkLoaded(request, it)
-            }
-        }
-
-        override fun setSortCriteria(sortCriteria: SortCriteria) {
-            NotImplementedError("Sorting isn't support by this implementation.")
-        }
-
-        override fun setResultHandler(resultHandler: IChunkDataResultHandler) {
-            this.resultHandler = resultHandler
-        }
-
-        override fun isAlive() = true
-        override fun dispose() {
-            disposeCallback?.let { it() }
-        }
-    }
-
-    private class ChunkDataProvider(
-        private val answerBuilder: ChunkDataAnswerBuilder? = null
-    ) {
-        val recordedRequests: MutableList<LoadRequest> = mutableListOf()
-        fun getData(request: LoadRequest): ChunkData? {
-            recordedRequests.add(request)
-            return answerBuilder?.createAnswer(request)
-        }
-    }
-
-    private class ChunkDataAnswerBuilder {
-
-        fun createAnswer(request: LoadRequest): ChunkData {
-            val chunkRegion = request.chunkRegion
-            return ChunkData(
-                ChunkHeaderLabels(
-                    LegendHeaders(),
-                    createHeaderLabels(if (request.excludeColumnHeaders) 0 else chunkRegion.numberOfColumns),
-                    createHeaderLabels(if (request.excludeRowHeaders) 0 else chunkRegion.numberOfRows)
-                ),
-                createValues(chunkRegion)
-            )
-        }
-
-        private fun createValues(chunkRegion: ChunkRegion): ChunkValues {
-            val value = StringValue("col")
-            val row = ChunkValuesRow(List(chunkRegion.numberOfColumns) { value })
-            return ChunkValues(List(chunkRegion.numberOfRows) { row })
-        }
-
-        private fun createHeaderLabels(size: Int): List<IHeaderLabel> {
-            return if (size == 0) {
-                emptyList()
-            } else {
-                val header = HeaderLabel()
-                return List(size) { header }
-            }
         }
     }
 }

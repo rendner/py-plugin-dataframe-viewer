@@ -16,8 +16,9 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ChunkValidator
-import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
+import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.shutdownExecutorSilently
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
@@ -36,20 +37,15 @@ import java.util.concurrent.TimeUnit
  * from the event dispatch thread (EDT).
  *
  * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
- * @param loadNewDataStructure flag to switch between old and new data structure.
- * The old one is an HTML string which has to be parsed to extract the element and style information.
- * The new one is an object which describes the required HTML properties - it is easier to process.
  * @param chunkValidator the validator to validate the generated HTML data for a chunk
  * @param errorHandler the error handler. All errors during the data fetching are forwarded to this handler.
  */
 class AsyncChunkDataLoader(
     chunkEvaluator: IChunkEvaluator,
-    loadNewDataStructure: Boolean,
     chunkValidator: ChunkValidator?,
     private val errorHandler: IChunkDataLoaderErrorHandler,
 ) : AbstractChunkDataLoader(
     chunkEvaluator,
-    loadNewDataStructure,
     chunkValidator,
 ) {
 
@@ -77,6 +73,8 @@ class AsyncChunkDataLoader(
 
     /**
      * Adds a load request to an internal waiting queue.
+     * Load requests are ignored if already disposed or if no [IChunkDataResultHandler] is registered.
+     *
      * The added requests are processed according to the LIFO principle (last-in-first-out).
      * Entries of the waiting queue are processed as soon as the next chunk can be fetched.
      *
@@ -137,19 +135,6 @@ class AsyncChunkDataLoader(
         }
     }
 
-    override fun handleStyledValues(ctx: LoadChunkContext, chunkValues: ChunkValues) {
-        ApplicationManager.getApplication().invokeLater {
-            myResultHandler?.let { resultHandler ->
-                if (ctx.sortCriteria == null && !mySortCriteriaChanged || ctx.sortCriteria == mySortCriteria) {
-                    resultHandler.onStyledValuesProcessed(ctx.request, chunkValues)
-                }
-                // "handleStyledValues" will be removed in a feature release - therefore it is OK to not call the
-                // "request rejected" method if sort criteria was changed - the requester clears all cached values
-                // anyway on sort criteria change
-            }
-        }
-    }
-
     private fun loadRequestDone() {
         ApplicationManager.getApplication().invokeLater {
             myActiveRequest = null
@@ -168,7 +153,10 @@ class AsyncChunkDataLoader(
 
                 submitFetchChunkTask(ctx, myExecutorService).whenComplete { _, throwable ->
                     if (throwable != null) {
-                        val unwrapped = if (throwable is CompletionException) throwable.cause!! else throwable
+                        var unwrapped = if (throwable is CompletionException) throwable.cause!! else throwable
+                        if (unwrapped !is ChunkDataLoaderException) {
+                            unwrapped = ChunkDataLoaderException("Failed to fetch data.", unwrapped)
+                        }
                         handleFetchTaskError(it, unwrapped)
                     }
                     loadRequestDone()
@@ -177,28 +165,20 @@ class AsyncChunkDataLoader(
         }
     }
 
-    private fun handleFetchTaskError(loadRequest: LoadRequest, throwable: Throwable) {
+    private fun handleFetchTaskError(loadRequest: LoadRequest, exception: ChunkDataLoaderException) {
         ApplicationManager.getApplication().invokeLater {
             if (myIsAliveFlag) {
-                errorHandler.handleChunkDataError(loadRequest.chunkRegion, throwable)
-                if (isCausedByDisconnectException(throwable)) {
+                errorHandler.handleChunkDataError(loadRequest.chunkRegion, exception)
+                if (isCausedByDisconnectException(exception)) {
                     myIsAliveFlag = false
                     logger.info("Debugger disconnected, setting 'isAlive' to false.")
                 }
-                myResultHandler?.onError(loadRequest, throwable)
+                myResultHandler?.onChunkFailed(loadRequest)
             }
         }
     }
 
-    private fun isCausedByDisconnectException(throwable: Throwable): Boolean {
-        val visitedExceptions = HashSet<Throwable>()
-        var current: Throwable? = throwable
-        while (true) {
-            if (current == null) return false
-            if (visitedExceptions.contains(current)) return false
-            if (current is PluginPyDebuggerException) return current.isDisconnectException()
-            visitedExceptions.add(current)
-            current = current.cause
-        }
+    private fun isCausedByDisconnectException(exception: ChunkDataLoaderException): Boolean {
+        return exception.cause.let { it is EvaluateException && it.isCausedByDisconnectException() }
     }
 }

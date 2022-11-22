@@ -20,7 +20,6 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkHeaderLabels
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValues
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkValuesRow
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.css.CSSValueConverter
 import cms.rendner.intellij.dataframe.viewer.python.bridge.HTMLPropsTable
 import cms.rendner.intellij.dataframe.viewer.python.bridge.RowElementType
 import com.intellij.util.SmartList

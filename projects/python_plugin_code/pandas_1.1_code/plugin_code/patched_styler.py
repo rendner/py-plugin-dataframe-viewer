@@ -23,13 +23,15 @@ from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
 import json
-from pandas.io.formats.style import Styler
 from dataclasses import dataclass
 from typing import Optional, List, Any
+import numpy as np
 
 
 @dataclass(frozen=True)
 class TableStructure:
+    org_rows_count: int
+    org_columns_count: int
     rows_count: int
     columns_count: int
     row_levels_count: int
@@ -52,14 +54,15 @@ class StyleFunctionDetails:
 
 class PatchedStyler:
 
-    def __init__(self, styler: Styler):
-        self.__context = PatchedStylerContext(styler)
-        self.__html_props_generator = HTMLPropsGenerator(self.__context)
-        self.__table_generator = HTMLPropsTableGenerator(self.__context)
-        self.__style_functions_validator = StyleFunctionsValidator(self.__context)
+    def __init__(self, context: PatchedStylerContext):
+        self.__context: PatchedStylerContext = context
 
-    def get_context(self) -> PatchedStylerContext:
+    def internal_get_context(self) -> PatchedStylerContext:
         return self.__context
+
+    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> str:
+        part = self.__context.get_org_indices_of_visible_columns(part_start, max_columns)
+        return np.array2string(part, separator=', ').replace('\n', '')
 
     @staticmethod
     def to_json(data: Any) -> str:
@@ -72,9 +75,8 @@ class PatchedStyler:
                                  cols: int,
                                  validation_strategy: Optional[ValidationStrategyType] = None,
                                  ) -> List[StyleFunctionValidationProblem]:
-        if validation_strategy is not None:
-            self.__style_functions_validator.set_validation_strategy_type(validation_strategy)
-        return self.__style_functions_validator.validate(Region(first_row, first_col, rows, cols))
+        return StyleFunctionsValidator(self.__context, validation_strategy) \
+            .validate(Region(first_row, first_col, rows, cols))
 
     def set_sort_criteria(self,
                           by_column_index: Optional[List[int]] = None,
@@ -90,60 +92,26 @@ class PatchedStyler:
                                        exclude_row_header: bool = False,
                                        exclude_col_header: bool = False,  # unused in this version
                                        ) -> HTMLPropsTable:
-        return self.__table_generator.compute_chunk_table(
+        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).compute_chunk_table(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
         )
 
-    def compute_unpatched_html_props_table(self) -> HTMLPropsTable:
-        return self.__table_generator.compute_unpatched_table()
-
-    def render_chunk(self,
-                     first_row: int,
-                     first_col: int,
-                     rows: int,
-                     cols: int,
-                     exclude_row_header: bool = False,
-                     exclude_column_header: bool = False,  # unused in this version
-                     ) -> str:
-        html_props = self.__html_props_generator.compute_chunk_props(
-            region=Region(first_row, first_col, rows, cols),
-            exclude_row_header=exclude_row_header,
-        )
-        styler = self.__context.get_styler()
-        return styler.template.render(
-            **html_props,
-            encoding="utf-8",
-            sparse_columns=False,
-            sparse_index=False,
-        )
-
-    def render_unpatched(self) -> str:
-        # This method deliberately does not use the "html_props_generator" but the original
-        # "Styler::render" method to create the html string.
-        #
-        # Method is only used in unit tests or to create test data for the plugin
-        # therefore it is save to change potential configured values
-        styler = self.__context.get_styler()
-        styler.uuid = ''
-        styler.uuid_len = 0
-        styler.cell_ids = False
-        # bug in pandas 1.x: we have to specify the "uuid" as arg
-        return styler.render(
-            encoding="utf-8",
-            uuid="",
-            sparse_columns=False,
-            sparse_index=False,
-        )
+    def internal_compute_unpatched_html_props_table(self) -> HTMLPropsTable:
+        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).internal_compute_unpatched_table()
 
     def get_table_structure(self) -> TableStructure:
         visible_frame = self.__context.get_visible_frame()
         styler = self.__context.get_styler()
+        org_rows_count = len(styler.data.index)
+        org_columns_count = len(styler.data.columns)
         rows_count = len(visible_frame.index)
         columns_count = len(visible_frame.columns)
         if rows_count == 0 or columns_count == 0:
             rows_count = columns_count = 0
         return TableStructure(
+            org_rows_count=org_rows_count,
+            org_columns_count=org_columns_count,
             rows_count=rows_count,
             columns_count=columns_count,
             row_levels_count=visible_frame.index.nlevels,

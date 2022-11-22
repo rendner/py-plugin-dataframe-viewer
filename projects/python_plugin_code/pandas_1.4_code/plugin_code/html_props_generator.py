@@ -11,11 +11,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from plugin_code.styler_todo import StylerTodo
 from plugin_code.patched_styler_context import PatchedStylerContext, Region, IndexTranslator
 
 # == copy after here ==
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Optional
 from collections.abc import Mapping
 from pandas.io.formats.style import Styler
 
@@ -95,18 +95,34 @@ class _HTMLPropsIndexAdjuster:
 
 
 class HTMLPropsGenerator:
-    def __init__(self, styler_context: PatchedStylerContext):
+    def __init__(self,
+                 styler_context: PatchedStylerContext,
+                 todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
+                 ):
         self.__styler_context: PatchedStylerContext = styler_context
+        self.__todos_filter: Optional[Callable[[StylerTodo], bool]] = todos_filter
 
-    def compute_unpatched_props(self) -> dict:
+    def internal_compute_unpatched_props(self) -> dict:
+        # this method should only be called from the unit tests or when generating test data
+
+        if self.__styler_context.is_filtered():
+            raise NotImplementedError("Context has a filter criteria defined. Unpatched props are not filtered.")
+
         # the styler._copy behavior was "broken" before pandas 1.3 (some parts were missing)
         # to ensure this doesn't happen again - use the original instance instead of a copy
         copy = self.__styler_context.get_styler()
+        # adjust temporary to get a stable output
+        old_values = [copy.uuid, copy.uuid_len, copy.cell_ids]
         copy.uuid = ''
         copy.uuid_len = 0
         copy.cell_ids = False
-        copy._compute()
-        return copy._translate(sparse_index=False, sparse_cols=False)
+        try:
+            copy._compute()
+            return copy._translate(sparse_index=False, sparse_cols=False)
+        finally:
+            copy.uuid = old_values[0]
+            copy.uuid_len = old_values[1]
+            copy.cell_ids = old_values[2]
 
     def compute_chunk_props(self,
                             region: Region,
@@ -123,7 +139,7 @@ class HTMLPropsGenerator:
                 ]
 
         # The apply/applymap params are patched to not operate outside the chunk bounds.
-        chunk_aware_todos = self.__styler_context.create_patched_todos(chunk)
+        chunk_aware_todos = self.__styler_context.create_patched_todos(chunk, self.__todos_filter)
 
         # Compute the styling for the chunk by operating on the original DataFrame.
         # The computed styler contains only entries for the cells of the chunk,

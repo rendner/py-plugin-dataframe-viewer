@@ -44,31 +44,26 @@ class ApplicationSettings : Configurable {
     }
 
     override fun reset() {
-        super.reset()
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
             it.validationStrategyType = settings.validationStrategyType
-            it.fsLoadNewDataStructure = settings.fsLoadNewDataStructure
+            it.fsUseFilterInputFromInternalApi = settings.fsUseFilterInputFromInternalApi
         }
     }
 
     override fun isModified(): Boolean {
-        var modified = false
-        mySettingsComponent?.let {
+        return mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
-            modified = it.validationStrategyType !== settings.validationStrategyType
-            if (!modified) {
-                modified = it.fsLoadNewDataStructure != settings.fsLoadNewDataStructure
-            }
-        }
-        return modified
+            it.validationStrategyType !== settings.validationStrategyType ||
+            it.fsUseFilterInputFromInternalApi != settings.fsUseFilterInputFromInternalApi
+        } ?: false
     }
 
     override fun apply() {
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
             settings.validationStrategyType = it.validationStrategyType
-            settings.fsLoadNewDataStructure = it.fsLoadNewDataStructure
+            settings.fsUseFilterInputFromInternalApi = it.fsUseFilterInputFromInternalApi
         }
     }
 

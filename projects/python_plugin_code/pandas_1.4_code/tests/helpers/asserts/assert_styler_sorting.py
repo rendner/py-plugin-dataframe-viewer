@@ -20,13 +20,13 @@ from pandas.io.formats.style import Styler
 from plugin_code.html_props_table_builder import HTMLPropsTable, HTMLPropsTableRowElement
 from plugin_code.patched_styler import PatchedStyler
 from plugin_code.patched_styler_context import Region
+from plugin_code.styled_data_frame_viewer_bridge import StyledDataFrameViewerBridge
 
 """
 Q: How can we test that a styled chunk is correctly sorted?
     note:
         -> the feature "style and sort afterwards" doesn't exist in pandas
-        -> "sort first and style afterwards" doesn't work because sorting could break subsets specified as IndexSlice
-            => a continues IndexSlice couldn't exist after sorting
+        -> "sort first and style afterwards" doesn't work see test case "test_sort_values_before_styling_breaks_styling"
 
     idea:
         - all cell values have to be unique
@@ -53,23 +53,23 @@ def create_and_assert_patched_styler_sorting(
     # create: expected styled
     styler = df.style
     init_styler_func(styler)
-    patched_styler = PatchedStyler(styler)
-    styled_table = patched_styler.compute_unpatched_html_props_table()
+    patched_styler = StyledDataFrameViewerBridge.create_patched_styler(styler)
+    styled_table = patched_styler.internal_compute_unpatched_html_props_table()
     expected_styled_dict = _map_cell_elements_by_unique_display_value(styled_table)
 
     # create: expected sorted
     sorted_styler = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending).style
     if init_expected_sorted_styler_func is not None:
         init_expected_sorted_styler_func(sorted_styler)
-    sorted_patched_styler = PatchedStyler(sorted_styler)
+    sorted_patched_styler = StyledDataFrameViewerBridge.create_patched_styler(sorted_styler)
     expected_sorted_dict = _map_cell_elements_by_unique_display_value(
-        sorted_patched_styler.compute_unpatched_html_props_table(),
+        sorted_patched_styler.internal_compute_unpatched_html_props_table(),
     )
 
-    # create: actual styled and sorted'
+    # create: actual styled and sorted
     chunk_styler = df.style
     init_styler_func(chunk_styler)
-    patched_chunk_styler = PatchedStyler(chunk_styler)
+    patched_chunk_styler = StyledDataFrameViewerBridge.create_patched_styler(chunk_styler)
     patched_chunk_styler.set_sort_criteria(sort_by_column_index, sort_ascending)
     actual_dict = _map_cell_elements_by_unique_display_value(
         _build_combined_chunk_table(
@@ -131,7 +131,7 @@ def _build_combined_chunk_table(
         cols_per_chunk: int,
 ):
     combined_table: Optional[HTMLPropsTable] = None
-    region = patched_chunk_styler.get_context().get_region_of_visible_frame()
+    region = patched_chunk_styler.internal_get_context().get_region_of_visible_frame()
 
     for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
         chunk_props_table = patched_chunk_styler.compute_chunk_html_props_table(

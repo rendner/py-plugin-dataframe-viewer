@@ -17,7 +17,7 @@ from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
 from plugin_code.html_props_validator import HTMLPropsValidator
-from plugin_code.patched_styler import PatchedStyler
+from plugin_code.patched_styler_context import PatchedStylerContext
 
 
 def create_and_assert_patched_styler_html_props(
@@ -28,7 +28,7 @@ def create_and_assert_patched_styler_html_props(
 ):
     styler = df.style
     init_styler_func(styler)
-    patched_styler = PatchedStyler(styler)
+    ctx = PatchedStylerContext(styler)
 
-    result = HTMLPropsValidator(patched_styler.get_context()).validate(rows_per_chunk, cols_per_chunk)
+    result = HTMLPropsValidator(ctx).test_only_validate(rows_per_chunk, cols_per_chunk)
     assert result.actual == result.expected

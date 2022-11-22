@@ -16,8 +16,7 @@ import pytest
 from pandas import MultiIndex, DataFrame, Series
 from pandas.io.formats.style import Styler
 
-from plugin_code.patched_styler import PatchedStyler
-from plugin_code.patched_styler_context import Region
+from plugin_code.patched_styler_context import Region, PatchedStylerContext, FilterCriteria
 from plugin_code.style_functions_validator import StyleFunctionValidationProblem, StyleFunctionsValidator, \
     ValidationStrategyType
 
@@ -37,9 +36,7 @@ df = DataFrame.from_dict({
 
 
 def _create_validator(style: Styler, validation_strategy_type: ValidationStrategyType) -> StyleFunctionsValidator:
-    validator = StyleFunctionsValidator(PatchedStyler(style).get_context())
-    validator.set_validation_strategy_type(validation_strategy_type)
-    return validator
+    return StyleFunctionsValidator(PatchedStylerContext(style), validation_strategy_type)
 
 
 @pytest.mark.parametrize("validation_strategy_type", [ValidationStrategyType.FAST, ValidationStrategyType.PRECISION])
@@ -191,3 +188,25 @@ def test_detect_invalid_styling_functions(validation_strategy_type: ValidationSt
         assert len(result) == 2
         assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
         assert result[1] == StyleFunctionValidationProblem(index=2, reason="EXCEPTION", message="I don't care")
+
+
+def test_does_not_fail_if_rows_and_cols_are_hidden():
+    style_hidden = df.style.background_gradient(axis=0)\
+        .hide(axis="index", subset=df.index[2:4])\
+        .hide(axis="columns", subset=df.columns[2:4])
+
+    validator = _create_validator(style_hidden, ValidationStrategyType.PRECISION)
+    result = validator.validate(Region(0, 0, len(df.index), len(df.columns)))
+    assert len(result) == 0
+
+
+def test_does_not_fail_if_rows_and_cols_are_filtered_out():
+    filter_frame = DataFrame(index=df.index[1:], columns=df.columns[1:])
+    style_hidden = df.style.background_gradient(axis=0)
+
+    validator = StyleFunctionsValidator(
+        PatchedStylerContext(style_hidden, FilterCriteria.from_frame(filter_frame)),
+        ValidationStrategyType.PRECISION,
+    )
+    result = validator.validate(Region(0, 0, len(df.index), len(df.columns)))
+    assert len(result) == 0

@@ -19,6 +19,7 @@ import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
 import cms.rendner.intellij.dataframe.viewer.models.Value
 import cms.rendner.intellij.dataframe.viewer.python.bridge.HTMLPropsTable
+import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -27,24 +28,10 @@ import kotlinx.serialization.Serializable
  */
 interface IChunkEvaluator {
     /**
-     * Evaluates the HTML representation for a chunk of a pandas DataFrame.
-     *
-     * Excluding already fetched headers reduces the amount of data which to be fetched and parsed.
-     *
-     * @param chunkRegion the region of the data to evaluate
-     * @param excludeRowHeaders if result should not include the headers of the rows
-     * @param excludeColumnHeaders if result should not include the headers of the columns
-     * @return returns a HtML string like pandas "Styler::to_html"
-     *
-     * [pandas-docs - Styler.to_html](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.to_html.html)
-     */
-    fun evaluate(chunkRegion: ChunkRegion, excludeRowHeaders: Boolean, excludeColumnHeaders: Boolean): String
-
-    /**
      * Evaluates the HTML properties for a chunk of a pandas DataFrame.
      *
      * Pandas generates HTML properties to populate an HTML template when a styler is rendered to HTML.
-     * The Python plugin code transforms these HTML properties into an easier usable data structure.
+     * The Python plugin code transforms these HTML properties into an easier processable data structure.
      *
      * Excluding already fetched headers reduces the amount of data which to be fetched and parsed.
      *
@@ -52,12 +39,20 @@ interface IChunkEvaluator {
      * @param excludeRowHeaders if result should not include the headers of the rows
      * @param excludeColumnHeaders if result should not include the headers of the columns
      * @return returns a table like structure, of HTML properties, similar to the evaluated chunk.
+     * @throws EvaluateException in case the evaluation fails.
      */
-    fun evaluateHTMLProps(chunkRegion: ChunkRegion, excludeRowHeaders: Boolean, excludeColumnHeaders: Boolean): HTMLPropsTable
+    @Throws(EvaluateException::class)
+    fun evaluateHTMLProps(
+        chunkRegion: ChunkRegion,
+        excludeRowHeaders: Boolean,
+        excludeColumnHeaders: Boolean
+    ): HTMLPropsTable
 
     /**
      * Applies the sort criteria to the styled pandas DataFrame.
+     * @throws EvaluateException in case the evaluation fails.
      */
+    @Throws(EvaluateException::class)
     fun setSortCriteria(sortCriteria: SortCriteria)
 }
 
@@ -69,6 +64,13 @@ interface IChunkValues {
  * The values of a row, without header.
  */
 data class ChunkValuesRow(val values: List<Value>)
+
+/**
+ * Temporary values of a row, without header, until real data is fetched.
+ */
+data class ChunkValuesPlaceholder(private val placeholder: Value) : IChunkValues {
+    override fun value(rowIndexInChunk: Int, columnIndexInChunk: Int) = placeholder
+}
 
 /**
  * The values of a chunk.
@@ -112,7 +114,7 @@ data class ChunkRegion(
  */
 data class ChunkData(
     val headerLabels: ChunkHeaderLabels,
-    val values: ChunkValues
+    val values: IChunkValues
 )
 
 /**
@@ -126,15 +128,19 @@ data class ChunkSize(val rows: Int, val columns: Int)
 /**
  * Describes the table structure of a pandas DataFrame.
  *
- * @param rowsCount number of rows
- * @param columnsCount number of columns
- * @param rowLevelsCount number of headers which build the label/index of a row, number >= 0.
- * @param columnLevelsCount number of headers which build the label of a column, number >= 0.
+ * @param orgRowsCount number of rows of the original unfiltered DataFrame
+ * @param orgColumnsCount number of visible columns of the original unfiltered DataFrame
+ * @param rowsCount number of rows in the DataFrame
+ * @param columnsCount number of columns in the DataFrame
+ * @param rowLevelsCount number of headers which build the label/index of a row, number >= 0
+ * @param columnLevelsCount number of headers which build the label of a column, number >= 0
  * @param hideRowHeader is true when no row-header should be displayed
  * @param hideColumnHeader is true when no column-header should be displayed
  */
 @Serializable
 data class TableStructure(
+    @SerialName("org_rows_count") val orgRowsCount: Int,
+    @SerialName("org_columns_count") val orgColumnsCount: Int,
     @SerialName("rows_count") val rowsCount: Int,
     @SerialName("columns_count") val columnsCount: Int,
     @SerialName("row_levels_count") val rowLevelsCount: Int,
@@ -142,13 +148,6 @@ data class TableStructure(
     @SerialName("hide_row_header") val hideRowHeader: Boolean,
     @SerialName("hide_column_header") val hideColumnHeader: Boolean
 )
-
-class MutableSortCriteria(
-    val byIndex: MutableList<Int> = mutableListOf(),
-    val ascending: MutableList<Boolean> = mutableListOf(),
-) {
-    fun toSortCriteria() = SortCriteria(byIndex, ascending)
-}
 
 /**
  * Describes the sort criteria for a pandas DataFrame.

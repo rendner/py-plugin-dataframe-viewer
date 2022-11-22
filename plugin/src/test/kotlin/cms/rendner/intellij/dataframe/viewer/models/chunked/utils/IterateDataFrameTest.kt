@@ -18,42 +18,42 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.utils
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
-import kotlin.test.assertFailsWith
 
 internal class IterateDataFrameTest {
 
     @Test
     fun negativeRowsInFrame_shouldThrowException() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             iterateDataFrame(-100, 100, ChunkSize(10, 10)).firstOrNull()
         }
     }
 
     @Test
     fun negativeColumnsInFrame_shouldThrowException() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             iterateDataFrame(100, -100, ChunkSize(10, 10)).firstOrNull()
         }
     }
 
     @Test
     fun negativeChunkSizeRows_shouldThrowException() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             iterateDataFrame(100, 100, ChunkSize(-10, 10)).firstOrNull()
         }
     }
 
     @Test
     fun negativeChunkSizeColumns_shouldThrowException() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             iterateDataFrame(100, 100, ChunkSize(10, -10)).firstOrNull()
         }
     }
 
     @Test
     fun zeroChunkSize_shouldThrowException() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             iterateDataFrame(100, 100, ChunkSize(0, 0)).firstOrNull()
         }
     }

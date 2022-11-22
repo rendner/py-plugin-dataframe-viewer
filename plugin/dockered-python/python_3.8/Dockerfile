@@ -15,7 +15,10 @@ RUN \
     ;do \
         cd "$i" \
         && pipenv sync \
+        # link python_helpers from WORKDIR
+        && echo PYTHONPATH=/usr/src/app/python_helpers/ > .env \
         && cd - \
     ;done
 
 COPY content/merge_into_pipenv_environments/ pipenv_environments/
+COPY content/python_helpers/ python_helpers/

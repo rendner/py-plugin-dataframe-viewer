@@ -1,5 +1,6 @@
 # HTML From Styler
 This directory contains projects, separated by the supported pandas version, for generating test data for the plugin.
+Previously the data was exported as HTML, but exports now JSON.
 
 These projects can also be used to verify that the plugin can interact with the PyCharm debugger.
 
@@ -50,14 +51,8 @@ Running the `export_data/main.py` via the PyCharm debugger, started from the plu
 
 #### Generated Output
 The following files are created for each pandas `Styler` instance listed in `export_test_data`:
-- `expected.html`
-    - contains the HTML as returned by pandas `Styler.render()`
 - `expected.json`
     - contains the HTML props (simplified data structure)
-- multiple `r<X>_c<Y>.html` files
-    - each one contains the HTML of one chunk as fetched by the plugin
-    - `<X>` index of first row of the chunk
-    - `<Y>` index of first column of the chunk
 - multiple `r<X>_c<Y>.json` files
     - each one contains the HTML props of one chunk as fetched by the plugin
     - `<X>` index of first row of the chunk

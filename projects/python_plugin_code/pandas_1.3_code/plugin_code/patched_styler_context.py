@@ -19,8 +19,9 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, Callable, Any
 from dataclasses import dataclass
 import numpy as np
-from pandas import DataFrame
+from pandas import DataFrame, Index
 from pandas.io.formats.style import Styler
+from pandas.io.formats.style_render import non_reducing_slice
 
 
 class IndexTranslator(ABC):
@@ -74,32 +75,67 @@ class Region:
             rows_processed += rows
 
 
+@dataclass(frozen=True)
+class SortCriteria:
+    by_column: Optional[List[int]] = None
+    ascending: Optional[List[bool]] = None
+
+    def is_empty(self) -> bool:
+        return self.by_column is None or len(self.by_column) == 0
+
+    def __eq__(self, other):
+        if isinstance(other, SortCriteria):
+            def _equals(s: Optional[List[Any]], o: Optional[List[Any]]) -> bool:
+                # None and [] are interpreted as "no sorting"
+                s_len = 0 if s is None else len(s)
+                o_len = 0 if o is None else len(o)
+                return (s_len + o_len == 0) or s == o
+
+            return _equals(self.by_column, other.by_column) and _equals(self.ascending, other.ascending)
+        return False
+
+
+@dataclass(frozen=True)
+class FilterCriteria:
+    index: Optional[Index] = None
+    columns: Optional[Index] = None
+
+    @staticmethod
+    def from_frame(frame: Optional[DataFrame]):
+        return None if frame is None else FilterCriteria(frame.index, frame.columns)
+
+    def is_empty(self) -> bool:
+        return self.index is None and self.columns is None
+
+    def __eq__(self, other):
+        if isinstance(other, FilterCriteria):
+            def _equals(s: Optional[Index], o: Optional[Index]) -> bool:
+                if s is None and o is None:
+                    return True
+                return s is not None and o is not None and s.equals(o)
+            return _equals(self.columns, other.columns) and _equals(self.index, other.index)
+        return False
+
+
 class PatchedStylerContext:
-    def __init__(self, styler: Styler, org_context: Any = None):
+    def __init__(self, styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
         self.__styler: Styler = styler
-        self.__styler_todos: Optional[List[StylerTodo]] = None
-        self.__sort_by_column_index: Optional[List[int]] = None
-        self.__sort_ascending: Optional[List[bool]] = None
+        self.__styler_todos: List[StylerTodo] = [StylerTodo.from_tuple(t) for t in styler._todo]
+        self.__sort_criteria: SortCriteria = SortCriteria()
+        self.__filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
 
-        if isinstance(org_context, PatchedStylerContext):
-            # don't copy "self.__styler_todos" (it's on purpose)
-            self.__visible_frame: DataFrame = org_context.__visible_frame
-            self.__visible_region = org_context.__visible_region
-            self.__sort_by_column_index = org_context.__sort_by_column_index
-            self.__sort_ascending = org_context.__sort_ascending
-        else:
-            self.__visible_frame: DataFrame = self.__sort_frame(self.__calculate_visible_frame(styler))
-            self.__visible_region = Region(0, 0, len(self.__visible_frame.index), len(self.__visible_frame.columns))
+        self.__recompute_visible_frame()
 
-    def new_context_with_copied_styler(self):
-        styler_copy = self.__styler.data.style._copy(deepcopy=True)
-        return PatchedStylerContext(styler_copy, self)
+    def is_filtered(self):
+        return not self.__filter_criteria.is_empty()
 
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
-        if self.__sort_by_column_index != sort_by_column_index or self.__sort_ascending != sort_ascending:
-            self.__sort_by_column_index = sort_by_column_index
-            self.__sort_ascending = sort_ascending
-            self.__visible_frame = self.__sort_frame(self.__calculate_visible_frame(self.__styler))
+        self.__sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
+        self.__recompute_visible_frame()
+
+    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> np.ndarray:
+        part = self.__visible_frame.columns[part_start:part_start + max_columns]
+        return self.__styler.columns.get_indexer_for(part)
 
     def get_region_of_visible_frame(self) -> Region:
         return self.__visible_region
@@ -129,30 +165,54 @@ class PatchedStylerContext:
             self.__styler_todos = [StylerTodo.from_tuple(t) for t in self.__styler._todo]
         return self.__styler_todos
 
-    def create_patched_todos(self, chunk: DataFrame) -> List[Tuple[Callable, tuple, dict]]:
-        return TodosPatcher().patch_todos_for_chunk(self.get_styler_todos(), self.__styler.data, chunk)
+    def create_patched_todos(self,
+                             chunk: DataFrame,
+                             todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
+                             ) -> List[Tuple[Callable, tuple, dict]]:
+        all_todos = self.get_styler_todos()
+        filtered_todos = all_todos if todos_filter is None else list(filter(todos_filter, all_todos))
+        return TodosPatcher().patch_todos_for_chunk(filtered_todos, self.__styler.data, chunk)
 
     def get_row_index_translator_for_chunk(self, chunk: DataFrame, chunk_region: Region) -> IndexTranslator:
-        if self.__sort_by_column_index is None and len(self.__styler.hidden_rows) == 0:
+        if self.__sort_criteria.is_empty() and self.__filter_criteria.index is None and len(
+                self.__styler.hidden_rows) == 0:
             return _OffsetIndexTranslator(chunk_region.first_row)
         return _SequenceIndexTranslator(self.__styler.index.get_indexer_for(chunk.index))
 
     def get_column_index_translator_for_chunk(self, chunk: DataFrame, chunk_region: Region) -> IndexTranslator:
-        if self.__sort_by_column_index is None and len(self.__styler.hidden_columns) == 0:
+        if self.__filter_criteria.columns is None and len(self.__styler.hidden_columns) == 0:
             return _OffsetIndexTranslator(chunk_region.first_col)
         return _SequenceIndexTranslator(self.__styler.columns.get_indexer_for(chunk.columns))
 
+    def __recompute_visible_frame(self):
+        self.__visible_frame = self.__sort_frame(
+            self.__filter_frame(self.__frame_without_hidden_rows_and_cols(self.__styler)),
+        )
+        self.__visible_region = Region(0, 0, len(self.__visible_frame.index), len(self.__visible_frame.columns))
+
     def __sort_frame(self, frame: DataFrame) -> DataFrame:
-        if self.__sort_by_column_index is None:
+        if self.__sort_criteria.is_empty():
             return frame
-        ascending = True if self.__sort_ascending is None else self.__sort_ascending
+        sc = self.__sort_criteria
         return frame.sort_values(
-            by=[frame.columns[i] for i in self.__sort_by_column_index],
-            ascending=ascending,
+            by=[frame.columns[i] for i in sc.by_column],
+            ascending=True if sc.ascending is None or len(sc.ascending) == 0 else sc.ascending,
         )
 
+    def __filter_frame(self, frame: DataFrame) -> DataFrame:
+        if self.__filter_criteria.is_empty():
+            return frame
+        else:
+            fc = self.__filter_criteria
+            index_intersection = frame.index if fc.index is None else frame.index.intersection(fc.index)
+            column_intersection = frame.columns if fc.columns is None else frame.columns.intersection(fc.columns)
+            subset = index_intersection, column_intersection
+            subset = slice(None) if subset is None else subset
+            subset = non_reducing_slice(subset)
+            return frame.loc[subset]
+
     @staticmethod
-    def __calculate_visible_frame(styler: Styler) -> DataFrame:
+    def __frame_without_hidden_rows_and_cols(styler: Styler) -> DataFrame:
         if len(styler.hidden_rows) == 0 and len(styler.hidden_columns) == 0:
             return styler.data
         else:

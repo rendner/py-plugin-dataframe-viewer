@@ -44,7 +44,7 @@ class ApplicationSettingsService : PersistentStateComponent<ApplicationSettingsS
     data class MyState (
         @OptionTag(converter = MyValidationStrategyTypeConverter::class)
         var validationStrategyType: ValidationStrategyType = ValidationStrategyType.DISABLED,
-        var fsLoadNewDataStructure: Boolean = true,
+        var fsUseFilterInputFromInternalApi: Boolean = true,
     )
 
     override fun getState(): MyState {

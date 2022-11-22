@@ -36,8 +36,9 @@ def test_sort_values_before_styling_breaks_styling():
     # note: extra space in front of color name (formatting bug in pandas 1.2)
     assert "background-color:  yellow;" in styler_asc.render()
 
-    # values get sorted - there will be no continues index slice with the indices 2,3,4
-    # -> this proofs that sorting can't be done before the styling
+    # values get sorted - there will be no continues rows with the indices 2,3,4
+    # -> df.sort_values(by=['col_0'], ascending=False).loc[IndexSlice[2:4]] is a DataFrame with 0 rows
+    # -> sorting can't be done before the styling
     styler_asc = df.sort_values(by=['col_0'], ascending=False).style.highlight_min(subset=IndexSlice[2:4])
     # note: extra space in front of color name (formatting bug in pandas 1.2)
     assert "background-color:  yellow;" not in styler_asc.render()

@@ -23,4 +23,12 @@ class EvaluateException(
         const val EXEC_FALLBACK_ERROR_MSG = "Statements could not be executed."
         const val EVAL_FALLBACK_ERROR_MSG = "Expression could not be evaluated."
     }
+
+    fun isCausedByDisconnectException(): Boolean {
+        return cause?.isDisconnectException() == true
+    }
+
+    fun isCausedByProcessIsRunningException(): Boolean {
+        return cause?.isProcessIsRunningException() == true
+    }
 }

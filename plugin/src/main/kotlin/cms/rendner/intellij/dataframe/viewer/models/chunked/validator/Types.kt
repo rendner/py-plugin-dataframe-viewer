@@ -72,7 +72,7 @@ enum class ValidationStrategyType {
     companion object {
         fun valueOfOrDisabled(value: String): ValidationStrategyType {
             return try {
-                ValidationStrategyType.valueOf(value.toUpperCase())
+                ValidationStrategyType.valueOf(value.uppercase())
             } catch (ignore:IllegalArgumentException) {
                 DISABLED
             }

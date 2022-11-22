@@ -1,7 +1,5 @@
 # Validating Style Functions
-
-> This is currently an experimental feature. Please report any problem (create an issue).
-> This will help to improve the quality and stability of this feature.
+> New in version 0.7.0.
 
 As mentioned in [README.md](../README.md#handle-chunks-in-custom-styles) the user has to take some extra care to
 ensure that custom styling functions behave correctly when applied via `Styler.apply`. 
@@ -50,39 +48,13 @@ A short video to demo the feature, taken from an earlier PoC, can be found here:
 ## Configure Validation
 Validation is **disabled** by default.
 
-> The plugin settings are global and apply to all existing projects of the current IntelliJ IDEA version.
-
-To configure the validation you have to open the settings dialog, select *IntelliJ IDEA | Preferences* for macOS or *File | Settings* for Windows and Linux.
-Alternatively, press `Ctrl+Alt+S`. 
-
-Under the section `Tools` you will find the entry `Styled DataFrame Viewer`.
-
-There are two different strategies to validate the styling functions of a styled `DataFrame`.
-If the performance is good enough for you, I would recommend to use the strategy `Precision`.
-
-> Changing the validation strategy only affects viewer-dialogs opened afterwards, viewer-dialogs already opened use the strategy that was configured when the dialog was opened.
-
-### Strategy: Precision
-Divides the fetched chunk into 4 smaller parts, by bisecting the chunk horizontally AND vertically.
-For each part and styling function an internal html representation is generated and combined. 
-The combined result is compared against the internal html representation of the chunk for the current checked styling function.
-
-### Strategy: Fast
-Divides the fetched chunk into 2 smaller parts, by alternately bisecting the chunk horizontally OR vertically.
-For each part and styling function an internal html representation is generated and combined.
-The combined result is compared against the internal html representation of the chunk for the current checked styling function.
-
-Alternately bisecting the chunk means that, bisecting is toggled between horizontally and vertically after fetching a chunk.
-This can lead to the fact that for the same `DataFrame`, once errors are reported and another time not. 
-This depends on whether the error can be detected when the fetched chunk is split horizontally or vertically during the validation.
-
-This Strategy does half of the work of the strategy `Precision`, therefore it is faster.
+> The configuration is described in [SETTINGS.md](SETTINGS.md)
 
 ## Notifications
 Whenever an incompatible styling function is detected a balloon notification is displayed.
 These notifications are also gathered in the *Event Log* tool window of IntelliJ and can be reviewed later.
 
-![x](images/notification_invalid_styling_function.png)
+![notification_invalid_styling_function](images/notification_invalid_styling_function.png)
 
 The notification provides a `Show Report` and a `Copy To Clipboard` action.
 

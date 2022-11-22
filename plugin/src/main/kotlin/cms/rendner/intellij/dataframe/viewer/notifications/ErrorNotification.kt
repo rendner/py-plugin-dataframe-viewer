@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.notifications
 
+import cms.rendner.intellij.dataframe.viewer.DataFrameViewerIcons
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
@@ -48,6 +49,7 @@ class ErrorNotification(
 ) {
 
     init {
+        icon = DataFrameViewerIcons.LOGO_16
         addAction(ShowErrorAction(title, content, throwable))
         addAction(CopyToClipboardAction(content, throwable))
     }

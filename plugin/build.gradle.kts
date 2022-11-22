@@ -1,28 +1,27 @@
-import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 
 plugins {
     id("idea")
     // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.7.0"
+    // https://github.com/JetBrains/gradle-intellij-plugin
+    id("org.jetbrains.intellij") version "1.9.0"
     // Kotlin JVM plugin to add support for Kotlin
-    // https://plugins.jetbrains.com/docs/intellij/kotlin.html#kotlin-standard-library
+    // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#kotlin-standard-library
     kotlin("jvm") version "1.6.21"
     kotlin("plugin.serialization") version "1.6.21"
 }
 
 group = "cms.rendner.intellij"
-version = "0.8.0"
+version = "0.9.0"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation("org.jsoup:jsoup:1.15.1")
-    implementation("net.sourceforge.cssparser:cssparser:0.9.29")
     implementation("org.beryx:awt-color-factory:1.0.2")
+    // https://github.com/Kotlin/kotlinx.serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
 
     // https://github.com/junit-team/junit5-samples/blob/r5.8.2/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
@@ -36,7 +35,7 @@ dependencies {
 // https://intellij-support.jetbrains.com/hc/en-us/community/posts/206590865-Creating-PyCharm-plugins
 intellij {
     plugins.add("python-ce") // is required even if we specify a PyCharm IDE
-    version.set("2020.3")
+    version.set("2021.3")
     type.set("PC")
     downloadSources.set(false)
     updateSinceUntilBuild.set(false)
@@ -129,6 +128,12 @@ tasks {
                     }
                 }
 
+                copy {
+                    from(testDockeredSourceSet.resources)
+                    include("**/debugger_helpers.py")
+                    into("${entry.contentPath}/")
+                }
+
                 exec {
                     workingDir = file(entry.path)
                     executable = "docker"
@@ -185,12 +190,18 @@ tasks {
                 classpath = testDockeredSourceSet.runtimeClasspath
 
                 systemProperty(
-                    "cms.rendner.dataframe.viewer.dockered.test.image",
+                    "cms.rendner.dataframe.viewer.docker.image",
                     entry.dockerImageName,
                 )
                 systemProperty(
-                    "cms.rendner.dataframe.viewer.dockered.test.workdir",
+                    "cms.rendner.dataframe.viewer.docker.workdir",
                     entry.getWorkdir(pipEnvEnvironment),
+                )
+                // To make files, for more complex test cases, available in the dockered python interpreter.
+                // Example - how to map a folder of files: "<host_dir>:<container_dir>:ro"
+                systemProperty(
+                    "cms.rendner.dataframe.viewer.docker.volumes",
+                    listOf<String>().joinToString(";"),
                 )
                 useJUnitPlatform {
                     include("**/integration/**")
@@ -220,8 +231,12 @@ tasks {
     pythonDockerImages.forEach { entry ->
         entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
 
-            val deleteTestData by register<Delete>("deleteTestData_$pipEnvEnvironment") {
-                delete("$exportTestDataPath$pipEnvEnvironment")
+            val deleteTestData by register<DefaultTask>("deleteTestData_$pipEnvEnvironment") {
+                doLast {
+                    file("$exportTestDataPath$pipEnvEnvironment").let {
+                        if (it.exists()) project.delete(files(it.listFiles()))
+                    }
+                }
             }
 
             val exportTestData by register<Test>("exportTestData_$pipEnvEnvironment") {
@@ -233,47 +248,24 @@ tasks {
                     exportTestDataPath,
                 )
                 systemProperty(
-                    "cms.rendner.dataframe.viewer.dockered.test.image",
+                    "cms.rendner.dataframe.viewer.docker.image",
                     entry.dockerImageName,
                 )
                 systemProperty(
-                    "cms.rendner.dataframe.viewer.dockered.test.workdir",
+                    "cms.rendner.dataframe.viewer.docker.workdir",
                     entry.getWorkdir(pipEnvEnvironment),
                 )
                 useJUnitPlatform {
                     include("**/export/**")
                 }
-                shouldRunAfter(deleteTestData)
-            }
-
-            val extractComputedCSS by register<Exec>("extractComputedCSS_$pipEnvEnvironment") {
-                workingDir = project.file("../projects/extract_computed_css")
-                System.getenv("JCEF_11_JDK")?.let {
-                    environment["JAVA_HOME"] = it
-                }
-                if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                    commandLine(
-                        "cmd",
-                        "/c",
-                        "gradlew.bat",
-                        "-PinputDir=$projectDir/src/test/resources/generated/$pipEnvEnvironment",
-                        "extractComputedCSSForPlugin"
-                    )
-                } else {
-                    commandLine(
-                        "./gradlew",
-                        "-PinputDir=$projectDir/src/test/resources/generated/$pipEnvEnvironment",
-                        "extractComputedCSSForPlugin"
-                    )
-                }
-                shouldRunAfter(exportTestData)
+                mustRunAfter(deleteTestData)
             }
 
             val addFilesToGit by register<Exec>("addTestDataToGit_$pipEnvEnvironment") {
-                workingDir = project.file("src/test/resources/generated/$pipEnvEnvironment")
+                workingDir = project.file("$exportTestDataPath$pipEnvEnvironment")
                 executable = "git"
                 args("add", ".")
-                shouldRunAfter(extractComputedCSS)
+                mustRunAfter(exportTestData)
             }
 
             register<DefaultTask>("generateTestData_$pipEnvEnvironment") {
@@ -282,7 +274,6 @@ tasks {
                 dependsOn(
                     deleteTestData,
                     exportTestData,
-                    extractComputedCSS,
                     addFilesToGit,
                 )
                 if (generateTestDataTasks.isNotEmpty()) {
@@ -336,6 +327,8 @@ tasks {
         )
         // environment["PYCHARM_DEBUG"] = "True"
         // environment["PYDEV_DEBUG"] = "True"
+        environment["PYDEVD_USE_CYTHON"] = "NO"
+        environment["idea.is.internal"] = true
         // ideDir.set(File("/snap/intellij-idea-community/current"))
     }
 
@@ -374,15 +367,15 @@ tasks {
     }
 
     runPluginVerifier {
-        // See https://github.com/JetBrains/gradle-intellij-plugin#plugin-verifier-dsl
+        // See https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#tasks-runpluginverifier
         // See https://data.services.jetbrains.com/products?fields=code,name,releases.version,releases.build,releases.type&code=PC
-        //ideVersions.addAll(listOf("PC-2020.3.3", "PC-2021.3.2", "PC-2022.1"))
+        //ideVersions.addAll(listOf("PC-2021.3", "PC-2021.3.2", "PC-2022.1"))
     }
 
     listProductsReleases {
-        sinceVersion.set("2020.3")
-        untilVersion.set("222.3345.99") // 2022.2 rc
-        //untilVersion.set("2022.2")
+        sinceVersion.set("2021.3")
+        //untilVersion.set("2022.2.3")
+        untilVersion.set("223.7571.64") // 2022.3 rc
     }
 }
 
@@ -393,5 +386,15 @@ tasks.withType<KotlinCompile>().configureEach {
             // to allow experimental "Json.decodeFromString()"
             "-opt-in=kotlin.RequiresOptIn",
         )
+    }
+}
+
+tasks.jar {
+    exclude {
+        // Exclude unwanted files.
+        // These files are created sometimes when using the python files from the plugin resource folder directly
+        // in a PyCharm project.
+        // info: https://www.jetbrains.com/help/pycharm/cleaning-pyc-files.html
+        it.name == "__pycache__" || it.file.extension == ".pyc"
     }
 }

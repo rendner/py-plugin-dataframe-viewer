@@ -15,13 +15,6 @@ See: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-
 
 The gradle-task `buildPythonDockerImage` (group `docker`) must have been executed at least once.
 
-### JDK
-A [JBR 11 with JCEF](https://confluence.jetbrains.com/pages/viewpage.action?pageId=221478946) has to be installed and one of the following environment variable has to be set:
-- `JAVA_HOME` which points to the folder where the JBR 11 with JCEF was installed
-- or `JCEF_11_JDK` which points to the folder where the JBR 11 with JCEF was installed
-
->Note: On Linux you can store the environment variable in `~/.profile`.
-
 ## Rebuild Docker Image
 If files from the projects under `<PROJECTS_DIR>/html_from_styler` have been modified, the Docker image must be recreated.
 

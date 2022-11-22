@@ -16,7 +16,6 @@
 package cms.rendner.intellij.dataframe.viewer.python.debugger
 
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
-import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyString
 
 /**
  * Holds a reference to a Python object or a result evaluated on Python side.
@@ -40,24 +39,15 @@ data class PluginPyValue(
      */
     val forcedValue: String
         get() = value!!
+
+    val qualifiedType: String
+        get() = "$typeQualifier.$type"
 }
 
 /**
  * Interface for evaluating or executing code on Python side.
  */
 interface IPluginPyValueEvaluator {
-    /**
-     * Returns an expression for accessing entries from the globals dictionary which contains the injected plugin code.
-     */
-    fun getFromPluginGlobalsExpr(name: String) = "$pluginGlobalsName.get(${stringifyString(name)})"
-
-    /**
-     * The name of the Python variable used as globals dictionary during plugin code injection.
-     */
-    val pluginGlobalsName: String
-        // use a "dunder name" (name with double underscore) for the name, to be listed under "special var" in the debugger
-        get() = "__styled_data_frame_plugin__"
-
     /**
      * Evaluates an expression.
      *

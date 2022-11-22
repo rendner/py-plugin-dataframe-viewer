@@ -2,6 +2,8 @@
     "rowsPerChunk": 2,
     "colsPerChunk": 2,
     "tableStructure": {
+        "org_rows_count": 5,
+        "org_columns_count": 5,
         "rows_count": 5,
         "columns_count": 5,
         "row_levels_count": 0,

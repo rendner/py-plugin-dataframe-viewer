@@ -19,10 +19,10 @@
     For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
     ]]></description>
 
-    <idea-version since-build="203.5981.155" until-build="223.*"/>
+    <idea-version since-build="213.5744.248" until-build="223.*"/>
 
     <change-notes><![CDATA[
-    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md#v080">changelog</a>
+    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md#v090">changelog</a>
     ]]></change-notes>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
@@ -45,6 +45,10 @@
         </group>
     </actions>
 
+    <extensions defaultExtensionNs="Pythonid">
+        <pyReferenceResolveProvider implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.PyCodeFragmentReferenceResolveProvider"/>
+    </extensions>
+
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService"/>
         <projectService serviceImplementation="cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService"/>
@@ -55,5 +59,8 @@
                 id="cms.rendner.StyledDataFrameViewer"
                 displayName="Styled DataFrame Viewer"
         />
+
+        <annotator language="Python" implementationClass="cms.rendner.intellij.dataframe.viewer.components.filter.editor.SyntheticIdentifierHighlighter"/>
+        <daemon.intentionActionFilter implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.IgnoreAllIntentionsActionFilter"/>
     </extensions>
 </idea-plugin>

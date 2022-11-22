@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.notifications
 
+import cms.rendner.intellij.dataframe.viewer.DataFrameViewerIcons
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ProblemReason
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionDetails
@@ -55,6 +56,7 @@ class ChunkValidationProblemNotification(
 ) {
 
     init {
+        icon = DataFrameViewerIcons.LOGO_16
         addAction(ShowValidationReportAction(region, validationStrategy, problems, details))
         addAction(CopyToClipboardAction(region, validationStrategy, problems, details))
     }

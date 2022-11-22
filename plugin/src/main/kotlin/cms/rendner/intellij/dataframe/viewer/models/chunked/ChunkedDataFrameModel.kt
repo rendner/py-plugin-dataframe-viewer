@@ -32,14 +32,18 @@ import javax.swing.table.AbstractTableModel
  * The [IChunkDataLoader.dispose] method of the [chunkDataLoader] is automatically called when the model is disposed.
  *
  * @param tableStructure describes the structure of the model.
+ * @param frameColumnOrgIndexList indices of the visible columns in the unfiltered DataFrame.
+ * @param dataSourceFingerprint fingerprint of the data source.
  * @param chunkDataLoader used for lazy data loading.
  * @param chunkSize size of the chunks to load.
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
+    private val frameColumnOrgIndexList: List<Int>,
+    private val dataSourceFingerprint: String,
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
-) : IDataFrameModel, IExternalSortableDataFrameModel, IChunkDataResultHandler {
+) : IDataFrameModel, IChunkDataResultHandler {
 
     private val myValueModel = ValueModel(this)
     private val myIndexModel = IndexModel(this)
@@ -106,6 +110,8 @@ class ChunkedDataFrameModel(
 
     private var disposed: Boolean = false
 
+    private var myDataFetchingEnabled = false
+
     init {
         chunkDataLoader.setResultHandler(this)
 
@@ -115,12 +121,15 @@ class ChunkedDataFrameModel(
         )
     }
 
-    override fun setSortKeys(sortKeys: List<SortKey>) {
-        val sortCriteria = sortKeys.fold(MutableSortCriteria()) { criteria, sortKey ->
-            criteria.byIndex.add(sortKey.column)
-            criteria.ascending.add(sortKey.sortOrder == SortOrder.ASCENDING)
-            criteria
-        }.toSortCriteria()
+    private fun setValueSortKeys(sortKeys: List<SortKey>) {
+        val sortCriteria = sortKeys.fold(Pair(mutableListOf<Int>(), mutableListOf<Boolean>()))
+        { pair, sortKey ->
+            pair.first.add(sortKey.column)
+            pair.second.add(sortKey.sortOrder == SortOrder.ASCENDING)
+            pair
+        }.let {
+            SortCriteria(it.first, it.second)
+        }
         chunkDataLoader.setSortCriteria(sortCriteria)
         clearAllFetchedData()
     }
@@ -153,6 +162,12 @@ class ChunkedDataFrameModel(
 
     override fun getIndexDataModel(): ITableIndexDataModel {
         return myIndexModel
+    }
+
+    override fun getDataSourceFingerprint() = dataSourceFingerprint
+
+    private fun enableDataFetching(enabled: Boolean) {
+        myDataFetchingEnabled = enabled
     }
 
     private fun getValueAt(rowIndex: Int, columnIndex: Int): Value {
@@ -234,7 +249,8 @@ class ChunkedDataFrameModel(
 
         if (values != null) return values
 
-        if (!disposed
+        if (myDataFetchingEnabled
+            && !disposed
             && chunkDataLoader.isAlive()
             && !myPendingChunks.contains(chunkRegion)
             && !myFailedChunks.contains(chunkRegion)
@@ -279,11 +295,6 @@ class ChunkedDataFrameModel(
         setChunkValues(chunkRegion, chunkData.values)
     }
 
-    override fun onStyledValuesProcessed(request: LoadRequest, chunkValues: ChunkValues) {
-        if (disposed) return
-        setChunkValues(request.chunkRegion, chunkValues)
-    }
-
     override fun onRequestRejected(request: LoadRequest, reason: IChunkDataResultHandler.RejectReason) {
         myPendingChunks.remove(request.chunkRegion)
         val scheduleInvokeLater = myRejectedChunkRegions.isEmpty
@@ -317,13 +328,13 @@ class ChunkedDataFrameModel(
         }
     }
 
-    override fun onError(request: LoadRequest, throwable: Throwable) {
+    override fun onChunkFailed(request: LoadRequest) {
         if (disposed) return
         myPendingChunks.remove(request.chunkRegion)
         myFailedChunks.add(request.chunkRegion)
     }
 
-    private fun setChunkValues(chunkRegion: ChunkRegion, chunkValues: ChunkValues) {
+    private fun setChunkValues(chunkRegion: ChunkRegion, chunkValues: IChunkValues) {
         myFetchedChunkValues[chunkRegion] = chunkValues
         fireValueModelValuesUpdated(chunkRegion)
     }
@@ -372,18 +383,17 @@ class ChunkedDataFrameModel(
         )
     }
 
-    private data class ChunkValuesPlaceholder(private val placeholder: Value) : IChunkValues {
-        override fun value(rowIndexInChunk: Int, columnIndexInChunk: Int) = placeholder
-    }
-
     private class ValueModel(private val source: ChunkedDataFrameModel) : AbstractTableModel(), ITableValueDataModel {
         override fun getRowCount() = source.tableStructure.rowsCount
         override fun getColumnCount() = source.tableStructure.columnsCount
+        override fun enableDataFetching(enabled: Boolean) = source.enableDataFetching(enabled)
         override fun getValueAt(rowIndex: Int, columnIndex: Int) = source.getValueAt(rowIndex, columnIndex)
         override fun getColumnHeaderAt(columnIndex: Int) = source.getColumnHeaderAt(columnIndex)
+        override fun setSortKeys(sortKeys: List<SortKey>) = source.setValueSortKeys(sortKeys)
         override fun getColumnName(columnIndex: Int) = getColumnHeaderAt(columnIndex).text()
         override fun getLegendHeader() = source.getColumnLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
+        override fun convertToFrameColumnIndex(columnIndex: Int) = source.frameColumnOrgIndexList[columnIndex]
         override fun isLeveled() = source.tableStructure.columnLevelsCount > 1
         override fun shouldHideHeaders() = source.tableStructure.hideColumnHeader
     }
@@ -392,6 +402,7 @@ class ChunkedDataFrameModel(
         override fun getRowCount() = source.tableStructure.rowsCount
         override fun getColumnCount() = if (source.tableStructure.hideRowHeader) 0 else 1
         override fun getColumnName(columnIndex: Int) = getColumnName()
+        override fun enableDataFetching(enabled: Boolean) = source.enableDataFetching(enabled)
         override fun getValueAt(rowIndex: Int) = source.getRowHeaderLabelAt(rowIndex)
         override fun getColumnHeader() = getLegendHeader()
         override fun getColumnName() = getLegendHeader().text()
