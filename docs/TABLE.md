@@ -26,8 +26,8 @@ This could also lead to an empty space after the last column if the sum of the w
 Below the table a small label with the number of rows and columns is displayed.
 
 The info label will also include the number of visible rows and columns in case some data:
-- was marked as hidden via (Styler.hide)[https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.hide.html]
-- was filtered out (by a filter query provided to the plugin)
+- was marked as hidden via [Styler.hide](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.hide.html)
+- was filtered out, by a filter query provided to the plugin
 
 
 ### Data Loading

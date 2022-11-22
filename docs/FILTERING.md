@@ -4,7 +4,7 @@
 A common operation in data analysis is to filter values based on a condition or multiple conditions. 
 Pandas provides a variety of ways to filter a `DataFrame`.
 
-The filter feature in the plugin doesn't use pandas [DataFrame.filter](https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.DataFrame.filter.html).
+The filter feature in the plugin doesn't use pandas [DataFrame.filter](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.filter.html).
 Because this method doesn't allow to filter a `DataFrame` on its content. Instead, you can provide a Python expression which returns a
 `DataFrame`. The intersection of the index and columns of the returned `DataFrame` and the viewed `DataFrame` are displayed.
 The returned `DataFrame` defines which values should be displayed, others are filtered out.
@@ -34,15 +34,15 @@ Right-click on `df` to open the context menu. Select `View as Styled DataFrame`.
 
 This is the result of the code snippet:
 
-<img width="400" src="images/filtering/initial_state.png">
+![initial_state](images/filtering/initial_state.png)
 
-As initial noted, the filtering doesn't use pandas [DataFrame.filter](https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.DataFrame.filter.html)
+As initial noted, the filtering doesn't use pandas [DataFrame.filter](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.filter.html)
 but you can use the method in your filter expression.
 Or any other expression as long as it returns a `DataFrame`:
 
-<img width="350" src="images/filtering/filter_by_dataframe_filter.png">
-<img width="350" src="images/filtering/filter_by_logical_operator.png">
-<img width="350" src="images/filtering/filter_by_tilde.png">
+![filter_by_dataframe_filter](images/filtering/filter_by_dataframe_filter.png)
+![filter_by_logical_operator](images/filtering/filter_by_logical_operator.png)
+![filter_by_tilde](images/filtering/filter_by_tilde.png)
 
 ## The Table State
 Filtering can modify the visual state of the table displayed in the dialog.
@@ -70,11 +70,11 @@ You can apply your filter by clicking on the `Apply Filter` button or by pressin
 ### Long Filter Queries
 Since the filter input is only a single line it can be tedious to enter expressions with long variable names:
 
-<img width="400" src="images/filtering/long_query_long.png">
+![long_query_long](images/filtering/long_query_long.png)
 
 In such a case you can use the special identifier `_df`, which is only available if there is no other variable named `_df`.
 
-<img width="400" src="images/filtering/long_query_short.png">
+![long_query_short](images/filtering/long_query_short.png)
 
 The identifier `_df` is rendered grayed out to indicate that this is the special identifier provided by the plugin.
 It is also provided in the code completion of the filter input.
