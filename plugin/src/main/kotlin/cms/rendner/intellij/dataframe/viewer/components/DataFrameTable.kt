@@ -247,6 +247,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         for (modelIndex in 0 until valueModel.columnCount) {
             val frameColumnIndex = valueModel.convertToFrameColumnIndex(modelIndex)
             result.add(MyValueTableColumn(modelIndex, frameColumnIndex).apply {
+                this.minWidth = MIN_COLUMN_WIDTH
                 prevTableColumnCache[ColumnCacheKey.orgFrameIndex(frameColumnIndex)]?.let { prevColumn ->
                     this.copyStateFrom(prevColumn)
                 }
@@ -459,6 +460,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
 
         fun afterColumnLayout() {
             if (columnCount < 1) return
+
             (tableHeader.resizingColumn as MyValueTableColumn?)?.let {
                 // remove temporary minWidth
                 it.setMinMaxPreferredWidth(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH, it.width)
@@ -466,27 +468,11 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         }
 
         override fun markFixed(viewColumnIndex: Int) {
-            // last column can't be adjusted
-            if (viewColumnIndex == columnCount - 1) return
-            castedColumnAt(viewColumnIndex).let {
-                if (!it.hasFixedWidth) {
-                    it.hasFixedWidth = true
-                    it.setMinMaxPreferredWidth(it.width, it.width, it.width)
-                    // to repaint the fixed-column indicator
-                    tableHeader.repaint()
-                }
-            }
+            makeColumnWidthStaticAndMarkFixed(castedColumnAt(viewColumnIndex))
         }
 
         override fun clearFixed(viewColumnIndex: Int) {
-            castedColumnAt(viewColumnIndex).let {
-                if (it.hasFixedWidth) {
-                    it.hasFixedWidth = false
-                    it.setMinMaxPreferredWidth(it.autoFitPreferredWidth, MAX_COLUMN_WIDTH, it.autoFitPreferredWidth)
-                    // to repaint the fixed-column indicator
-                    tableHeader.repaint()
-                }
-            }
+            makeColumnWidthResizeableAndClearFixed(castedColumnAt(viewColumnIndex))
         }
 
         override fun clearAllFixed() {
@@ -507,7 +493,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
 
         fun ensureLastColumnIsNotFixed() {
             if (columnCount > 0) {
-                clearFixed(columnCount - 1)
+                makeColumnWidthResizeableAndClearFixed(castedColumnAt(columnCount - 1))
             }
         }
 
@@ -544,24 +530,36 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
                     if (newColumn == null) {
                         val oldColumn = event.oldValue as MyValueTableColumn? ?: return
                         if (oldColumn.width != myResizingColumnStartWidth) {
-                            markFixed(convertColumnIndexToView(oldColumn.modelIndex))
+                            makeColumnWidthStaticAndMarkFixed(oldColumn)
                         } else if (!myResizingColumnWasFixed) {
-                            castedColumnAt(convertColumnIndexToView(oldColumn.modelIndex)).let {
-                                it.setMinMaxPreferredWidth(
-                                    it.autoFitPreferredWidth,
-                                    MAX_COLUMN_WIDTH,
-                                    it.autoFitPreferredWidth
-                                )
-                            }
+                            makeColumnWidthResizeableAndClearFixed(oldColumn)
                         }
                     } else {
-                        castedColumnAt(convertColumnIndexToView(newColumn.modelIndex)).let {
-                            myResizingColumnWasFixed = it.hasFixedWidth
-                            // allow to reduce and increase the width
-                            it.setMinMaxPreferredWidth(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH, it.width)
-                        }
+                        myResizingColumnWasFixed = newColumn.hasFixedWidth
+                        // allow to reduce and increase the width
+                        newColumn.setMinMaxPreferredWidth(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH, newColumn.width)
                     }
                 }
+            }
+        }
+
+        private fun makeColumnWidthStaticAndMarkFixed(column: MyValueTableColumn) {
+            // last column can't be marked as fixed
+            if (convertColumnIndexToView(column.modelIndex) == columnCount - 1) return
+            column.setMinMaxPreferredWidth(column.width, column.width, column.width)
+            if (!column.hasFixedWidth) {
+                column.hasFixedWidth = true
+                // to repaint the fixed-column indicator
+                tableHeader.repaint()
+            }
+        }
+
+        private fun makeColumnWidthResizeableAndClearFixed(column: MyValueTableColumn) {
+            column.setMinMaxPreferredWidth(column.autoFitPreferredWidth, MAX_COLUMN_WIDTH, column.autoFitPreferredWidth)
+            if (column.hasFixedWidth) {
+                column.hasFixedWidth = false
+                // to repaint the fixed-column indicator
+                tableHeader.repaint()
             }
         }
 
@@ -951,11 +949,6 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
         rowSorter = null
         tableHeader?.reorderingAllowed = false
         updateDefaultHeaderRenderer()
-    }
-
-    override fun addColumn(column: TableColumn) {
-        column.minWidth = MIN_COLUMN_WIDTH
-        super.addColumn(column)
     }
 
     override fun setModel(tableModel: TableModel) {
