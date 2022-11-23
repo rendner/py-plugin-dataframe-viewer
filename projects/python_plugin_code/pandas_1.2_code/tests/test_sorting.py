@@ -36,8 +36,8 @@ def test_sort_values_before_styling_breaks_styling():
     # note: extra space in front of color name (formatting bug in pandas 1.2)
     assert "background-color:  yellow;" in styler_asc.render()
 
-    # values get sorted - there will be no continues rows with the indices 2,3,4
-    # -> df.sort_values(by=['col_0'], ascending=False).loc[IndexSlice[2:4]] is a DataFrame with 0 rows
+    # After the sorting below, the DataFrame has the row indices: [4, 3, 2, 1, 0]
+    # The subset [2, 3, 4] provided to "highlight_min" doesn't exist in the DataFrame
     # -> sorting can't be done before the styling
     styler_asc = df.sort_values(by=['col_0'], ascending=False).style.highlight_min(subset=IndexSlice[2:4])
     # note: extra space in front of color name (formatting bug in pandas 1.2)
