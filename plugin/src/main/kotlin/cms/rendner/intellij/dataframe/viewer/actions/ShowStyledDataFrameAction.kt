@@ -50,7 +50,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.IdeFocusManager
@@ -91,7 +90,36 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
         if (project.isDisposed) return
-        getFrameOrStyler(event)?.let { MyDialog(project, it).show() }
+        getFrameOrStyler(event)?.let { pyDebugValue ->
+
+            val parentDisposable = project.service<ParentDisposableService>()
+            val debugSession = XDebuggerManager.getInstance(project).currentSession!!
+            BackgroundTaskUtil.executeOnPooledThread(parentDisposable) {
+                try {
+                    PythonPluginCodeInjector.injectIfRequired(pyDebugValue.toPluginType().evaluator)
+                } catch (ex: Throwable) {
+                    ErrorNotification(
+                        BALLOON.displayId,
+                        "Initialize plugin code failed",
+                        ex.localizedMessage ?: "",
+                        ex
+                    ).notify(project)
+                    return@executeOnPooledThread
+                }
+
+                ApplicationManager.getApplication().invokeLater {
+                    if (debugSession.isStopped || Disposer.isDisposed(parentDisposable) || project.isDisposed) return@invokeLater
+                    MyDialog(parentDisposable, debugSession, pyDebugValue).apply {
+                        if (!debugSession.isStopped) {
+                            startListeningAndFetchInitialData()
+                            show()
+                        } else {
+                            close(DialogWrapper.CANCEL_EXIT_CODE)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun getFrameOrStyler(e: AnActionEvent): PyDebugValue? {
@@ -104,18 +132,17 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
     }
 
     private class MyDialog(
-        private val project: Project,
+        parentDisposable: Disposable,
+        private val myDebugSession: XDebugSession,
         frameOrStyler: PyDebugValue,
     ) :
-        DialogWrapper(project, false),
+        DialogWrapper(myDebugSession.project, false),
         IChunkValidationProblemHandler,
         IChunkDataLoaderErrorHandler,
         XDebugSessionListener {
 
-        private val myParentDisposable = project.service<ParentDisposableService>()
         private var myDebugValueEvalExpr: PyDebugValueEvalExpr
         private val myEvaluator: IPluginPyValueEvaluator
-        private val myDebugSession: XDebugSession
         private var myFilterEvalExprBuilder: IFilterEvalExprBuilder
         private val myFilterInput: AbstractEditorComponent
         private val myDataFrameTable: DataFrameTable
@@ -125,14 +152,18 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         private var myLastStartedModelDataFetcher: Disposable? = null
 
         init {
-            Disposer.register(myParentDisposable, disposable)
-
-            myDebugSession = XDebuggerManager.getInstance(project).currentSession!!
-            myFilterInput = FilterInputFactory.createComponent(project, myDebugSession.currentPosition)
-            myFilterEvalExprBuilder = myFilterInput.createFilterExprBuilder()
+            Disposer.register(parentDisposable, disposable)
 
             myDebugValueEvalExpr = frameOrStyler.toValueEvalExpr()
             myEvaluator = frameOrStyler.toPluginType().evaluator
+
+            myFilterInput = FilterInputFactory.createComponent(myDebugSession.project, myDebugSession.currentPosition)
+            myFilterInput.setChangedListener(object : IEditorChangedListener {
+                override fun editorInputChanged() {
+                    updateApplyFilterButtonState()
+                }
+            })
+            myFilterEvalExprBuilder = myFilterInput.createFilterExprBuilder()
 
             isModal = false
             title = myDebugValueEvalExpr.reEvalExpr
@@ -140,42 +171,17 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             setOKButtonText("Apply Filter")
             setCancelButtonText("Close")
             setCrossClosesWindow(true)
+            disableApplyFilterButton()
 
             myDataFrameTable = DataFrameTable()
             myDataFrameTable.preferredSize = Dimension(700, 500)
 
             init()
+        }
 
-            disableApplyFilterButton()
-
-            BackgroundTaskUtil.executeOnPooledThread(disposable) {
-                try {
-                    PythonPluginCodeInjector.injectIfRequired(myEvaluator)
-                } catch (ex: Throwable) {
-                    ErrorNotification(
-                        BALLOON.displayId,
-                        "Initialize plugin code failed",
-                        ex.localizedMessage ?: "",
-                        ex
-                    ).notify(project)
-                }
-
-                ApplicationManager.getApplication().invokeLater {
-                    if (!isDisposed) {
-                        if (myDebugSession.isStopped) {
-                            close(CANCEL_EXIT_CODE)
-                        } else {
-                            myFilterInput.setChangedListener(object : IEditorChangedListener {
-                                override fun editorInputChanged() {
-                                    updateApplyFilterButtonState()
-                                }
-                            })
-                            myDebugSession.addSessionListener(this)
-                            fetchModelData(false)
-                        }
-                    }
-                }
-            }
+        fun startListeningAndFetchInitialData() {
+            myDebugSession.addSessionListener(this)
+            fetchModelData(false)
         }
 
         override fun dispose() {
@@ -322,7 +328,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                     validationStrategy,
                     problems,
                     details,
-                ).notify(project)
+                ).notify(myDebugSession.project)
             }
         }
 
@@ -334,7 +340,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                 "Error during fetching/processing chunk",
                 "${exception.message ?: "Unknown error occurred"}\nfor $region",
                 exception
-            ).notify(project)
+            ).notify(myDebugSession.project)
         }
 
         private inner class MyModelDataFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator),
@@ -383,7 +389,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                             "Creating DataFrame model failed",
                             ex.localizedMessage ?: "",
                             ex
-                        ).notify(project)
+                        ).notify(myDebugSession.project)
                     }
                 }
             }
@@ -430,7 +436,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
 
                         // assign focus to the DataFrame table
                         // -> allows immediately to use key bindings of the table like sort/scroll/etc.
-                        IdeFocusManager.getInstance(project).requestFocus(preferredFocusedComponent, true)
+                        IdeFocusManager.getInstance(myDebugSession.project).requestFocus(preferredFocusedComponent, true)
                     }
                 }
             }
