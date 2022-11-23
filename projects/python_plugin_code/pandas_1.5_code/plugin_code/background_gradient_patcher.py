@@ -23,7 +23,7 @@ from pandas import DataFrame, Series
 from pandas.io.formats.style import _validate_apply_axis_arg
 
 
-# background_gradient: https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L2690-L2840
+# background_gradient: https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L2995-L3141
 class BackgroundGradientPatcher(TodoPatcher):
 
     def __init__(self, todo: StylerTodo):

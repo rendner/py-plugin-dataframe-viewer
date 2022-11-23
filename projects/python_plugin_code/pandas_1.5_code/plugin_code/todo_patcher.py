@@ -39,7 +39,7 @@ class TodoPatcher(ABC):
     @staticmethod
     def _create_subset_frame(org_frame: DataFrame, subset: Optional[Subset]) -> DataFrame:
         # same steps as in pandas
-        # https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L1420-L1422
+        # https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L1708-L1710
         subset = slice(None) if subset is None else subset
         subset = non_reducing_slice(subset)
         return org_frame.loc[subset]

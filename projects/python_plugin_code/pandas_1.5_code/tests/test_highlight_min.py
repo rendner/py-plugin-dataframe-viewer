@@ -81,6 +81,17 @@ def test_highlight_min_nulls(axis):
     )
 
 
+def test_highlight_min_handles_na_values():
+    # GH 45804
+    create_and_assert_patched_styler(
+        pd.DataFrame({"A": [0, np.nan, 10], "B": [1, pd.NA, 2]}, dtype="Int64"),
+        # replace pd.NA values with '' otherwise the are rendered as <NA> and interpreted as html tag
+        lambda styler: styler.format(na_rep='').highlight_min(axis=1),
+        2,
+        2
+    )
+
+
 def test_for_new_parameters():
     assert_style_func_parameters(
         df.style.highlight_min,

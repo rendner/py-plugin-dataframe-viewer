@@ -17,12 +17,13 @@ from plugin_code.todo_patcher import TodoPatcher
 
 # == copy after here ==
 import numpy as np
+import pandas as pd
 from typing import Optional, Union
 from pandas import DataFrame, Series
 
 
-# highlight_max: https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L3071-L3112
-# highlight_min: https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L3115-L3156
+# highlight_max: https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L3395-L3436
+# highlight_min: https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L3439-L3480
 class HighlightExtremaPatcher(TodoPatcher):
 
     def __init__(self, todo: StylerTodo, op: str):
@@ -45,9 +46,11 @@ class HighlightExtremaPatcher(TodoPatcher):
         if chunk_or_series_from_chunk.empty:
             return chunk_or_series_from_chunk
 
-        # https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L3651-L3658
+        # https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L4031-L4040
         value = getattr(chunk_parent, self._op)(skipna=True)
 
         if isinstance(chunk_or_series_from_chunk, DataFrame):  # min/max must be done twice to return scalar
             value = getattr(value, self._op)(skipna=True)
-        return np.where(chunk_or_series_from_chunk == value, self._attribute, "")
+        cond = chunk_or_series_from_chunk == value
+        cond = cond.where(pd.notna(cond), False)
+        return np.where(cond, self._attribute, "")

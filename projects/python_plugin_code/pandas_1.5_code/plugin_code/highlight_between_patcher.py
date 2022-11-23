@@ -23,7 +23,7 @@ from pandas import DataFrame, Series
 from pandas.io.formats.style import _validate_apply_axis_arg
 
 
-# highlight_between: https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L3159-L3260
+# highlight_between: https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L3483-L3584
 class HighlightBetweenPatcher(TodoPatcher):
 
     def __init__(self, todo: StylerTodo):
@@ -47,7 +47,7 @@ class HighlightBetweenPatcher(TodoPatcher):
         left = kwargs.get("left", None)
         right = kwargs.get("right", None)
 
-        # https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L3603-L3648
+        # https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L3975-L4028
         if np.iterable(left) and not isinstance(left, str):
             left = _validate_apply_axis_arg(left, "left", None, chunk_parent)
             # adjust shape of "left" to match shape of chunk

@@ -27,18 +27,27 @@ df = pd.DataFrame.from_dict({
 
 
 @pytest.mark.parametrize("subset", [None, pd.IndexSlice[2:3, ["col_2", "col_3"]]])
-@pytest.mark.parametrize("null_color, props", [(None, "font-weight: bold;"), ("pink", None)])
+@pytest.mark.parametrize("color, props", [(None, "font-weight: bold;"), ("pink", None)])
 @pytest.mark.parametrize(
     "rows_per_chunk, cols_per_chunk", [
         (1, 2),
         (len(df.index), len(df.columns))  # single chunk
     ])
-def test_chunked(subset, null_color, props, rows_per_chunk, cols_per_chunk):
+def test_chunked(subset, color, props, rows_per_chunk, cols_per_chunk):
     create_and_assert_patched_styler(
         df,
-        lambda styler: styler.highlight_null(subset=subset, null_color=null_color, props=props),
+        lambda styler: styler.highlight_null(subset=subset, color=color, props=props),
         rows_per_chunk,
         cols_per_chunk
+    )
+
+
+def test_chunked_with_deprecated_null_color():
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.highlight_null(null_color="pink"),
+        2,
+        2
     )
 
 
@@ -59,5 +68,5 @@ def test_frame_can_handle_reducing_subset(subset):
 def test_for_new_parameters():
     assert_style_func_parameters(
         df.style.highlight_null,
-        ['subset', 'null_color', 'props']
+        ['subset', 'null_color', 'props', 'color']
     )
