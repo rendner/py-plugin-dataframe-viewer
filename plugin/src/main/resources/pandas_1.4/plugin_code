@@ -418,6 +418,7 @@ class HighlightBetweenPatcher(TodoPatcher):
         return part
 
 import numpy as np
+import pandas as pd
 from typing import Optional, Union
 from pandas import DataFrame, Series
 
@@ -448,7 +449,9 @@ class HighlightExtremaPatcher(TodoPatcher):
 
         if isinstance(chunk_or_series_from_chunk, DataFrame):  # min/max must be done twice to return scalar
             value = getattr(value, self._op)(skipna=True)
-        return np.where(chunk_or_series_from_chunk == value, self._attribute, "")
+        cond = chunk_or_series_from_chunk == value
+        cond = cond.where(pd.notna(cond), False)
+        return np.where(cond, self._attribute, "")
 
 from typing import Callable, List, Tuple, Optional
 

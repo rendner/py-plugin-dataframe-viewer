@@ -17,6 +17,7 @@ from plugin_code.todo_patcher import TodoPatcher
 
 # == copy after here ==
 import numpy as np
+import pandas as pd
 from typing import Optional, Union
 from pandas import DataFrame, Series
 
@@ -46,8 +47,11 @@ class HighlightExtremaPatcher(TodoPatcher):
             return chunk_or_series_from_chunk
 
         # https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L3651-L3658
+        # https://github.com/pandas-dev/pandas/blob/v1.4.1/pandas/io/formats/style.py#L3655-L3664
         value = getattr(chunk_parent, self._op)(skipna=True)
 
         if isinstance(chunk_or_series_from_chunk, DataFrame):  # min/max must be done twice to return scalar
             value = getattr(value, self._op)(skipna=True)
-        return np.where(chunk_or_series_from_chunk == value, self._attribute, "")
+        cond = chunk_or_series_from_chunk == value
+        cond = cond.where(pd.notna(cond), False)
+        return np.where(cond, self._attribute, "")
