@@ -48,6 +48,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.DialogWrapper
@@ -149,7 +150,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         private val myDataFrameTableFooterLabel = JBLabel("", UIUtil.ComponentStyle.SMALL, FontColor.BRIGHTER)
 
         private var myLastDataModelDisposable: Disposable? = null
-        private var myLastStartedModelDataFetcher: Disposable? = null
+        private var myLastStartedDataFetcher: ActiveDataFetcher? = null
 
         init {
             Disposer.register(parentDisposable, disposable)
@@ -186,13 +187,14 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
 
         override fun dispose() {
             myDebugSession.removeSessionListener(this)
+            cancelLastStartedDataFetcherAndDisposeModel()
             super.dispose()
         }
 
-        private fun disposeLastStartedModelDataFetcherAndModel() {
-            myLastStartedModelDataFetcher?.let {
-                myLastStartedModelDataFetcher = null
-                Disposer.dispose(it)
+        private fun cancelLastStartedDataFetcherAndDisposeModel() {
+            myLastStartedDataFetcher?.let {
+                myLastStartedDataFetcher = null
+                it.progressIndicator.cancel()
             }
             myLastDataModelDisposable?.let {
                 myLastDataModelDisposable = null
@@ -207,7 +209,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         override fun beforeSessionResume() {
             ApplicationManager.getApplication().invokeLater {
                 disableApplyFilterButton()
-                disposeLastStartedModelDataFetcherAndModel()
+                cancelLastStartedDataFetcherAndDisposeModel()
                 myFilterInput.setSourcePosition(null)
             }
         }
@@ -247,18 +249,19 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
         private fun fetchModelData(reEvaluateDataSource:Boolean) {
             disableApplyFilterButton()
             myFilterInput.hideErrorMessage()
-            disposeLastStartedModelDataFetcherAndModel()
+            cancelLastStartedDataFetcherAndDisposeModel()
 
-            myLastStartedModelDataFetcher = MyModelDataFetcher(myEvaluator).also {
-                Disposer.register(disposable, it)
-                val request = ModelDataFetcher.Request(
-                    myDebugValueEvalExpr,
-                    myFilterEvalExprBuilder,
-                    reEvaluateDataSource,
-                    myDataFrameTable.getDataFrameModel().getDataSourceFingerprint(),
-                )
-                BackgroundTaskUtil.executeOnPooledThread(it) { it.fetchModelData(request) }
-            }
+            val request = ModelDataFetcher.Request(
+                myDebugValueEvalExpr,
+                myFilterEvalExprBuilder,
+                reEvaluateDataSource,
+                myDataFrameTable.getDataFrameModel().getDataSourceFingerprint(),
+            )
+            val fetcher = MyModelDataFetcher(myEvaluator)
+            myLastStartedDataFetcher = ActiveDataFetcher(
+                fetcher,
+                BackgroundTaskUtil.executeOnPooledThread(disposable) { fetcher.fetchModelData(request) }
+            )
         }
 
         private fun updateFooterLabel(tableStructure: TableStructure) {
@@ -343,13 +346,18 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             ).notify(myDebugSession.project)
         }
 
-        private inner class MyModelDataFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator),
-            Disposable {
+        private fun shouldHandleFetcherAction(fetcher: ModelDataFetcher): Boolean {
+            return fetcher == myLastStartedDataFetcher?.fetcher && !isDisposed
+        }
+
+        private class ActiveDataFetcher(var fetcher: ModelDataFetcher, var progressIndicator: ProgressIndicator)
+
+        private inner class MyModelDataFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator) {
 
             override fun handleReEvaluateDataSourceException(request: Request, ex: Exception) {
                 if (ex is ProcessCanceledException || isShouldAbortDataFetchingSilentlyException(ex)) return
                 ApplicationManager.getApplication().invokeLater {
-                    if (this == myLastStartedModelDataFetcher && !isDisposed) {
+                    if (shouldHandleFetcherAction(this)) {
                         updateApplyFilterButtonState()
                         setErrorText(
                             ex.localizedMessage
@@ -361,7 +369,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
 
             override fun handleNonMatchingFingerprint(request: Request, fingerprint: String) {
                 ApplicationManager.getApplication().invokeLater {
-                    if (this == myLastStartedModelDataFetcher && !isDisposed) {
+                    if (shouldHandleFetcherAction(this)) {
                         close(CANCEL_EXIT_CODE)
                     }
                 }
@@ -370,7 +378,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             override fun handleFilterFrameEvaluateException(request: Request, ex: Exception) {
                 if (ex is ProcessCanceledException || isShouldAbortDataFetchingSilentlyException(ex)) return
                 ApplicationManager.getApplication().invokeLater {
-                    if (this == myLastStartedModelDataFetcher && !isDisposed) {
+                    if (shouldHandleFetcherAction(this)) {
                         updateApplyFilterButtonState()
                         ex.localizedMessage?.let { myFilterInput.showErrorMessage(it) }
                     }
@@ -380,7 +388,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             override fun handleEvaluateModelDataException(request: Request, ex: Exception) {
                 if (ex is ProcessCanceledException || isShouldAbortDataFetchingSilentlyException(ex)) return
                 ApplicationManager.getApplication().invokeLater {
-                    if (this == myLastStartedModelDataFetcher && !isDisposed) {
+                    if (shouldHandleFetcherAction(this)) {
                         updateApplyFilterButtonState()
                         logger.error("Creating DataFrame model failed", ex)
 
@@ -396,7 +404,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
 
             override fun handleEvaluateModelDataSuccess(request: Request, result: Result, fetcher: ModelDataFetcher) {
                 ApplicationManager.getApplication().invokeLater {
-                    if (this == myLastStartedModelDataFetcher && !isDisposed) {
+                    if (shouldHandleFetcherAction(this)) {
                         updateApplyFilterButtonState()
 
                         myLastDataModelDisposable?.let {
@@ -440,8 +448,6 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
                     }
                 }
             }
-
-            override fun dispose() {}
         }
     }
 }
