@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.9.1
+- `Released`: 2022-11-29
+- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.2)
+- `Min Required IntelliJ Version`: 2021.3
+
+### Added
+#### Support For pandas 1.5
+All already supported `Styler` methods are now also usable with pandas 1.5.
+
+### Fixed
+- don't open dialog for unsupported pandas version
+- code-completion for synthetic identifier `_df`
+
 ## v0.9.0
 - `Released`: 2022-11-22
 - `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.4)
