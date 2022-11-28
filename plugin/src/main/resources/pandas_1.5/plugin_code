@@ -1,0 +1,1616 @@
+
+import json
+from dataclasses import is_dataclass, asdict
+from typing import Any
+
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj: Any):
+        if is_dataclass(obj):
+            return asdict(obj)
+        return str(obj)
+
+import inspect
+from dataclasses import dataclass
+from functools import partial
+from typing import Tuple, Callable, Optional, Union
+from pandas._typing import Axis
+from pandas.io.formats.style_render import Subset
+
+
+@dataclass(frozen=True)
+class ApplyMapArgs:
+    style_func: Callable
+    subset: Optional[Subset]
+
+    @classmethod
+    def from_tuple(cls, args: Tuple[Callable, Optional[Subset]]):
+        return cls(args[0], args[1])
+
+    @staticmethod
+    def copy_with(style_func: Callable, subset: Optional[Subset]):
+        return ApplyMapArgs(style_func, subset)
+
+    def to_tuple(self) -> Tuple[Callable, Optional[Subset]]:
+        return self.style_func, self.subset
+
+
+@dataclass(frozen=True)
+class ApplyArgs:
+    style_func: Callable
+    axis: Optional[Axis]
+    subset: Optional[Subset]
+
+    @classmethod
+    def from_tuple(cls, args: Tuple[Callable, Optional[Axis], Optional[Subset]]):
+        return cls(args[0], args[1], args[2])
+
+    def copy_with(self, style_func: Callable, subset: Optional[Subset]):
+        return ApplyArgs(style_func, self.axis, subset)
+
+    def to_tuple(self) -> Tuple[Callable, Optional[Axis], Optional[Subset]]:
+        return self.style_func, self.axis, self.subset
+
+
+@dataclass(frozen=True)
+class StylerTodo:
+    apply_func: Callable
+    apply_args: Union[ApplyArgs, ApplyMapArgs]
+    style_func_kwargs: dict
+
+    @classmethod
+    def from_tuple(cls, todo: Tuple[Callable, tuple, dict]):
+        return cls(todo[0], cls._to_apply_args(todo), todo[2])
+
+    def builder(self):
+        return StylerTodoBuilder(self)
+
+    @staticmethod
+    def _to_apply_args(todo: Tuple[Callable, tuple, dict]):
+        if StylerTodo.is_applymap_tuple(todo):
+            return ApplyMapArgs.from_tuple(todo[1])
+        else:
+            return ApplyArgs.from_tuple(todo[1])
+
+    @classmethod
+    def is_applymap_tuple(cls, todo: Tuple[Callable, tuple, dict]):
+        return cls.__is_apply_map_func(todo[0])
+
+    def is_applymap(self) -> bool:
+        return self.__is_apply_map_func(self.apply_func)
+
+    @staticmethod
+    def __is_apply_map_func(func: Callable) -> bool:
+        return getattr(func, '__qualname__', '').startswith('Styler.applymap')
+
+    def is_pandas_style_func(self) -> bool:
+        func = self.apply_args.style_func
+        if isinstance(func, partial):
+            func = func.func
+        inspect_result = inspect.getmodule(func)
+        return False if inspect_result is None else inspect.getmodule(func).__name__ == 'pandas.io.formats.style'
+
+    def should_provide_chunk_parent(self):
+        sig = inspect.signature(self.apply_args.style_func)
+        for param in sig.parameters.values():
+            if param.name == "chunk_parent" or param.kind == inspect.Parameter.VAR_KEYWORD:
+                return True
+        return False
+
+    def to_tuple(self) -> Tuple[Callable, tuple, dict]:
+        return self.apply_func, self.apply_args.to_tuple(), self.style_func_kwargs
+
+
+class StylerTodoBuilder:
+
+    def __init__(self, source: StylerTodo):
+        self.source: StylerTodo = source
+        self.values: dict = {}
+
+    def with_subset(self, subset: Optional[Subset]):
+        self.values["subset"] = subset
+        return self
+
+    def with_style_func(self, style_func: Callable):
+        self.values["style_func"] = style_func
+        return self
+
+    def with_style_func_kwargs(self, style_func_kwargs: dict):
+        self.values["style_func_kwargs"] = style_func_kwargs
+        return self
+
+    def build(self) -> StylerTodo:
+        return StylerTodo(
+            self.source.apply_func,
+            self.source.apply_args.copy_with(
+                style_func=self.values.get("style_func", self.source.apply_args.style_func),
+                subset=self.values.get("subset", self.source.apply_args.subset),
+            ),
+            self.values.get("style_func_kwargs", self.source.style_func_kwargs),
+        )
+
+from functools import partial
+
+
+class StyleFunctionNameResolver:
+
+    @staticmethod
+    def get_style_func_qname(todo: StylerTodo) -> str:
+        func = todo.apply_args.style_func
+        if isinstance(func, partial):
+            func = func.func
+        return getattr(func, '__qualname__', '')
+
+    @staticmethod
+    def resolve_style_func_name(todo: StylerTodo) -> str:
+        qname = StyleFunctionNameResolver.get_style_func_qname(todo)
+        if todo.is_pandas_style_func():
+            if StyleFunctionNameResolver.is_pandas_text_gradient(qname, todo):
+                return "text_gradient"
+            elif StyleFunctionNameResolver.is_pandas_background_gradient(qname):
+                return "background_gradient"
+            elif StyleFunctionNameResolver.is_pandas_highlight_max(qname, todo):
+                return "highlight_max"
+            elif StyleFunctionNameResolver.is_pandas_highlight_min(qname, todo):
+                return "highlight_min"
+            elif StyleFunctionNameResolver.is_pandas_highlight_null(qname):
+                return "highlight_null"
+            elif StyleFunctionNameResolver.is_pandas_highlight_between(qname):
+                return "highlight_between or highlight_quantile"
+            elif StyleFunctionNameResolver.is_pandas_set_properties(qname):
+                return "set_properties"
+            else:
+                return qname.rpartition('.')[2]
+        else:
+            return qname.rpartition('.')[2]
+
+    @staticmethod
+    def is_pandas_background_gradient(style_func_qname: str) -> bool:
+        return style_func_qname == '_background_gradient'
+
+    @staticmethod
+    def is_pandas_text_gradient(style_func_qname: str, todo: StylerTodo) -> bool:
+        return style_func_qname == '_background_gradient' \
+               and todo.style_func_kwargs.get("text_only", False)
+
+    @staticmethod
+    def is_pandas_highlight_max(style_func_qname: str, todo: StylerTodo) -> bool:
+        return style_func_qname == '_highlight_value' \
+               and isinstance(todo.apply_args.style_func, partial) \
+               and todo.apply_args.style_func.keywords.get('op', '') == 'max'
+
+    @staticmethod
+    def is_pandas_highlight_min(style_func_qname: str, todo: StylerTodo) -> bool:
+        return style_func_qname == '_highlight_value' \
+               and isinstance(todo.apply_args.style_func, partial) \
+               and todo.apply_args.style_func.keywords.get('op', '') == 'min'
+
+    @staticmethod
+    def is_pandas_highlight_null(style_func_qname: str) -> bool:
+        return style_func_qname.startswith('Styler.highlight_null')
+
+    @staticmethod
+    def is_pandas_highlight_between(style_func_qname: str) -> bool:
+        return style_func_qname == '_highlight_between'
+
+    @staticmethod
+    def is_pandas_set_properties(style_func_qname: str) -> bool:
+        return style_func_qname.startswith('Styler.set_properties')
+
+from abc import ABC, abstractmethod
+from typing import Optional
+
+from pandas import DataFrame
+from pandas.io.formats.style_render import Subset, non_reducing_slice
+
+
+class TodoPatcher(ABC):
+
+    def __init__(self, todo: StylerTodo):
+        self._todo: StylerTodo = todo
+
+    @abstractmethod
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
+        pass
+
+    @staticmethod
+    def _calculate_chunk_subset(org_subset_frame: DataFrame, chunk: DataFrame) -> Subset:
+        index_intersection = chunk.index.intersection(org_subset_frame.index)
+        column_intersection = chunk.columns.intersection(org_subset_frame.columns)
+        return index_intersection, column_intersection
+
+    @staticmethod
+    def _create_subset_frame(org_frame: DataFrame, subset: Optional[Subset]) -> DataFrame:
+        subset = slice(None) if subset is None else subset
+        subset = non_reducing_slice(subset)
+        return org_frame.loc[subset]
+
+from typing import Optional
+from pandas import DataFrame
+
+
+class ApplyMapPatcher(TodoPatcher):
+
+    def __init__(self, todo: StylerTodo):
+        super().__init__(todo)
+
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
+        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
+        return self._todo.builder() \
+            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
+            .build()
+
+from typing import Optional, Union
+
+from pandas import DataFrame, Series
+
+
+class ApplyPatcher(TodoPatcher):
+
+    def __init__(self, todo: StylerTodo):
+        super().__init__(todo)
+
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
+        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
+        builder = self._todo.builder().with_subset(self._calculate_chunk_subset(subset_frame, chunk))
+        if self._todo.should_provide_chunk_parent():
+            builder.with_style_func(
+                ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame),
+            )
+        else:
+            builder.with_style_func(self._styling_func)
+        return builder.build()
+
+    def _styling_func(self, chunk_or_series_from_chunk: Union[DataFrame, Series], **kwargs):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
+        return self._todo.apply_args.style_func(chunk_or_series_from_chunk, **kwargs)
+
+from typing import Optional, Union
+
+import numpy as np
+from pandas import DataFrame, Series
+from pandas.io.formats.style import _validate_apply_axis_arg
+
+
+class BackgroundGradientPatcher(TodoPatcher):
+
+    def __init__(self, todo: StylerTodo):
+        super().__init__(todo)
+
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
+        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
+        return self._todo.builder() \
+            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
+            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame))\
+            .build()
+
+    def _styling_func(self,
+                      chunk_or_series_from_chunk: Union[DataFrame, Series],
+                      chunk_parent: Union[DataFrame, Series],
+                      **kwargs,
+                      ):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
+
+
+        vmin = kwargs.get("vmin", None)
+        vmax = kwargs.get("vmax", None)
+        gmap = kwargs.get("gmap", None)
+
+        if gmap is None:
+            gmap = chunk_parent.to_numpy(dtype=float)
+        else:
+            gmap = _validate_apply_axis_arg(gmap, "gmap", float, chunk_parent)
+
+        if vmin is None or vmax is None:
+            if vmin is None:
+                vmin = np.nanmin(gmap)
+            if vmax is None:
+                vmax = np.nanmax(gmap)
+
+        gmap = self._adjust_gmap_shape_to_chunk_shape(gmap, chunk_or_series_from_chunk, chunk_parent)
+
+        return self._todo.apply_args.style_func(
+            chunk_or_series_from_chunk,
+            **dict(kwargs, vmin=vmin, vmax=vmax, gmap=gmap),
+        )
+
+    def _adjust_gmap_shape_to_chunk_shape(self,
+                                          gmap: np.ndarray,
+                                          chunk_or_series_from_chunk: Union[DataFrame, Series],
+                                          chunk_parent: Union[DataFrame, Series],
+                                          ) -> np.ndarray:
+        if isinstance(chunk_or_series_from_chunk, Series):
+            return gmap[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
+        elif isinstance(chunk_or_series_from_chunk, DataFrame) and self._todo.apply_args.axis is None:
+            ri = chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)
+            ci = chunk_parent.columns.get_indexer_for(chunk_or_series_from_chunk.columns)
+            if isinstance(gmap, DataFrame):
+                return gmap.iloc[(ri, ci)]
+            elif isinstance(gmap, np.ndarray):
+                return DataFrame(data=gmap, index=chunk_parent.index, columns=chunk_parent.columns).iloc[(ri, ci)]
+        return gmap
+
+from typing import Callable, Optional, Union
+
+from pandas import DataFrame, Series
+from pandas._typing import Axis
+
+
+class ChunkParentProvider:
+    def __init__(self, style_func: Callable, axis: Optional[Axis], subset_frame: DataFrame):
+        self.__style_func = style_func
+        self.__axis = axis
+        self.__subset_frame = subset_frame
+
+    def __call__(self, chunk_or_series_from_chunk: Union[DataFrame, Series], *args, **kwargs):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
+
+        kwargs['chunk_parent'] = self._get_parent(chunk_or_series_from_chunk)
+        return self.__style_func(chunk_or_series_from_chunk, *args, **kwargs)
+
+    def _get_parent(self, chunk_or_series_from_chunk: Union[DataFrame, Series]):
+        if self.__axis == 0 or self.__axis == "index":
+            return self.__subset_frame[chunk_or_series_from_chunk.name]
+        elif self.__axis == 1 or self.__axis == "columns":
+            return self.__subset_frame.loc[chunk_or_series_from_chunk.name]
+        else:
+            return self.__subset_frame
+
+from typing import Optional, Union
+
+import numpy as np
+from pandas import DataFrame, Series
+from pandas.io.formats.style import _validate_apply_axis_arg
+
+
+class HighlightBetweenPatcher(TodoPatcher):
+
+    def __init__(self, todo: StylerTodo):
+        super().__init__(todo)
+
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
+        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
+        return self._todo.builder() \
+            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
+            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame)) \
+            .build()
+
+    def _styling_func(self,
+                      chunk_or_series_from_chunk: Union[DataFrame, Series],
+                      chunk_parent: Union[DataFrame, Series],
+                      **kwargs,
+                      ):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
+
+        left = kwargs.get("left", None)
+        right = kwargs.get("right", None)
+
+        if np.iterable(left) and not isinstance(left, str):
+            left = _validate_apply_axis_arg(left, "left", None, chunk_parent)
+            left = self._adjust_range_part(left, chunk_or_series_from_chunk, chunk_parent)
+
+        if np.iterable(right) and not isinstance(right, str):
+            right = _validate_apply_axis_arg(right, "right", None, chunk_parent)
+            right = self._adjust_range_part(right, chunk_or_series_from_chunk, chunk_parent)
+
+        return self._todo.apply_args.style_func(
+            chunk_or_series_from_chunk,
+            **dict(kwargs, left=left, right=right),
+        )
+
+    def _adjust_range_part(self,
+                           part: np.ndarray,
+                           chunk_or_series_from_chunk: Union[DataFrame, Series],
+                           chunk_parent: Union[DataFrame, Series],
+                           ) -> np.ndarray:
+        if isinstance(chunk_or_series_from_chunk, Series):
+            return part[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
+        elif isinstance(chunk_or_series_from_chunk, DataFrame) and self._todo.apply_args.axis is None:
+            ri = chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)
+            ci = chunk_parent.columns.get_indexer_for(chunk_or_series_from_chunk.columns)
+            ri_slice = slice(ri[0], ri[-1] + 1)
+            ci_slice = slice(ci[0], ci[-1] + 1)
+            return part[ri_slice, ci_slice]
+        return part
+
+import numpy as np
+import pandas as pd
+from typing import Optional, Union
+from pandas import DataFrame, Series
+
+
+class HighlightExtremaPatcher(TodoPatcher):
+
+    def __init__(self, todo: StylerTodo, op: str):
+        super().__init__(todo)
+        self._op: str = op
+        self._attribute: str = todo.style_func_kwargs.get('props', 'background-color: yellow')
+
+    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
+        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
+        return self._todo.builder() \
+            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
+            .with_style_func_kwargs({}) \
+            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame)) \
+            .build()
+
+    def _styling_func(self,
+                      chunk_or_series_from_chunk: Union[DataFrame, Series],
+                      chunk_parent: Union[DataFrame, Series],
+                      ):
+        if chunk_or_series_from_chunk.empty:
+            return chunk_or_series_from_chunk
+
+        value = getattr(chunk_parent, self._op)(skipna=True)
+
+        if isinstance(chunk_or_series_from_chunk, DataFrame):  # min/max must be done twice to return scalar
+            value = getattr(value, self._op)(skipna=True)
+        cond = chunk_or_series_from_chunk == value
+        cond = cond.where(pd.notna(cond), False)
+        return np.where(cond, self._attribute, "")
+
+from typing import Callable, List, Tuple, Optional
+
+from pandas import DataFrame
+
+
+class TodosPatcher:
+
+    def patch_todos_for_chunk(self,
+                              todos: List[StylerTodo],
+                              org_frame: DataFrame,
+                              chunk: DataFrame,
+                              ) -> List[Tuple[Callable, tuple, dict]]:
+        result: List[Tuple[Callable, tuple, dict]] = []
+
+        for t in todos:
+
+            if t.is_pandas_style_func():
+                patcher = self.__get_patcher_for_pandas_style_function(t)
+            else:
+                if t.is_applymap():
+                    patcher = ApplyMapPatcher(t)
+                else:
+                    patcher = ApplyPatcher(t)
+
+            if patcher is not None:
+                result.append(patcher.create_patched_todo(org_frame, chunk).to_tuple())
+
+        return result
+
+    @staticmethod
+    def is_style_function_supported(todo: StylerTodo) -> bool:
+        if todo.is_pandas_style_func():
+            return TodosPatcher.__get_patcher_for_pandas_style_function(todo) is not None
+        return True
+
+    @staticmethod
+    def __get_patcher_for_pandas_style_function(todo: StylerTodo) -> Optional[TodoPatcher]:
+        qname = StyleFunctionNameResolver.get_style_func_qname(todo)
+        if StyleFunctionNameResolver.is_pandas_text_gradient(qname, todo):
+            return BackgroundGradientPatcher(todo)
+        elif StyleFunctionNameResolver.is_pandas_background_gradient(qname):
+            return BackgroundGradientPatcher(todo)
+        elif StyleFunctionNameResolver.is_pandas_highlight_max(qname, todo):
+            return HighlightExtremaPatcher(todo, 'max')
+        elif StyleFunctionNameResolver.is_pandas_highlight_min(qname, todo):
+            return HighlightExtremaPatcher(todo, 'min')
+        elif StyleFunctionNameResolver.is_pandas_highlight_null(qname):
+            return ApplyPatcher(todo)
+        elif StyleFunctionNameResolver.is_pandas_highlight_between(qname):
+            return HighlightBetweenPatcher(todo)
+        elif StyleFunctionNameResolver.is_pandas_set_properties(qname):
+            return ApplyMapPatcher(todo)
+        return None
+
+from abc import ABC, abstractmethod
+from typing import List, Optional, Tuple, Callable, Any
+from dataclasses import dataclass
+import numpy as np
+from pandas import DataFrame, Index
+from pandas.io.formats.style import Styler
+from pandas.io.formats.style_render import non_reducing_slice
+
+
+class IndexTranslator(ABC):
+    @abstractmethod
+    def translate(self, index):
+        pass
+
+
+class _SequenceIndexTranslator(IndexTranslator):
+    def __init__(self, seq):
+        super().__init__()
+        self.__seq = seq
+
+    def translate(self, index):
+        return self.__seq[index]
+
+
+class _OffsetIndexTranslator(IndexTranslator):
+    def __init__(self, offset: int):
+        super().__init__()
+        self.__offset = offset
+
+    def translate(self, index):
+        return index + self.__offset
+
+
+@dataclass(frozen=True)
+class Region:
+    first_row: int = 0
+    first_col: int = 0
+    rows: int = 0
+    cols: int = 0
+
+    def is_empty(self) -> bool:
+        return self.rows == 0 or self.cols == 0
+
+    def is_valid(self) -> bool:
+        return self.first_row >= 0 and self.first_col >= 0 and self.rows >= 0 and self.cols >= 0
+
+    def iterate_chunkwise(self, rows_per_chunk: int, cols_per_chunk: int):
+        rows_processed = 0
+        while rows_processed < self.rows:
+            rows = min(rows_per_chunk, self.rows - rows_processed)
+            cols_in_row_processed = 0
+            while cols_in_row_processed < self.cols:
+                cols = min(cols_per_chunk, self.cols - cols_in_row_processed)
+
+                yield Region(rows_processed, cols_in_row_processed, rows, cols)
+
+                cols_in_row_processed += cols
+            rows_processed += rows
+
+
+@dataclass(frozen=True)
+class SortCriteria:
+    by_column: Optional[List[int]] = None
+    ascending: Optional[List[bool]] = None
+
+    def is_empty(self) -> bool:
+        return self.by_column is None or len(self.by_column) == 0
+
+    def __eq__(self, other):
+        if isinstance(other, SortCriteria):
+            def _equals(s: Optional[List[Any]], o: Optional[List[Any]]) -> bool:
+                s_len = 0 if s is None else len(s)
+                o_len = 0 if o is None else len(o)
+                return (s_len + o_len == 0) or s == o
+
+            return _equals(self.by_column, other.by_column) and _equals(self.ascending, other.ascending)
+        return False
+
+
+@dataclass(frozen=True)
+class FilterCriteria:
+    index: Optional[Index] = None
+    columns: Optional[Index] = None
+
+    @staticmethod
+    def from_frame(frame: Optional[DataFrame]):
+        return None if frame is None else FilterCriteria(frame.index, frame.columns)
+
+    def is_empty(self) -> bool:
+        return self.index is None and self.columns is None
+
+    def __eq__(self, other):
+        if isinstance(other, FilterCriteria):
+            def _equals(s: Optional[Index], o: Optional[Index]) -> bool:
+                if s is None and o is None:
+                    return True
+                return s is not None and o is not None and s.equals(o)
+            return _equals(self.columns, other.columns) and _equals(self.index, other.index)
+        return False
+
+
+class PatchedStylerContext:
+    def __init__(self, styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
+        self.__styler: Styler = styler
+        self.__styler_todos: List[StylerTodo] = [StylerTodo.from_tuple(t) for t in styler._todo]
+        self.__sort_criteria: SortCriteria = SortCriteria()
+        self.__filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
+
+        self.__recompute_visible_frame()
+
+    def is_filtered(self):
+        return not self.__filter_criteria.is_empty()
+
+    def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
+        self.__sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
+        self.__recompute_visible_frame()
+
+    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> np.ndarray:
+        part = self.__visible_frame.columns[part_start:part_start + max_columns]
+        return self.__styler.columns.get_indexer_for(part)
+
+    def get_region_of_visible_frame(self) -> Region:
+        return self.__visible_region
+
+    def compute_visible_intersection(self, region: Region) -> Region:
+        if region.is_empty():
+            return region
+        if self.__visible_region.is_empty():
+            return self.__visible_region
+        assert region.is_valid()
+        first_row = min(region.first_row, self.__visible_region.rows - 1)
+        first_col = min(region.first_col, self.__visible_region.cols - 1)
+        rows_left = self.__visible_region.rows - (0 if first_row == 0 else first_row + 1)
+        cols_left = self.__visible_region.cols - (0 if first_col == 0 else first_col + 1)
+        rows = min(region.rows, rows_left)
+        cols = min(region.cols, cols_left)
+        return Region(first_row, first_col, rows, cols)
+
+    def get_visible_frame(self) -> DataFrame:
+        return self.__visible_frame
+
+    def get_styler(self) -> Styler:
+        return self.__styler
+
+    def get_styler_todos(self) -> List[StylerTodo]:
+        if self.__styler_todos is None:
+            self.__styler_todos = [StylerTodo.from_tuple(t) for t in self.__styler._todo]
+        return self.__styler_todos
+
+    def create_patched_todos(self,
+                             chunk: DataFrame,
+                             todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
+                             ) -> List[Tuple[Callable, tuple, dict]]:
+        all_todos = self.get_styler_todos()
+        filtered_todos = all_todos if todos_filter is None else list(filter(todos_filter, all_todos))
+        return TodosPatcher().patch_todos_for_chunk(filtered_todos, self.__styler.data, chunk)
+
+    def get_row_index_translator_for_chunk(self, chunk: DataFrame, chunk_region: Region) -> IndexTranslator:
+        if self.__sort_criteria.is_empty() and self.__filter_criteria.index is None and len(
+                self.__styler.hidden_rows) == 0:
+            return _OffsetIndexTranslator(chunk_region.first_row)
+        return _SequenceIndexTranslator(self.__styler.index.get_indexer_for(chunk.index))
+
+    def get_column_index_translator_for_chunk(self, chunk: DataFrame, chunk_region: Region) -> IndexTranslator:
+        if self.__filter_criteria.columns is None and len(self.__styler.hidden_columns) == 0:
+            return _OffsetIndexTranslator(chunk_region.first_col)
+        return _SequenceIndexTranslator(self.__styler.columns.get_indexer_for(chunk.columns))
+
+    def __recompute_visible_frame(self):
+        self.__visible_frame = self.__sort_frame(
+            self.__filter_frame(self.__frame_without_hidden_rows_and_cols(self.__styler)),
+        )
+        self.__visible_region = Region(0, 0, len(self.__visible_frame.index), len(self.__visible_frame.columns))
+
+    def __sort_frame(self, frame: DataFrame) -> DataFrame:
+        if self.__sort_criteria.is_empty():
+            return frame
+        sc = self.__sort_criteria
+        return frame.sort_values(
+            by=[frame.columns[i] for i in sc.by_column],
+            ascending=True if sc.ascending is None or len(sc.ascending) == 0 else sc.ascending,
+        )
+
+    def __filter_frame(self, frame: DataFrame) -> DataFrame:
+        if self.__filter_criteria.is_empty():
+            return frame
+        else:
+            fc = self.__filter_criteria
+            index_intersection = frame.index if fc.index is None else frame.index.intersection(fc.index)
+            column_intersection = frame.columns if fc.columns is None else frame.columns.intersection(fc.columns)
+            subset = index_intersection, column_intersection
+            subset = slice(None) if subset is None else subset
+            subset = non_reducing_slice(subset)
+            return frame.loc[subset]
+
+    @staticmethod
+    def __frame_without_hidden_rows_and_cols(styler: Styler) -> DataFrame:
+        if len(styler.hidden_rows) == 0 and len(styler.hidden_columns) == 0:
+            return styler.data
+        else:
+            visible_indices = np.delete(styler.index.get_indexer_for(styler.index), styler.hidden_rows)
+            visible_columns = np.delete(styler.columns.get_indexer_for(styler.columns), styler.hidden_columns)
+            return styler.data.iloc[visible_indices, visible_columns]
+
+from collections import Sequence
+from dataclasses import dataclass
+from typing import List, Dict, Set, Any, Optional
+
+import numpy as np
+
+
+@dataclass
+class HTMLPropsTableElementCSS:
+    id_props: Dict[str, str]
+    class_props: List[Dict[str, str]]
+
+
+@dataclass
+class HTMLPropsTableRowElement:
+    type: str
+    display_value: str
+    kind: str
+    css_props: Optional[Dict[str, str]]
+    attributes: Optional[Dict[str, Any]]
+
+
+@dataclass
+class HTMLPropsTable:
+    head: List[List[HTMLPropsTableRowElement]]
+    body: List[List[HTMLPropsTableRowElement]]
+
+
+@dataclass
+class _CSSPropsWithIndex:
+    props: Dict[str, str]
+    index: int
+
+
+@dataclass
+class _SpannedElement:
+    row_span: int
+    col_span: int
+    element: HTMLPropsTableRowElement
+
+
+class DisplayValueTruncater:
+
+    def __init__(self, appr_max_chars: int, is_cell_value: bool):
+        self.__char_counter: int = appr_max_chars
+        self.__is_cell_value: bool = is_cell_value
+        self.__inside_container_counter: int = 0
+        self.__truncated_value_parts: List[str] = []
+
+    def truncate(self, value: Any) -> str:
+        self.__truncate_value_recursive(value)
+        return ''.join(self.__truncated_value_parts)
+
+    def __truncate_value_recursive(self, value: str):
+        is_string = True if isinstance(value, str) else False
+        if isinstance(value, tuple):
+            prepend_comma = False
+            self.__enter_container("(")
+            for entry in value:
+                if prepend_comma:
+                    self.__append(", ")
+                if self.__char_counter > 0:
+                    self.__truncate_value_recursive(entry)
+                else:
+                    self.__append("...")
+                    break
+                prepend_comma = True
+            self.__leave_container(")")
+        elif isinstance(value, (Sequence, np.ndarray)) and not is_string:
+            prepend_comma = False
+            comma = " " if isinstance(value, np.ndarray) else ", "
+            self.__enter_container("[")
+            for entry in value:
+                if prepend_comma:
+                    self.__append(comma)
+                if self.__char_counter > 0:
+                    self.__truncate_value_recursive(entry)
+                else:
+                    self.__append("...")
+                    break
+                prepend_comma = True
+            self.__leave_container("]")
+        elif isinstance(value, dict):
+            prepend_comma = False
+            self.__enter_container("{")
+            for k, v in value.items():
+                if prepend_comma:
+                    self.__append(", ")
+                if self.__char_counter > 0:
+                    self.__truncate_value_recursive(k)
+                    self.__append(": ")
+                    self.__truncate_value_recursive(v)
+                else:
+                    self.__append("...")
+                    break
+                prepend_comma = True
+            self.__leave_container("}")
+        else:
+            value = str(value)
+            if len(value) > self.__char_counter:
+                if self.__char_counter <= 0:
+                    value = f"{value[:1]}..."
+                else:
+                    value = f"{value[:self.__char_counter]}..."
+            if is_string and self.__is_in_container() and self.__is_cell_value:
+                value = f"'{value}'"
+            self.__append(value)
+
+    def __append(self, value: str):
+        self.__truncated_value_parts.append(value)
+        self.__char_counter -= len(value)
+
+    def __enter_container(self, prefix: str):
+        self.__append(prefix)
+        self.__inside_container_counter += 1
+
+    def __leave_container(self, suffix: str):
+        self.__append(suffix)
+        self.__inside_container_counter -= 1
+
+    def __is_in_container(self) -> bool:
+        return self.__inside_container_counter > 0
+
+
+class HTMLPropsTableBuilder:
+    APPROX_DISPLAY_VALUE_LENGTH = 300
+
+    def __init__(self):
+        self.__table = HTMLPropsTable([], [])
+
+    def build(self) -> HTMLPropsTable:
+        table = self.__table
+        self.__table = HTMLPropsTable([], [])
+        return table
+
+    def append_props(self,
+                     html_props: dict,
+                     target_row_offset: int,
+                     is_part_of_first_rows_in_chunk: bool,
+                     is_part_of_first_cols_in_chunk: bool,
+                     ):
+        css_dict = self.__create_css_dict_from_cellstyles(html_props)
+
+        if is_part_of_first_rows_in_chunk:
+            self.__append_head_elements(html_props.get("head", []), css_dict)
+
+        self.__append_body_elements(
+            html_props.get("body", []),
+            target_row_offset,
+            is_part_of_first_cols_in_chunk,
+            css_dict,
+        )
+
+    def __append_head_elements(self, head_elements: list, css_dict: Dict[str, _CSSPropsWithIndex]):
+        transformed_head_elements = self.__transform_rows(head_elements, css_dict)
+        if len(self.__table.head) == 0:
+            self.__table.head.extend(transformed_head_elements)
+        else:
+            for i, row in enumerate(transformed_head_elements):
+                for element in row:
+                    if element.kind == "col_heading":
+                        self.__table.head[i].append(element)
+
+    def __append_body_elements(self,
+                               body_elements: list,
+                               target_row_offset: int,
+                               is_part_of_first_cols_in_chunk: bool,
+                               css_dict: Dict[str, _CSSPropsWithIndex],
+                               ):
+        transformed_body_elements = self.__transform_rows(body_elements, css_dict)
+        if is_part_of_first_cols_in_chunk:
+            self.__table.body.extend(transformed_body_elements)
+        else:
+            for i, row in enumerate(transformed_body_elements):
+                target_row = self.__table.body[target_row_offset + i]
+                for j, entry in enumerate(row):
+                    if entry.type == 'td':
+                        target_row.extend(row[j:])
+                        break
+
+    @staticmethod
+    def __create_css_dict_from_cellstyles(html_props: dict) -> Dict[str, _CSSPropsWithIndex]:
+        cellstyle = html_props.get("cellstyle", None)
+        css_dict: Dict[str, _CSSPropsWithIndex] = {}
+        if cellstyle is not None:
+            for index, entry in enumerate(cellstyle):
+                props = entry['props']
+                if len(props) == 0:
+                    continue
+                css_props = _CSSPropsWithIndex({p[0]: p[1] for p in props}, index)
+                for s in entry.get('selectors', []):
+                    css_dict[s] = css_props
+        return css_dict
+
+    def __transform_rows(self,
+                         rows: List[List[dict]],
+                         css_dict: Dict[str, _CSSPropsWithIndex],
+                         ) -> List[List[HTMLPropsTableRowElement]]:
+        transformed_rows: List[List[HTMLPropsTableRowElement]] = []
+        open_spans: Dict[int, List[_SpannedElement]] = {}
+
+        for row in rows:
+
+            transformed_row = []
+            ignore_trailing_blank_row_headers = False
+
+            for ci, element in enumerate(row):
+
+                element_to_add = None
+                element_classes_set = set(element.get("class", "").split(" "))
+                is_header = element.get("type", "") == "th"
+
+                if ignore_trailing_blank_row_headers:
+                    if is_header and "blank" in element_classes_set:
+                        continue
+                else:
+                    ignore_trailing_blank_row_headers = is_header and "blank" not in element_classes_set
+
+                if element.get("is_visible", True):
+                    transformed_element = self.__transform_row_element(
+                        element,
+                        element_classes_set,
+                        css_dict,
+                    )
+                    element_to_add = transformed_element
+
+                    spanned_element = self.__create_spanned_element_from_span_attributes(transformed_element)
+                    if spanned_element is not None:
+                        element_to_add = None
+                        open_spans.setdefault(ci, []).append(spanned_element)
+
+                if ci in open_spans:
+                    pending_col_spans = open_spans[ci]
+                    remove_consumed_spans = False
+                    for pending_span in pending_col_spans:
+                        transformed_row.extend(pending_span.col_span * [pending_span.element])
+                        pending_span.row_span -= 1
+                        if pending_span.row_span < 1:
+                            remove_consumed_spans = True
+
+                    if remove_consumed_spans:
+                        cleaned = [s for s in pending_col_spans if s.row_span > 0]
+                        if len(cleaned) == 0:
+                            del open_spans[ci]
+                        else:
+                            open_spans[ci] = cleaned
+
+                if element_to_add is not None:
+                    transformed_row.append(element_to_add)
+
+            if len(transformed_row) > 0:
+                transformed_rows.append(transformed_row)
+
+        assert len(open_spans) == 0, f"Trailing spans are not implemented, found {len(open_spans)} pending."
+        return transformed_rows
+
+    def __transform_row_element(self,
+                                element: dict,
+                                element_classes_set: Set[str],
+                                css_dict: Dict[str, _CSSPropsWithIndex],
+                                ) -> HTMLPropsTableRowElement:
+        value_truncater = DisplayValueTruncater(
+            self.APPROX_DISPLAY_VALUE_LENGTH,
+            element.get("type", "") == "td",
+        )
+        return HTMLPropsTableRowElement(
+            type=element.get("type", ""),
+            display_value=value_truncater.truncate(element.get("display_value", "")),
+            kind=self.__get_kind(element_classes_set),
+            css_props=self.__compute_element_css(element, element_classes_set, css_dict),
+            attributes=self.__extract_attributes(element),
+        )
+
+    @staticmethod
+    def __compute_element_css(
+            element: dict,
+            element_classes_set: Set[str],
+            css_dict: Dict[str, _CSSPropsWithIndex],
+    ) -> Optional[Dict[str, str]]:
+        matching_css_props: List[_CSSPropsWithIndex] = []
+
+        for c in element_classes_set:
+            css_props = css_dict.get(c, None)
+            if css_props is not None:
+                matching_css_props.append(css_props)
+        if len(matching_css_props) > 1:
+            matching_css_props.sort(key=lambda x: x.index)
+
+        id_css_props = css_dict.get(element.get("id", None), None)
+        if id_css_props is not None:
+            matching_css_props.append(id_css_props)
+
+        if len(matching_css_props) == 0:
+            return None
+
+        result: Dict[str, str] = {}
+        for css_props in matching_css_props:
+            result.update(css_props.props)
+        return result
+
+    @staticmethod
+    def __get_kind(element_classes_set: Set[str]) -> str:
+        if "blank" in element_classes_set:
+            return "blank"
+        if "index_name" in element_classes_set:
+            return "index_name"
+        if "col_heading" in element_classes_set:
+            return "col_heading"
+        if "row_heading" in element_classes_set:
+            return "row_heading"
+        return ""
+
+    @staticmethod
+    def __create_spanned_element_from_span_attributes(element: HTMLPropsTableRowElement) -> Optional[_SpannedElement]:
+        attributes = element.attributes
+        if attributes is None:
+            return None
+
+        rowspan = attributes.pop("rowspan", None)
+        colspan = attributes.pop("colspan", None)
+        if len(attributes) == 0:
+            element.attributes = None
+        if rowspan is None and colspan is None:
+            return None
+
+        rowspan = 1 if rowspan is None else int(rowspan)
+        colspan = 1 if colspan is None else int(colspan)
+        if rowspan > 1 or colspan > 1:
+            return _SpannedElement(rowspan, colspan, element)
+
+        return None
+
+    @staticmethod
+    def __extract_attributes(element: dict) -> Optional[Dict[str, Any]]:
+        attributes = element.get("attributes", '')  # empty attributes can be defined as an empty string instead of list
+        if attributes == '':
+            return None
+        if isinstance(attributes, list):
+            if len(attributes) == 0:
+                return None
+            attributes_dict = {}
+            for attr in attributes:
+                key, value = attr.split("=")
+                attributes_dict[key] = value.strip('"')
+            return attributes_dict
+        return None
+
+from typing import List, Tuple, Callable, Optional
+from collections.abc import Mapping
+from pandas.io.formats.style import Styler
+
+
+class _TranslateKeysDict(Mapping):
+
+    def __init__(self, org_dict: dict, translate_key: Callable):
+        self._org_dict = org_dict
+        self._translate_key = translate_key
+
+    def get(self, key, default=None):
+        t_key = self._translate_key(key)
+        if t_key not in self._org_dict:
+            return default
+        return self._org_dict.get(t_key)
+
+    def __contains__(self, key):
+        return self._translate_key(key) in self._org_dict
+
+    def __getitem__(self, key):
+        return self._org_dict[self._translate_key(key)]
+
+    def values(self):
+        return super().values()
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def keys(self):
+        raise NotImplementedError
+
+    def items(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        return len(self._org_dict)
+
+
+class _HTMLPropsIndexAdjuster:
+
+    def __init__(self, ri_translator: IndexTranslator, ci_translator: IndexTranslator):
+        self.ri_translator = ri_translator
+        self.ci_translator = ci_translator
+
+    def adjust(self, d: dict):
+        for head in d.get('head', []):
+            for col in head:
+                if 'id' in col:
+                    col['id'] = '_'.join(self._adjust_indices(col['id'].split('_')))
+                if 'class' in col:
+                    col['class'] = ' '.join(self._adjust_indices(col['class'].strip().split(' ')))
+
+        for row in d.get('body', []):
+            for entry in row:
+                if 'id' in entry:
+                    entry['id'] = '_'.join(self._adjust_indices(entry['id'].split('_')))
+                if 'class' in entry:
+                    entry['class'] = ' '.join(self._adjust_indices(entry['class'].strip().split(' ')))
+
+        for style in d.get('cellstyle', []):
+            if 'selectors' in style:
+                style['selectors'] = ['_'.join(self._adjust_indices(s.split('_'))) for s in style['selectors']]
+
+        if 'index_lengths' in d:
+            d['index_lengths'] = {(k[0], self.ri_translator.translate(k[1])): v for k, v in d['index_lengths'].items()}
+
+    def _adjust_indices(self, indices: List[str]) -> List[str]:
+        return [self._adjust_index(x) for x in indices]
+
+    def _adjust_index(self, index: str) -> str:
+        if index.startswith("row") and index[3:].isdigit():
+            return f'row{self.ri_translator.translate(int(index[3:]))}'
+        if index.startswith("col") and index[3:].isdigit():
+            return f'col{self.ci_translator.translate(int(index[3:]))}'
+        return index
+
+
+class HTMLPropsGenerator:
+    def __init__(self,
+                 styler_context: PatchedStylerContext,
+                 todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
+                 ):
+        self.__styler_context: PatchedStylerContext = styler_context
+        self.__todos_filter: Optional[Callable[[StylerTodo], bool]] = todos_filter
+
+    def internal_compute_unpatched_props(self) -> dict:
+
+        if self.__styler_context.is_filtered():
+            raise NotImplementedError("Context has a filter criteria defined. Unpatched props are not filtered.")
+
+        copy = self.__styler_context.get_styler()
+        old_values = [copy.uuid, copy.uuid_len, copy.cell_ids]
+        copy.uuid = ''
+        copy.uuid_len = 0
+        copy.cell_ids = False
+        try:
+            copy._compute()
+            return copy._translate(sparse_index=False, sparse_cols=False)
+        finally:
+            copy.uuid = old_values[0]
+            copy.uuid_len = old_values[1]
+            copy.cell_ids = old_values[2]
+
+    def compute_chunk_props(self,
+                            region: Region,
+                            exclude_row_header: bool = False,
+                            exclude_col_header: bool = False,
+                            translate_indices: bool = True,
+                            ) -> dict:
+        chunk = self.__styler_context.get_visible_frame().iloc[
+                region.first_row: region.first_row + region.rows,
+                region.first_col: region.first_col + region.cols,
+                ]
+
+        chunk_aware_todos = self.__styler_context.create_patched_todos(chunk, self.__todos_filter)
+
+        computed_styler = self.__compute_styling(
+            chunk_aware_todos=chunk_aware_todos,
+            exclude_row_header=exclude_row_header,
+            exclude_col_header=exclude_col_header,
+        )
+
+        chunk_styler = chunk.style
+        self.__copy_styler_state(source=computed_styler, target=chunk_styler)
+
+        rit = self.__styler_context.get_row_index_translator_for_chunk(chunk, region)
+        cit = self.__styler_context.get_column_index_translator_for_chunk(chunk, region)
+
+        def translate_key(k):
+            return rit.translate(k[0]), cit.translate(k[1])
+
+        chunk_styler.ctx = _TranslateKeysDict(computed_styler.ctx, translate_key)
+        chunk_styler.cell_context = _TranslateKeysDict(computed_styler.cell_context, translate_key)
+        chunk_styler._display_funcs = _TranslateKeysDict(computed_styler._display_funcs, translate_key)
+
+        result = chunk_styler._translate(sparse_index=False, sparse_cols=False)
+
+        if translate_indices:
+            _HTMLPropsIndexAdjuster(rit, cit).adjust(result)
+
+        return result
+
+    def __compute_styling(self,
+                          chunk_aware_todos: List[Tuple[Callable, tuple, dict]],
+                          exclude_row_header: bool = False,
+                          exclude_col_header: bool = False,
+                          ) -> Styler:
+        styler = self.__styler_context.get_styler()
+
+        copy = styler.data.style
+        self.__copy_styler_state(source=styler, target=copy)
+
+        copy._todo = chunk_aware_todos
+
+        if exclude_row_header:
+            copy.hide(axis="index")
+        if exclude_col_header:
+            copy.hide(axis="columns")
+
+        copy._compute()
+        return copy
+
+    @staticmethod
+    def __copy_styler_state(source: Styler, target: Styler):
+        target.uuid = ''
+        target.uuid_len = 0
+        target.cell_ids = False
+
+        target.table_styles = source.table_styles
+        target.table_attributes = source.table_attributes
+        target.hide_columns_ = source.hide_columns_
+        target.hide_column_names = source.hide_column_names
+        target.hide_index_ = source.hide_index_
+        target.hide_index_names = source.hide_index_names
+        target.cell_context = source.cell_context
+        target._display_funcs = source._display_funcs
+
+
+
+class HTMLPropsTableGenerator:
+    def __init__(self, props_generator: HTMLPropsGenerator):
+        self.__props_generator: HTMLPropsGenerator = props_generator
+
+    def internal_compute_unpatched_table(self) -> HTMLPropsTable:
+        table_builder = HTMLPropsTableBuilder()
+        table_builder.append_props(
+            html_props=self.__props_generator.internal_compute_unpatched_props(),
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return table_builder.build()
+
+    def compute_chunk_table(self,
+                            region: Region,
+                            exclude_row_header: bool = False,
+                            exclude_col_header: bool = False
+                            ) -> HTMLPropsTable:
+        html_props = self.__props_generator.compute_chunk_props(
+            region=region,
+            exclude_row_header=exclude_row_header,
+            exclude_col_header=exclude_col_header,
+            translate_indices=False,
+        )
+
+        table_builder = HTMLPropsTableBuilder()
+        table_builder.append_props(
+            html_props=html_props,
+            target_row_offset=0,
+            is_part_of_first_rows_in_chunk=True,
+            is_part_of_first_cols_in_chunk=True,
+        )
+        return table_builder.build()
+
+    def compute_table_from_chunks(self,
+                                  region: Region,
+                                  rows_per_chunk: int,
+                                  cols_per_chunk: int,
+                                  ) -> HTMLPropsTable:
+        table_builder = HTMLPropsTableBuilder()
+
+        for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
+            chunk_html_props = self.__props_generator.compute_chunk_props(
+                region=Region(
+                    region.first_row + chunk_region.first_row,
+                    region.first_col + chunk_region.first_col,
+                    chunk_region.rows,
+                    chunk_region.cols,
+                ),
+                exclude_row_header=chunk_region.first_col > 0,
+                exclude_col_header=chunk_region.first_row > 0,
+                translate_indices=False,
+            )
+
+            table_builder.append_props(
+                html_props=chunk_html_props,
+                target_row_offset=chunk_region.first_row,
+                is_part_of_first_rows_in_chunk=chunk_region.first_row == 0,
+                is_part_of_first_cols_in_chunk=chunk_region.first_col == 0,
+            )
+
+        return table_builder.build()
+
+from typing import Optional
+from dataclasses import dataclass
+import json
+
+
+@dataclass(frozen=True)
+class HTMLPropsValidationResult:
+    actual: str
+    expected: str
+    is_equal: bool
+
+
+class HTMLPropsValidator:
+    def __init__(self, styler_context: PatchedStylerContext, props_generator: Optional[HTMLPropsGenerator] = None):
+        self.__styler_context: PatchedStylerContext = styler_context
+        self.__table_generator: HTMLPropsTableGenerator = HTMLPropsTableGenerator(
+            props_generator if props_generator is not None else HTMLPropsGenerator(styler_context),
+        )
+
+    def test_only_validate(self, rows_per_chunk: int, cols_per_chunk: int) -> HTMLPropsValidationResult:
+        region = self.__styler_context.get_region_of_visible_frame()
+        if region.is_empty():
+            return HTMLPropsValidationResult('', '', True)
+        combined_table = self.__table_generator.compute_table_from_chunks(region, rows_per_chunk, cols_per_chunk)
+        expected_table = self.__table_generator.internal_compute_unpatched_table()
+        return self.__compare_tables(combined_table, expected_table)
+
+    def validate_chunk_region(self,
+                              chunk_region: Region,
+                              rows_per_chunk: int,
+                              cols_per_chunk: int,
+                              ) -> HTMLPropsValidationResult:
+        clamped_region = self.__styler_context.compute_visible_intersection(chunk_region)
+        if clamped_region.is_empty():
+            return HTMLPropsValidationResult('', '', True)
+        combined_table = self.__table_generator.compute_table_from_chunks(clamped_region, rows_per_chunk, cols_per_chunk)
+        expected_table = self.__table_generator.compute_chunk_table(clamped_region)
+        return self.__compare_tables(combined_table, expected_table)
+
+    def __compare_tables(self,
+                         combined_table: HTMLPropsTable,
+                         expected_table: HTMLPropsTable,
+                         ) -> HTMLPropsValidationResult:
+        combined_json = self.__jsonify_table(combined_table)
+        expected_json = self.__jsonify_table(expected_table)
+        return HTMLPropsValidationResult(combined_json, expected_json, combined_json == expected_json)
+
+    @staticmethod
+    def __jsonify_table(table: HTMLPropsTable) -> str:
+        return json.dumps(table, indent=2, cls=CustomJSONEncoder)
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Tuple, Optional
+from abc import ABC, abstractmethod
+
+
+@dataclass(frozen=True)
+class StyleFunctionValidationProblem:
+    index: int
+    reason: str
+    message: str = ""
+
+
+class ValidationStrategyType(Enum):
+    FAST = "fast"
+    PRECISION = "precision"
+
+
+class _AbstractValidationStrategy(ABC):
+    def __init__(self, strategy_type: ValidationStrategyType):
+        self._strategy_type: ValidationStrategyType = strategy_type
+
+    @property
+    def strategy_type(self):
+        return self._strategy_type
+
+    @abstractmethod
+    def get_chunk_size(self, rows_in_region: int, columns_in_region: int) -> Tuple[int, int]:
+        pass
+
+    @staticmethod
+    def _ceiling_division(n, d):
+        return -(n // -d)
+
+
+class _PrecisionValidationStrategy(_AbstractValidationStrategy):
+    def __init__(self):
+        super().__init__(ValidationStrategyType.PRECISION)
+
+    def get_chunk_size(self, rows_in_region: int, columns_in_region: int) -> Tuple[int, int]:
+        cols_per_chunk = max(1, self._ceiling_division(rows_in_region, 2))
+        rows_per_chunk = max(1, self._ceiling_division(columns_in_region, 2))
+        return rows_per_chunk, cols_per_chunk
+
+
+class _FastValidationStrategy(_AbstractValidationStrategy):
+    def __init__(self):
+        super().__init__(ValidationStrategyType.FAST)
+        self.__split_vertical = True
+
+    def get_chunk_size(self, rows_in_region: int, columns_in_region: int) -> Tuple[int, int]:
+        rows_per_chunk = rows_in_region
+        cols_per_chunk = columns_in_region
+
+        if self.__split_vertical:
+            cols_per_chunk = max(1, self._ceiling_division(cols_per_chunk, 2))
+        else:
+            rows_per_chunk = max(1, self._ceiling_division(rows_per_chunk, 2))
+
+        self.__split_vertical = not self.__split_vertical
+        return rows_per_chunk, cols_per_chunk
+
+
+class StyleFunctionsValidator:
+    def __init__(self, styler_context: PatchedStylerContext, strategy_type: Optional[ValidationStrategyType] = None):
+        self.__styler_context: PatchedStylerContext = styler_context
+        self.__apply_todos_count: int = self.__count_apply_todos(styler_context.get_styler_todos())
+        self.__validation_strategy: _AbstractValidationStrategy = self.__create_validation_strategy(strategy_type)
+
+    def validate(self, region: Region) -> List[StyleFunctionValidationProblem]:
+
+        if self.__apply_todos_count == 0:
+            return []
+
+        rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(region.rows, region.cols)
+
+        if self.__apply_todos_count == 1:
+            return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
+
+        try:
+            validator = HTMLPropsValidator(self.__styler_context)
+            if validator.validate_chunk_region(region, rows_per_chunk, cols_per_chunk).is_equal:
+                return []
+        except Exception:
+            pass
+
+        return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
+
+    def __validate_todos_separately(self,
+                                    region: Region,
+                                    rows_per_chunk: int,
+                                    cols_per_chunk: int,
+                                    ) -> List[StyleFunctionValidationProblem]:
+        validation_result = []
+
+        ctx = self.__styler_context
+        for i, todo in enumerate(ctx.get_styler_todos()):
+            try:
+                if todo.is_applymap():
+                    continue
+                validator = HTMLPropsValidator(ctx, HTMLPropsGenerator(ctx, lambda x: x is todo))
+                result = validator.validate_chunk_region(region, rows_per_chunk, cols_per_chunk)
+                if not result.is_equal:
+                    validation_result.append(StyleFunctionValidationProblem(i, "NOT_EQUAL"))
+            except Exception as e:
+                validation_result.append(StyleFunctionValidationProblem(i, "EXCEPTION", str(e)))
+
+        return validation_result
+
+    @staticmethod
+    def __count_apply_todos(todos: List[StylerTodo]) -> int:
+        if len(todos) == 0:
+            return 0
+        return len([not t.is_applymap() for t in todos])
+
+    @staticmethod
+    def __create_validation_strategy(strategy_type: Optional[ValidationStrategyType] = None):
+        if strategy_type is ValidationStrategyType.PRECISION:
+            return _PrecisionValidationStrategy()
+        else:
+            return _FastValidationStrategy()
+
+import json
+from dataclasses import dataclass
+from typing import List, Optional, Any
+import numpy as np
+
+
+@dataclass(frozen=True)
+class TableStructure:
+    org_rows_count: int
+    org_columns_count: int
+    rows_count: int
+    columns_count: int
+    row_levels_count: int
+    column_levels_count: int
+    hide_row_header: bool
+    hide_column_header: bool
+
+
+@dataclass(frozen=True)
+class StyleFunctionDetails:
+    index: int
+    qname: str
+    resolved_name: str
+    axis: str
+    is_chunk_parent_requested: bool
+    is_apply: bool
+    is_pandas_builtin: bool
+    is_supported: bool
+
+
+class PatchedStyler:
+    def __init__(self, context: PatchedStylerContext):
+        self.__context: PatchedStylerContext = context
+
+    def internal_get_context(self) -> PatchedStylerContext:
+        return self.__context
+
+    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> str:
+        part = self.__context.get_org_indices_of_visible_columns(part_start, max_columns)
+        return np.array2string(part, separator=', ').replace('\n', '')
+
+    @staticmethod
+    def to_json(data: Any) -> str:
+        return json.dumps(data, cls=CustomJSONEncoder)
+
+    def validate_style_functions(self,
+                                 first_row: int,
+                                 first_col: int,
+                                 rows: int,
+                                 cols: int,
+                                 validation_strategy: Optional[ValidationStrategyType] = None,
+                                 ) -> List[StyleFunctionValidationProblem]:
+        return StyleFunctionsValidator(self.__context, validation_strategy)\
+            .validate(Region(first_row, first_col, rows, cols))
+
+    def set_sort_criteria(self,
+                          by_column_index: Optional[List[int]] = None,
+                          ascending: Optional[List[bool]] = None,
+                          ):
+        self.__context.set_sort_criteria(by_column_index, ascending)
+
+    def compute_chunk_html_props_table(self,
+                                       first_row: int,
+                                       first_col: int,
+                                       rows: int,
+                                       cols: int,
+                                       exclude_row_header: bool = False,
+                                       exclude_col_header: bool = False
+                                       ) -> HTMLPropsTable:
+        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).compute_chunk_table(
+            region=Region(first_row, first_col, rows, cols),
+            exclude_row_header=exclude_row_header,
+            exclude_col_header=exclude_col_header,
+        )
+
+    def internal_compute_unpatched_html_props_table(self) -> HTMLPropsTable:
+        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).internal_compute_unpatched_table()
+
+    def get_table_structure(self) -> TableStructure:
+        visible_frame = self.__context.get_visible_frame()
+        styler = self.__context.get_styler()
+        org_rows_count = len(styler.data.index)
+        org_columns_count = len(styler.data.columns)
+        rows_count = len(visible_frame.index)
+        columns_count = len(visible_frame.columns)
+        if rows_count == 0 or columns_count == 0:
+            rows_count = columns_count = 0
+        return TableStructure(
+            org_rows_count=org_rows_count,
+            org_columns_count=org_columns_count,
+            rows_count=rows_count,
+            columns_count=columns_count,
+            row_levels_count=visible_frame.index.nlevels - styler.hide_index_.count(True),
+            column_levels_count=visible_frame.columns.nlevels - styler.hide_columns_.count(True),
+            hide_row_header=all(styler.hide_index_),
+            hide_column_header=all(styler.hide_columns_)
+        )
+
+    def get_style_function_details(self) -> List[StyleFunctionDetails]:
+        result = []
+
+        for i, todo in enumerate(self.__context.get_styler_todos()):
+            result.append(StyleFunctionDetails(
+                index=i,
+                qname=StyleFunctionNameResolver.get_style_func_qname(todo),
+                resolved_name=StyleFunctionNameResolver.resolve_style_func_name(todo),
+                axis='' if todo.is_applymap() else str(todo.apply_args.axis),
+                is_pandas_builtin=todo.is_pandas_style_func(),
+                is_supported=TodosPatcher.is_style_function_supported(todo),
+                is_apply=not todo.is_applymap(),
+                is_chunk_parent_requested=todo.should_provide_chunk_parent(),
+            ))
+
+        return result
+
+from typing import Union, Optional
+from hashlib import blake2b
+from pandas import DataFrame
+from pandas.io.formats.style import Styler
+
+
+class StyledDataFrameViewerBridge:
+
+    @staticmethod
+    def create_patched_styler(frame_or_styler: Union[DataFrame, Styler],
+                              filter_frame: Optional[DataFrame] = None,
+                              ) -> PatchedStyler:
+        if isinstance(frame_or_styler, DataFrame):
+            styler: Styler = frame_or_styler.style
+        else:
+            styler: Styler = frame_or_styler
+
+        return PatchedStyler(PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame)))
+
+    @staticmethod
+    def create_fingerprint(frame_or_styler: Union[DataFrame, Styler]) -> str:
+        frame = frame_or_styler if isinstance(frame_or_styler, DataFrame) else frame_or_styler.data
+        fingerprint_input = [id(frame), frame.shape, frame.index[:60], frame.dtypes[:60]]
+        return blake2b('-'.join(str(x) for x in fingerprint_input).encode(), digest_size=16).hexdigest()
