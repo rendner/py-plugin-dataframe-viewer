@@ -267,18 +267,18 @@ internal class DataFrameTableTest {
         val tsA = tableModelFactory.createTableStructure()
         val modelA = createModel(tsA, dataSourceFingerprint, List(tsA.columnsCount) { it })
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
-        tableComponent.getValueTable().columnModel.getColumn(0).let { c ->
-                c.width = 123
-                c.preferredWidth = 123
+        val oldColumn = tableComponent.getValueTable().columnModel.getColumn(1).also {
+                it.width = 123
+                it.preferredWidth = 123
+                it.headerValue = "123"
         }
 
-        val oldColumn = tableComponent.getValueTable().columnModel.getColumn(0)
-
         val tsB = tableModelFactory.createTableStructure()
-        val modelB = createModel(tsB, dataSourceFingerprint, List(tsB.columnsCount) { if (it == 0) 0 else it + 1 }.reversed())
+        val modelB = createModel(tsB, dataSourceFingerprint, List(tsB.columnsCount) { it }.reversed())
         tableComponent.setDataFrameModel(modelB)
-        tableComponent.getValueTable().columnModel.getColumn(7).let { c ->
+        tableComponent.getValueTable().columnModel.getColumn(tsB.columnsCount - 2).let { c ->
             assertThat(c.identifier).isEqualTo(oldColumn.identifier)
+            assertThat(c.headerValue).isEqualTo(oldColumn.headerValue)
             assertThat(c.width).isEqualTo(oldColumn.width)
             assertThat(c.preferredWidth).isEqualTo(oldColumn.preferredWidth)
         }
@@ -288,17 +288,17 @@ internal class DataFrameTableTest {
     fun valueTable_columns_shouldIgnoreColumnStateIfDifferentDataSource() {
         val modelA = createModel(tableModelFactory.createTableStructure(), "A")
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
-        tableComponent.getValueTable().columnModel.getColumn(0).let { c ->
-            c.width = 123
-            c.preferredWidth = 123
+        val oldColumn = tableComponent.getValueTable().columnModel.getColumn(0).also {
+            it.width = 123
+            it.preferredWidth = 123
+            it.headerValue = "123"
         }
-
-        val oldColumn = tableComponent.getValueTable().columnModel.getColumn(0)
 
         val modelB = createModel(tableModelFactory.createTableStructure(), "B")
         tableComponent.setDataFrameModel(modelB)
         tableComponent.getValueTable().columnModel.getColumn(0).let { c ->
             assertThat(c.identifier).isEqualTo(oldColumn.identifier)
+            assertThat(c.headerValue).isNotEqualTo(oldColumn.headerValue)
             assertThat(c.width).isNotEqualTo(oldColumn.width)
             assertThat(c.preferredWidth).isNotEqualTo(oldColumn.preferredWidth)
         }

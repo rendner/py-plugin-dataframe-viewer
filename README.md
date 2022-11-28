@@ -2,7 +2,7 @@
 
 Download from JetBrains Marketplace: [Python: Styled DataFrame Viewer](https://plugins.jetbrains.com/plugin/16050-python-styled-dataframe-viewer)
 
-**latest supported pandas version:**  1.4.x (min required plugin version `0.6.0`)
+**latest supported pandas version:**  1.5.x (min required plugin version `0.9.1`)
 
 ## What It Is
 View styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` when debugging.
@@ -17,20 +17,20 @@ The following `Styler` methods are supported:
 
 | pandas Styler method                                                                                                                             | supported pandas version |
 |--------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------|
-| [Styler.apply](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.apply.html)                             | 1.1.x - 1.4.x            |
-| [Styler.applymap](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.applymap.html)                       | 1.1.x - 1.4.x            |
-| [Styler.background_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.background_gradient.html) | 1.1.x - 1.4.x            |
-| [Styler.format](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.format.html)                           | 1.1.x - 1.4.x            |
-| [Styler.hide_columns](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide_columns.html)               | 1.1.x - 1.4.x            |
-| [Styler.hide_index](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide_index.html)                   | 1.1.x - 1.4.x            |
-| [Styler.hide](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide.html)                               | 1.4.x (added in 1.4.0)   |
-| [Styler.highlight_between](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_between.html)     | 1.3.x - 1.4.x            |
-| [Styler.highlight_max](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_max.html)             | 1.1.x - 1.4.x            |
-| [Styler.highlight_min](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_min.html)             | 1.1.x - 1.4.x            |
-| [Styler.highlight_null](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_null.html)           | 1.1.x - 1.4.x            |
-| [Styler.highlight_quantile](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_quantile.html)   | 1.3.x - 1.4.x            |
-| [Styler.set_properties](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.set_properties.html)           | 1.1.x - 1.4.x            |
-| [Styler.text_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.text_gradient.html)             | 1.3.x - 1.4.x            |
+| [Styler.apply](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.apply.html)                             | 1.1.x - 1.5.x            |
+| [Styler.applymap](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.applymap.html)                       | 1.1.x - 1.5.x            |
+| [Styler.background_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.background_gradient.html) | 1.1.x - 1.5.x            |
+| [Styler.format](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.format.html)                           | 1.1.x - 1.5.x            |
+| [Styler.hide_columns](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide_columns.html)               | 1.1.x - 1.5.x            |
+| [Styler.hide_index](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide_index.html)                   | 1.1.x - 1.5.x            |
+| [Styler.hide](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide.html)                               | 1.4.x - 1.5.x            |
+| [Styler.highlight_between](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_between.html)     | 1.3.x - 1.5.x            |
+| [Styler.highlight_max](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_max.html)             | 1.1.x - 1.5.x            |
+| [Styler.highlight_min](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_min.html)             | 1.1.x - 1.5.x            |
+| [Styler.highlight_null](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_null.html)           | 1.1.x - 1.5.x            |
+| [Styler.highlight_quantile](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_quantile.html)   | 1.3.x - 1.5.x            |
+| [Styler.set_properties](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.set_properties.html)           | 1.1.x - 1.5.x            |
+| [Styler.text_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.text_gradient.html)             | 1.3.x - 1.5.x            |
 
 
 > A good overview about styling `DataFrames` can be found on the pandas website: [pandas User Guide: Styling](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)

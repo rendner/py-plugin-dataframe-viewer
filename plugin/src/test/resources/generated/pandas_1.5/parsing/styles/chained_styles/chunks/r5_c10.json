@@ -1,0 +1,82 @@
+{
+    "head": [
+    ],
+    "body": [
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+1.56",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.22",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.63",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.99",
+                "css_props": {
+                    "background-color": "yellow"
+                }
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.30",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.56",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.89",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+1.01",
+                "css_props": {
+                    "background-color": "red"
+                }
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.633368",
+                "css_props": {
+                    "background-color": "red"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.737564",
+                "css_props": null
+            }
+        ]
+    ]
+}

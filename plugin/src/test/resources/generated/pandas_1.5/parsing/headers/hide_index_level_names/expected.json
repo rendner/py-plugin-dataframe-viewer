@@ -1,0 +1,310 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "x",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "x",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "x",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "y",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "y",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "y",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "a",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "b",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "c",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "a",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "b",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "c",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.469112",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.282863",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.509059",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.135632",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.212112",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.173215",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.119209",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.044236",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.861849",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-2.104569",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.494929",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.071804",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.721555",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.706771",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.039575",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.271860",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.424972",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.567020",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.276232",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.087401",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.673690",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.113648",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.478427",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.524988",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.404705",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.577046",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.715002",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.039268",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.370647",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.157892",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.344312",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.844885",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.075770",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.109050",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.643563",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.469388",
+                "css_props": null
+            }
+        ]
+    ]
+}

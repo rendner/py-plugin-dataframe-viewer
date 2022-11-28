@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "cms.rendner.intellij"
-version = "0.9.0"
+version = "0.9.1"
 
 repositories {
     mavenCentral()
@@ -74,7 +74,7 @@ tasks {
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.8",
             "3.8",
-            listOf("pandas_1.4"),
+            listOf("pandas_1.5", "pandas_1.4"),
         ),
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.7",
