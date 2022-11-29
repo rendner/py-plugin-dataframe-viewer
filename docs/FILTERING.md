@@ -78,3 +78,5 @@ In such a case you can use the special identifier `_df`, which is only available
 
 The identifier `_df` is rendered grayed out to indicate that this is the special identifier provided by the plugin.
 It is also provided in the code completion of the filter input.
+
+>Note: The code completion for the properties of the identifier `_df` is currently broken and doesn't work.

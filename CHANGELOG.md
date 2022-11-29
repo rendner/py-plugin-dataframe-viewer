@@ -11,7 +11,6 @@ All already supported `Styler` methods are now also usable with pandas 1.5.
 
 ### Fixed
 - don't open dialog for unsupported pandas version
-- code-completion for synthetic identifier `_df`
 
 ## v0.9.0
 - `Released`: 2022-11-22
