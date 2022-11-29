@@ -46,11 +46,10 @@ class PyCodeFragmentReferenceResolveProvider : PyReferenceResolveProvider {
 
     override fun resolveName(element: PyQualifiedExpression, context: TypeEvalContext): List<RatedResolveResult> {
         val origin = context.origin
-        val originalFile = element.containingFile.originalFile
         if (
             origin is ScopeOwner &&
-            originalFile is PyExpressionCodeFragment &&
-            RESOLVE_REFERENCES.get(originalFile, false)
+            element.containingFile is PyExpressionCodeFragment &&
+            RESOLVE_REFERENCES.get(element.containingFile, false)
         ) {
             element.referencedName?.let { name ->
                 return PyResolveUtil.resolveLocally(origin, name)
