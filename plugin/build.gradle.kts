@@ -5,7 +5,7 @@ plugins {
     id("idea")
     // Gradle IntelliJ Plugin
     // https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.9.0"
+    id("org.jetbrains.intellij") version "1.13.0"
     // Kotlin JVM plugin to add support for Kotlin
     // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#kotlin-standard-library
     kotlin("jvm") version "1.6.21"
