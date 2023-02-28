@@ -1,4 +1,4 @@
-#  Copyright 2021 cms.rendner (Daniel Schmidt)
+#  Copyright 2023 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -16,15 +16,11 @@ from pathlib import Path
 from importlib import import_module
 import pandas as pd
 
-from semantic_version import SimpleSpec, Version
-
-pandas_sem_version = Version(pd.__version__)
-
 
 def collect_all_test_cases(root_dir: str):
     test_cases = []
 
-    print(f'collecting test cases (using pandas {pandas_sem_version})')
+    print(f'collecting test cases (using pandas {pd.__version__})')
 
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for name in dirnames:
@@ -47,11 +43,6 @@ def collect_test_cases_from_dir(module_dir: str):
             module = import_module(module_import_name)
             if hasattr(module, 'test_case'):
                 test_case = getattr(module, 'test_case')
-                if 'pandas_version' in test_case:
-                    spec = SimpleSpec(test_case['pandas_version'])
-                    if not spec.match(pandas_sem_version):
-                        print(f'- skipping test case "{module_name}", requires pandas{spec}')
-                        continue
                 test_case_export_dir = path[export_dir_name_offset:-py_suffix_length]
                 test_cases.append({**test_case, 'export_dir': test_case_export_dir})
 

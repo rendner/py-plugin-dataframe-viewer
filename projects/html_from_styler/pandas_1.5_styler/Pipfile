@@ -7,9 +7,8 @@ name = "pypi"
 Jinja2 = "==3.0.1"
 matplotlib = "==3.4.2"
 numpy = "==1.21.0"
-semantic-version = "==2.8.5"
 pytz = "==2020.1"
-pandas = "==1.5.2"
+pandas = "==1.5.3"
 
 [dev-packages]
 
