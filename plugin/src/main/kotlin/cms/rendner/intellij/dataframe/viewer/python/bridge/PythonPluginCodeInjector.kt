@@ -118,9 +118,16 @@ class PythonPluginCodeInjector {
         }
 
         private fun getPluginCodeResourcePath(version: PandasVersion): String {
-            if (version.minor in 1..5) {
-                return "/pandas_1.${version.minor}/plugin_code"
-            } else throw InjectException("Unsupported $version.")
+            if (version.major == 1) {
+                if (version.minor in 1..5) {
+                    return "/pandas_1.${version.minor}/plugin_code"
+                }
+            } else if (version.major == 2) {
+                if (version.minor in 0..0) {
+                    return "/pandas_2.${version.minor}/plugin_code"
+                }
+            }
+            throw InjectException("Unsupported $version.")
         }
     }
 }

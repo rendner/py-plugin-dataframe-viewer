@@ -74,7 +74,7 @@ tasks {
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.8",
             "3.8",
-            listOf("pandas_1.5", "pandas_1.4"),
+            listOf("pandas_2.0", "pandas_1.5", "pandas_1.4"),
         ),
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.7",
