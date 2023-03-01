@@ -13,9 +13,20 @@ All projects are set up via [pipenv](https://pypi.org/project/pipenv/) and use t
 | 1.1 - 1.3 |             3.7             |
 | >= 1.4    |             3.8             |
 
-- [ho to install Python 3.7 on Ubuntu](https://stackoverflow.com/questions/61430166/python-3-7-on-ubuntu-20-04)
 
-It is important to use the minimum required version to guarantee that the plugin code is also compatible with the specified Python version.
+It is important to use the specified minimum required version to guarantee that the plugin code is also compatible with the specified Python version.
+
+### Older Python Versions
+- [how to install older versions of Python on Ubuntu](https://stackoverflow.com/questions/61430166/python-3-7-on-ubuntu-20-04) (works also for Ubuntu 22)
+- run a test with `python3.x -m pip` (if you installed Python 3.7 => `python3.7 -m pip`)
+- in case of `ModuleNotFoundError: No module named 'distutils.cmd'`
+- run `sudo apt install python3.x-distutils` (if you installed Python 3.7 => `sudo apt install python3.7-distutils`)
+
+### Check Pipenv
+- run `pipenv`
+- in case of `AttributeError: module 'collections' has no attribute 'MutableMapping'` 
+  - ["pipenv" fails with AttributeError after upgrading from ubuntu 20.04 to 22.04](https://github.com/pypa/pipenv/issues/5088)
+  - [the pipenv package as it is seems incompatible with python 3.10 and 3.11 (jammy and kinetic)](https://bugs.launchpad.net/ubuntu/+source/pipenv/+bug/1998280)
 
 ## Running These Projects (preferred way)
 The easiest way is to open these projects from a PyCharm instance started by the `runIde` gradle-task (no need for an additional PyCharm installation).
