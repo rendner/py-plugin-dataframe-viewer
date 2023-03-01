@@ -175,7 +175,7 @@ class ShowStyledDataFrameAction : AnAction(), DumbAware {
             disableApplyFilterButton()
 
             myDataFrameTable = DataFrameTable()
-            myDataFrameTable.preferredSize = Dimension(700, 500)
+            myDataFrameTable.preferredSize = Dimension(635, 404)
 
             init()
         }
