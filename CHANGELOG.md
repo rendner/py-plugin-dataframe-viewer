@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.10.0
+- `Released`: 2023-03-01
+- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x (tested with 2.0.0rc0)
+- `Min Required IntelliJ Version`: 2021.3
+
+### Added
+#### Support For pandas 2.0
+All already supported `Styler` methods as well as sorting and filtering are now also usable with pandas 2.0.
+
+### Other
+- fix Intellij-Plugin-API warnings (deprecated API)
+- configure plugin compatibility "until 2023.3"
+
 ## v0.9.1
 - `Released`: 2022-11-29
 - `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.2)

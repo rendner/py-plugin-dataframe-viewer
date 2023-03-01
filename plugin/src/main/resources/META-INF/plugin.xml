@@ -19,10 +19,10 @@
     For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
     ]]></description>
 
-    <idea-version since-build="213.5744.248" until-build="223.*"/>
+    <idea-version since-build="213.5744.248" until-build="233.*"/>
 
     <change-notes><![CDATA[
-    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md#v091">changelog</a>
+    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md#v0100">changelog</a>
     ]]></change-notes>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
