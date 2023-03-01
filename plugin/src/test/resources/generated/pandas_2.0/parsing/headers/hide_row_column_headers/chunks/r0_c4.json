@@ -1,0 +1,22 @@
+{
+    "head": [
+    ],
+    "body": [
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.172496",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.183319",
+                "css_props": null
+            }
+        ]
+    ]
+}
