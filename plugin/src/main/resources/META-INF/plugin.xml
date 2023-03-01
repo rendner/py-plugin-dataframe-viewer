@@ -9,7 +9,7 @@
     -->
 
     <description><![CDATA[
-    View styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> when debugging.
+    View, <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/SORTING.md">sort</a> and <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/FILTERING.md">filter</a> styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> when debugging.
     <br/><br/>
     Apply conditional formatting and visual styling in your Python code, by using <i>DataFrame.style</i>.
     The configured style is used to render a styled output of the <i>DataFrame</i>.

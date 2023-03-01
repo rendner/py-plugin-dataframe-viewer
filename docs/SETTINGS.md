@@ -3,7 +3,7 @@ Settings persistently store states that control the behavior and appearance of t
 Changes to the settings are not applied to `Styled DataFrame Viewer` dialogs that are already open.
 
 To adjust the settings of the plugin, open **Preferences** of your Jetbrains IDE for macOS or **File | Settings** for Windows and Linux.
-Alternatively, press `Ctrl+Alt+S`.
+Alternatively, press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd>.
 
 In the settings dialog select **Tools > Styled DataFrame Viewer**
 

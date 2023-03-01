@@ -65,7 +65,7 @@ The filter input is a simplified editor component with syntax highlighting suppo
 
 ![code_completion_and_errors](images/filtering/code_completion_and_errors.gif)
 
-You can apply your filter by clicking on the `Apply Filter` button or by pressing the `Enter` key.
+You can apply your filter by clicking on the `Apply Filter` button or by pressing the <kbd>Enter</kbd>-key.
 
 ### Long Filter Queries
 Since the filter input is only a single line it can be tedious to enter expressions with long variable names:

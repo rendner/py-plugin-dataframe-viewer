@@ -96,7 +96,7 @@ It is enabled by default. If you disable the feature, the HTML will be loaded as
 It is planned to switch completely to JSON in one of the next versions, this depends on feedback.
 
 To switch back to the old behavior, you have to open the settings dialog, select *IntelliJ IDEA | Preferences* for macOS or *File | Settings* for Windows and Linux.
-Alternatively, press `Ctrl+Alt+S`.
+Alternatively, press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd>.
 
 Under the section `Tools` you will find the entry `Styled DataFrame Viewer`.
 The feature switch is called: `Use new data structure when loading chunks`
