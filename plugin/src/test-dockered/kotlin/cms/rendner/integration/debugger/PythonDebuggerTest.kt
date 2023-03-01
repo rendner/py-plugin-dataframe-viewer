@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -234,7 +234,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
             val result = valueEvaluator.evaluate("a")
             assertThat(result.value).isEqualTo("2")
 
-            debugger.submitContinue()
+            debugger.submitContinue().get()
 
             val result2 = valueEvaluator.evaluate("a")
             assertThat(result2.value).isEqualTo("5")
@@ -258,7 +258,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
             val result = valueEvaluator.evaluate("a")
             assertThat(result.value).isEqualTo("2")
 
-            debugger.submitContinue()
+            debugger.submitContinue().get()
 
             val result2 = valueEvaluator.evaluate("a")
             assertThat(result2.value).isEqualTo("5")
