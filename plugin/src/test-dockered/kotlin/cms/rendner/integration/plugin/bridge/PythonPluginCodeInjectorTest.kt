@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
             Assertions.assertThatExceptionOfType(InjectException::class.java).isThrownBy {
                 PythonPluginCodeInjector.injectIfRequired(patchedEvaluator, ::pluginCodeEscaper)
             }.withMessageContaining(
-                "Unsupported ${PandasVersion(major=99, minor=99, patch="0")}",
+                "Unsupported ${PandasVersion(major=99, minor=99, rest="0")}",
             )
         }
     }
