@@ -5,7 +5,7 @@ plugins {
     id("idea")
     // Gradle IntelliJ Plugin
     // https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.9.0"
+    id("org.jetbrains.intellij") version "1.13.0"
     // Kotlin JVM plugin to add support for Kotlin
     // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#kotlin-standard-library
     kotlin("jvm") version "1.6.21"
@@ -13,13 +13,14 @@ plugins {
 }
 
 group = "cms.rendner.intellij"
-version = "0.9.1"
+version = "0.10.0"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    // https://github.com/beryx/awt-color-factory
     implementation("org.beryx:awt-color-factory:1.0.2")
     // https://github.com/Kotlin/kotlinx.serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
@@ -37,7 +38,7 @@ intellij {
     plugins.add("python-ce") // is required even if we specify a PyCharm IDE
     version.set("2021.3")
     type.set("PC")
-    downloadSources.set(false)
+    downloadSources.set(true)
     updateSinceUntilBuild.set(false)
 }
 
@@ -74,7 +75,7 @@ tasks {
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.8",
             "3.8",
-            listOf("pandas_1.5", "pandas_1.4"),
+            listOf("pandas_2.0", "pandas_1.5", "pandas_1.4"),
         ),
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.7",
@@ -374,8 +375,8 @@ tasks {
 
     listProductsReleases {
         sinceVersion.set("2021.3")
-        //untilVersion.set("2022.2.3")
-        untilVersion.set("223.7571.64") // 2022.3 rc
+        //untilVersion.set("2022.3")
+        untilVersion.set("231.7515.12") // 2023.1 eap
     }
 }
 

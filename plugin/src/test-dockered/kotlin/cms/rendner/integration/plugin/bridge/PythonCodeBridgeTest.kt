@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,17 +93,17 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
             assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("1")
             assertThat(PythonCodeBridge.createPatchedStyler(evaluator, "df1")).isNotNull
 
-            debugger.submitContinue()
+            debugger.submitContinue().get()
 
             assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("2")
             assertThat(PythonCodeBridge.createPatchedStyler(evaluator,"df2")).isNotNull
 
-            debugger.submitContinue()
+            debugger.submitContinue().get()
 
             assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("3")
             assertThat(PythonCodeBridge.createPatchedStyler(evaluator, "df3")).isNotNull
 
-            debugger.submitContinue()
+            debugger.submitContinue().get()
 
             assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("1")
             assertThat(PythonCodeBridge.createPatchedStyler(evaluator,"df1")).isNotNull

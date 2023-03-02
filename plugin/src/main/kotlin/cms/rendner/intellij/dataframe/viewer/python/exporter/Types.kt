@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.python.exporter
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import kotlinx.serialization.Serializable
 import java.nio.file.Files
@@ -31,9 +32,13 @@ import java.nio.file.Path
  * - export_dir: the name of the test case as directory name
  *
  * @param testCases a Python ref to a list of test cases.
- * @param pandasMajorMinorVersion the major and minor version, of pandas used by the test cases, separated by a ".".
+ * @param pandasVersion the pandas version used to create the test data.
  */
-data class ExportData(val testCases: PluginPyValue, val pandasMajorMinorVersion: String)
+data class ExportData(val testCases: PluginPyValue, val pandasVersion: PandasVersion) {
+    fun resolveBaseExportDir(baseDir: Path): Path {
+        return baseDir.resolve("pandas_${pandasVersion.major}.${pandasVersion.minor}")
+    }
+}
 
 /**
  * Describes a test case to export.

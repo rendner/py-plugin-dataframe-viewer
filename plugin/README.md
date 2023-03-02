@@ -14,7 +14,7 @@ The plugin is written in Kotlin and some parts are written in Python.
 
 ### Kotlin
 The interaction with the PyCharm debugger is written in Kotlin. 
-Also, the parsing of the HTML output and the computing of the CSS values.
+Also, the parsing of the HTML output.
 
 ### Python 
 All code which interacts with pandas is written directly in Python to have:

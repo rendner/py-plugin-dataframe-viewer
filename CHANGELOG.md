@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.10.0
+- `Released`: 2023-03-01
+- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x (tested with 2.0.0rc0)
+- `Min Required IntelliJ Version`: 2021.3
+
+### Added
+#### Support For pandas 2.0
+All already supported `Styler` methods as well as sorting and filtering are now also usable with pandas 2.0.
+
+### Other
+- fix Intellij-Plugin-API warnings (deprecated API)
+- configure plugin compatibility "until 2023.3"
+
 ## v0.9.1
 - `Released`: 2022-11-29
 - `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.2)
@@ -96,7 +109,7 @@ It is enabled by default. If you disable the feature, the HTML will be loaded as
 It is planned to switch completely to JSON in one of the next versions, this depends on feedback.
 
 To switch back to the old behavior, you have to open the settings dialog, select *IntelliJ IDEA | Preferences* for macOS or *File | Settings* for Windows and Linux.
-Alternatively, press `Ctrl+Alt+S`.
+Alternatively, press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd>.
 
 Under the section `Tools` you will find the entry `Styled DataFrame Viewer`.
 The feature switch is called: `Use new data structure when loading chunks`

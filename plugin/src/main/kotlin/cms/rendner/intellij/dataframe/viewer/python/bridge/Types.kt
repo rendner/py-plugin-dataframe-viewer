@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,21 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.Evaluate
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-data class PandasVersion(val major: Int, val minor: Int, val patch: String = "") {
+data class PandasVersion(val major: Int, val minor: Int, val rest: String = "") {
     companion object {
+        /**
+         * Creates a version instance from a pandas version string.
+         *
+         * pandas version is defined as described in pep-440:
+         * Version Identification and Dependency Specification
+         * https://peps.python.org/pep-0440/
+         */
         fun fromString(value: String): PandasVersion {
+            // versions can be:
+            // - '1.2.0'
+            // - '1.4.0.dev0+1574.g46ddb8ef88'
+            // - '2.0.0rc0'
+            // this is a very naive way to extract the required info (but OK)
             val parts = value.split(".")
             return PandasVersion(
                 parts[0].toInt(),

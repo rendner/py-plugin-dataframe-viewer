@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -218,9 +218,9 @@ abstract class PythonEvalDebugger {
                             nextDebugCommand = if (task is EvaluateTask) {
                                 escapeDebuggerInput(task.request.expression).let {
                                     if (task.request.execute) {
-                                        "!__import__('debugger_helpers').DebuggerInternals.exec($it)"
+                                        "__import__('debugger_helpers').DebuggerInternals.exec($it)"
                                     } else {
-                                        "!__import__('debugger_helpers').DebuggerInternals.eval($it)"
+                                        "__import__('debugger_helpers').DebuggerInternals.eval($it)"
                                     }
                                 }
 

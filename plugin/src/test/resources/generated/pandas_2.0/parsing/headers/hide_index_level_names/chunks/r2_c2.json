@@ -1,0 +1,34 @@
+{
+    "head": [
+    ],
+    "body": [
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.039575",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.271860",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.673690",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.113648",
+                "css_props": null
+            }
+        ]
+    ]
+}

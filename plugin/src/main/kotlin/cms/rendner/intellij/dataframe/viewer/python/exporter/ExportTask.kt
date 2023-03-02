@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,27 @@
 package cms.rendner.intellij.dataframe.viewer.python.exporter
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import java.nio.file.Path
 
 /**
  * Iterates over the available test data, provided by [exportDataValue] and saves the HTML files
- * for each one in the directory specified by [baseExportDir].
+ * for each one in the directory specified by [rootExportDir].
  *
- * @param baseExportDir the base directory for the HTML files generated from the test cases.
+ * @param rootExportDir the root directory for the files generated from the test cases.
  * @param exportDataValue provides a list of test cases.
  */
 class ExportTask(
-    private val baseExportDir: Path,
+    private val rootExportDir: Path,
     private val exportDataValue: PluginPyValue,
 ) {
     fun run() {
         try {
             val exportData = convertExportValue(exportDataValue)
-            val exportDir = baseExportDir.resolve("pandas_${exportData.pandasMajorMinorVersion}")
-            println("exportDir: $exportDir")
-            val testCaseExporter = TestCaseExporter(exportDir)
+            val baseExportDir = exportData.resolveBaseExportDir(rootExportDir)
+            println("baseExportDir: $baseExportDir")
+            val testCaseExporter = TestCaseExporter(baseExportDir)
             val testCaseIterator = EvaluateElementWiseListIterator(exportData.testCases)
 
             while (testCaseIterator.hasNext()) {
@@ -49,11 +50,10 @@ class ExportTask(
     private fun convertExportValue(exportDataDict: PluginPyValue): ExportData {
         val evaluator = exportDataDict.evaluator
         exportDataDict.refExpr.let {
-            val testCases = evaluator.evaluate("$it['test_cases']", true)
-            val pandasVersion = evaluator.evaluate("$it['pandas_version']")
-            val versionParts = pandasVersion.forcedValue.split(".")
-            val majorMinor = "${versionParts[0]}.${versionParts[1]}"
-            return ExportData(testCases, majorMinor)
+            return ExportData(
+                evaluator.evaluate("$it['test_cases']", true),
+                PandasVersion.fromString(evaluator.evaluate("$it['pandas_version']").forcedValue),
+            )
         }
     }
 

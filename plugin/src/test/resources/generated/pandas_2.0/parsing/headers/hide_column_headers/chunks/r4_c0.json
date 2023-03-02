@@ -1,0 +1,34 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "index_name",
+                "display_value": "idx_name",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "i_4",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.594561",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.709693",
+                "css_props": null
+            }
+        ]
+    ]
+}
