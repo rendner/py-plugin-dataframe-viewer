@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,20 +36,17 @@ import javax.swing.JOptionPane
 /**
  * Notification about a chunk-validation-result.
  *
- * @param groupId the notification group id
  * @param region the validated region in the pandas DataFrame
  * @param validationStrategy the used validation strategy
  * @param problems the detected problems
  * @param details additional information about the styling functions registered to the pandas DataFrame
  */
 class ChunkValidationProblemNotification(
-    groupId: String,
     region: ChunkRegion,
     validationStrategy: ValidationStrategyType,
     problems: List<StyleFunctionValidationProblem>,
     details: List<StyleFunctionDetails>,
-) : Notification(
-    groupId,
+) : AbstractBalloonNotification(
     "Possible incompatible styling function found",
     "Found ${problems.size} problem(s)\nin $region",
     NotificationType.WARNING,

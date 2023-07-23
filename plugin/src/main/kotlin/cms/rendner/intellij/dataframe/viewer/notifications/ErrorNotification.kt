@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package cms.rendner.intellij.dataframe.viewer.notifications
 
 import cms.rendner.intellij.dataframe.viewer.DataFrameViewerIcons
-import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -31,18 +30,15 @@ import javax.swing.JOptionPane
 /**
  * Notification about an error.
  *
- * @param groupId the notification group id
  * @param title the title of the notification
  * @param content the content of the notification
  * @param throwable the throwable to be reported
  */
 class ErrorNotification(
-    groupId: String,
     title: String,
     content: String,
     throwable: Throwable,
-) : Notification(
-    groupId,
+) : AbstractBalloonNotification(
     title,
     content,
     NotificationType.ERROR,

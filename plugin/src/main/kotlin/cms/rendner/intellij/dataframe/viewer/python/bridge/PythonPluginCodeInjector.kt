@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,6 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.Evaluate
 /**
  * Injects the Python-specific plugin code into the Python process.
  * The injected code is available until the Python process is terminated.
- *
- * There is no protection to ensure that code is injected only once into a Python process
- * when multiple threads attempt to inject the code. (should be OK for our use case)
  */
 class PythonPluginCodeInjector {
 
