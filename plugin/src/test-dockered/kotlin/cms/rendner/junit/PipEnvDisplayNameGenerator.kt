@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ class PipEnvDisplayNameGenerator : DisplayNameGenerator.Standard() {
 
     private val pipEnvTestSuperClass = AbstractPipEnvEnvironmentTest::class.java
     private val workdirFolderName =
-        System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR).substringAfterLast("/")
+        System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR, "?").substringAfterLast("/")
 
     override fun generateDisplayNameForClass(testClass: Class<*>?): String {
         if (testClass != null && pipEnvTestSuperClass.isAssignableFrom(testClass)) {
