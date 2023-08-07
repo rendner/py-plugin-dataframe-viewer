@@ -67,8 +67,8 @@ def create_and_assert_patched_styler_filtering(
     # create: actual styled and filtered
     chunk_styler = df.style
     init_styler_func(chunk_styler)
-    filter_criteria = FilterCriteria.from_frame(df.filter(items=filter_keep_items, axis=filter_axis))
-    patched_chunk_styler = StyledDataFrameViewerBridge.create_patched_styler(chunk_styler, filter_criteria)
+    filter_frame = df.filter(items=filter_keep_items, axis=filter_axis)
+    patched_chunk_styler = StyledDataFrameViewerBridge.create_patched_styler(chunk_styler, filter_frame)
     actual_dict = _map_cell_elements_by_unique_display_value(
         _build_combined_chunk_table(
             patched_chunk_styler=patched_chunk_styler,
