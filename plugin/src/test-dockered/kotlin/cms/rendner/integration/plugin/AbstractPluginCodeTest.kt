@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package cms.rendner.integration.plugin
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import cms.rendner.debugger.impl.PythonEvalDebugger
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
@@ -31,7 +32,7 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
     ) {
         super.runPythonDebuggerWithSourceFile(sourceFile) { evaluator, debugger ->
-            PythonPluginCodeInjector.injectIfRequired(evaluator, ::pluginCodeEscaper)
+            PythonPluginCodeInjector.injectIfRequired(getPandasVersion(evaluator), evaluator, ::pluginCodeEscaper)
             block(evaluator, debugger)
         }
     }
@@ -41,7 +42,7 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
     ) {
         super.runPythonDebuggerWithCodeSnippet(codeSnippet) { evaluator, debugger ->
-            PythonPluginCodeInjector.injectIfRequired(evaluator, ::pluginCodeEscaper)
+            PythonPluginCodeInjector.injectIfRequired(getPandasVersion(evaluator), evaluator, ::pluginCodeEscaper)
             block(evaluator, debugger)
         }
     }
@@ -58,5 +59,9 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         return code
             .replace("\\n", "\\\n")
             .replace("\\t", "\\\t")
+    }
+
+    protected fun getPandasVersion(evaluator: IPluginPyValueEvaluator): PandasVersion {
+        return PandasVersion.fromString(evaluator.evaluate("__import__('pandas').__version__").forcedValue)
     }
 }
