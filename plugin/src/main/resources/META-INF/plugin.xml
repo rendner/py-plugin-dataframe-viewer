@@ -63,4 +63,12 @@
         <annotator language="Python" implementationClass="cms.rendner.intellij.dataframe.viewer.components.filter.editor.SyntheticIdentifierHighlighter"/>
         <daemon.intentionActionFilter implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.IgnoreAllIntentionsActionFilter"/>
     </extensions>
+
+    <projectListeners>
+        <listener class="cms.rendner.intellij.dataframe.viewer.python.pycharm.listeners.DebuggerListener"
+                  topic="com.intellij.xdebugger.XDebuggerManagerListener"
+                  activeInHeadlessMode="false"
+                  activeInTestMode="false"
+        />
+    </projectListeners>
 </idea-plugin>
