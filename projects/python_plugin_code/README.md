@@ -121,7 +121,6 @@ Short overview about the public methods of the class:
 
 | Method                | used by the plugin | purpose                                     |
 |:----------------------|:------------------:|:--------------------------------------------|
-| create_fingerprint    |         X          | To create a fingerprint from a `DataFrame`. |
 | create_patched_styler |         X          | To create a `PatchedStyler` instance.       |
 
 ### Directory: test
