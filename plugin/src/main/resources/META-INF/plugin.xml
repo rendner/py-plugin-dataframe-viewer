@@ -32,10 +32,20 @@
 
     <actions>
         <group id="debugActionGroup">
-            <action id="cms.rendner.ShowStyledDataFrameAction"
-                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowStyledDataFrameAction"
+            <action id="cms.rendner.ShowViewerForFrameOrStylerAction"
+                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowViewerForFrameOrStylerAction"
                     text="View as Styled DataFrame">
                 <keyboard-shortcut keymap="$default" first-keystroke="alt shift V"/>
+            </action>
+            <action id="cms.rendner.ShowViewerForDictWithKeysAsColumnsAction"
+                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowViewerForDictAction"
+                    text="View as Styled DataFrame">
+                <!-- available via key binding because orientation columns is the default value in pandas -->
+                <keyboard-shortcut keymap="$default" first-keystroke="alt shift V"/>
+            </action>
+            <action id="cms.rendner.ShowViewerForDictWithKeysAsRowsAction"
+                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowViewerForDictWithKeysAsRowsAction"
+                    text="View as Styled DataFrame (Keys as Rows)">
             </action>
             <action id="cms.rendner.ExportDataFrameTestDataAction"
                     class="cms.rendner.intellij.dataframe.viewer.actions.ExportDataFrameTestDataAction"
@@ -52,7 +62,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService"/>
         <projectService serviceImplementation="cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService"/>
-        <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON"/>
+        <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON" isLogByDefault="true"/>
         <applicationConfigurable
                 parentId="tools"
                 instance="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettings"

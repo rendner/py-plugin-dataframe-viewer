@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,10 @@ internal abstract class AbstractPipEnvEnvironmentTest {
     @BeforeAll
     protected fun initializeDebuggerContainer() {
         debugger.startContainer()
+        afterContainerStart()
     }
+
+    protected open fun afterContainerStart() {}
 
     @AfterAll
     protected fun destroyDebuggerContainer() {
@@ -68,6 +71,10 @@ internal abstract class AbstractPipEnvEnvironmentTest {
     protected fun shutdownDebugger() {
         debuggerStarted = false
         debugger.shutdown()
+    }
+
+    protected fun uninstallPythonModules(vararg modules: String) {
+        executorService.submit { debugger.uninstallPythonModules(*modules) }
     }
 
     protected open fun runPythonDebuggerWithCodeSnippet(

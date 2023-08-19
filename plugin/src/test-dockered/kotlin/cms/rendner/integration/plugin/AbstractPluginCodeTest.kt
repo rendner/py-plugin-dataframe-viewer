@@ -23,7 +23,7 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvalu
 
 /**
  * Abstract class to run tests with a Python interpreter.
- * The plugin code
+ * The plugin code is automatically injected. Use [runPythonDebuggerWithoutPluginCode] in case the plugin code should not be injected.
  */
 internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest() {
 

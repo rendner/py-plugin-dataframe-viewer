@@ -17,6 +17,7 @@ package cms.rendner.integration.plugin.bridge
 
 import cms.rendner.debugger.impl.PythonEvalDebugger
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
+import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerConfig
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
 import org.assertj.core.api.Assertions.assertThat
@@ -41,27 +42,20 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
     }
 
     @Test
+    fun createPatchedStyler_shouldBeCallableWithADictionary() {
+        runWithDefaultSnippet { evaluator: IPluginPyValueEvaluator, _ ->
+            assertThat(PythonCodeBridge.createPatchedStyler(evaluator, "d")).isNotNull
+        }
+    }
+
+    @Test
     fun createPatchedStyler_shouldBeCallableWithAFilterFrame() {
         runWithDefaultSnippet { evaluator: IPluginPyValueEvaluator, _ ->
             assertThat(PythonCodeBridge.createPatchedStyler(
                 evaluator,
                 "df.style",
-                "df.filter(items=[1, 2], axis='index')",
+                CreatePatchedStylerConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
             )).isNotNull
-        }
-    }
-
-    @Test
-    fun createFingerprint_shouldBeCallableWithADataFrame() {
-        runWithDefaultSnippet { evaluator: IPluginPyValueEvaluator, _ ->
-            assertThat(PythonCodeBridge.createFingerprint(evaluator, "df")).isNotNull
-        }
-    }
-
-    @Test
-    fun createFingerprint_shouldBeCallableWithAStyler() {
-        runWithDefaultSnippet { evaluator: IPluginPyValueEvaluator, _ ->
-            assertThat(PythonCodeBridge.createFingerprint(evaluator, "df.style")).isNotNull
         }
     }
 
@@ -117,6 +111,7 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
     private fun createDataFrameSnippet() = """
                 from pandas import DataFrame
                 
+                d = {'a': [1]}
                 df = DataFrame.from_dict({
                     "col_0": [0, 1],
                     "col_1": [2, 3],

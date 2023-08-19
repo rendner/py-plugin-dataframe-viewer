@@ -44,7 +44,7 @@ class DefaultEditorComponent(
     }
 
     override fun getText(): String {
-        return myEditor.text
+        return myEditor.text.trim()
     }
 
     override fun setSourcePosition(sourcePosition: XSourcePosition?) {

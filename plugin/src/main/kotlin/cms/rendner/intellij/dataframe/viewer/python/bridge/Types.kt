@@ -22,8 +22,14 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunct
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionValidationProblem
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 data class PandasVersion(val major: Int, val minor: Int, val rest: String = "") {
     companion object {
@@ -199,4 +205,74 @@ enum class RowElementKind {
      */
     @SerialName("")
     UNKNOWN,
+}
+
+enum class DataSourceToFrameHint {
+    DictKeysAsRows,
+}
+
+enum class CreatePatchedStylerErrorKind {
+    /**
+     * The evaluation resulted in an [EvaluateException].
+     */
+    EVAL_EXCEPTION,
+    /**
+     * Re-evaluated data-source has another type.
+     */
+    RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
+    /**
+     * The data-source is not supported by the plugin.
+     */
+    UNSUPPORTED_DATA_SOURCE_TYPE,
+    /**
+     * The data-source has another fingerprint as expected.
+     */
+    INVALID_FINGERPRINT,
+    /**
+     * The filter expression can't be evaluated.
+     */
+    FILTER_FRAME_EVAL_FAILED,
+    /**
+     * The filter expression evaluates to an unexpected type (DataFrame is expected).
+     */
+    FILTER_FRAME_OF_WRONG_TYPE,
+}
+
+@Serializable
+data class CreatePatchedStylerConfig(
+    @SerialName("data_source_to_frame_hint") val dataSourceToFrameHint: DataSourceToFrameHint? = null,
+    @SerialName("previous_fingerprint") val previousFingerprint: String? = null,
+    @SerialName("filter_eval_expr") val filterEvalExpr: String? = null,
+    @SerialName("filter_eval_expr_provide_frame")
+    @Serializable(PythonBooleanSerializer::class)
+    val filterEvalExprProvideFrame: Boolean = false,
+)
+
+@Serializable
+data class CreatePatchedStylerFailure(
+    /**
+     * Describes the error kind.
+     */
+    @SerialName("error_kind") val errorKind: CreatePatchedStylerErrorKind,
+    /**
+     * Can be a failure message or any other information (depends on the [errorKind])
+     */
+    @SerialName("info") val info: String,
+)
+
+class PythonBooleanSerializer : KSerializer<Boolean> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("PythonBooleanDescriptor", PrimitiveKind.BOOLEAN)
+
+    override fun deserialize(decoder: Decoder): Boolean {
+        return when (decoder.decodeString()) {
+            "True", "true" -> true
+            "False", "false" -> false
+            else -> false
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: Boolean) {
+        encoder.encodeString(if (value) "True" else "False")
+    }
 }

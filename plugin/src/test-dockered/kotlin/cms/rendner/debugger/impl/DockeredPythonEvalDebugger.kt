@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,8 +85,12 @@ class DockeredPythonEvalDebugger(
                         throw IllegalStateException("Container creation for image '$dockerImage' failed with: $firstLine")
                     }
                 }
-                it.waitFor(2, TimeUnit.SECONDS)
-                it.destroyForcibly()
+                if (!it.waitFor(5, TimeUnit.SECONDS)) {
+                    it.destroy()
+                }
+                if (it.exitValue() != 0) {
+                    throw IllegalStateException("docker run failed, exitValue: ${it.exitValue()}")
+                }
             }
     }
 
@@ -107,6 +111,43 @@ class DockeredPythonEvalDebugger(
      */
     fun startWithCodeSnippet(codeSnippet: String) {
         start(listOf("-c", codeSnippet))
+    }
+
+    /**
+     * Uninstalls Python modules.
+     * This action may take some time, as pipenv recreates the lock-file.
+     *
+     * @param modules modules to remove from a running container.
+     */
+    fun uninstallPythonModules(vararg modules: String) {
+        if (modules.isEmpty()) return
+
+        if (containerId == null) {
+            throw IllegalStateException("No container available.")
+        }
+
+        val processArgs = mutableListOf<String>().apply {
+            add("docker")
+            add("exec")
+            // "workdir" has to be one of the already existing pipenv environments
+            // otherwise "pipenv run" creates a new pipenv environment in the specified "workdir"
+            add("--workdir=$workdir")
+            add(containerId!!)
+            addAll("pipenv uninstall".split(" "))
+            addAll(modules)
+        }
+
+        ProcessBuilder(processArgs)
+        // uncomment line below to see uninstall info in console output
+        //.inheritIO()
+        .start().let {
+            if (!it.waitFor(5, TimeUnit.MINUTES)) {
+                it.destroy()
+            }
+            if (it.exitValue() != 0) {
+                throw IllegalStateException("pipenv uninstall failed, exitValue: ${it.exitValue()}")
+            }
+        }
     }
 
     private fun start(additionalPythonArgs: List<String>) {
@@ -143,9 +184,13 @@ class DockeredPythonEvalDebugger(
             "docker rm -f $containerId".split(" ")
         )
             .start().also {
-                it.waitFor(2, TimeUnit.SECONDS)
-                it.destroy()
+                if (!it.waitFor(5, TimeUnit.SECONDS)) {
+                    it.destroy()
+                }
                 containerId = null
+                if (it.exitValue() != 0) {
+                    throw IllegalStateException("docker rm failed for container $containerId, exitValue: ${it.exitValue()}")
+                }
             }
     }
 }

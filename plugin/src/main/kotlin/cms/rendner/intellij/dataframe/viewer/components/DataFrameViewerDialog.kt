@@ -16,8 +16,8 @@
 package cms.rendner.intellij.dataframe.viewer.components
 
 import cms.rendner.intellij.dataframe.viewer.components.filter.FilterInputFactory
-import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterEvalExprBuilder
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.AbstractEditorComponent
+import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInputState
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.IEditorChangedListener
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvaluator
@@ -28,6 +28,9 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.Ch
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
 import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
+import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerErrorKind
+import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerFailure
+import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceToFrameHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
@@ -36,9 +39,7 @@ import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.ui.DialogWrapper
@@ -56,34 +57,28 @@ import java.text.NumberFormat
 import javax.swing.JComponent
 
 class DataFrameViewerDialog(
-        parentDisposable: Disposable,
-        private val myDebugSession: XDebugSession,
-        frameOrStyler: PyDebugValue,
+    private val myDebugSession: XDebugSession,
+    dataSource: PyDebugValue,
+    private val dataSourceToFrameHint: DataSourceToFrameHint?,
     ) :
         DialogWrapper(myDebugSession.project, false),
         IChunkValidationProblemHandler,
         IChunkDataLoaderErrorHandler,
         XDebugSessionListener {
 
-    companion object {
-        private val logger = Logger.getInstance(DataFrameViewerDialog::class.java)
-    }
-
-    private var myDebugValueEvalExpr: PyDebugValueEvalExpr
+    private var myDataSourceEvalExpr: PyDebugValueEvalExpr
     private val myEvaluator: IPluginPyValueEvaluator
-    private var myFilterEvalExprBuilder: IFilterEvalExprBuilder
+    private var myLastFilterInputState: FilterInputState
     private val myFilterInput: AbstractEditorComponent
-    private val myDataFrameTable: DataFrameTable
-    private val myDataFrameTableFooterLabel = JBLabel("", UIUtil.ComponentStyle.SMALL, FontColor.BRIGHTER)
+    private val myTable: DataFrameTable
+    private val myTableFooterLabel = JBLabel("", UIUtil.ComponentStyle.SMALL, FontColor.BRIGHTER)
 
     private var myLastDataModelDisposable: Disposable? = null
     private var myLastStartedDataFetcher: ActiveDataFetcher? = null
 
     init {
-        Disposer.register(parentDisposable, disposable)
-
-        myDebugValueEvalExpr = frameOrStyler.toValueEvalExpr()
-        myEvaluator = frameOrStyler.toPluginType().evaluator
+        myDataSourceEvalExpr = dataSource.toValueEvalExpr()
+        myEvaluator = dataSource.toPluginType().evaluator
 
         myFilterInput = FilterInputFactory.createComponent(myDebugSession.project, myDebugSession.currentPosition)
         myFilterInput.setChangedListener(object : IEditorChangedListener {
@@ -91,18 +86,18 @@ class DataFrameViewerDialog(
                 updateApplyFilterButtonState()
             }
         })
-        myFilterEvalExprBuilder = myFilterInput.createFilterExprBuilder()
+        myLastFilterInputState = myFilterInput.getInputState()
 
         isModal = false
-        title = myDebugValueEvalExpr.reEvalExpr
+        title = myDataSourceEvalExpr.reEvalExpr
 
         setOKButtonText("Apply Filter")
         setCancelButtonText("Close")
         setCrossClosesWindow(true)
         disableApplyFilterButton()
 
-        myDataFrameTable = DataFrameTable()
-        myDataFrameTable.preferredSize = Dimension(635, 404)
+        myTable = DataFrameTable()
+        myTable.preferredSize = Dimension(635, 404)
 
         init()
     }
@@ -129,16 +124,14 @@ class DataFrameViewerDialog(
         }
     }
 
-    override fun sessionStopped() {
-        ApplicationManager.getApplication().invokeLater { close(CANCEL_EXIT_CODE) }
+    override fun sessionStopped() = runInEdt {
+        close(CANCEL_EXIT_CODE)
     }
 
-    override fun beforeSessionResume() {
-        ApplicationManager.getApplication().invokeLater {
-            disableApplyFilterButton()
-            cancelLastStartedDataFetcherAndDisposeModel()
-            myFilterInput.setSourcePosition(null)
-        }
+    override fun beforeSessionResume() = runInEdt {
+        disableApplyFilterButton()
+        cancelLastStartedDataFetcherAndDisposeModel()
+        myFilterInput.setSourcePosition(null)
     }
 
     private fun disableApplyFilterButton() {
@@ -146,23 +139,20 @@ class DataFrameViewerDialog(
     }
 
     private fun updateApplyFilterButtonState() {
-        myOKAction.isEnabled =
-            myFilterEvalExprBuilder.build(null) != myFilterInput.getText()
+        myOKAction.isEnabled = myLastFilterInputState.text != myFilterInput.getText()
     }
 
-    override fun stackFrameChanged() {
-        ApplicationManager.getApplication().invokeLater {
-            if (!myDebugValueEvalExpr.canBeReEvaluated()) {
-                setErrorText("Can't re-evaluate '${myDebugValueEvalExpr.reEvalExpr}'")
-            } else {
-                myDebugSession.currentPosition.let { myFilterInput.setSourcePosition(it) }
-                fetchModelData(myDebugValueEvalExpr.reEvalExpr != myDebugValueEvalExpr.currentFrameRefExpr)
-            }
+    override fun stackFrameChanged() = runInEdt {
+        if (!myDataSourceEvalExpr.canBeReEvaluated()) {
+            setErrorText("Can't re-evaluate '${myDataSourceEvalExpr.reEvalExpr}'")
+        } else {
+            myDebugSession.currentPosition.let { myFilterInput.setSourcePosition(it) }
+            fetchModelData(myDataSourceEvalExpr.reEvalExpr != myDataSourceEvalExpr.currentFrameRefExpr)
         }
     }
 
     override fun doOKAction() {
-        myFilterEvalExprBuilder = myFilterInput.createFilterExprBuilder()
+        myLastFilterInputState = myFilterInput.getInputState()
         fetchModelData(false)
     }
 
@@ -179,10 +169,11 @@ class DataFrameViewerDialog(
         cancelLastStartedDataFetcherAndDisposeModel()
 
         val request = ModelDataFetcher.Request(
-            myDebugValueEvalExpr,
-            myFilterEvalExprBuilder,
+            myDataSourceEvalExpr,
+            myLastFilterInputState,
             reEvaluateDataSource,
-            myDataFrameTable.getDataFrameModel().getDataSourceFingerprint(),
+            myTable.getDataFrameModel().getDataSourceFingerprint(),
+            dataSourceToFrameHint,
         )
         val fetcher = MyModelDataFetcher(myEvaluator)
         myLastStartedDataFetcher = ActiveDataFetcher(
@@ -192,7 +183,7 @@ class DataFrameViewerDialog(
     }
 
     private fun updateFooterLabel(tableStructure: TableStructure) {
-        myDataFrameTableFooterLabel.text = tableStructure.let {
+        myTableFooterLabel.text = tableStructure.let {
             NumberFormat.getInstance().let { nf ->
                 val rowsCounter =
                     if (it.rowsCount != it.orgRowsCount) {
@@ -209,8 +200,8 @@ class DataFrameViewerDialog(
 
     override fun createCenterPanel(): JComponent {
         return FormBuilder.createFormBuilder()
-            .addComponent(myDataFrameTable)
-            .addComponent(myDataFrameTableFooterLabel)
+            .addComponent(myTable)
+            .addComponent(myTableFooterLabel)
             .addVerticalGap(10)
             .addComponent(myFilterInput.getMainComponent())
             .panel
@@ -221,7 +212,7 @@ class DataFrameViewerDialog(
     }
 
     override fun getPreferredFocusedComponent(): JComponent {
-        return myDataFrameTable.getPreferredFocusedComponent()
+        return myTable.getPreferredFocusedComponent()
     }
 
     private fun createChunkLoader(
@@ -251,7 +242,6 @@ class DataFrameViewerDialog(
         details: List<StyleFunctionDetails>,
     ) {
         if (problems.isNotEmpty()) {
-            logger.warn("Possible incompatible styling function detected for $region.\n$problems")
             ChunkValidationProblemNotification(
                 region,
                 validationStrategy,
@@ -263,7 +253,6 @@ class DataFrameViewerDialog(
 
     override fun handleChunkDataError(region: ChunkRegion, exception: ChunkDataLoaderException) {
         if (isShouldAbortDataFetchingSilentlyException(exception.cause)) return
-        logger.error("Error during fetching/processing chunk for $region.", exception)
         ErrorNotification(
             "Error during fetching/processing chunk",
             "${exception.message ?: "Unknown error occurred"}\nfor $region",
@@ -279,97 +268,60 @@ class DataFrameViewerDialog(
 
     private inner class MyModelDataFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator) {
 
-        override fun handleReEvaluateDataSourceException(request: Request, ex: Exception) {
-            if (ex is ProcessCanceledException || isShouldAbortDataFetchingSilentlyException(ex)) return
-            ApplicationManager.getApplication().invokeLater {
-                if (shouldHandleFetcherAction(this)) {
-                    updateApplyFilterButtonState()
-                    setErrorText(
-                        ex.localizedMessage
-                            ?: "Couldn't re-evaluate '${request.dataSourceExpr.reEvalExpr}' for current stack frame."
-                    )
+        override fun handleFetchFailure(request: Request, failure: CreatePatchedStylerFailure) = runInEdt {
+            if (shouldHandleFetcherAction(this)) {
+                updateApplyFilterButtonState()
+                when (failure.errorKind) {
+                    CreatePatchedStylerErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
+                    CreatePatchedStylerErrorKind.INVALID_FINGERPRINT -> close(CANCEL_EXIT_CODE)
+
+                    CreatePatchedStylerErrorKind.FILTER_FRAME_EVAL_FAILED,
+                    CreatePatchedStylerErrorKind.FILTER_FRAME_OF_WRONG_TYPE -> myFilterInput.showErrorMessage(failure.info)
+
+                    CreatePatchedStylerErrorKind.EVAL_EXCEPTION,
+                    CreatePatchedStylerErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE -> setErrorText(failure.info)
                 }
             }
         }
 
-        override fun handleNonMatchingFingerprint(request: Request, fingerprint: String) {
-            ApplicationManager.getApplication().invokeLater {
-                if (shouldHandleFetcherAction(this)) {
-                    close(CANCEL_EXIT_CODE)
+        override fun handleFetchSuccess(request: Request, result: Result) = runInEdt {
+            if (shouldHandleFetcherAction(this)) {
+                updateApplyFilterButtonState()
+
+                myLastDataModelDisposable?.let {
+                    myLastDataModelDisposable = null
+                    Disposer.dispose(it)
                 }
-            }
-        }
 
-        override fun handleFilterFrameEvaluateException(request: Request, ex: Exception) {
-            if (ex is ProcessCanceledException || isShouldAbortDataFetchingSilentlyException(ex)) return
-            ApplicationManager.getApplication().invokeLater {
-                if (shouldHandleFetcherAction(this)) {
-                    updateApplyFilterButtonState()
-                    ex.localizedMessage?.let { myFilterInput.showErrorMessage(it) }
+                val settings = ApplicationSettingsService.instance.state
+                // note: loader doesn't sync on settings, user has to re-open the dialog after settings are changed
+                val chunkLoader = createChunkLoader(result.patchedStyler, settings)
+                ChunkedDataFrameModel(
+                    result.tableStructure,
+                    result.frameColumnIndexList,
+                    chunkLoader,
+                    ChunkSize(30, 20),
+                ).let { model ->
+                    myLastDataModelDisposable = Disposer.newDisposable(disposable, "modelDisposable").also {
+                        Disposer.register(it, model)
+                        Disposer.register(it, chunkLoader)
+                    }
+                    myTable.setDataFrameModel(model)
                 }
-            }
-        }
 
-        override fun handleEvaluateModelDataException(request: Request, ex: Exception) {
-            if (ex is ProcessCanceledException || isShouldAbortDataFetchingSilentlyException(ex)) return
-            ApplicationManager.getApplication().invokeLater {
-                if (shouldHandleFetcherAction(this)) {
-                    updateApplyFilterButtonState()
-                    logger.error("Creating DataFrame model failed", ex)
-
-                    ErrorNotification(
-                        "Creating DataFrame model failed",
-                        ex.localizedMessage ?: "",
-                        ex
-                    ).notify(myDebugSession.project)
+                if (request.reEvaluateDataSource) {
+                    myDataSourceEvalExpr = result.updatedDataSourceExpr
                 }
-            }
-        }
 
-        override fun handleEvaluateModelDataSuccess(request: Request, result: Result, fetcher: ModelDataFetcher) {
-            ApplicationManager.getApplication().invokeLater {
-                if (shouldHandleFetcherAction(this)) {
-                    updateApplyFilterButtonState()
-
-                    myLastDataModelDisposable?.let {
-                        myLastDataModelDisposable = null
-                        Disposer.dispose(it)
-                    }
-
-                    val settings = ApplicationSettingsService.instance.state
-                    // note: loader doesn't sync on settings, user has to re-open the dialog after settings are changed
-                    val chunkLoader = createChunkLoader(result.dataSource, settings)
-                    ChunkedDataFrameModel(
-                        result.tableStructure,
-                        result.frameColumnIndexList,
-                        result.dataSourceFingerprint,
-                        chunkLoader,
-                        ChunkSize(30, 20),
-                    ).let { model ->
-                        myLastDataModelDisposable = Disposer.newDisposable(disposable, "modelDisposable").also {
-                            Disposer.register(it, model)
-                            Disposer.register(it, chunkLoader)
-                        }
-                        myDataFrameTable.setDataFrameModel(model)
-                    }
-
-                    if (request.reEvaluateDataSource) {
-                        myDebugValueEvalExpr = result.updatedDataSourceExpr
-                    }
-
-                    request.filterExprBuilder.let {
-                        val filterCompText = myFilterInput.getText()
-                        if (filterCompText.isNotEmpty() && filterCompText == it.build(null)) {
-                            myFilterInput.saveInputInHistory()
-                        }
-                    }
-
-                    updateFooterLabel(result.tableStructure)
-
-                    // assign focus to the DataFrame table
-                    // -> allows immediately to use key bindings of the table like sort/scroll/etc.
-                    IdeFocusManager.getInstance(myDebugSession.project).requestFocus(preferredFocusedComponent, true)
+                if (request.filterInputState.text.isNotEmpty()  && request.filterInputState.text == myFilterInput.getText()) {
+                    myFilterInput.saveInputInHistory()
                 }
+
+                updateFooterLabel(result.tableStructure)
+
+                // assign focus to the DataFrame table
+                // -> allows immediately to use key bindings of the table like sort/scroll/etc.
+                IdeFocusManager.getInstance(myDebugSession.project).requestFocus(preferredFocusedComponent, true)
             }
         }
     }

@@ -44,7 +44,7 @@ class InternalApiEditorComponent(
     }
 
     override fun getText(): String {
-        return myEditor.expression.expression
+        return myEditor.expression.expression.trim()
     }
 
     override fun getEditor(): Editor? {

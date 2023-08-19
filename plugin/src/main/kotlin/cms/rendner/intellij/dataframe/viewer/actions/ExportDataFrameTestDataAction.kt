@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import cms.rendner.intellij.dataframe.viewer.python.exporter.ExportTask
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -56,10 +56,9 @@ class ExportDataFrameTestDataAction : AnAction(), DumbAware {
                 project,
                 ExportTask(exportDir, exportDataValue.toPluginType()),
             ) {
-                ApplicationManager.getApplication().invokeLater {
-                    isEnabled = true
-                }
-            })
+                runInEdt { isEnabled = true }
+            }
+        )
     }
 
     private fun getExportDataValue(e: AnActionEvent): PyDebugValue? {

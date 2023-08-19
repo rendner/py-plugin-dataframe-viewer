@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -136,6 +136,7 @@ data class ChunkSize(val rows: Int, val columns: Int)
  * @param columnLevelsCount number of headers which build the label of a column, number >= 0
  * @param hideRowHeader is true when no row-header should be displayed
  * @param hideColumnHeader is true when no column-header should be displayed
+ * @param fingerprint fingerprint of the data source
  */
 @Serializable
 data class TableStructure(
@@ -146,7 +147,8 @@ data class TableStructure(
     @SerialName("row_levels_count") val rowLevelsCount: Int,
     @SerialName("column_levels_count") val columnLevelsCount: Int,
     @SerialName("hide_row_header") val hideRowHeader: Boolean,
-    @SerialName("hide_column_header") val hideColumnHeader: Boolean
+    @SerialName("hide_column_header") val hideColumnHeader: Boolean,
+    @SerialName("fingerprint") val fingerprint: String,
 )
 
 /**

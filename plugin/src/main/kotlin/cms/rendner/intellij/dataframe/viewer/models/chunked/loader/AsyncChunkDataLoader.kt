@@ -20,7 +20,7 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.Ch
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ChunkValidator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.shutdownExecutorSilently
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.diagnostic.Logger
 import java.util.*
 import java.util.concurrent.CompletionException
@@ -117,30 +117,26 @@ class AsyncChunkDataLoader(
         myActiveRequest = null
     }
 
-    override fun handleChunkData(ctx: LoadChunkContext, chunkData: ChunkData) {
-        ApplicationManager.getApplication().invokeLater {
-            if (mySortCriteriaChanged && ctx.sortCriteria == mySortCriteria) {
-                mySortCriteriaChanged = false
-            }
-            myResultHandler?.let { resultHandler ->
-                if (ctx.sortCriteria == null && !mySortCriteriaChanged || ctx.sortCriteria == mySortCriteria) {
-                    resultHandler.onChunkLoaded(ctx.request, chunkData)
-                } else {
-                    resultHandler.onRequestRejected(
-                        ctx.request,
-                        IChunkDataResultHandler.RejectReason.SORT_CRITERIA_CHANGED
-                    )
-                }
+    override fun handleChunkData(ctx: LoadChunkContext, chunkData: ChunkData) = runInEdt {
+        if (mySortCriteriaChanged && ctx.sortCriteria == mySortCriteria) {
+            mySortCriteriaChanged = false
+        }
+        myResultHandler?.let { resultHandler ->
+            if (ctx.sortCriteria == null && !mySortCriteriaChanged || ctx.sortCriteria == mySortCriteria) {
+                resultHandler.onChunkLoaded(ctx.request, chunkData)
+            } else {
+                resultHandler.onRequestRejected(
+                    ctx.request,
+                    IChunkDataResultHandler.RejectReason.SORT_CRITERIA_CHANGED
+                )
             }
         }
     }
 
-    private fun loadRequestDone() {
-        ApplicationManager.getApplication().invokeLater {
-            myActiveRequest = null
-            if (myIsAliveFlag) {
-                fetchNextChunk()
-            }
+    private fun loadRequestDone() = runInEdt {
+        myActiveRequest = null
+        if (myIsAliveFlag) {
+            fetchNextChunk()
         }
     }
 
@@ -165,16 +161,14 @@ class AsyncChunkDataLoader(
         }
     }
 
-    private fun handleFetchTaskError(loadRequest: LoadRequest, exception: ChunkDataLoaderException) {
-        ApplicationManager.getApplication().invokeLater {
-            if (myIsAliveFlag) {
-                errorHandler.handleChunkDataError(loadRequest.chunkRegion, exception)
-                if (isCausedByDisconnectException(exception)) {
-                    myIsAliveFlag = false
-                    logger.info("Debugger disconnected, setting 'isAlive' to false.")
-                }
-                myResultHandler?.onChunkFailed(loadRequest)
+    private fun handleFetchTaskError(loadRequest: LoadRequest, exception: ChunkDataLoaderException) = runInEdt {
+        if (myIsAliveFlag) {
+            errorHandler.handleChunkDataError(loadRequest.chunkRegion, exception)
+            if (isCausedByDisconnectException(exception)) {
+                myIsAliveFlag = false
+                logger.info("Debugger disconnected, setting 'isAlive' to false.")
             }
+            myResultHandler?.onChunkFailed(loadRequest)
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter.editor
 
-import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterEvalExprBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
@@ -47,6 +46,8 @@ private const val SYNTHETIC_DATAFRAME_IDENTIFIER = "_df"
 interface IEditorChangedListener {
     fun editorInputChanged()
 }
+
+data class FilterInputState(val text: String, val containsSyntheticFrameIdentifier: Boolean = false)
 
 abstract class AbstractEditorComponent : KeyAdapter() {
     protected val myEditorsProvider = MyDebuggerEditorsProvider()
@@ -112,30 +113,29 @@ abstract class AbstractEditorComponent : KeyAdapter() {
 
     protected abstract fun getEditor(): Editor?
 
-    fun createFilterExprBuilder(): IFilterEvalExprBuilder {
-        return getEditor()?.let { editor ->
-            val psiFile = PsiDocumentManager.getInstance(editor.project!!).getPsiFile(editor.document)!!
-            if (MyDebuggerEditorsProvider.SYNTHETIC_IDENTIFIER_INJECTED.get(psiFile, false)) {
-                MyFilterExpressionVisitor().also { psiFile.accept(it) }
-            } else MySimpleFilterEvalExprBuilder(psiFile.text)
-        } ?: MySimpleFilterEvalExprBuilder("")
+    fun getInputState(): FilterInputState {
+        return getText().let{
+            FilterInputState(it, if (it.isEmpty()) false else textContainsSyntheticFrameIdentifier())
+        }
     }
 
-    private class MySimpleFilterEvalExprBuilder(private val result: String) : IFilterEvalExprBuilder {
-        override fun build(dataFrameRefExpr: String?) = result
+    private fun textContainsSyntheticFrameIdentifier(): Boolean {
+        val editor = getEditor() ?: return false
+        val project = editor.project ?: return false
+        val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return false
+        return MyCheckForSyntheticIdentifierVisitor().also { psiFile.accept(it) }.containsSyntheticFrameIdentifier()
     }
 
-    private class MyFilterExpressionVisitor: IFilterEvalExprBuilder, PsiRecursiveElementVisitor() {
-        private val myStringBuilder = StringBuilder()
-        private val myDataFrameIndices = mutableListOf<Int>()
+    private class MyCheckForSyntheticIdentifierVisitor: PsiRecursiveElementVisitor() {
+        private var mySyntheticIdentifierUsed = false
 
         override fun visitElement(element: PsiElement) {
+            if (mySyntheticIdentifierUsed) return
+
             if (element is LeafPsiElement) {
                 element.text.let {
                     if (element.elementType == PyTokenTypes.IDENTIFIER && it == SYNTHETIC_DATAFRAME_IDENTIFIER) {
-                        myDataFrameIndices.add(myStringBuilder.length)
-                    } else {
-                        myStringBuilder.append(it)
+                        mySyntheticIdentifierUsed = true
                     }
                 }
             } else {
@@ -143,22 +143,8 @@ abstract class AbstractEditorComponent : KeyAdapter() {
             }
         }
 
-        override fun build(dataFrameRefExpr: String?): String {
-            return if (myDataFrameIndices.isEmpty()) {
-                myStringBuilder.toString()
-            } else {
-                var last = 0
-                val result = StringBuilder()
-                myDataFrameIndices.forEach {
-                    result.append(myStringBuilder.substring(last, it))
-                    result.append(dataFrameRefExpr ?: SYNTHETIC_DATAFRAME_IDENTIFIER)
-                    last = it
-                }
-                if (last < myStringBuilder.length) {
-                    result.append(myStringBuilder.substring(last))
-                }
-                result.toString()
-            }
+        fun containsSyntheticFrameIdentifier(): Boolean {
+            return mySyntheticIdentifierUsed
         }
     }
 
