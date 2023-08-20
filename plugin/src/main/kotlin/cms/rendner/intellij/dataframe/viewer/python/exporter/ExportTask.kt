@@ -32,18 +32,14 @@ class ExportTask(
     private val exportDataValue: PluginPyValue,
 ) {
     fun run() {
-        try {
-            val exportData = convertExportValue(exportDataValue)
-            val baseExportDir = exportData.resolveBaseExportDir(rootExportDir)
-            println("baseExportDir: $baseExportDir")
-            val testCaseExporter = TestCaseExporter(baseExportDir)
-            val testCaseIterator = EvaluateElementWiseListIterator(exportData.testCases)
+        val exportData = convertExportValue(exportDataValue)
+        val baseExportDir = exportData.resolveBaseExportDir(rootExportDir)
+        println("baseExportDir: $baseExportDir")
+        val testCaseExporter = TestCaseExporter(baseExportDir)
+        val testCaseIterator = EvaluateElementWiseListIterator(exportData.testCases)
 
-            while (testCaseIterator.hasNext()) {
-                testCaseExporter.export(convertTestCaseValue(testCaseIterator.next()))
-            }
-        } catch (e: Throwable) {
-            println("ExportTask::run failed: ${e.stackTraceToString()}")
+        while (testCaseIterator.hasNext()) {
+            testCaseExporter.export(convertTestCaseValue(testCaseIterator.next()))
         }
     }
 

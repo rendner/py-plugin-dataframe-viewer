@@ -16,9 +16,13 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.SystemPropertyKey
+import cms.rendner.intellij.dataframe.viewer.notifications.AbstractBalloonNotification
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersionInSessionProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.exporter.ExportTask
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.runInEdt
@@ -27,9 +31,19 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerUtil
 import com.jetbrains.python.debugger.PyDebugValue
 import java.nio.file.Paths
+
+class MyErrorNotification(
+    title: String,
+    content: String,
+) : AbstractBalloonNotification(
+    title,
+    content,
+    NotificationType.ERROR,
+)
 
 /**
  * Helper action, used to dump test data from the "html_from_styler" Python projects via the PyCharm debugger.
@@ -48,13 +62,25 @@ class ExportDataFrameTestDataAction : AnAction(), DumbAware {
     override fun actionPerformed(event: AnActionEvent) {
         if (exportDir == null) return
         val project = event.project ?: return
-        if (project.isDisposed) return
         val exportDataValue = getExportDataValue(event) ?: return
+        val debugSession = XDebuggerManager.getInstance(project).currentSession ?: return
+        val pandasVersion = PandasVersionInSessionProvider.getVersion(debugSession)
+
+        if (pandasVersion == null) {
+            MyErrorNotification(
+                "No pandasVersion for debug session found",
+                "Can't export test data because of missing pandasVersion.",
+            ).notify(project)
+            return
+        }
+
         isEnabled = false
+        val pluginValue = exportDataValue.toPluginType()
         ProgressManager.getInstance().run(
             MyExportTask(
                 project,
-                ExportTask(exportDir, exportDataValue.toPluginType()),
+                { PythonPluginCodeInjector.injectIfRequired(pandasVersion, pluginValue.evaluator) },
+                ExportTask(exportDir, pluginValue),
             ) {
                 runInEdt { isEnabled = true }
             }
@@ -74,14 +100,17 @@ class ExportDataFrameTestDataAction : AnAction(), DumbAware {
 
     private class MyExportTask(
         project: Project,
+        private val injectPluginCode: () -> Unit,
         private val exportTask: ExportTask,
         private val onFinally: () -> Unit
     ) : Task.Backgroundable(project, "Exporting test cases", true) {
         override fun run(indicator: ProgressIndicator) {
             var failed = false
             try {
+                injectPluginCode()
                 exportTask.run()
             } catch (ex: Exception) {
+                MyErrorNotification("Exception during export", ex.stackTraceToString()).notify(project)
                 failed = true
                 if (ex is InterruptedException) {
                     Thread.currentThread().interrupt()

@@ -23,6 +23,6 @@ test_case = {
                               .background_gradient(subset=pd.IndexSlice[1:3, :])
                               .highlight_max(color="red")
                               .highlight_min()
-                              .highlight_null(null_color="pink")),
+                              .highlight_null(color="pink")),
     "chunk_size": (5, 5)
 }
