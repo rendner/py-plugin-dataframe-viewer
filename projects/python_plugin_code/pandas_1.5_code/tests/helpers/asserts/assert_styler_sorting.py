@@ -1,4 +1,4 @@
-#  Copyright 2022 cms.rendner (Daniel Schmidt)
+#  Copyright 2023 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ from pandas.io.formats.style import Styler
 
 from plugin_code.html_props_table_builder import HTMLPropsTable, HTMLPropsTableRowElement
 from plugin_code.patched_styler import PatchedStyler
-from plugin_code.patched_styler_context import Region
-from plugin_code.styled_data_frame_viewer_bridge import StyledDataFrameViewerBridge
+from plugin_code.patched_styler_context import Region, PatchedStylerContext
 
 """
 Q: How can we test that a styled chunk is correctly sorted?
@@ -53,7 +52,7 @@ def create_and_assert_patched_styler_sorting(
     # create: expected styled
     styler = df.style
     init_styler_func(styler)
-    patched_styler = StyledDataFrameViewerBridge.create_patched_styler(styler)
+    patched_styler = PatchedStyler(PatchedStylerContext(styler), "")
     styled_table = patched_styler.internal_compute_unpatched_html_props_table()
     expected_styled_dict = _map_cell_elements_by_unique_display_value(styled_table)
 
@@ -61,7 +60,7 @@ def create_and_assert_patched_styler_sorting(
     sorted_styler = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending).style
     if init_expected_sorted_styler_func is not None:
         init_expected_sorted_styler_func(sorted_styler)
-    sorted_patched_styler = StyledDataFrameViewerBridge.create_patched_styler(sorted_styler)
+    sorted_patched_styler = PatchedStyler(PatchedStylerContext(sorted_styler), "")
     expected_sorted_dict = _map_cell_elements_by_unique_display_value(
         sorted_patched_styler.internal_compute_unpatched_html_props_table(),
     )
@@ -69,7 +68,7 @@ def create_and_assert_patched_styler_sorting(
     # create: actual styled and sorted
     chunk_styler = df.style
     init_styler_func(chunk_styler)
-    patched_chunk_styler = StyledDataFrameViewerBridge.create_patched_styler(chunk_styler)
+    patched_chunk_styler = PatchedStyler(PatchedStylerContext(chunk_styler), "")
     patched_chunk_styler.set_sort_criteria(sort_by_column_index, sort_ascending)
     actual_dict = _map_cell_elements_by_unique_display_value(
         _build_combined_chunk_table(
