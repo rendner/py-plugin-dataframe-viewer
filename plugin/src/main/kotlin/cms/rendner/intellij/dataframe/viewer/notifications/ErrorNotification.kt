@@ -37,7 +37,7 @@ import javax.swing.JOptionPane
 class ErrorNotification(
     title: String,
     content: String,
-    throwable: Throwable,
+    throwable: Throwable?,
 ) : AbstractBalloonNotification(
     title,
     content,
@@ -46,8 +46,10 @@ class ErrorNotification(
 
     init {
         icon = DataFrameViewerIcons.LOGO_16
-        addAction(ShowErrorAction(title, content, throwable))
-        addAction(CopyToClipboardAction(content, throwable))
+        if (throwable != null) {
+            addAction(ShowErrorAction(title, content, throwable))
+            addAction(CopyToClipboardAction(content, throwable))
+        }
     }
 
     private class CopyToClipboardAction(

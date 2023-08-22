@@ -21,35 +21,27 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import java.nio.file.Path
 
 /**
- * Iterates over the available test data, provided by [exportDataValue] and saves the HTML files
- * for each one in the directory specified by [rootExportDir].
+ * Iterates over the provided [testCases], and writes the dumped data into json files.
+ * The json files are stored into separate dictionaries inside [rootExportDir].
  *
- * @param rootExportDir the root directory for the files generated from the test cases.
- * @param exportDataValue provides a list of test cases.
+ * @param rootExportDir the directory to store the generated test data.
+ * @param pandasVersion the used pandas version.
+ * @param testCases a python list of test cases.
  */
 class ExportTask(
     private val rootExportDir: Path,
-    private val exportDataValue: PluginPyValue,
+    private val pandasVersion: PandasVersion,
+    private val testCases: PluginPyValue,
 ) {
     fun run() {
-        val exportData = convertExportValue(exportDataValue)
-        val baseExportDir = exportData.resolveBaseExportDir(rootExportDir)
+        val baseExportDir = rootExportDir.resolve("pandas_${pandasVersion.major}.${pandasVersion.minor}")
         println("baseExportDir: $baseExportDir")
         val testCaseExporter = TestCaseExporter(baseExportDir)
-        val testCaseIterator = EvaluateElementWiseListIterator(exportData.testCases)
+        val testCaseIterator = EvaluateElementWiseListIterator(testCases)
+        println("testCases: ${testCaseIterator.size}")
 
         while (testCaseIterator.hasNext()) {
             testCaseExporter.export(convertTestCaseValue(testCaseIterator.next()))
-        }
-    }
-
-    private fun convertExportValue(exportDataDict: PluginPyValue): ExportData {
-        val evaluator = exportDataDict.evaluator
-        exportDataDict.refExpr.let {
-            return ExportData(
-                evaluator.evaluate("$it['test_cases']", true),
-                PandasVersion.fromString(evaluator.evaluate("$it['pandas_version']").forcedValue),
-            )
         }
     }
 
@@ -73,7 +65,7 @@ class ExportTask(
     ) : Iterator<PluginPyValue> {
 
         private var lastFetchedEntryIndex: Int = -1
-        private val size: Int = testCases.evaluator.evaluate("len(${testCases.refExpr})").forcedValue.toInt()
+        val size: Int = testCases.evaluator.evaluate("len(${testCases.refExpr})").forcedValue.toInt()
 
         override fun hasNext(): Boolean {
             return lastFetchedEntryIndex + 1 < size
