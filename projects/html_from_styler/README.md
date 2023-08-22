@@ -1,6 +1,6 @@
 # HTML From Styler
 This directory contains projects, separated by the supported pandas version, for generating test data for the plugin.
-Previously the data was exported as HTML, but exports now JSON.
+Previously the data was exported as HTML, but now as JSON.
 
 These projects can also be used to verify that the plugin can interact with the PyCharm debugger.
 
@@ -46,7 +46,7 @@ Running the `export_data/main.py` via the PyCharm debugger, started from the plu
 2. in the debugger tab, right-click on `export_test_data` to open the context menu
 3. select `Export DataFrame Test Data` from the context menu
     - (option is only available if started via `runIde` gradle-task of the plugin project)
-    - this starts the export of the HTML files
+    - this starts the export of the JSON files
     - the progress of the export can be monitored in the console of the IntelliJ instance
 
 #### Generated Output
@@ -58,10 +58,10 @@ The following files are created for each pandas `Styler` instance listed in `exp
     - `<X>` index of first row of the chunk
     - `<Y>` index of first column of the chunk
 - `testCaseProperties.json`
-    - contains some required information about the structure of the `DataFrame` represented to process the generated files
+    - contains some required information about the structure of the styled `DataFrame`
 
 ### Directory: export_data/parsing
-The directory `export_data/parsing`contains pre-configured styled DataFrames which are automatically picked up the code when running the `export_data/main.py` file.
+The directory `export_data/parsing` contains pre-configured styled DataFrames which are automatically picked up the code when running the `export_data/main.py` file.
 
 A test file has to specify a dictionary named `test_case` with the following two keys:
 
@@ -70,9 +70,7 @@ A test file has to specify a dictionary named `test_case` with the following two
 | create_styler | A parameterless function to create a new (configured) styler to dump. Used to generate test data from it. |
 | chunk_size    | The chunk size to use when dumping the `styler`.                                                          |
 
-Nearly all tests specify small styled `DataFrames`, because the generated data is used to validate if the HTML can be parsed and is combined correctly.
-
-The benefit of small test cases is, that in a short amount of time many test cases can be fetched from the debugger without running into a timeout exception.
+Nearly all tests specify small styled `DataFrames`, because the generated data is used to validate that fetched chunks can be parsed and that they combined give the same result.
 
 ### Directory: manual_testing
 The directory contains examples to test the behavior of the plugin manually. 

@@ -14,23 +14,21 @@
 import os
 from pathlib import Path
 from importlib import import_module
-import pandas as pd
 
 
 def collect_all_test_cases(root_dir: str):
     test_cases = []
 
-    print(f'collecting test cases (using pandas {pd.__version__})')
+    print(f'collecting test cases')
 
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for name in dirnames:
-            test_cases.extend(collect_test_cases_from_dir(os.path.join(dirpath, name)))
+            _collect_test_cases_from_dir(os.path.join(dirpath, name), test_cases)
 
-    return {"test_cases": test_cases, "pandas_version": pd.__version__}
+    return test_cases
 
 
-def collect_test_cases_from_dir(module_dir: str):
-    test_cases = []
+def _collect_test_cases_from_dir(module_dir: str, test_cases):
     py_suffix_length = len(".py")
     module_path_start_offset = module_dir.index("export_data")
     export_dir_name_offset = module_path_start_offset + len("export_data.")
@@ -45,5 +43,3 @@ def collect_test_cases_from_dir(module_dir: str):
                 test_case = getattr(module, 'test_case')
                 test_case_export_dir = path[export_dir_name_offset:-py_suffix_length]
                 test_cases.append({**test_case, 'export_dir': test_case_export_dir})
-
-    return test_cases
