@@ -727,7 +727,7 @@ class PatchedStylerContext:
             visible_columns = np.delete(styler.columns.get_indexer_for(styler.columns), styler.hidden_columns)
             return styler.data.iloc[visible_indices, visible_columns]
 
-from collections import Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import List, Dict, Set, Any, Optional
 

@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 # == copy after here ==
-from collections import Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import List, Dict, Set, Any, Optional
 
