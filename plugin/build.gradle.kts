@@ -180,7 +180,7 @@ tasks {
     register<DefaultTask>("buildPythonDockerImages") {
         description = "Builds all python docker images."
         group = "docker"
-        dependsOn(buildPythonDockerImagesTasks)
+        dependsOn(project.tasks.filter { it.name.startsWith("buildPythonDockerImage_") })
     }
 
     register<DefaultTask>("killAllPythonContainers") {
@@ -259,7 +259,8 @@ tasks {
     register<DefaultTask>("integrationTest_all") {
         description = "Runs all integrationTest tasks."
         group = "verification"
-        dependsOn(integrationTestTasks)
+        outputs.upToDateWhen { false }
+        dependsOn(project.tasks.filter { it.name.startsWith("integrationTest_") && it.name != this.name })
     }
 
     val generateTestDataTasks = mutableListOf<Task>()
@@ -323,7 +324,7 @@ tasks {
     register<DefaultTask>("generateTestData_all") {
         description = "Runs all generate-test-data tasks."
         group = "generate"
-        dependsOn(generateTestDataTasks)
+        dependsOn(project.tasks.filter { it.name.startsWith("generateTestData_") && it.name != this.name })
     }
 
     test {
