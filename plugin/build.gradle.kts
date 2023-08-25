@@ -62,10 +62,21 @@ idea {
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
 
-    data class PythonDockerImage(val path: String, val pythonVersion: String, val pipenvEnvironments: List<String>) {
+    val supportedPandasVersions = listOf("1.1", "1.2", "1.3", "1.4", "1.5", "2.0")
+
+    data class PythonDockerImage(
+        val path: String,
+        val pythonVersion: String,
+        val pipenvEnvironments: List<String>,
+        val envsAreHtmlFromStylerProjects: Boolean,
+        ) {
         val dockerImageName = "sdfv-plugin-dockered-python_$pythonVersion"
         val contentPath = "$path/content/"
         fun getWorkdir(pipenvEnvironment: String) = "/usr/src/app/pipenv_environments/$pipenvEnvironment"
+        fun getBuildArgs(): Array<String> {
+            return if (envsAreHtmlFromStylerProjects) emptyArray()
+            else arrayOf("--build-arg", "pipenv_environment=${pipenvEnvironments.first()}")
+        }
     }
 
     val pythonDockerBaseDir = "$projectDir/dockered-python"
@@ -73,14 +84,34 @@ tasks {
         // order of python versions: latest to oldest
         // order of pipenv environments: latest to oldest
         PythonDockerImage(
+            "$pythonDockerBaseDir/python_3.11",
+            "3.11",
+            listOf("python_3.11"),
+            false,
+        ),
+        PythonDockerImage(
+            "$pythonDockerBaseDir/python_3.10",
+            "3.10",
+            listOf("python_3.10"),
+            false,
+        ),
+        PythonDockerImage(
+            "$pythonDockerBaseDir/python_3.9",
+            "3.9",
+            listOf("python_3.9"),
+            false,
+        ),
+        PythonDockerImage(
             "$pythonDockerBaseDir/python_3.8",
             "3.8",
             listOf("pandas_2.0", "pandas_1.5", "pandas_1.4"),
+            true,
         ),
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.7",
             "3.7",
             listOf("pandas_1.3", "pandas_1.2", "pandas_1.1"),
+            true,
         ),
     )
     val exportTestDataPath = "$projectDir/src/test/resources/generated/"
@@ -101,31 +132,33 @@ tasks {
             doLast {
                 delete(entry.contentPath)
 
-                entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
-                    val pythonSourceProjectPath = "../projects/html_from_styler/${pipEnvEnvironment}_styler"
+                if (entry.envsAreHtmlFromStylerProjects) {
+                    entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
+                        val pythonSourceProjectPath = "../projects/html_from_styler/${pipEnvEnvironment}_styler"
 
-                    val pipFile = project.file("$pythonSourceProjectPath/Pipfile")
-                    val pipFileLock = project.file("$pythonSourceProjectPath/Pipfile.lock")
-                    if (pipFile.exists() && pipFileLock.exists()) {
-                        copy {
-                            from(pipFile, pipFileLock)
-                            into("${entry.contentPath}/pipenv_environments/$pipEnvEnvironment/")
+                        val pipFile = project.file("$pythonSourceProjectPath/Pipfile")
+                        val pipFileLock = project.file("$pythonSourceProjectPath/Pipfile.lock")
+                        if (pipFile.exists() && pipFileLock.exists()) {
+                            copy {
+                                from(pipFile, pipFileLock)
+                                into("${entry.contentPath}/pipenv_environments/$pipEnvEnvironment/")
+                            }
+                        } else {
+                            throw GradleException("Incomplete Pipfiles for environment: $pipEnvEnvironment")
                         }
-                    } else {
-                        throw GradleException("Incomplete Pipfiles for environment: $pipEnvEnvironment")
-                    }
 
-                    val exportData = project.file("$pythonSourceProjectPath/export_data")
-                    if (exportData.exists() && exportData.isDirectory) {
-                        // The additional content of the pipenv environments (like Python source code, etc.)
-                        // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
-                        // the pipenv environments are re-build whenever a source file has changed.
-                        copy {
-                            from(exportData)
-                            into("${entry.contentPath}/merge_into_pipenv_environments/$pipEnvEnvironment/export_data")
+                        val exportData = project.file("$pythonSourceProjectPath/export_data")
+                        if (exportData.exists() && exportData.isDirectory) {
+                            // The additional content of the pipenv environments (like Python source code, etc.)
+                            // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
+                            // the pipenv environments are re-build whenever a source file has changed.
+                            copy {
+                                from(exportData)
+                                into("${entry.contentPath}/merge_into_pipenv_environments/$pipEnvEnvironment/export_data")
+                            }
+                        } else {
+                            throw GradleException("No export-data found for environment: $pipEnvEnvironment")
                         }
-                    } else {
-                        throw GradleException("No export-data found for environment: $pipEnvEnvironment")
                     }
                 }
 
@@ -138,7 +171,7 @@ tasks {
                 exec {
                     workingDir = file(entry.path)
                     executable = "docker"
-                    args("build", ".", "-t", entry.dockerImageName)
+                    args("build", *entry.getBuildArgs(), ".", "-t", entry.dockerImageName)
                 }
             }
         }
@@ -229,7 +262,7 @@ tasks {
     }
 
     val generateTestDataTasks = mutableListOf<Task>()
-    pythonDockerImages.forEach { entry ->
+    pythonDockerImages.filter { it.envsAreHtmlFromStylerProjects }.forEach { entry ->
         entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
 
             val deleteTestData by register<DefaultTask>("deleteTestData_$pipEnvEnvironment") {
@@ -349,18 +382,16 @@ tasks {
         // - plugin crashes because the resources are not available
         doFirst {
             logger.lifecycle("copy 'plugin_code' files")
-            pythonDockerImages.forEach { entry ->
-                entry.pipenvEnvironments.forEach { pipenvEnvironment ->
-                    val pluginCode =
-                        project.file("../projects/python_plugin_code/${pipenvEnvironment}_code/generated/plugin_code")
-                    if (pluginCode.exists()) {
-                        copy {
-                            from(pluginCode)
-                            into(project.file("src/main/resources/$pipenvEnvironment"))
-                        }
-                    } else {
-                        throw GradleException("Missing file 'plugin_code' for version: $pipenvEnvironment")
+            supportedPandasVersions.forEach { majorMinor ->
+                val pluginCode =
+                    project.file("../projects/python_plugin_code/pandas_${majorMinor}_code/generated/plugin_code")
+                if (pluginCode.exists()) {
+                    copy {
+                        from(pluginCode)
+                        into(project.file("src/main/resources/pandas_$majorMinor"))
                     }
+                } else {
+                    throw GradleException("Missing file 'plugin_code' for pandas version: $majorMinor")
                 }
             }
         }

@@ -59,14 +59,6 @@ class PythonPluginCodeInjector {
             /*
             Some Notes:
 
-            1)
-            The methods of the created MyPluginCodeImporter-instance are called sometime later.
-            Therefore, it is important to define all required imports in the methods themselves, otherwise they are
-            no longer available if they are defined at the top of the Python code snippet.
-
-            Imports via __import__(...) are not visible in the PyCharm debugger afterwards.
-
-            2)
             Linebreak-chars in strings passed to "exec" have to be escaped.
 
             Examples:
@@ -84,18 +76,26 @@ class PythonPluginCodeInjector {
              */
             try {
                 evaluator.execute("""
-                |class MyPluginCodeImporter(__import__('importlib').abc.MetaPathFinder, __import__('importlib').abc.Loader):
-                |   def find_spec(self, fullname, path=None, target=None):
-                |       if fullname == "$PLUGIN_MODULE_NAME":
-                |           return __import__('importlib').util.spec_from_loader(fullname, self)
-                |       return None
+                |def sdfv_plugin_code_injector():
+                |   from importlib import abc
+                |   import sys
                 |
-                |   def exec_module(self, module) -> None:
-                |       exec('''${pluginCodeEscaper(pluginCode)}''', module.__dict__)
+                |   class MyPluginCodeImporter(abc.MetaPathFinder, abc.Loader):
+                |       def find_spec(self, fullname, path=None, target=None):
+                |           if fullname == "$PLUGIN_MODULE_NAME":
+                |               from importlib import util
+                |               return util.spec_from_loader(fullname, self)
+                |           return None
                 |
-                |__import__('sys').meta_path.append(MyPluginCodeImporter())
-                |# cleanup to hide the class after use
-                |del MyPluginCodeImporter
+                |       def exec_module(self, module) -> None:
+                |           exec('''${pluginCodeEscaper(pluginCode)}''', module.__dict__)
+                |
+                |   sys.meta_path.append(MyPluginCodeImporter())
+                |
+                |try:
+                |   sdfv_plugin_code_injector()
+                |finally:
+                |   del sdfv_plugin_code_injector
                 """.trimMargin()
                 )
             } catch (ex: EvaluateException) {

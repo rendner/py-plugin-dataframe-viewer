@@ -33,16 +33,16 @@ import org.junit.jupiter.api.Test
 internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
-    fun shouldFailIfLinebreakIsInSingleLineString() {
+    fun shouldFailWithASyntaxErrorIfLinebreakIsInSingleLineString() {
         runPythonDebugger { valueEvaluator, _ ->
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 valueEvaluator.execute("multi = 'line_1\nline_2'")
-            }.withMessageContaining("{SyntaxError} EOL while scanning string literal")
+            }.withMessageStartingWith("{SyntaxError}")
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 valueEvaluator.evaluate("'line_1\nline_2'")
-            }.withMessageContaining("{SyntaxError} EOL while scanning string literal")
+            }.withMessageStartingWith("{SyntaxError}")
         }
     }
 
