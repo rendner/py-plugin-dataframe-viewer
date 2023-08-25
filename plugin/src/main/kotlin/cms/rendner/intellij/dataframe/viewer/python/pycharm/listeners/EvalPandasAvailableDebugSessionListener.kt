@@ -15,8 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.pycharm.listeners
 
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersionInSessionProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasAvailableInSessionProvider
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebugSessionListener
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
@@ -25,12 +24,12 @@ import com.jetbrains.python.debugger.PyDebugValue
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Evaluates the pandas version available in a debug process.
- * The version is only evaluated once on start of the debug session.
+ * Checks if pandas is available in a debug process.
+ * The check is only done once on start of the debug session.
  *
- * The result can be retrieved via: [PandasVersionInSessionProvider.getVersion(myDebugSession)].
+ * The result can be retrieved via: [PandasAvailableInSessionProvider.isAvailable(myDebugSession)].
  */
-class EvalPandasVersionDebugSessionListener(private val session: XDebugSession): XDebugSessionListener {
+class EvalPandasAvailableDebugSessionListener(private val session: XDebugSession): XDebugSessionListener {
     /**
      * AtomicBoolean because [sessionResumed] and [sessionPaused] are called from different threads.
      */
@@ -38,11 +37,11 @@ class EvalPandasVersionDebugSessionListener(private val session: XDebugSession):
 
     override fun sessionStopped() {
         session.removeSessionListener(this)
-        PandasVersionInSessionProvider.remove(session)
+        PandasAvailableInSessionProvider.remove(session)
     }
 
     override fun sessionResumed() {
-        if (PandasVersionInSessionProvider.getVersion(session) == null) {
+        if (PandasAvailableInSessionProvider.isAvailable(session) == null) {
             // reset if pending, to retry next time
             pendingEval.compareAndSet(true, false)
         }
@@ -52,13 +51,12 @@ class EvalPandasVersionDebugSessionListener(private val session: XDebugSession):
         session.debugProcess.evaluator?.let {
             if (!pendingEval.compareAndSet(false, true)) return
             it.evaluate(
-                "__import__('pandas').__version__",
+                "__import__('importlib').util.find_spec('pandas')",
                 object : XDebuggerEvaluator.XEvaluationCallback {
                     override fun errorOccurred(errorMessage: String) {
                         // Only a paused session can evaluate expressions (doesn't matter if current session or not).
                         // If not paused, ignore error.
                         if (session.isPaused) {
-                            // "errorMessage" could be something like: "{ModuleNotFoundError}No module named 'pandas'"
                             pendingEval.set(false)
                         }
                     }
@@ -66,10 +64,10 @@ class EvalPandasVersionDebugSessionListener(private val session: XDebugSession):
                     override fun evaluated(result: XValue) {
                         if (result is PyDebugValue) {
                             pendingEval.set(false)
-                            result.value?.let { v ->
-                                if (v.isNotEmpty()) {
-                                    PandasVersionInSessionProvider.setVersion(session, PandasVersion.fromString(v))
-                                }
+                            // explicit check for expected type
+                            // value can be "None" in case no spec is found
+                            if (result.type == "ModuleSpec") {
+                                PandasAvailableInSessionProvider.setIsAvailable(session)
                             }
                         }
                     }

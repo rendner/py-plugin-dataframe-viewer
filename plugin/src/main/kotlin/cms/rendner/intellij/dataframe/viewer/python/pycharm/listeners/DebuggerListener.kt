@@ -23,7 +23,7 @@ import com.jetbrains.python.debugger.PyDebugProcess
 
 
 /**
- * Registers an [EvalPandasVersionDebugSessionListener] for each started debug session.
+ * Registers an [EvalPandasAvailableDebugSessionListener] for each started debug session.
  */
 class DebuggerListener: XDebuggerManagerListener {
 
@@ -31,7 +31,7 @@ class DebuggerListener: XDebuggerManagerListener {
     if (debugProcess is PyDebugProcess && !debugProcess.project.isDisposed) {
       debugProcess.session.let {
         it.addSessionListener(
-          EvalPandasVersionDebugSessionListener(it),
+          EvalPandasAvailableDebugSessionListener(it),
           it.project.service<ParentDisposableService>(),
         )
       }

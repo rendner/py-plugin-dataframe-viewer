@@ -32,7 +32,7 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
     @Test
     fun shouldInjectCodeWithoutAnError() {
         runPythonDebuggerWithoutPluginCode { evaluator: IPluginPyValueEvaluator, _ ->
-            PythonPluginCodeInjector.injectIfRequired(getPandasVersion(evaluator), evaluator, ::pluginCodeEscaper)
+            PythonPluginCodeInjector.injectIfRequired(evaluator, ::pluginCodeEscaper)
         }
     }
 
@@ -40,12 +40,26 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
     fun shouldThrowExceptionForUnsupportedPandasVersion() {
         runPythonDebuggerWithoutPluginCode { evaluator: IPluginPyValueEvaluator, _ ->
 
-            val nonExistingPandasVersion = PandasVersion.fromString("99.99.0")
+            val pandasVersion = getPandasVersion(evaluator)
+            val nonExistingPandasVersion = "99.99.0"
+            val patchedEvaluator = object: IPluginPyValueEvaluator {
+                override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
+                    return evaluator.evaluate(expression, trimResult).let {
+                        if (it.forcedValue != pandasVersion) it
+                        else it.copy(value = nonExistingPandasVersion)
+                    }
+                }
+
+                override fun execute(statements: String) {
+                    return evaluator.execute(statements)
+                }
+            }
+
 
             Assertions.assertThatExceptionOfType(InjectException::class.java).isThrownBy {
-                PythonPluginCodeInjector.injectIfRequired(nonExistingPandasVersion, evaluator, ::pluginCodeEscaper)
+                PythonPluginCodeInjector.injectIfRequired(patchedEvaluator, ::pluginCodeEscaper)
             }.withMessageContaining(
-                "Unsupported $nonExistingPandasVersion",
+                "Unsupported ${PandasVersion(major=99, minor=99, rest="0")}",
             )
         }
     }
@@ -54,7 +68,6 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
     fun shouldInjectCodeOnlyOnceWhenCalledMultipleTimes() {
         runPythonDebuggerWithoutPluginCode { evaluator: IPluginPyValueEvaluator, _ ->
 
-            val pandasVersion = getPandasVersion(evaluator)
             var codeInjectDetected = 0
             val patchedEvaluator = object: IPluginPyValueEvaluator {
                 override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
@@ -68,10 +81,14 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
             }
 
             repeat(3) {
-                PythonPluginCodeInjector.injectIfRequired(pandasVersion, patchedEvaluator, ::pluginCodeEscaper)
+                PythonPluginCodeInjector.injectIfRequired(patchedEvaluator, ::pluginCodeEscaper)
             }
 
             assertThat(codeInjectDetected).isOne()
         }
+    }
+
+    private fun getPandasVersion(evaluator: IPluginPyValueEvaluator): String {
+        return evaluator.evaluate("__import__('pandas').__version__").forcedValue
     }
 }

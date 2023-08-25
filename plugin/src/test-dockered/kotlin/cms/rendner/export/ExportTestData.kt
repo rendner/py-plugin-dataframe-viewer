@@ -33,7 +33,7 @@ internal class ExportTestData : AbstractPluginCodeTest() {
     fun exportTestDataForUnitTests() {
         assertThat(rootExportDir).isNotNull
         runPythonDebuggerWithSourceFile("export_data/main.py") { evaluator, _ ->
-            ExportTask(rootExportDir!!, getPandasVersion(evaluator), evaluator.evaluate("export_test_data")).run()
+            ExportTask(rootExportDir!!, evaluator.evaluate("export_test_data")).run()
         }
     }
 }

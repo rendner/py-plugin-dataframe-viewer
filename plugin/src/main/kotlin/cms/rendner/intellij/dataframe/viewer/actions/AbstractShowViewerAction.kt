@@ -18,7 +18,6 @@ package cms.rendner.intellij.dataframe.viewer.actions
 import cms.rendner.intellij.dataframe.viewer.components.DataFrameViewerDialog
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceToFrameHint
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersionInSessionProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService
@@ -44,12 +43,11 @@ abstract class AbstractShowViewerAction: AnAction(), DumbAware {
         if (project.isDisposed) return
         val dataSource = getSelectedDebugValue(event) ?: return
         val debugSession = XDebuggerManager.getInstance(project).currentSession ?: return
-        val pandasVersion = PandasVersionInSessionProvider.getVersion(debugSession) ?: return
         val parentDisposable = project.service<ParentDisposableService>()
 
         BackgroundTaskUtil.executeOnPooledThread(parentDisposable) {
             try {
-                PythonPluginCodeInjector.injectIfRequired(pandasVersion, dataSource.toPluginType().evaluator)
+                PythonPluginCodeInjector.injectIfRequired(dataSource.toPluginType().evaluator)
             } catch (ex: Throwable) {
                 ErrorNotification(
                     "Initialize plugin code failed",

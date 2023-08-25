@@ -20,11 +20,11 @@ import com.intellij.openapi.util.Key
 import com.intellij.xdebugger.XDebugSession
 import java.util.concurrent.ConcurrentHashMap
 
-class PandasVersionInSessionProvider {
+class PandasAvailableInSessionProvider {
     companion object {
         // A user can start more than one debug process in parallel per project.
         // Therefore, a map is used to store the result.
-        private val KEY: Key<MutableMap<String, PandasVersion?>> = Key.create("cms.rendner.pandasVersionInSession")
+        private val KEY: Key<MutableMap<String, Boolean?>> = Key.create("cms.rendner.pandasVersionInSession")
 
         fun init(project: Project) {
             project.putUserData(KEY, ConcurrentHashMap())
@@ -38,11 +38,11 @@ class PandasVersionInSessionProvider {
             session.project.getUserData(KEY)?.remove(createSessionFingerprint(session))
         }
 
-        fun setVersion(session: XDebugSession, version: PandasVersion) {
-            session.project.getUserData(KEY)?.put(createSessionFingerprint(session), version)
+        fun setIsAvailable(session: XDebugSession) {
+            session.project.getUserData(KEY)?.put(createSessionFingerprint(session), true)
         }
 
-        fun getVersion(session: XDebugSession): PandasVersion? {
+        fun isAvailable(session: XDebugSession): Boolean? {
             return session.project.getUserData(KEY)?.get(createSessionFingerprint(session))
         }
 

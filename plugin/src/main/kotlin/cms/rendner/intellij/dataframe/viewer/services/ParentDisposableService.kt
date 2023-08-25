@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.services
 
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersionInSessionProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasAvailableInSessionProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 
@@ -33,14 +33,14 @@ import com.intellij.openapi.project.Project
 class ParentDisposableService(private val project: Project): Disposable {
 
     init {
-        PandasVersionInSessionProvider.init(project)
+        PandasAvailableInSessionProvider.init(project)
     }
 
     var isDisposed = false
         private set
 
     override fun dispose() {
-        PandasVersionInSessionProvider.cleanup(project)
+        PandasAvailableInSessionProvider.cleanup(project)
         isDisposed = true
     }
 }

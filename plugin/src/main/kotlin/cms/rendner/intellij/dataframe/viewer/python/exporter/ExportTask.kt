@@ -18,6 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.python.exporter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
+import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import java.nio.file.Path
 
 /**
@@ -25,15 +26,18 @@ import java.nio.file.Path
  * The json files are stored into separate dictionaries inside [rootExportDir].
  *
  * @param rootExportDir the directory to store the generated test data.
- * @param pandasVersion the used pandas version.
  * @param testCases a python list of test cases.
  */
 class ExportTask(
     private val rootExportDir: Path,
-    private val pandasVersion: PandasVersion,
     private val testCases: PluginPyValue,
 ) {
     fun run() {
+        val pandasVersion = try {
+            PandasVersion.fromString(testCases.evaluator.evaluate("__import__('pandas').__version__").forcedValue)
+        } catch (ex: EvaluateException) {
+            throw IllegalStateException("Failed to identify version of pandas.", ex)
+        }
         val baseExportDir = rootExportDir.resolve("pandas_${pandasVersion.major}.${pandasVersion.minor}")
         println("baseExportDir: $baseExportDir")
         val testCaseExporter = TestCaseExporter(baseExportDir)

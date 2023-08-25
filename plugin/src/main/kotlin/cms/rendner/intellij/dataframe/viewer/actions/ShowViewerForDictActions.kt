@@ -17,7 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceToFrameHint
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersionInSessionProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasAvailableInSessionProvider
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.xdebugger.XDebuggerManager
 import com.jetbrains.python.debugger.PyDebugValue
@@ -34,7 +34,7 @@ open class ShowViewerForDictAction: AbstractShowViewerAction() {
         if (value.qualifiedType == PythonQualifiedTypes.Dict) {
             val project = event.project ?: return false
             val session = XDebuggerManager.getInstance(project).currentSession ?: return false
-            return PandasVersionInSessionProvider.getVersion(session) != null
+            return PandasAvailableInSessionProvider.isAvailable(session) == true
         }
         return false
     }

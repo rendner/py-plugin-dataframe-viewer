@@ -40,7 +40,6 @@ class PythonPluginCodeInjector {
 
         @Synchronized
         fun injectIfRequired(
-            pandasVersion: PandasVersion,
             evaluator: IPluginPyValueEvaluator,
             pluginCodeEscaper: (code: String) -> String = ::defaultCodeEscaper,
         ) {
@@ -48,6 +47,12 @@ class PythonPluginCodeInjector {
             val doesExist =
                 evaluator.evaluate("__import__('importlib').util.find_spec('$PLUGIN_MODULE_NAME') is not None").forcedValue
             if (doesExist == "True") return
+
+            val pandasVersion = try {
+                PandasVersion.fromString(evaluator.evaluate("__import__('pandas').__version__").forcedValue)
+            } catch (ex: EvaluateException) {
+                throw InjectException("Failed to identify version of pandas.", ex)
+            }
 
             val codeResourcePath = getPluginCodeResourcePath(pandasVersion)
             val pluginCode = try {
