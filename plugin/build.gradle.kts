@@ -219,6 +219,7 @@ tasks {
             register<Test>("integrationTest_$pipEnvEnvironment") {
                 description = "Runs integration test on pipenv environment: $pipEnvEnvironment."
                 group = "verification"
+                outputs.upToDateWhen { false }
 
                 testClassesDirs = testDockeredSourceSet.output.classesDirs
                 classpath = testDockeredSourceSet.runtimeClasspath
@@ -276,6 +277,7 @@ tasks {
             val exportTestData by register<Test>("exportTestData_$pipEnvEnvironment") {
                 testClassesDirs = testDockeredSourceSet.output.classesDirs
                 classpath = testDockeredSourceSet.runtimeClasspath
+                outputs.upToDateWhen { false }
 
                 systemProperty(
                     "cms.rendner.dataframe.viewer.export.test.data.dir",
