@@ -15,19 +15,17 @@
  */
 package cms.rendner.junit
 
-import cms.rendner.TestSystemPropertyKey
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import org.junit.jupiter.api.DisplayNameGenerator
 
 class PipEnvDisplayNameGenerator : DisplayNameGenerator.Standard() {
 
     private val pipEnvTestSuperClass = AbstractPipEnvEnvironmentTest::class.java
-    private val workdirFolderName =
-        System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR, "?").substringAfterLast("/")
+    private val pipEnvEnvironmentName = AbstractPipEnvEnvironmentTest.getPipEnvEnvironmentName()
 
     override fun generateDisplayNameForClass(testClass: Class<*>?): String {
         if (testClass != null && pipEnvTestSuperClass.isAssignableFrom(testClass)) {
-            return "[pipenv env: ${workdirFolderName}] ${super.generateDisplayNameForClass(testClass)}"
+            return "[pipenv env: ${pipEnvEnvironmentName}] ${super.generateDisplayNameForClass(testClass)}".replace(".", "_")
         }
         return super.generateDisplayNameForClass(testClass)
     }

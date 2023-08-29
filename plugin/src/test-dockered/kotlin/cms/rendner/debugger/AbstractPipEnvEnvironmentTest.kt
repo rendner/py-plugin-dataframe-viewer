@@ -42,6 +42,12 @@ internal abstract class AbstractPipEnvEnvironmentTest {
     private var executorService: ExecutorService? = null
     private var debugger: PythonDebugger? = null
 
+    companion object {
+        fun getPipEnvEnvironmentName(): String {
+            return System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR, "?").substringAfterLast("/")
+        }
+    }
+
     private val pipEnvEnvironment = DockeredPipEnvEnvironment(
         System.getProperty(TestSystemPropertyKey.DOCKER_IMAGE),
         System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR),
