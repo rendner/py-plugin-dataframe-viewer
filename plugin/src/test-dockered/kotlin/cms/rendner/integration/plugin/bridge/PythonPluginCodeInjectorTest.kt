@@ -31,27 +31,27 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
 
     @Test
     fun shouldInjectCodeWithoutAnError() {
-        runPythonDebuggerWithoutPluginCode { evaluator: IPluginPyValueEvaluator, _ ->
-            PythonPluginCodeInjector.injectIfRequired(evaluator, ::pluginCodeEscaper)
+        runPythonDebuggerWithoutPluginCode { debuggerApi ->
+            PythonPluginCodeInjector.injectIfRequired(debuggerApi.evaluator, ::pluginCodeEscaper)
         }
     }
 
     @Test
     fun shouldThrowExceptionForUnsupportedPandasVersion() {
-        runPythonDebuggerWithoutPluginCode { evaluator: IPluginPyValueEvaluator, _ ->
+        runPythonDebuggerWithoutPluginCode { debuggerApi ->
 
-            val pandasVersion = getPandasVersion(evaluator)
+            val pandasVersion = getPandasVersion(debuggerApi.evaluator)
             val nonExistingPandasVersion = "99.99.0"
             val patchedEvaluator = object: IPluginPyValueEvaluator {
                 override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
-                    return evaluator.evaluate(expression, trimResult).let {
+                    return debuggerApi.evaluator.evaluate(expression, trimResult).let {
                         if (it.forcedValue != pandasVersion) it
                         else it.copy(value = nonExistingPandasVersion)
                     }
                 }
 
                 override fun execute(statements: String) {
-                    return evaluator.execute(statements)
+                    return debuggerApi.evaluator.execute(statements)
                 }
             }
 
@@ -66,17 +66,17 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
 
     @Test
     fun shouldInjectCodeOnlyOnceWhenCalledMultipleTimes() {
-        runPythonDebuggerWithoutPluginCode { evaluator: IPluginPyValueEvaluator, _ ->
+        runPythonDebuggerWithoutPluginCode { debuggerApi ->
 
             var codeInjectDetected = 0
             val patchedEvaluator = object: IPluginPyValueEvaluator {
                 override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
-                    return evaluator.evaluate(expression, trimResult)
+                    return debuggerApi.evaluator.evaluate(expression, trimResult)
                 }
 
                 override fun execute(statements: String) {
                     if (statements.contains("MyPluginCodeImporter") ) codeInjectDetected++
-                    return evaluator.execute(statements)
+                    return debuggerApi.evaluator.execute(statements)
                 }
             }
 

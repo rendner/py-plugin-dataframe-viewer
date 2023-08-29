@@ -18,7 +18,6 @@ package cms.rendner.debugger.impl
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 private const val NEW_LINE_MARKER = "@_@NL@_@"
 private const val RESULT_MARKER = "@_@RESULT@_@"
@@ -29,14 +28,18 @@ private const val EXC_MARKER = "@_@EXC@_@"
  * Only the functionalities required by the plugin are implemented.
  *
  * Requirement:
- * The "/resources/python_helpers" of the resources have to be in the "sys.path" of the running python interpreter
- * to allow import of the "debugger_helpers".
+ * The "python_helpers" have to be linked via "PYTHONPATH" for the running python interpreter
+ * to allow import of the "debugger_helpers". For the dockered Python interpreters the file
+ * is mapped into the container via a volume. Therefore, the Python interpreter will always
+ * use the latest version (no need to rebuild the docker images after change).
  */
-abstract class PythonEvalDebugger {
+abstract class PythonDebugger {
 
-    private interface Task {
-        val result: CompletableFuture<*>
-        fun completeWithResult(result: MarkedResult?)
+    private abstract class Task<R> {
+        val result = CompletableFuture<R>()
+        open fun completeWithResult(result: MarkedResult?) {
+            this.result.complete(null)
+        }
 
         fun completeWithError(throwable: Throwable) {
             if (throwable is PluginPyDebuggerException) {
@@ -103,56 +106,54 @@ abstract class PythonEvalDebugger {
         val refId: String?,
     )
 
-    private val openTasks = ArrayBlockingQueue<Task>(1)
-
-    @Volatile
-    private var shutdownRequested: Boolean = false
-
-    @Volatile
-    private var isRunning: Boolean = false
+    private val openTasks = ArrayBlockingQueue<Task<*>>(1)
 
     private object LinePrefixes {
         const val DEBUGGER_PROMPT = "(Pdb) "
     }
 
     /**
-     * Submits an evaluation request.
-     * The requests are processed as soon as the used pythonProcess enters the debug mode.
+     * §valuates an expression or executes statements.
+     * Blocks the caller thread until the operation is complete.
      */
-    fun submit(request: EvaluateRequest): Future<EvaluateResponse> {
-        val result = CompletableFuture<EvaluateResponse>()
-        openTasks.put(EvaluateTask(request, result))
-        return result
+    fun evalOrExec(request: EvalOrExecRequest): EvalOrExecResponse {
+        return EvaluateTask(request).also { openTasks.put(it) }.result.get()
     }
 
     /**
-     * Submits a "continue" request to continue from the current breakpoint.
+     * Continues from the current breakpoint.
+     * Blocks the caller thread until the operation is complete.
      */
-    fun submitContinue(): Future<Unit> {
-        val result = CompletableFuture<Unit>()
-        openTasks.put(ContinueTask(result))
-        return result
+    fun continueFromBreakpoint() {
+        ContinueTask().also { openTasks.put(it) }.result.get()
     }
 
     /**
-     * Requests a shutdown of the debugger.
+     * Quits the debugger.
+     * Blocks the caller thread until the operation is complete.
      */
-    fun shutdown() {
-        shutdownRequested = true
+    fun quit() {
+        QuitTask().also { openTasks.put(it) }.result.get()
     }
 
     /**
-     * Clears all submitted open tasks and resets the shutdownRequested flag.
-     * Throws a PluginPyDebuggerException if called on a running debugger.
+     * Installs a dump-on-exit handler.
+     * Blocks the caller thread until the operation is complete.
+     *
+     * @param filePath relative file path inside the "transfer/out" folder.
      */
-    fun reset() {
-        if (isRunning) {
-            throw PluginPyDebuggerException("Can't reset a running debugger.")
-        }
-        openTasks.clear()
-        shutdownRequested = false
+    fun dumpTracesOnExit(filePath: String) {
+        DumpTracesOnExitTask("'$filePath'").also { openTasks.put(it) }.result.get()
     }
 
+    /**
+     * Starts the debugger.
+     * Blocks the caller thread until the debugger is terminated.
+     *
+     * A started debugger can be terminated by sending a quit-command [quit]
+     * or by interrupting the thread which started the debugger.
+     */
+    abstract fun start()
 
     /**
      * The [pythonProcess] must have been started with a source file or code that contain a line with "breakpoint()"
@@ -161,13 +162,8 @@ abstract class PythonEvalDebugger {
      *
      * [pythonProcess] must be a started python interpreter and not the Python Debugger (Pdb).
      * Starting directly in debug mode isn't supported.
-     *
-     * Throws a PluginPyDebuggerException if called on an already started debugger.
      */
     protected fun start(pythonProcess: PythonProcess) {
-        if (isRunning) {
-            throw PluginPyDebuggerException("Can't re-start an already running debugger")
-        }
         try {
             processOpenTasks(pythonProcess)
             openTasks.forEach { it.result.cancel(false) }
@@ -181,20 +177,18 @@ abstract class PythonEvalDebugger {
             } else {
                 throw PluginPyDebuggerException("Unknown error occurred.", ex)
             }
-        } finally {
-            isRunning = false
         }
     }
 
     private fun processOpenTasks(pythonProcess: PythonProcess) {
 
-        var activeTask: Task? = null
+        var activeTask: Task<*>? = null
         var lines: List<String> = emptyList()
         var stoppedAtInputPrompt = false
         var checkForInputPrompt = true
 
         try {
-            while (!shutdownRequested && !Thread.currentThread().isInterrupted) {
+            while (!Thread.currentThread().isInterrupted) {
 
                 checkProcessIsAlive(pythonProcess)
 
@@ -215,17 +209,23 @@ abstract class PythonEvalDebugger {
 
                     if (openTasks.isNotEmpty()) {
                         activeTask = openTasks.take().also { task ->
-                            nextDebugCommand = if (task is EvaluateTask) {
-                                escapeDebuggerInput(task.request.expression).let {
-                                    if (task.request.execute) {
-                                        "__import__('debugger_helpers').DebuggerInternals.exec($it)"
-                                    } else {
-                                        "__import__('debugger_helpers').DebuggerInternals.eval($it)"
+                            nextDebugCommand = when (task) {
+                                is EvaluateTask -> {
+                                    escapeDebuggerInput(task.request.expression).let {
+                                        if (task.request.execute) {
+                                            "!__import__('debugger_helpers').DebuggerInternals.exec($it)"
+                                        } else {
+                                            "!__import__('debugger_helpers').DebuggerInternals.eval($it)"
+                                        }
                                     }
-                                }
 
-                            } else {
-                                "continue"
+                                }
+                                is DumpTracesOnExitTask -> {
+                                    "!__import__('debugger_helpers').DebuggerInternals.dump_traces_on_exit(${task.filePath})"
+                                }
+                                is QuitTask -> "quit"
+                                is ContinueTask -> "continue"
+                                else -> null
                             }
                         }
                     }
@@ -240,6 +240,10 @@ abstract class PythonEvalDebugger {
 
             activeTask?.completeWithError(PluginPyDebuggerException("Task was canceled."))
         } catch (e: Throwable) {
+            if (e is PluginPyDebuggerException && e.isDisconnectException() && activeTask is QuitTask) {
+                activeTask.completeWithResult(null)
+                return
+            }
             activeTask?.completeWithError(e)
             if (e is InterruptedException) {
                 Thread.currentThread().interrupt()
@@ -310,18 +314,19 @@ abstract class PythonEvalDebugger {
         return "'$sanitizedInput'"
     }
 
-    private data class EvaluateTask(
-        val request: EvaluateRequest,
-        override val result: CompletableFuture<EvaluateResponse>
-    ) : Task {
+    private class ContinueTask: Task<Unit>()
+    private class QuitTask: Task<Unit>()
+    private class DumpTracesOnExitTask(val filePath: String): Task<Unit>()
+
+    private class EvaluateTask(val request: EvalOrExecRequest) : Task<EvalOrExecResponse>() {
         override fun completeWithResult(result: MarkedResult?) {
             this.result.complete(createResponse(result))
         }
 
-        private fun createResponse(result: MarkedResult?): EvaluateResponse {
+        private fun createResponse(result: MarkedResult?): EvalOrExecResponse {
             return if (result?.marker == EXC_MARKER) {
                 MarkedResult.parseToError(result).let {
-                    EvaluateResponse(
+                    EvalOrExecResponse(
                         value = it.cause,
                         type = it.type,
                         typeQualifier = it.typeQualifier,
@@ -329,9 +334,9 @@ abstract class PythonEvalDebugger {
                     )
                 }
             } else if (result == null || request.execute) {
-                EvaluateResponse(null, null, null, false, null)
+                EvalOrExecResponse(null, null, null, false, null)
             } else MarkedResult.parseToValue(result, request.trimResult).let {
-                EvaluateResponse(
+                EvalOrExecResponse(
                     value = it.value,
                     type = it.type,
                     typeQualifier = it.typeQualifier,
@@ -339,12 +344,6 @@ abstract class PythonEvalDebugger {
                     refId = it.refId,
                 )
             }
-        }
-    }
-
-    private class ContinueTask(override val result: CompletableFuture<Unit>) : Task {
-        override fun completeWithResult(result: MarkedResult?) {
-            this.result.complete(null)
         }
     }
 }

@@ -20,43 +20,42 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Allows to use a dockered Python interpreter during tests.
  *
- * The [dockerImage] has to exist and contain a pre-configured pip-env
- * environment.
+ * The [dockerImage] has to exist and contain a pre-configured pipenv environment.
  *
  * @param dockerImage the docker image to start. The docker image has to exist.
- * @param workdir the pipenv environment workdir to use.
- * The workdir has to be an already existing pipenv environment.
+ * @param pipEnvDir the pipenv environment workdir to use.
+ * The directory has to contain an existing pipenv environment.
  * Otherwise, the command to start the Python interpreter will
  * create a new pipenv environment instead of starting the Python interpreter.
- * Therefore, a debugger can't be started.
  * @param volumes volumes to map.
  */
-class DockeredPythonEvalDebugger(
+class DockeredPipEnvEnvironment(
     private val dockerImage: String,
-    private val workdir: String,
+    private val pipEnvDir: String,
     private val volumes: List<String>?,
-) : PythonEvalDebugger() {
+) {
 
     companion object {
-        private val logger = Logger.getInstance(DockeredPythonEvalDebugger::class.java)
+        private val logger = Logger.getInstance(DockeredPipEnvEnvironment::class.java)
     }
 
     private var containerId: String? = null
     private val containerIdRegex = "\\p{XDigit}+".toRegex()
 
-
     /**
      * Creates a docker container of the specified [dockerImage].
      */
-    fun startContainer() {
+    fun runContainer() {
 
         val processArgs = mutableListOf<String>().apply{
             add("docker")
             add("run")
+            add("--workdir=$pipEnvDir")
             volumes?.forEach { add("-v"); add(it) }
             add("-d")
             add(dockerImage)
@@ -95,26 +94,29 @@ class DockeredPythonEvalDebugger(
     }
 
     /**
-     * Starts a Python interpreter by using the specified [workdir].
+     * Creates a Python debugger which is started in the pipenv environment ([pipEnvDir]) when its start method is called.
      * The file referred by [sourceFilePath] has to contain a line with "breakpoint()", usually the last line,
-     * to switch the interpreter into debug mode. The interpreter will stop at this line and process all submitted
-     * evaluation requests.
+     * to switch the Python interpreter into debug mode (Pdb).
+     * The interpreter will stop at this line and process all submitted evaluation requests.
      */
-    fun startWithSourceFile(sourceFilePath: String) {
-        start(listOf(sourceFilePath))
+    fun createPythonDebuggerWithSourceFile(sourceFilePath: String): PythonDebugger {
+        return createPythonDebugger(listOf(sourceFilePath))
     }
 
     /**
-     * Starts a Python interpreter by using the specified [workdir].
-     * The [codeSnippet] has to contain a line with "breakpoint()", usually the last line, to switch the interpreter
-     * into debug mode. The interpreter will stop at this line and process all submitted evaluation requests.
+     * Creates a Python debugger which is started in the pipenv environment ([pipEnvDir]) when its start method is called.
+     * The [codeSnippet] has to contain a line with "breakpoint()", usually the last line, to switch
+     * the Python interpreter into debug mode (Pdb).
+     * The interpreter will stop at this line and process all submitted evaluation requests.
      */
-    fun startWithCodeSnippet(codeSnippet: String) {
-        start(listOf("-c", codeSnippet))
+    fun createPythonDebuggerWithCodeSnippet(codeSnippet: String): PythonDebugger {
+        return createPythonDebugger(listOf("-c", codeSnippet))
     }
 
     /**
      * Uninstalls Python modules.
+     * The modules are removed from the pipenv environment ([pipEnvDir]).
+     *
      * This action may take some time, as pipenv recreates the lock-file.
      *
      * @param modules modules to remove from a running container.
@@ -129,9 +131,6 @@ class DockeredPythonEvalDebugger(
         val processArgs = mutableListOf<String>().apply {
             add("docker")
             add("exec")
-            // "workdir" has to be one of the already existing pipenv environments
-            // otherwise "pipenv run" creates a new pipenv environment in the specified "workdir"
-            add("--workdir=$workdir")
             add(containerId!!)
             addAll("pipenv uninstall".split(" "))
             addAll(modules)
@@ -141,7 +140,7 @@ class DockeredPythonEvalDebugger(
         // uncomment line below to see uninstall info in console output
         //.inheritIO()
         .start().let {
-            if (!it.waitFor(5, TimeUnit.MINUTES)) {
+            if (!it.waitFor(2, TimeUnit.MINUTES)) {
                 it.destroy()
             }
             if (it.exitValue() != 0) {
@@ -150,32 +149,21 @@ class DockeredPythonEvalDebugger(
         }
     }
 
-    private fun start(additionalPythonArgs: List<String>) {
+    private fun createPythonDebugger(additionalPythonArgs: List<String>): PythonDebugger {
         if (containerId == null) {
             throw IllegalStateException("No container available.")
         }
 
-        val process = PythonProcess("\n", printOutput = false, printInput = false)
-
         val processArgs = mutableListOf<String>().apply {
             add("docker")
             add("exec")
-            // "workdir" has to be one of the already existing pipenv environments
-            // otherwise "pipenv run" creates a new pipenv environment in the specified "workdir"
-            add("--workdir=$workdir")
             add("-i")
             add(containerId!!)
             addAll("pipenv run python".split(" "))
             addAll(additionalPythonArgs)
         }
 
-        process.start(processArgs)
-
-        try {
-            start(process)
-        } finally {
-            process.cleanup()
-        }
+        return MyPythonDebugger(processArgs)
     }
 
     fun destroyContainer() {
@@ -192,5 +180,24 @@ class DockeredPythonEvalDebugger(
                     throw IllegalStateException("docker rm failed for container $containerId, exitValue: ${it.exitValue()}")
                 }
             }
+    }
+
+    private class MyPythonDebugger(private val processArgs: List<String>): PythonDebugger() {
+        private var started = AtomicBoolean()
+
+        override fun start() {
+            if (!started.compareAndSet(false, true)) {
+                throw IllegalStateException("Debugger was already started.")
+            }
+
+            val process = PythonProcess("\n", printOutput = false, printInput = false)
+            process.start(processArgs)
+
+            try {
+                start(process)
+            } finally {
+                process.cleanup()
+            }
+        }
     }
 }

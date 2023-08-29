@@ -32,8 +32,8 @@ internal class ExportTestData : AbstractPluginCodeTest() {
     @Test
     fun exportTestDataForUnitTests() {
         assertThat(rootExportDir).isNotNull
-        runPythonDebuggerWithSourceFile("export_data/main.py") { evaluator, _ ->
-            ExportTask(rootExportDir!!, evaluator.evaluate("export_test_data")).run()
+        createPythonDebuggerWithSourceFile("export_data/main.py") { debuggerApi ->
+            ExportTask(rootExportDir!!, debuggerApi.evaluator.evaluate("export_test_data")).run()
         }
     }
 }

@@ -70,9 +70,14 @@ tasks {
         val pipenvEnvironments: List<String>,
         val envsAreHtmlFromStylerProjects: Boolean,
         ) {
+        private val workdir = "/usr/src/app"
         val dockerImageName = "sdfv-plugin-dockered-python_$pythonVersion"
         val contentPath = "$path/content/"
-        fun getWorkdir(pipenvEnvironment: String) = "/usr/src/app/pipenv_environments/$pipenvEnvironment"
+        fun getTransferDirMappings(hostTransferPath: String) = arrayOf(
+            "$hostTransferPath/in:${workdir}/transfer/in:ro",
+            "$hostTransferPath/out:${workdir}/transfer/out",
+        )
+        fun getEnvironmentDir(pipenvEnvironment: String) = "${workdir}/pipenv_environments/$pipenvEnvironment"
         fun getBuildArgs(): Array<String> {
             return if (envsAreHtmlFromStylerProjects) emptyArray()
             else arrayOf("--build-arg", "pipenv_environment=${pipenvEnvironments.first()}")
@@ -162,12 +167,6 @@ tasks {
                     }
                 }
 
-                copy {
-                    from(testDockeredSourceSet.resources)
-                    include("**/debugger_helpers.py")
-                    into("${entry.contentPath}/")
-                }
-
                 exec {
                     workingDir = file(entry.path)
                     executable = "docker"
@@ -230,13 +229,13 @@ tasks {
                 )
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.workdir",
-                    entry.getWorkdir(pipEnvEnvironment),
+                    entry.getEnvironmentDir(pipEnvEnvironment),
                 )
-                // To make files, for more complex test cases, available in the dockered python interpreter.
-                // Example - how to map a folder of files: "<host_dir>:<container_dir>:ro"
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.volumes",
-                    listOf<String>().joinToString(";"),
+                    listOf(
+                        *entry.getTransferDirMappings("$projectDir/src/test-dockered/transfer"),
+                    ).joinToString(";"),
                 )
                 useJUnitPlatform {
                     include("**/integration/**")
@@ -290,7 +289,13 @@ tasks {
                 )
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.workdir",
-                    entry.getWorkdir(pipEnvEnvironment),
+                    entry.getEnvironmentDir(pipEnvEnvironment),
+                )
+                systemProperty(
+                    "cms.rendner.dataframe.viewer.docker.volumes",
+                    listOf(
+                        *entry.getTransferDirMappings("$projectDir/src/test-dockered/transfer"),
+                    ).joinToString(";"),
                 )
                 useJUnitPlatform {
                     include("**/export/**")

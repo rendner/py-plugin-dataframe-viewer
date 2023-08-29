@@ -3,24 +3,33 @@ FROM python:3.10.12-slim-buster
 
 ARG pipenv_environment
 
-ENV PIPENV_VENV_IN_PROJECT=1
-
-# https://github.com/pypa/pipenv/issues/4027
-ENV PIPENV_QUIET=1
+RUN pip install pipenv
 
 WORKDIR /usr/src/app
 
-RUN pip install pipenv
+# create a non-root user
+RUN \
+    adduser --uid 1000 --no-create-home --disabled-password --gecos "" appuser \
+    # add file permission
+    && chown -R appuser /usr/src/app
 
-COPY requirements.txt requirements.txt
+# switch to it
+USER appuser
+
+
+ENV \
+    PIPENV_VENV_IN_PROJECT=1 \
+    # https://github.com/pypa/pipenv/issues/4027
+    PIPENV_QUIET=1 \
+    # a volume will be mounted on container start to provide the required content
+    PYTHONPATH=/usr/src/app/transfer/in/python_helpers/ \
+    TRANSFER_OUT_DIR=/usr/src/app/transfer/out
+
+COPY --chown=appuser requirements.txt requirements.txt
 
 # create pipenv environment
 RUN \
     mkdir -p ./pipenv_environments/$pipenv_environment \
     && cd ./pipenv_environments/$pipenv_environment \
     && pipenv --python 3.10 \
-    && pipenv install -r /usr/src/app/requirements.txt \
-    # link python_helpers
-    && echo PYTHONPATH=/usr/src/app/python_helpers/ > .env
-
-COPY content/python_helpers/ python_helpers/
+    && pipenv install -r /usr/src/app/requirements.txt

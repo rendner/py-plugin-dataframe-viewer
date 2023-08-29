@@ -15,10 +15,9 @@
  */
 package cms.rendner.integration.plugin.bridge
 
-import cms.rendner.debugger.impl.PythonEvalDebugger
+import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerConfig
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
@@ -29,30 +28,30 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
 
     @Test
     fun createPatchedStyler_shouldBeCallableWithAStyler() {
-        runWithDefaultSnippet { evaluator: IPluginPyValueEvaluator, _ ->
-            assertThat(PythonCodeBridge.createPatchedStyler(evaluator, "df.style")).isNotNull
+        runWithDefaultSnippet { debuggerApi ->
+            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "df.style")).isNotNull
         }
     }
 
     @Test
     fun createPatchedStyler_shouldBeCallableWithADataFrame() {
-        runWithDefaultSnippet { evaluator: IPluginPyValueEvaluator, _ ->
-            assertThat(PythonCodeBridge.createPatchedStyler(evaluator, "df")).isNotNull
+        runWithDefaultSnippet { debuggerApi ->
+            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "df")).isNotNull
         }
     }
 
     @Test
     fun createPatchedStyler_shouldBeCallableWithADictionary() {
-        runWithDefaultSnippet { evaluator: IPluginPyValueEvaluator, _ ->
-            assertThat(PythonCodeBridge.createPatchedStyler(evaluator, "d")).isNotNull
+        runWithDefaultSnippet { debuggerApi ->
+            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "d")).isNotNull
         }
     }
 
     @Test
     fun createPatchedStyler_shouldBeCallableWithAFilterFrame() {
-        runWithDefaultSnippet { evaluator: IPluginPyValueEvaluator, _ ->
+        runWithDefaultSnippet { debuggerApi ->
             assertThat(PythonCodeBridge.createPatchedStyler(
-                evaluator,
+                debuggerApi.evaluator,
                 "df.style",
                 CreatePatchedStylerConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
             )).isNotNull
@@ -61,7 +60,7 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
 
     @Test
     fun pluginCode_shouldBeAccessibleInEveryStackFrameWithoutReInjection() {
-        runPythonDebuggerWithCodeSnippet("""
+        createPythonDebuggerWithCodeSnippet("""
                 from pandas import DataFrame
                 
                 df1 = DataFrame()
@@ -82,30 +81,30 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
                 method_b()
                 breakpoint()
             """.trimIndent()
-        ) { evaluator: IPluginPyValueEvaluator, debugger ->
+        ) { debuggerApi ->
 
-            assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(PythonCodeBridge.createPatchedStyler(evaluator, "df1")).isNotNull
+            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
+            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "df1")).isNotNull
 
-            debugger.submitContinue().get()
+            debuggerApi.continueFromBreakpoint()
 
-            assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("2")
-            assertThat(PythonCodeBridge.createPatchedStyler(evaluator,"df2")).isNotNull
+            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("2")
+            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator,"df2")).isNotNull
 
-            debugger.submitContinue().get()
+            debuggerApi.continueFromBreakpoint()
 
-            assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("3")
-            assertThat(PythonCodeBridge.createPatchedStyler(evaluator, "df3")).isNotNull
+            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("3")
+            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "df3")).isNotNull
 
-            debugger.submitContinue().get()
+            debuggerApi.continueFromBreakpoint()
 
-            assertThat(evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(PythonCodeBridge.createPatchedStyler(evaluator,"df1")).isNotNull
+            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
+            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator,"df1")).isNotNull
         }
     }
 
-    private fun runWithDefaultSnippet(block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit) {
-        runPythonDebuggerWithCodeSnippet(createDataFrameSnippet(), block)
+    private fun runWithDefaultSnippet(block: (debuggerApi: IPythonDebuggerApi) -> Unit) {
+        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet(), block)
     }
 
     private fun createDataFrameSnippet() = """

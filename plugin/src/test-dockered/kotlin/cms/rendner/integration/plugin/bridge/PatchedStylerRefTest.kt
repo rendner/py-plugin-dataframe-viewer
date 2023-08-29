@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunct
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.junit.jupiter.api.Order
@@ -118,9 +117,9 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     private fun runWithPatchedStyler(block: (patchedStyler: IPyPatchedStylerRef) -> Unit) {
-        runPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { evaluator: IPluginPyValueEvaluator, _ ->
+        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
             block(PythonCodeBridge.createPatchedStyler(
-                evaluator,
+                debuggerApi.evaluator,
                 "df.style.applymap(lambda x: 'color: red')",
             ))
         }

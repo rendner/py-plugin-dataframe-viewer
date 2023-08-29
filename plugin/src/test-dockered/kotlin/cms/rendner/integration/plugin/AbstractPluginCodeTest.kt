@@ -16,9 +16,8 @@
 package cms.rendner.integration.plugin
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
-import cms.rendner.debugger.impl.PythonEvalDebugger
+import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
 /**
  * Abstract class to run tests with a Python interpreter.
@@ -26,31 +25,31 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvalu
  */
 internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest() {
 
-    override fun runPythonDebuggerWithSourceFile(
+    override fun createPythonDebuggerWithSourceFile(
         sourceFile: String,
-        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+        block: (debuggerApi: IPythonDebuggerApi) -> Unit,
     ) {
-        super.runPythonDebuggerWithSourceFile(sourceFile) { evaluator, debugger ->
-            PythonPluginCodeInjector.injectIfRequired(evaluator, ::pluginCodeEscaper)
-            block(evaluator, debugger)
+        super.createPythonDebuggerWithSourceFile(sourceFile) { debuggerApi ->
+            PythonPluginCodeInjector.injectIfRequired(debuggerApi.evaluator, ::pluginCodeEscaper)
+            block(debuggerApi)
         }
     }
 
-    override fun runPythonDebuggerWithCodeSnippet(
+    override fun createPythonDebuggerWithCodeSnippet(
         codeSnippet: String,
-        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+        block: (debuggerApi: IPythonDebuggerApi) -> Unit,
     ) {
-        super.runPythonDebuggerWithCodeSnippet(codeSnippet) { evaluator, debugger ->
-            PythonPluginCodeInjector.injectIfRequired(evaluator, ::pluginCodeEscaper)
-            block(evaluator, debugger)
+        super.createPythonDebuggerWithCodeSnippet(codeSnippet) { debuggerApi ->
+            PythonPluginCodeInjector.injectIfRequired(debuggerApi.evaluator, ::pluginCodeEscaper)
+            block(debuggerApi)
         }
     }
 
     fun runPythonDebuggerWithoutPluginCode(
-        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
+        block: (debuggerApi: IPythonDebuggerApi) -> Unit,
     ) {
-        super.runPythonDebuggerWithCodeSnippet("breakpoint()") { evaluator, debugger ->
-            block(evaluator, debugger)
+        super.createPythonDebuggerWithCodeSnippet("breakpoint()") { debuggerApi ->
+            block(debuggerApi)
         }
     }
 

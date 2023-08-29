@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,15 @@
  */
 package cms.rendner.debugger.impl
 
-data class EvaluateRequest(
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+
+data class EvalOrExecRequest(
     val expression: String,
     val execute: Boolean,
     val trimResult: Boolean,
 )
 
-data class EvaluateResponse(
+data class EvalOrExecResponse(
     // the evaluated result
     val value: String? = null,
     // the type of the evaluated value
@@ -32,3 +34,8 @@ data class EvaluateResponse(
     // a unique id to refer to the evaluated var on python side
     val refId: String? = null,
 )
+
+interface IPythonDebuggerApi {
+    val evaluator: IPluginPyValueEvaluator
+    fun continueFromBreakpoint()
+}

@@ -5,4 +5,5 @@
 **/.pytest_cache/
 /__exclude/
 /plugin/src/test/resources/generated-error-images/
+/plugin/src/test-dockered/transfer/out/
 /plugin/dockered-python/**/content/

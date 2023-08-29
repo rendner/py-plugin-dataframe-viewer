@@ -15,11 +15,9 @@
  */
 package cms.rendner.integration.plugin.models
 
-import cms.rendner.debugger.impl.PythonEvalDebugger
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInputState
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerErrorKind
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
 
@@ -32,10 +30,10 @@ internal class ModelDataFetcherWithoutJinja2Test: AbstractModelDataFetcherTest()
 
     @Test
     fun shouldFailIfJinja2IsNotInstalled() {
-        runPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { evaluator: IPluginPyValueEvaluator, _: PythonEvalDebugger ->
+        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = evaluator.evaluate("df")
-            val fetcher = MyTestFetcher(evaluator)
+            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(dataSource.toValueEvalExpr(), FilterInputState(""), false)
             )
