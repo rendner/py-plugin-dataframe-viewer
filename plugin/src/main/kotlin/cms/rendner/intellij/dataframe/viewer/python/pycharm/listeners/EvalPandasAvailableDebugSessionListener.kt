@@ -35,6 +35,10 @@ class EvalPandasAvailableDebugSessionListener(private val session: XDebugSession
      */
     private val pendingEval = AtomicBoolean(false)
 
+    companion object {
+        const val EVAL_EXPRESSION = "__import__('importlib').util.find_spec('pandas')"
+    }
+
     override fun sessionStopped() {
         session.removeSessionListener(this)
         PandasAvailableInSessionProvider.remove(session)
@@ -51,7 +55,7 @@ class EvalPandasAvailableDebugSessionListener(private val session: XDebugSession
         session.debugProcess.evaluator?.let {
             if (!pendingEval.compareAndSet(false, true)) return
             it.evaluate(
-                "__import__('importlib').util.find_spec('pandas')",
+                EVAL_EXPRESSION,
                 object : XDebuggerEvaluator.XEvaluationCallback {
                     override fun errorOccurred(errorMessage: String) {
                         // Only a paused session can evaluate expressions (doesn't matter if current session or not).
