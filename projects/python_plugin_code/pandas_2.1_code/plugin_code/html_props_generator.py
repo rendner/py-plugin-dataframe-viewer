@@ -138,7 +138,7 @@ class HTMLPropsGenerator:
                 region.first_col: region.first_col + region.cols,
                 ]
 
-        # The apply/applymap params are patched to not operate outside the chunk bounds.
+        # The apply/map params are patched to not operate outside the chunk bounds.
         chunk_aware_todos = self.__styler_context.create_patched_todos(chunk, self.__todos_filter)
 
         # Compute the styling for the chunk by operating on the original DataFrame.

@@ -160,7 +160,7 @@ def test_get_style_function_details_df_no_styles():
 
 
 def test_get_style_function_details_df():
-    styler = df.style.bar().highlight_min(axis='columns').applymap(lambda x: "color: red")
+    styler = df.style.bar().highlight_min(axis='columns').map(lambda x: "color: red")
     details = PatchedStyler(PatchedStylerContext(styler), "").get_style_function_details()
     assert len(details) == 3
     assert details[0] == StyleFunctionDetails(

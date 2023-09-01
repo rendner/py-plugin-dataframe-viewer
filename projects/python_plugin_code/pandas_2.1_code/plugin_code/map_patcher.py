@@ -19,7 +19,9 @@ from typing import Optional
 from pandas import DataFrame
 
 
-class ApplyMapPatcher(TodoPatcher):
+# map: https://github.com/pandas-dev/pandas/blob/v2.1.0/pandas/io/formats/style.py#L2035-L2092
+# applymap: https://github.com/pandas-dev/pandas/blob/v2.1.0/pandas/io/formats/style.py#L2095-L2122
+class MapPatcher(TodoPatcher):
 
     def __init__(self, todo: StylerTodo):
         super().__init__(todo)

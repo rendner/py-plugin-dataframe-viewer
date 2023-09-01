@@ -131,10 +131,10 @@ class PatchedStyler:
                 index=i,
                 qname=StyleFunctionNameResolver.get_style_func_qname(todo),
                 resolved_name=StyleFunctionNameResolver.resolve_style_func_name(todo),
-                axis='' if todo.is_applymap() else str(todo.apply_args.axis),
+                axis='' if todo.is_map() else str(todo.apply_args.axis),
                 is_pandas_builtin=todo.is_pandas_style_func(),
                 is_supported=TodosPatcher.is_style_function_supported(todo),
-                is_apply=not todo.is_applymap(),
+                is_apply=not todo.is_map(),
                 is_chunk_parent_requested=todo.should_provide_chunk_parent(),
             ))
 

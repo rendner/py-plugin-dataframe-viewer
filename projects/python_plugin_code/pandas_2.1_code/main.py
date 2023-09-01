@@ -27,7 +27,7 @@ def generate_plugin_code():
         'styler_todo.py',
         'style_function_name_resolver.py',
         'todo_patcher.py',
-        'apply_map_patcher.py',
+        'map_patcher.py',
         'apply_patcher.py',
         'background_gradient_patcher.py',
         'chunk_parent_provider.py',

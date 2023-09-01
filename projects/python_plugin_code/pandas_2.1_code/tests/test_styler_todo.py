@@ -16,20 +16,20 @@ from pandas import DataFrame, Series
 from plugin_code.styler_todo import StylerTodo
 
 
-def test_is_applymap_tuple_with_applymap():
+def test_is_map_tuple_with_map():
     def style_func(scalar: Any):
         return scalar
 
-    styler = DataFrame().style.applymap(style_func)
-    assert StylerTodo.is_applymap_tuple(styler._todo[0])
+    styler = DataFrame().style.map(style_func)
+    assert StylerTodo.is_map_tuple(styler._todo[0])
 
 
-def test_is_applymap_tuple_with_apply():
+def test_is_map_tuple_with_apply():
     def style_func(series: Series):
         return series
 
     styler = DataFrame().style.apply(style_func)
-    assert StylerTodo.is_applymap_tuple(styler._todo[0]) is False
+    assert StylerTodo.is_map_tuple(styler._todo[0]) is False
 
 
 def test_apply_parsing():
@@ -39,7 +39,7 @@ def test_apply_parsing():
     styler = DataFrame().style.apply(style_func, axis='index', subset=['a', 'b'])
     actual = StylerTodo.from_tuple(styler._todo[0])
 
-    assert actual.is_applymap() is False
+    assert actual.is_map() is False
     assert actual.apply_args.style_func == style_func
     assert actual.apply_args.axis == 'index'
     assert actual.apply_args.subset == ['a', 'b']
@@ -55,23 +55,23 @@ def test_apply_kwargs():
     assert actual.style_func_kwargs == {'name': 'abc'}
 
 
-def test_applymap_parsing():
+def test_map_parsing():
     def style_func(scalar: Any):
         return scalar
 
-    styler = DataFrame().style.applymap(style_func, subset=['a', 'b'])
+    styler = DataFrame().style.map(style_func, subset=['a', 'b'])
     actual = StylerTodo.from_tuple(styler._todo[0])
 
-    assert actual.is_applymap()
+    assert actual.is_map()
     assert actual.apply_args.style_func == style_func
     assert actual.apply_args.subset == ['a', 'b']
 
 
-def test_applymap_kwargs():
+def test_map_kwargs():
     def style_func(scalar: Any):
         return scalar
 
-    styler = DataFrame().style.applymap(style_func, name='abc')
+    styler = DataFrame().style.map(style_func, name='abc')
     actual = StylerTodo.from_tuple(styler._todo[0])
 
     assert actual.style_func_kwargs == {'name': 'abc'}

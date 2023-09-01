@@ -27,7 +27,7 @@ df = pd.DataFrame.from_dict({
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
-@pytest.mark.parametrize("color, props", [(None, "font-weight: bold;"), ("pink", None)])
+@pytest.mark.parametrize("color, props", [("red", "font-weight: bold;"), ("pink", None)])
 @pytest.mark.parametrize(
     "rows_per_chunk, cols_per_chunk", [
         (1, 2),
@@ -36,7 +36,7 @@ df = pd.DataFrame.from_dict({
 def test_chunked(axis, color, props, rows_per_chunk, cols_per_chunk):
     create_and_assert_patched_styler(
         df,
-        lambda styler: styler.highlight_quantile(axis=axis, q_left=0.8, color=color),
+        lambda styler: styler.highlight_quantile(axis=axis, q_left=0.8, color=color, props=props),
         rows_per_chunk,
         cols_per_chunk
     )

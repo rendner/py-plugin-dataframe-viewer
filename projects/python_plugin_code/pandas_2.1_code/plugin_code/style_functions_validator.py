@@ -115,7 +115,7 @@ class StyleFunctionsValidator:
         ctx = self.__styler_context
         for i, todo in enumerate(ctx.get_styler_todos()):
             try:
-                if todo.is_applymap():
+                if todo.is_map():
                     continue
                 validator = HTMLPropsValidator(ctx, HTMLPropsGenerator(ctx, lambda x: x is todo))
                 result = validator.validate_chunk_region(region, rows_per_chunk, cols_per_chunk)
@@ -132,7 +132,7 @@ class StyleFunctionsValidator:
     def __count_apply_todos(todos: List[StylerTodo]) -> int:
         if len(todos) == 0:
             return 0
-        return len([not t.is_applymap() for t in todos])
+        return len([not t.is_map() for t in todos])
 
     @staticmethod
     def __create_validation_strategy(strategy_type: Optional[ValidationStrategyType] = None):

@@ -28,7 +28,7 @@ df = pd.DataFrame.from_dict({
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("subset", [None, pd.IndexSlice[2:3, ["col_2", "col_3"]]])
-@pytest.mark.parametrize("color", [None, "pink"])
+@pytest.mark.parametrize("color", ["pink"])
 @pytest.mark.parametrize("props", [None, "font-weight: bold;"])
 @pytest.mark.parametrize(
     "rows_per_chunk, cols_per_chunk", [

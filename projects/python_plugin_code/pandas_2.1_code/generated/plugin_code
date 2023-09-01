@@ -34,7 +34,7 @@ from pandas.io.formats.style_render import Subset
 
 
 @dataclass(frozen=True)
-class ApplyMapArgs:
+class MapArgs:
     style_func: Callable
     subset: Optional[Subset]
 
@@ -44,7 +44,7 @@ class ApplyMapArgs:
 
     @staticmethod
     def copy_with(style_func: Callable, subset: Optional[Subset]):
-        return ApplyMapArgs(style_func, subset)
+        return MapArgs(style_func, subset)
 
     def to_tuple(self) -> Tuple[Callable, Optional[Subset]]:
         return self.style_func, self.subset
@@ -70,7 +70,7 @@ class ApplyArgs:
 @dataclass(frozen=True)
 class StylerTodo:
     apply_func: Callable
-    apply_args: Union[ApplyArgs, ApplyMapArgs]
+    apply_args: Union[ApplyArgs, MapArgs]
     style_func_kwargs: dict
 
     @classmethod
@@ -82,21 +82,21 @@ class StylerTodo:
 
     @staticmethod
     def _to_apply_args(todo: Tuple[Callable, tuple, dict]):
-        if StylerTodo.is_applymap_tuple(todo):
-            return ApplyMapArgs.from_tuple(todo[1])
+        if StylerTodo.is_map_tuple(todo):
+            return MapArgs.from_tuple(todo[1])
         else:
             return ApplyArgs.from_tuple(todo[1])
 
     @classmethod
-    def is_applymap_tuple(cls, todo: Tuple[Callable, tuple, dict]):
-        return cls.__is_apply_map_func(todo[0])
+    def is_map_tuple(cls, todo: Tuple[Callable, tuple, dict]):
+        return cls.__is_map_func(todo[0])
 
-    def is_applymap(self) -> bool:
-        return self.__is_apply_map_func(self.apply_func)
+    def is_map(self) -> bool:
+        return self.__is_map_func(self.apply_func)
 
     @staticmethod
-    def __is_apply_map_func(func: Callable) -> bool:
-        return getattr(func, '__qualname__', '').startswith('Styler.applymap')
+    def __is_map_func(func: Callable) -> bool:
+        return getattr(func, '__qualname__', '').startswith('Styler.map')
 
     def is_pandas_style_func(self) -> bool:
         func = self.apply_args.style_func
@@ -244,7 +244,7 @@ from typing import Optional
 from pandas import DataFrame
 
 
-class ApplyMapPatcher(TodoPatcher):
+class MapPatcher(TodoPatcher):
 
     def __init__(self, todo: StylerTodo):
         super().__init__(todo)
@@ -487,8 +487,8 @@ class TodosPatcher:
             if t.is_pandas_style_func():
                 patcher = self.__get_patcher_for_pandas_style_function(t)
             else:
-                if t.is_applymap():
-                    patcher = ApplyMapPatcher(t)
+                if t.is_map():
+                    patcher = MapPatcher(t)
                 else:
                     patcher = ApplyPatcher(t)
 
@@ -519,7 +519,7 @@ class TodosPatcher:
         elif StyleFunctionNameResolver.is_pandas_highlight_between(qname):
             return HighlightBetweenPatcher(todo)
         elif StyleFunctionNameResolver.is_pandas_set_properties(qname):
-            return ApplyMapPatcher(todo)
+            return MapPatcher(todo)
         return None
 
 from abc import ABC, abstractmethod
@@ -1466,7 +1466,7 @@ class StyleFunctionsValidator:
         ctx = self.__styler_context
         for i, todo in enumerate(ctx.get_styler_todos()):
             try:
-                if todo.is_applymap():
+                if todo.is_map():
                     continue
                 validator = HTMLPropsValidator(ctx, HTMLPropsGenerator(ctx, lambda x: x is todo))
                 result = validator.validate_chunk_region(region, rows_per_chunk, cols_per_chunk)
@@ -1481,7 +1481,7 @@ class StyleFunctionsValidator:
     def __count_apply_todos(todos: List[StylerTodo]) -> int:
         if len(todos) == 0:
             return 0
-        return len([not t.is_applymap() for t in todos])
+        return len([not t.is_map() for t in todos])
 
     @staticmethod
     def __create_validation_strategy(strategy_type: Optional[ValidationStrategyType] = None):
@@ -1599,10 +1599,10 @@ class PatchedStyler:
                 index=i,
                 qname=StyleFunctionNameResolver.get_style_func_qname(todo),
                 resolved_name=StyleFunctionNameResolver.resolve_style_func_name(todo),
-                axis='' if todo.is_applymap() else str(todo.apply_args.axis),
+                axis='' if todo.is_map() else str(todo.apply_args.axis),
                 is_pandas_builtin=todo.is_pandas_style_func(),
                 is_supported=TodosPatcher.is_style_function_supported(todo),
-                is_apply=not todo.is_applymap(),
+                is_apply=not todo.is_map(),
                 is_chunk_parent_requested=todo.should_provide_chunk_parent(),
             ))
 

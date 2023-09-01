@@ -22,8 +22,8 @@ from typing import Optional, Union
 from pandas import DataFrame, Series
 
 
-# highlight_max: https://github.com/pandas-dev/pandas/blob/v2.0.0rc0/pandas/io/formats/style.py#L3083-L3124
-# highlight_min: https://github.com/pandas-dev/pandas/blob/v2.0.0rc0/pandas/io/formats/style.py#L3131-L3172
+# highlight_max: https://github.com/pandas-dev/pandas/blob/v2.1/pandas/io/formats/style.py#L3245-L3294
+# highlight_min: https://github.com/pandas-dev/pandas/blob/v2.1/pandas/io/formats/style.py#L3301-L3350
 class HighlightExtremaPatcher(TodoPatcher):
 
     def __init__(self, todo: StylerTodo, op: str):
@@ -46,7 +46,7 @@ class HighlightExtremaPatcher(TodoPatcher):
         if chunk_or_series_from_chunk.empty:
             return chunk_or_series_from_chunk
 
-        # https://github.com/pandas-dev/pandas/blob/v2.0.0rc0/pandas/io/formats/style.py#L3738-L3747
+        # https://github.com/pandas-dev/pandas/blob/v2.1/pandas/io/formats/style.py#L3931-L3940
         value = getattr(chunk_parent, self._op)(skipna=True)
 
         if isinstance(chunk_or_series_from_chunk, DataFrame):  # min/max must be done twice to return scalar

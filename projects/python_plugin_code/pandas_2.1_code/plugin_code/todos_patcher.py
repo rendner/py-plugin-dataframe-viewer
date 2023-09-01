@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from plugin_code.apply_map_patcher import ApplyMapPatcher
+from plugin_code.map_patcher import MapPatcher
 from plugin_code.apply_patcher import ApplyPatcher
 from plugin_code.background_gradient_patcher import BackgroundGradientPatcher
 from plugin_code.highlight_between_patcher import HighlightBetweenPatcher
@@ -40,8 +40,8 @@ class TodosPatcher:
             if t.is_pandas_style_func():
                 patcher = self.__get_patcher_for_pandas_style_function(t)
             else:
-                if t.is_applymap():
-                    patcher = ApplyMapPatcher(t)
+                if t.is_map():
+                    patcher = MapPatcher(t)
                 else:
                     patcher = ApplyPatcher(t)
 
@@ -72,5 +72,5 @@ class TodosPatcher:
         elif StyleFunctionNameResolver.is_pandas_highlight_between(qname):
             return HighlightBetweenPatcher(todo)
         elif StyleFunctionNameResolver.is_pandas_set_properties(qname):
-            return ApplyMapPatcher(todo)
+            return MapPatcher(todo)
         return None

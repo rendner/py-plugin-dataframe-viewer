@@ -38,7 +38,7 @@ df = pd.DataFrame.from_dict({
 def test_chunked(subset, kwargs, rows_per_chunk, cols_per_chunk):
     create_and_assert_patched_styler(
         df,
-        lambda styler: styler.applymap(highlight_even_numbers, subset=subset, **kwargs),
+        lambda styler: styler.map(highlight_even_numbers, subset=subset, **kwargs),
         rows_per_chunk,
         cols_per_chunk
     )
@@ -52,7 +52,7 @@ def test_chunked(subset, kwargs, rows_per_chunk, cols_per_chunk):
 def test_frame_can_handle_reducing_subset(subset):
     create_and_assert_patched_styler(
         df,
-        lambda styler: styler.applymap(highlight_even_numbers, subset=subset),
+        lambda styler: styler.map(highlight_even_numbers, subset=subset),
         2,
         2
     )
@@ -65,7 +65,16 @@ def test_forwards_kwargs():
 
     create_and_assert_patched_styler(
         df,
-        lambda styler: styler.applymap(my_styling_func, color="pink"),
+        lambda styler: styler.map(my_styling_func, color="pink"),
+        2,
+        2
+    )
+
+
+def test_deprecated_applymap_works():
+    create_and_assert_patched_styler(
+        df,
+        lambda styler: styler.applymap(highlight_even_numbers, color="pink"),
         2,
         2
     )
@@ -73,6 +82,6 @@ def test_forwards_kwargs():
 
 def test_for_new_parameters():
     assert_style_func_parameters(
-        df.style.applymap,
+        df.style.map,
         ['subset', 'func', 'kwargs']
     )

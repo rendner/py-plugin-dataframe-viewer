@@ -22,7 +22,7 @@ from pandas.io.formats.style_render import Subset
 
 
 @dataclass(frozen=True)
-class ApplyMapArgs:
+class MapArgs:
     style_func: Callable
     subset: Optional[Subset]
 
@@ -32,7 +32,7 @@ class ApplyMapArgs:
 
     @staticmethod
     def copy_with(style_func: Callable, subset: Optional[Subset]):
-        return ApplyMapArgs(style_func, subset)
+        return MapArgs(style_func, subset)
 
     def to_tuple(self) -> Tuple[Callable, Optional[Subset]]:
         return self.style_func, self.subset
@@ -58,7 +58,7 @@ class ApplyArgs:
 @dataclass(frozen=True)
 class StylerTodo:
     apply_func: Callable
-    apply_args: Union[ApplyArgs, ApplyMapArgs]
+    apply_args: Union[ApplyArgs, MapArgs]
     style_func_kwargs: dict
 
     @classmethod
@@ -70,21 +70,21 @@ class StylerTodo:
 
     @staticmethod
     def _to_apply_args(todo: Tuple[Callable, tuple, dict]):
-        if StylerTodo.is_applymap_tuple(todo):
-            return ApplyMapArgs.from_tuple(todo[1])
+        if StylerTodo.is_map_tuple(todo):
+            return MapArgs.from_tuple(todo[1])
         else:
             return ApplyArgs.from_tuple(todo[1])
 
     @classmethod
-    def is_applymap_tuple(cls, todo: Tuple[Callable, tuple, dict]):
-        return cls.__is_apply_map_func(todo[0])
+    def is_map_tuple(cls, todo: Tuple[Callable, tuple, dict]):
+        return cls.__is_map_func(todo[0])
 
-    def is_applymap(self) -> bool:
-        return self.__is_apply_map_func(self.apply_func)
+    def is_map(self) -> bool:
+        return self.__is_map_func(self.apply_func)
 
     @staticmethod
-    def __is_apply_map_func(func: Callable) -> bool:
-        return getattr(func, '__qualname__', '').startswith('Styler.applymap')
+    def __is_map_func(func: Callable) -> bool:
+        return getattr(func, '__qualname__', '').startswith('Styler.map')
 
     def is_pandas_style_func(self) -> bool:
         func = self.apply_args.style_func

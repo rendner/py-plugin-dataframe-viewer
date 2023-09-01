@@ -93,10 +93,10 @@ def test_sorting_with_apply(axis):
     )
 
 
-def test_sorting_with_applymap():
+def test_sorting_with_map():
     create_and_assert_patched_styler_sorting(
         df,
-        lambda styler: styler.applymap(highlight_even_numbers),
+        lambda styler: styler.map(highlight_even_numbers),
         2,
         2,
         [0],
