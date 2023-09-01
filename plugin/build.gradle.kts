@@ -103,8 +103,8 @@ tasks {
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.9",
             "3.9",
-            listOf("python_3.9"),
-            false,
+            listOf("pandas_2.1"),
+            true,
         ),
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.8",
