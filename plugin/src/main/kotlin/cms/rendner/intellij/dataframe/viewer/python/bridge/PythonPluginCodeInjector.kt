@@ -120,7 +120,7 @@ class PythonPluginCodeInjector {
                     return "/pandas_1.${version.minor}/plugin_code"
                 }
             } else if (version.major == 2) {
-                if (version.minor in 0..0) {
+                if (version.minor in 0..1) {
                     return "/pandas_2.${version.minor}/plugin_code"
                 }
             }

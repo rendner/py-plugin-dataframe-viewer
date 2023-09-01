@@ -62,7 +62,7 @@ idea {
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
 
-    val supportedPandasVersions = listOf("1.1", "1.2", "1.3", "1.4", "1.5", "2.0")
+    val supportedPandasVersions = listOf("1.1", "1.2", "1.3", "1.4", "1.5", "2.0", "2.1")
 
     data class PythonDockerImage(
         val path: String,
