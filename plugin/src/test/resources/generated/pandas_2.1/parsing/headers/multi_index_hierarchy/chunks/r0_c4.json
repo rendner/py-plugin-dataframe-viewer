@@ -1,0 +1,62 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "Sue",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "Sue",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "HR",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "Temp",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.200000",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.200000",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.500000",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.100000",
+                "css_props": null
+            }
+        ]
+    ]
+}

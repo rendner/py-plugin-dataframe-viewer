@@ -1,0 +1,15 @@
+{
+    "rowsPerChunk": 2,
+    "colsPerChunk": 2,
+    "tableStructure": {
+        "org_rows_count": 6,
+        "org_columns_count": 6,
+        "rows_count": 6,
+        "columns_count": 6,
+        "row_levels_count": 0,
+        "column_levels_count": 2,
+        "hide_row_header": true,
+        "hide_column_header": false,
+        "fingerprint": ""
+    }
+}

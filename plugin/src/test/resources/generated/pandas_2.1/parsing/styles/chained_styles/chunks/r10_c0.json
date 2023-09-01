@@ -1,0 +1,84 @@
+{
+    "head": [
+    ],
+    "body": [
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "10",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.511339",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.755499",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.962037",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.187429",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.290538",
+                "css_props": null
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "11",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.001547",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.709033",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.714961",
+                "css_props": {
+                    "background-color": "yellow"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.605747",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-1.260336",
+                "css_props": null
+            }
+        ]
+    ]
+}
