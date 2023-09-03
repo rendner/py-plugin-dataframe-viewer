@@ -32,18 +32,14 @@ A short video to demo the feature, taken from an earlier PoC, can be found here:
 ### Things To Keep In Mind:
 
 - Evaluation and validation of a chunk takes place on the Python side and must be performed sequentially.
-  Because, the internal data structure of pandas `DataFrame` and `Styler` are not threadsafe - performing both steps at the same time would result in unexpected results.
+  Because, the internal data structure of pandas `DataFrame` and `Styler` are not threadsafe - performing both steps at the same time could result in unexpected results. Therefore, fetching the next chunk of a `DataFrame` can only be done after the previous chunk has been fetched and its validation has been completed.
 
 - The number of styling functions used (less is better) to style a `DataFrame` can greatly affect the duration of validation.
   In case of an error, the plugin tries to identify the styling functions which caused the non-matching values.
   To do this, it has to do all the validation steps for each styling function.
 
-- Fetching the next chunk of a `DataFrame` can only be done after the previous chunk has been fetched and its validation has been completed.
-
 - By the plugin reported errors indicate that a styling function produce different output for different sizes of chunks.
-  However, this does not mean that the values just displayed for the chunk are wrong. 
-  Smaller parts of the chunk were used for the validation and these parts combined didn't match with the styled values of the fetched chunk.
-  The error, detected by the plugin, can therefore not be found in the displayed data.
+  However, this does not mean that you can always see such an error in the current displayed values. Because, the internal validation uses smalller chunks to speed up the validation.
 
 ## Configure Validation
 Validation is **disabled** by default.
