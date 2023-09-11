@@ -56,7 +56,7 @@
     </actions>
 
     <extensions defaultExtensionNs="Pythonid">
-        <pyReferenceResolveProvider implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.PyCodeFragmentReferenceResolveProvider"/>
+        <pyReferenceResolveProvider implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.PyChainedCodeFragmentReferenceResolveProvider"/>
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -72,6 +72,8 @@
 
         <annotator language="Python" implementationClass="cms.rendner.intellij.dataframe.viewer.components.filter.editor.SyntheticIdentifierHighlighter"/>
         <daemon.intentionActionFilter implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.IgnoreAllIntentionsActionFilter"/>
+
+        <completion.contributor language="Python" implementationClass="cms.rendner.intellij.dataframe.viewer.components.filter.editor.MyAdjustAutoCompletionFilter" order="first"/>
     </extensions>
 
     <projectListeners>

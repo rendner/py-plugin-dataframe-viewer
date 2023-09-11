@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,14 @@ import com.jetbrains.python.psi.PyExpressionCodeFragment
  */
 class IgnoreAllIntentionsActionFilter: IntentionActionFilter {
     companion object {
-        val IGNORE = Key.create<Boolean>("${Companion::class.java.name}.IGNORE")
+        private val KEY = Key.create<Boolean>("cms.rendner.IgnoreAllIntentionsActionFilter")
+
+        fun register(file: PsiFile) {
+            KEY.set(file, true)
+        }
     }
 
     override fun accept(action: IntentionAction, file: PsiFile?): Boolean {
-        return !(file is PyExpressionCodeFragment && IGNORE.get(file, false))
+        return !(file is PyExpressionCodeFragment && KEY.get(file, false))
     }
 }

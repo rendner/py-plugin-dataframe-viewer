@@ -27,23 +27,23 @@ class PandasAvailableInSessionProvider {
         private val KEY: Key<MutableMap<String, Boolean?>> = Key.create("cms.rendner.pandasVersionInSession")
 
         fun init(project: Project) {
-            project.putUserData(KEY, ConcurrentHashMap())
+            KEY.set(project, ConcurrentHashMap())
         }
 
         fun cleanup(project: Project) {
-            project.putUserData(KEY, null)
+            KEY.set(project, null)
         }
 
         fun remove(session: XDebugSession) {
-            session.project.getUserData(KEY)?.remove(createSessionFingerprint(session))
+            KEY.get(session.project)?.remove(createSessionFingerprint(session))
         }
 
         fun setIsAvailable(session: XDebugSession) {
-            session.project.getUserData(KEY)?.put(createSessionFingerprint(session), true)
+            KEY.get(session.project)?.put(createSessionFingerprint(session), true)
         }
 
         fun isAvailable(session: XDebugSession): Boolean? {
-            return session.project.getUserData(KEY)?.get(createSessionFingerprint(session))
+            return KEY.get(session.project)?.get(createSessionFingerprint(session))
         }
 
         /**
