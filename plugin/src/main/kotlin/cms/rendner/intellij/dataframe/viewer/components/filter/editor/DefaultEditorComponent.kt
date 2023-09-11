@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.project.Project
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.ErrorStripeEditorCustomization
+import com.intellij.xdebugger.XDebuggerUtil
 import com.intellij.xdebugger.XSourcePosition
 import com.jetbrains.python.PythonFileType
 
@@ -74,6 +75,8 @@ class DefaultEditorComponent(
 
                 ErrorStripeEditorCustomization.ENABLED.customize(editor)
                 SpellCheckingEditorCustomizationProvider.getInstance().disabledCustomization?.customize(editor)
+
+                XDebuggerUtil.getInstance().disableValueLookup(editor)
 
                 editor.contentComponent.addKeyListener(that)
             }
