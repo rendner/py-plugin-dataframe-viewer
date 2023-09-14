@@ -19,6 +19,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -93,7 +94,7 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         myErrorLabel.text = message
         // error message will be truncated if dialog is too small
         // therefore also show the message as tooltip
-        myErrorLabel.toolTipText = message
+        myErrorLabel.toolTipText = StringUtil.escapeXmlEntities(message)
     }
 
     fun hideErrorMessage() {

@@ -275,8 +275,11 @@ class DataFrameViewerDialog(
                     CreatePatchedStylerErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
                     CreatePatchedStylerErrorKind.INVALID_FINGERPRINT -> close(CANCEL_EXIT_CODE)
 
-                    CreatePatchedStylerErrorKind.FILTER_FRAME_EVAL_FAILED,
-                    CreatePatchedStylerErrorKind.FILTER_FRAME_OF_WRONG_TYPE -> myFilterInput.showErrorMessage(failure.info)
+                    CreatePatchedStylerErrorKind.FILTER_FRAME_EVAL_FAILED ->
+                        myFilterInput.showErrorMessage("Failed to evaluate filter from expression: ${failure.info}")
+
+                    CreatePatchedStylerErrorKind.FILTER_FRAME_OF_WRONG_TYPE ->
+                        myFilterInput.showErrorMessage("Expression returned invalid filter of type: ${failure.info}")
 
                     CreatePatchedStylerErrorKind.EVAL_EXCEPTION,
                     CreatePatchedStylerErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE -> setErrorText(failure.info)
