@@ -21,6 +21,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiRecursiveElementVisitor
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.ui.JBColor
@@ -40,8 +41,6 @@ import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import javax.swing.JPanel
 
-private const val SYNTHETIC_DATAFRAME_IDENTIFIER = "_df"
-
 interface IEditorChangedListener {
     fun editorInputChanged()
 }
@@ -49,12 +48,13 @@ interface IEditorChangedListener {
 data class FilterInputState(val text: String, val containsSyntheticFrameIdentifier: Boolean = false)
 
 abstract class AbstractEditorComponent : KeyAdapter() {
-    protected val myEditorsProvider = MyDebuggerEditorsProvider()
+    protected val myEditorsProvider = MyDebuggerEditorsProvider(::processDocumentFile)
 
     private var changedListener: IEditorChangedListener? = null
     protected val myEditorContainer = Panels.simplePanel()
     private val myMainPanel: JPanel
     private val myErrorLabel: JBLabel = JBLabel()
+    private val myExpressionComponentLabel = JBLabel("Filter:")
 
     init {
         myErrorLabel.icon = AllIcons.General.Error
@@ -63,12 +63,8 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         // set an explicit min width to not increase the width when a long error message is displayed
         myErrorLabel.minimumSize = myErrorLabel.minimumSize.also { it.width = 100 }
 
-        val expressionComponentLabel = JBLabel("Filter:").apply {
-            toolTipText = "Hint: You can use the identifier '$SYNTHETIC_DATAFRAME_IDENTIFIER' to refer to the displayed DataFrame."
-        }
-
         myMainPanel = FormBuilder.createFormBuilder()
-            .addLabeledComponent(expressionComponentLabel, myEditorContainer)
+            .addLabeledComponent(myExpressionComponentLabel, myEditorContainer)
             .addTooltip("Specify a DataFrame that contains the rows and columns to keep")
             .addLabeledComponent("", myErrorLabel)
             .panel
@@ -80,12 +76,11 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         changedListener = listener
     }
 
-
     override fun keyReleased(e: KeyEvent?) {
-        notifyChange()
+        notifyInputChanged()
     }
 
-    protected fun notifyChange() {
+    protected fun notifyInputChanged() {
         changedListener?.editorInputChanged()
     }
 
@@ -118,6 +113,18 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         }
     }
 
+    private fun processDocumentFile(psiFile: PsiFile, withSyntheticIdentifier: Boolean) {
+        IgnoreAllIntentionsActionFilter.register(psiFile)
+
+        if (withSyntheticIdentifier && psiFile is PyExpressionCodeFragment) {
+            SyntheticDataFrameIdentifier.allowSyntheticIdentifier(psiFile)
+        }
+
+        myExpressionComponentLabel.toolTipText = if (withSyntheticIdentifier) {
+            "Hint: You can use the synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' in the expression to refer to the used DataFrame."
+        } else null
+    }
+
     private fun textContainsSyntheticFrameIdentifier(): Boolean {
         val editor = getEditor() ?: return false
         val project = editor.project ?: return false
@@ -146,7 +153,9 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         }
     }
 
-    protected class MyDebuggerEditorsProvider : PyDebuggerEditorsProvider() {
+    protected class MyDebuggerEditorsProvider(
+        private val documentFileProcessor: (psiFile: PsiFile, withSyntheticIdentifier: Boolean) -> Unit,
+    ) : PyDebuggerEditorsProvider() {
         fun createDocument(project: Project, expression: String, sourcePosition: XSourcePosition?): Document {
             return createDocument(
                 project,
@@ -163,17 +172,15 @@ abstract class AbstractEditorComponent : KeyAdapter() {
             sourcePosition: XSourcePosition?,
             mode: EvaluationMode
         ): Document {
-            val documentSourcePosition =
-                if (syntheticIdentifierNameExistsInContext(project, sourcePosition)) {
-                    sourcePosition
-                } else createSyntheticSourcePosition(project, sourcePosition)
-
-            return super.createDocument(project, expression, documentSourcePosition, EvaluationMode.EXPRESSION).apply {
-                PsiDocumentManager.getInstance(project).getPsiFile(this)?.let {
-                    IgnoreAllIntentionsActionFilter.register(it)
-                    if (documentSourcePosition !== sourcePosition && it is PyExpressionCodeFragment) {
-                        SyntheticDataFrameIdentifier.allowSyntheticIdentifier(it)
-                    }
+            val injectSyntheticIdentifier = !syntheticIdentifierNameExistsInContext(project, sourcePosition)
+            return super.createDocument(
+                project,
+                expression,
+                if (injectSyntheticIdentifier) createSyntheticSourcePosition(project, sourcePosition) else sourcePosition,
+                EvaluationMode.EXPRESSION,
+            ).also {
+                PsiDocumentManager.getInstance(project).getPsiFile(it)?.let { psiFile ->
+                    documentFileProcessor(psiFile, injectSyntheticIdentifier)
                 }
             }
         }

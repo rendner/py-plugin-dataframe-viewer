@@ -102,7 +102,7 @@ class InternalApiEditorComponent(
             override fun doSetText(text: XExpression?) {
                 super.doSetText(text)
                 if (!myComboBoxPopUpIsOpen) {
-                    notifyChange()
+                    notifyInputChanged()
                     /*
                     Requesting the focus back solves two problems:
 
