@@ -66,7 +66,7 @@ abstract class AbstractEditorComponent : KeyAdapter() {
 
         myMainPanel = FormBuilder.createFormBuilder()
             .addLabeledComponent(myExpressionComponentLabel, myEditorContainer)
-            .addTooltip("Specify a DataFrame that contains the rows and columns to keep")
+            .addTooltip("Expression that returns a DataFrame with the rows and columns to keep")
             .addLabeledComponent("", myErrorLabel)
             .panel
     }
