@@ -9,7 +9,7 @@
     -->
 
     <description><![CDATA[
-    View, <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/SORTING.md">sort</a> and <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/FILTERING.md">filter</a> styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> when debugging.
+    View, <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/SORTING.md">sort</a> and <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/FILTERING.md">filter</a> styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> or a Python <i>dict</i> when debugging.
     <br/><br/>
     Apply conditional formatting and visual styling in your Python code, by using <i>DataFrame.style</i>.
     The configured style is used to render a styled output of the <i>DataFrame</i>.
@@ -17,12 +17,39 @@
     <a href="https://github.com/rendner/py-plugin-dataframe-viewer">How does it work</a>
     <br/><br/>
     For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
+    <br/><br/>
+    Note: The plugin requires <i>pandas</i> and <i>jinja2</i> (used by pandas Styler class).
+    <br/><br/>
+    Supported pandas versions:
+    <ul>
+        <li>1.1.x - 1.5.x</li>
+        <li>2.0.x - 2.1.x</li>
+    </ul>
     ]]></description>
 
     <idea-version since-build="213.5744.248" until-build="233.*"/>
 
     <change-notes><![CDATA[
-    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md#v0100">changelog</a>
+    <br/>
+    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md#v0110">full changelog (all versions)</a>
+    <br/>
+    <h2>Added</h2>
+    <h3>Support For pandas 2.1</h3>
+    All already supported <i>Styler</i> methods as well as sorting and filtering are now also usable with pandas 2.1.
+    <h3>Display Python dicts as DataFrame</h3>
+    If pandas is installed, Python dictionaries can be displayed as a pandas DataFrame that can be sorted and filtered.
+    <br/><br/>
+    Select a Python dictionary in the debugger variable view, open the context menu and select <i>View as Styled DataFrame</i>.
+    You can display the <i>Keys as Columns</i> (default behavior) or <i>Keys as Rows</i>. If the dictionary contains the keys
+    <i>index, columns, data, index_names and column_names</i> it is displayed with <i>orient='tight'</i>.
+    <br/><br/>
+    This new feature is available for all supported pandas versions.
+    A detailed description about the behavior can be found in the pandas-docs <a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.from_dict.html#pandas-dataframe-from-dict">DataFrame.from_dict</a>.
+    <h2>Fixed</h2>
+    <ul>
+        <li>plugin fails with Python 3.10</li>
+        <li>filter input: in some cases attribute references couldn't be resolved</li>
+    </ul>
     ]]></change-notes>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
@@ -32,10 +59,20 @@
 
     <actions>
         <group id="debugActionGroup">
-            <action id="cms.rendner.ShowStyledDataFrameAction"
-                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowStyledDataFrameAction"
+            <action id="cms.rendner.ShowViewerForFrameOrStylerAction"
+                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowViewerForFrameOrStylerAction"
                     text="View as Styled DataFrame">
                 <keyboard-shortcut keymap="$default" first-keystroke="alt shift V"/>
+            </action>
+            <action id="cms.rendner.ShowViewerForDictWithKeysAsColumnsAction"
+                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowViewerForDictAction"
+                    text="View as Styled DataFrame">
+                <!-- available via key binding because orientation columns is the default value in pandas -->
+                <keyboard-shortcut keymap="$default" first-keystroke="alt shift V"/>
+            </action>
+            <action id="cms.rendner.ShowViewerForDictWithKeysAsRowsAction"
+                    class="cms.rendner.intellij.dataframe.viewer.actions.ShowViewerForDictWithKeysAsRowsAction"
+                    text="View as Styled DataFrame (Keys as Rows)">
             </action>
             <action id="cms.rendner.ExportDataFrameTestDataAction"
                     class="cms.rendner.intellij.dataframe.viewer.actions.ExportDataFrameTestDataAction"
@@ -46,13 +83,13 @@
     </actions>
 
     <extensions defaultExtensionNs="Pythonid">
-        <pyReferenceResolveProvider implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.PyCodeFragmentReferenceResolveProvider"/>
+        <pyReferenceResolveProvider implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.PyChainedCodeFragmentReferenceResolveProvider"/>
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService"/>
         <projectService serviceImplementation="cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService"/>
-        <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON"/>
+        <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON" isLogByDefault="true"/>
         <applicationConfigurable
                 parentId="tools"
                 instance="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettings"
@@ -62,5 +99,15 @@
 
         <annotator language="Python" implementationClass="cms.rendner.intellij.dataframe.viewer.components.filter.editor.SyntheticIdentifierHighlighter"/>
         <daemon.intentionActionFilter implementation="cms.rendner.intellij.dataframe.viewer.components.filter.editor.IgnoreAllIntentionsActionFilter"/>
+
+        <completion.contributor language="Python" implementationClass="cms.rendner.intellij.dataframe.viewer.components.filter.editor.MyAdjustAutoCompletionFilter" order="first"/>
     </extensions>
+
+    <projectListeners>
+        <listener class="cms.rendner.intellij.dataframe.viewer.python.pycharm.listeners.DebuggerListener"
+                  topic="com.intellij.xdebugger.XDebuggerManagerListener"
+                  activeInHeadlessMode="false"
+                  activeInTestMode="false"
+        />
+    </projectListeners>
 </idea-plugin>

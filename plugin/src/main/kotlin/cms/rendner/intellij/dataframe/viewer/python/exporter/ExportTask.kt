@@ -18,42 +18,34 @@ package cms.rendner.intellij.dataframe.viewer.python.exporter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
+import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import java.nio.file.Path
 
 /**
- * Iterates over the available test data, provided by [exportDataValue] and saves the HTML files
- * for each one in the directory specified by [rootExportDir].
+ * Iterates over the provided [testCases], and writes the dumped data into json files.
+ * The json files are stored into separate dictionaries inside [rootExportDir].
  *
- * @param rootExportDir the root directory for the files generated from the test cases.
- * @param exportDataValue provides a list of test cases.
+ * @param rootExportDir the directory to store the generated test data.
+ * @param testCases a python list of test cases.
  */
 class ExportTask(
     private val rootExportDir: Path,
-    private val exportDataValue: PluginPyValue,
+    private val testCases: PluginPyValue,
 ) {
     fun run() {
-        try {
-            val exportData = convertExportValue(exportDataValue)
-            val baseExportDir = exportData.resolveBaseExportDir(rootExportDir)
-            println("baseExportDir: $baseExportDir")
-            val testCaseExporter = TestCaseExporter(baseExportDir)
-            val testCaseIterator = EvaluateElementWiseListIterator(exportData.testCases)
-
-            while (testCaseIterator.hasNext()) {
-                testCaseExporter.export(convertTestCaseValue(testCaseIterator.next()))
-            }
-        } catch (e: Throwable) {
-            println("ExportTask::run failed: ${e.stackTraceToString()}")
+        val pandasVersion = try {
+            PandasVersion.fromString(testCases.evaluator.evaluate("__import__('pandas').__version__").forcedValue)
+        } catch (ex: EvaluateException) {
+            throw IllegalStateException("Failed to identify version of pandas.", ex)
         }
-    }
+        val baseExportDir = rootExportDir.resolve("pandas_${pandasVersion.major}.${pandasVersion.minor}")
+        println("baseExportDir: $baseExportDir")
+        val testCaseExporter = TestCaseExporter(baseExportDir)
+        val testCaseIterator = EvaluateElementWiseListIterator(testCases)
+        println("testCases: ${testCaseIterator.size}")
 
-    private fun convertExportValue(exportDataDict: PluginPyValue): ExportData {
-        val evaluator = exportDataDict.evaluator
-        exportDataDict.refExpr.let {
-            return ExportData(
-                evaluator.evaluate("$it['test_cases']", true),
-                PandasVersion.fromString(evaluator.evaluate("$it['pandas_version']").forcedValue),
-            )
+        while (testCaseIterator.hasNext()) {
+            testCaseExporter.export(convertTestCaseValue(testCaseIterator.next()))
         }
     }
 
@@ -77,7 +69,7 @@ class ExportTask(
     ) : Iterator<PluginPyValue> {
 
         private var lastFetchedEntryIndex: Int = -1
-        private val size: Int = testCases.evaluator.evaluate("len(${testCases.refExpr})").forcedValue.toInt()
+        val size: Int = testCases.evaluator.evaluate("len(${testCases.refExpr})").forcedValue.toInt()
 
         override fun hasNext(): Boolean {
             return lastFetchedEntryIndex + 1 < size

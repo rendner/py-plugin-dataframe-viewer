@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.project.Project
 import com.intellij.ui.ErrorStripeEditorCustomization
 import com.intellij.ui.PopupMenuListenerAdapter
+import com.intellij.xdebugger.XDebuggerUtil
 import com.intellij.xdebugger.XExpression
 import com.intellij.xdebugger.XSourcePosition
 import com.intellij.xdebugger.impl.ui.XDebuggerExpressionComboBox
@@ -44,7 +45,7 @@ class InternalApiEditorComponent(
     }
 
     override fun getText(): String {
-        return myEditor.expression.expression
+        return myEditor.expression.expression.trim()
     }
 
     override fun getEditor(): Editor? {
@@ -94,12 +95,14 @@ class InternalApiEditorComponent(
                 editor.colorsScheme.editorFontSize = comboBox.font.size
 
                 editor.contentComponent.addKeyListener(that)
+
+                XDebuggerUtil.getInstance().disableValueLookup(editor)
             }
 
             override fun doSetText(text: XExpression?) {
                 super.doSetText(text)
                 if (!myComboBoxPopUpIsOpen) {
-                    notifyChange()
+                    notifyInputChanged()
                     /*
                     Requesting the focus back solves two problems:
 

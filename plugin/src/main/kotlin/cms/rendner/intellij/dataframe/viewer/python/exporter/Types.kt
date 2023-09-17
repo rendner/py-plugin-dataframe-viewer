@@ -17,28 +17,11 @@ package cms.rendner.intellij.dataframe.viewer.python.exporter
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkSize
 import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import kotlinx.serialization.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
 
-/**
- * A set of test cases to export.
- *
- * A testcase is a Python dict with at least the following keys:
- * - styler: the styled DataFrame to export
- * - chunk_size: the size of the chunks used to export smaller chunks
- * - export_dir: the name of the test case as directory name
- *
- * @param testCases a Python ref to a list of test cases.
- * @param pandasVersion the pandas version used to create the test data.
- */
-data class ExportData(val testCases: PluginPyValue, val pandasVersion: PandasVersion) {
-    fun resolveBaseExportDir(baseDir: Path): Path {
-        return baseDir.resolve("pandas_${pandasVersion.major}.${pandasVersion.minor}")
-    }
-}
 
 /**
  * Describes a test case to export.

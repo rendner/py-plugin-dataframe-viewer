@@ -1,11 +1,11 @@
 # Generate Test Data Manually
-The data to be created will be extracted by using the PyCharm debugger.
+The data are extracted by using the PyCharm debugger (no additional PyCharm required).
 
 If docker is installed, please read [GENERATE_TEST_DATA_AUTOMATED.md](GENERATE_TEST_DATA_AUTOMATED.md).
 
 Most unit-tests are executed against prefetched JSON files.
 At the moment there is no way to use the PyCharm debugger directly in the unit-tests to fetch the data.
-And if it should be possible, the test time would be much longer if the required data has to be fetched from the PyCharm debugger each time.
+And if it should be possible, the test time would be much longer if the data has to be fetched from the PyCharm debugger each time.
 
 ## When To Re-Generate
 Whenever plugin related code has changed, which could affect one of the following parts:
@@ -14,7 +14,13 @@ Whenever plugin related code has changed, which could affect one of the followin
 - pandas related plugin code (Python)
 - the structure of the returned JSON (Python)
 
-All files of the affected pandas versions, supported by the plugin, have to be re-generated. 
+All files of the affected pandas versions, supported by the plugin, have to be re-generated.
+This ensures that the plugin is able to:
+- detecting the correct pandas version
+- inject code required to extract data from pandas DataFrames
+- parse the extracted data correctly
+
+Most of these things are tested automatically when running the automated tests which require docker to be installed.
 
 ## Generate Test Data
 The test data has to be generated in separate steps.
@@ -43,7 +49,7 @@ In case you are unsure which data should be deleted, here are some examples:
 Run `runIde` gradle-task from IntelliJ, this will start a PyCharm instance with the plugin installed
 
 For each pandas version from which the generated test files were deleted in **[Step 1]**:
-  1. open the corresponding project from `<PROJECTS_DIR>/html_from_styler/` in PyCharm
+  1. open the corresponding project from `<PROJECTS_DIR>/html_from_styler/` in the started PyCharm
       - for initial setup of such a project check [README.md of the "html_from_styler" projects](../../projects/html_from_styler/README.md)
   2. run `export_data/main.py` in debug mode
   3. in the debugger tab, right-click on `export_test_data` to open the context menu

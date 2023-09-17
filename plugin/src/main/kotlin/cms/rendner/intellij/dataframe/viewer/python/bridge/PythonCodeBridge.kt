@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,11 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
-import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
-import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
+import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionDetails
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionValidationProblem
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
+import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.CreatePatchedStylerException
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge.PyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
@@ -30,6 +29,8 @@ import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyMethodCall
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+
+private val json: Json by lazy { Json { ignoreUnknownKeys = true } }
 
 /**
  * Creates [PyPatchedStylerRef] instances to enable "communication" with pandas objects.
@@ -45,25 +46,23 @@ class PythonCodeBridge {
             return PythonPluginCodeInjector.getFromPluginModuleExpr("StyledDataFrameViewerBridge")
         }
 
-        fun createFingerprint(evaluator: IPluginPyValueEvaluator, frameOrStylerRefExpr: String): String {
-            return evaluator.evaluate(
-                stringifyMethodCall(getBridgeExpr(), "create_fingerprint") {
-                    refParam(frameOrStylerRefExpr)
-                }
-            ).value!!
-        }
-
         fun createPatchedStyler(
             evaluator: IPluginPyValueEvaluator,
             frameOrStylerRefExpr: String,
-            filterFrameRefExpr: String? = null
+            config: CreatePatchedStylerConfig? = null,
         ): IPyPatchedStylerRef {
             val patchedStyler = evaluator.evaluate(
                 stringifyMethodCall(getBridgeExpr(), "create_patched_styler") {
                     refParam(frameOrStylerRefExpr)
-                    if (filterFrameRefExpr == null) noneParam() else refParam(filterFrameRefExpr)
+                    if (config == null) noneParam() else refParam(convertToDataClass(json, config, "CreatePatchedStylerConfig"))
                 }
             )
+
+            if (patchedStyler.qualifiedType == "builtins.str") {
+                @OptIn(ExperimentalSerializationApi::class)
+                val info: CreatePatchedStylerFailure = json.decodeFromString(patchedStyler.forcedValue.removeSurrounding("\""))
+                throw CreatePatchedStylerException(info)
+            }
             return PyPatchedStylerRef(patchedStyler)
         }
     }
@@ -76,10 +75,6 @@ class PythonCodeBridge {
      * @param pythonValue the wrapped "PatchedStyler" Python instance.
      */
     private class PyPatchedStylerRef(val pythonValue: PluginPyValue) : IPyPatchedStylerRef {
-
-        private val json: Json by lazy {
-            Json { ignoreUnknownKeys = true }
-        }
 
         @Throws(EvaluateException::class)
         override fun evaluateTableStructure(): TableStructure {

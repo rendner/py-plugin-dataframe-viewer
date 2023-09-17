@@ -112,7 +112,7 @@ internal abstract class BaseResourceValidationTest(errorImageSubDirName: String)
         chunkSize: ChunkSize,
     ): IDataFrameModel {
         val frameColumnIndexList = List(tableStructure.columnsCount) { it + 1 }
-        return ChunkedDataFrameModel(tableStructure, frameColumnIndexList, "0", chunkLoader, chunkSize).also {
+        return ChunkedDataFrameModel(tableStructure, frameColumnIndexList, chunkLoader, chunkSize).also {
             preloadTableValues(it, chunkSize)
         }
     }

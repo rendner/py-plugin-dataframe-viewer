@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,10 +34,9 @@ class PythonProcess(
      * @param processArgs the arguments containing the program to start and its arguments.
      */
     fun start(processArgs: List<String>) {
-        val processBuilder = ProcessBuilder(processArgs)
-        processBuilder.redirectErrorStream(true)
-
-        process = processBuilder.start()
+        process = ProcessBuilder(processArgs)
+            .redirectErrorStream(true)
+            .start()
 
         reader = BufferedReader(InputStreamReader(process.inputStream, StandardCharsets.UTF_8))
         writer = BufferedWriter(OutputStreamWriter(process.outputStream, StandardCharsets.UTF_8))

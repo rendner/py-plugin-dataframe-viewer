@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,13 @@ import java.nio.file.Paths
  */
 internal class ExportTestData : AbstractPluginCodeTest() {
 
-    private val exportDir = System.getProperty(SystemPropertyKey.EXPORT_TEST_DATA_DIR)?.let { Paths.get(it) }
+    private val rootExportDir = System.getProperty(SystemPropertyKey.EXPORT_TEST_DATA_DIR)?.let { Paths.get(it) }
 
     @Test
     fun exportTestDataForUnitTests() {
-        assertThat(exportDir).isNotNull
-        runPythonDebuggerWithSourceFile("export_data/main.py") { evaluator, _ ->
-            ExportTask(exportDir!!, evaluator.evaluate("export_test_data")).run()
+        assertThat(rootExportDir).isNotNull
+        createPythonDebuggerWithSourceFile("export_data/main.py") { debuggerApi ->
+            ExportTask(rootExportDir!!, debuggerApi.evaluator.evaluate("export_test_data")).run()
         }
     }
 }

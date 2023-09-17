@@ -15,7 +15,9 @@
  */
 package cms.rendner.intellij.dataframe.viewer.services
 
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasAvailableInSessionProvider
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.project.Project
 
 /**
  * Even though Application and Project implement Disposable, they must NEVER be used as parent
@@ -28,11 +30,17 @@ import com.intellij.openapi.Disposable
  * Source: https://jetbrains.org/intellij/sdk/docs/basics/disposers.html#automatically-disposed-objects
  */
 // https://plugins.jetbrains.com/docs/intellij/disposers.html#diagnosing-disposer-leaks
-class ParentDisposableService: Disposable {
+class ParentDisposableService(private val project: Project): Disposable {
+
+    init {
+        PandasAvailableInSessionProvider.init(project)
+    }
+
     var isDisposed = false
         private set
 
     override fun dispose() {
+        PandasAvailableInSessionProvider.cleanup(project)
         isDisposed = true
     }
 }

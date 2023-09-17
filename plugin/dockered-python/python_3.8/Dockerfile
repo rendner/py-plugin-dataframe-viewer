@@ -1,13 +1,29 @@
 # https://hub.docker.com/_/python?tab=description
 FROM python:3.8.12-slim-buster
 
-ENV PIPENV_VENV_IN_PROJECT=1
+RUN pip install pipenv
 
 WORKDIR /usr/src/app
 
-RUN pip install pipenv
+# create a non-root user
+RUN \
+    adduser --uid 1000 --no-create-home --disabled-password --gecos "" appuser \
+    # add file permission
+    && chown -R appuser /usr/src/app
 
-COPY content/pipenv_environments/ pipenv_environments/
+# switch to it
+USER appuser
+
+
+ENV \
+    PIPENV_VENV_IN_PROJECT=1 \
+    # https://github.com/pypa/pipenv/issues/4027
+    PIPENV_QUIET=1 \
+    # a volume will be mounted on container start to provide the required content
+    PYTHONPATH=/usr/src/app/transfer/in/python_helpers/ \
+    TRANSFER_OUT_DIR=/usr/src/app/transfer/out
+
+COPY --chown=appuser content/pipenv_environments/ pipenv_environments/
 
 # build all pipenv environments
 RUN \
@@ -15,10 +31,7 @@ RUN \
     ;do \
         cd "$i" \
         && pipenv sync \
-        # link python_helpers from WORKDIR
-        && echo PYTHONPATH=/usr/src/app/python_helpers/ > .env \
         && cd - \
     ;done
 
-COPY content/merge_into_pipenv_environments/ pipenv_environments/
-COPY content/python_helpers/ python_helpers/
+COPY --chown=appuser content/merge_into_pipenv_environments/ pipenv_environments/

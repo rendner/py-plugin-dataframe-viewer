@@ -1,4 +1,4 @@
-#  Copyright 2022 cms.rendner (Daniel Schmidt)
+#  Copyright 2023 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ class TableStructure:
     column_levels_count: int
     hide_row_header: bool
     hide_column_header: bool
+    fingerprint: str
 
 
 @dataclass(frozen=True)
@@ -53,8 +54,9 @@ class StyleFunctionDetails:
 
 
 class PatchedStyler:
-    def __init__(self, context: PatchedStylerContext):
+    def __init__(self, context: PatchedStylerContext, fingerprint: str):
         self.__context: PatchedStylerContext = context
+        self.__fingerprint: str = fingerprint
 
     def internal_get_context(self) -> PatchedStylerContext:
         return self.__context
@@ -117,7 +119,8 @@ class PatchedStyler:
             row_levels_count=visible_frame.index.nlevels - styler.hide_index_.count(True),
             column_levels_count=visible_frame.columns.nlevels - styler.hide_columns_.count(True),
             hide_row_header=all(styler.hide_index_),
-            hide_column_header=all(styler.hide_columns_)
+            hide_column_header=all(styler.hide_columns_),
+            fingerprint=self.__fingerprint
         )
 
     def get_style_function_details(self) -> List[StyleFunctionDetails]:

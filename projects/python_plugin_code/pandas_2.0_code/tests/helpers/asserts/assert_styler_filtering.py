@@ -19,8 +19,7 @@ from pandas.io.formats.style import Styler
 
 from plugin_code.html_props_table_builder import HTMLPropsTable, HTMLPropsTableRowElement
 from plugin_code.patched_styler import PatchedStyler
-from plugin_code.patched_styler_context import Region, FilterCriteria
-from plugin_code.styled_data_frame_viewer_bridge import StyledDataFrameViewerBridge
+from plugin_code.patched_styler_context import Region, PatchedStylerContext, FilterCriteria
 
 """
 Q: How can we test that a styled chunk is correctly filtered?
@@ -53,13 +52,13 @@ def create_and_assert_patched_styler_filtering(
     # create: expected styled
     styler = df.style
     init_styler_func(styler)
-    patched_styler = StyledDataFrameViewerBridge.create_patched_styler(styler)
+    patched_styler = PatchedStyler(PatchedStylerContext(styler), "")
     styled_table = patched_styler.internal_compute_unpatched_html_props_table()
     expected_styled_dict = _map_cell_elements_by_unique_display_value(styled_table, True)
 
     # create: expected filtered
     filtered_styler = df.filter(items=filter_keep_items, axis=filter_axis).style
-    filtered_patched_styler = StyledDataFrameViewerBridge.create_patched_styler(filtered_styler)
+    filtered_patched_styler = PatchedStyler(PatchedStylerContext(filtered_styler), "")
     expected_filtered_dict = _map_cell_elements_by_unique_display_value(
         filtered_patched_styler.internal_compute_unpatched_html_props_table(),
     )
@@ -67,8 +66,13 @@ def create_and_assert_patched_styler_filtering(
     # create: actual styled and filtered
     chunk_styler = df.style
     init_styler_func(chunk_styler)
-    filter_criteria = FilterCriteria.from_frame(df.filter(items=filter_keep_items, axis=filter_axis))
-    patched_chunk_styler = StyledDataFrameViewerBridge.create_patched_styler(chunk_styler, filter_criteria)
+    patched_chunk_styler = PatchedStyler(
+        PatchedStylerContext(
+            chunk_styler,
+            FilterCriteria.from_frame(df.filter(items=filter_keep_items, axis=filter_axis)),
+        ),
+        "",
+    )
     actual_dict = _map_cell_elements_by_unique_display_value(
         _build_combined_chunk_table(
             patched_chunk_styler=patched_chunk_styler,

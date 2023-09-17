@@ -1,4 +1,4 @@
-#  Copyright 2022 cms.rendner (Daniel Schmidt)
+#  Copyright 2023 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ COPY_MARKER = "# == copy after here =="
 def generate_plugin_code():
     # the order of the files matters (Python does not allow calling of a function/class before declaring it)
     file_names = [
+        'create_fingerprint.py',
         'custom_json_encoder.py',
         'styler_todo.py',
         'style_function_name_resolver.py',

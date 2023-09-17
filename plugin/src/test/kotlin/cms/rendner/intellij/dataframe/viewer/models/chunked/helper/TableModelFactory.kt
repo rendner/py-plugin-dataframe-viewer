@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,11 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
 
     fun createModel(
         tableStructure: TableStructure,
-        dataSourceFingerprint: String,
         frameColumnOrgIndexList: List<Int>? = null): RecordingModel {
         val loader = RecordingLoader()
         val model = ChunkedDataFrameModel(
             tableStructure,
             frameColumnOrgIndexList ?: List(tableStructure.columnsCount) { it },
-            dataSourceFingerprint,
             loader,
             chunkSize,
         )
@@ -39,8 +37,6 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
     }
 
     fun createTableStructure(
-        hideRowHeader: Boolean = false,
-        hideColumnHeader: Boolean = false,
         rowCount: Int = chunkSize.rows * 4,
         columnCount: Int = chunkSize.columns * 4,
     ): TableStructure {
@@ -51,8 +47,9 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
             columnCount,
             1,
             1,
-            hideRowHeader,
-            hideColumnHeader,
+            hideRowHeader = false,
+            hideColumnHeader = false,
+            fingerprint = "",
         )
     }
 

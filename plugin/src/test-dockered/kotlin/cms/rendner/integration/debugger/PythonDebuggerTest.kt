@@ -33,37 +33,37 @@ import org.junit.jupiter.api.Test
 internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
-    fun shouldFailIfLinebreakIsInSingleLineString() {
-        runPythonDebugger { valueEvaluator, _ ->
+    fun shouldFailWithASyntaxErrorIfLinebreakIsInSingleLineString() {
+        createPythonDebugger { debuggerApi ->
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                valueEvaluator.execute("multi = 'line_1\nline_2'")
-            }.withMessageContaining("{SyntaxError} EOL while scanning string literal")
+                debuggerApi.evaluator.execute("multi = 'line_1\nline_2'")
+            }.withMessageStartingWith("{SyntaxError}")
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                valueEvaluator.evaluate("'line_1\nline_2'")
-            }.withMessageContaining("{SyntaxError} EOL while scanning string literal")
+                debuggerApi.evaluator.evaluate("'line_1\nline_2'")
+            }.withMessageStartingWith("{SyntaxError}")
         }
     }
 
     @Test
     fun shouldNotFailIfLinebreakIsInTripleQuotes() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            valueEvaluator.execute("multi = '''line_1\nline_2'''")
-            val multi = valueEvaluator.evaluate("multi")
+            debuggerApi.evaluator.execute("multi = '''line_1\nline_2'''")
+            val multi = debuggerApi.evaluator.evaluate("multi")
             assertThat(multi.value).isEqualTo("line_1\nline_2")
 
-            val multi2 = valueEvaluator.evaluate("'''line_1\nline_2'''")
+            val multi2 = debuggerApi.evaluator.evaluate("'''line_1\nline_2'''")
             assertThat(multi2.value).isEqualTo("line_1\nline_2")
         }
     }
 
     @Test
     fun shouldEvaluateExpression() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            val result = valueEvaluator.evaluate("1 + 2")
+            val result = debuggerApi.evaluator.evaluate("1 + 2")
 
             assertThat(result.value).isEqualTo("3")
         }
@@ -71,19 +71,19 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
     fun shouldFailOnInvalidCodeForEval() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                valueEvaluator.evaluate("abc(42)")
+                debuggerApi.evaluator.evaluate("abc(42)")
             }.withMessageContaining("{NameError} name 'abc' is not defined")
         }
     }
 
     @Test
     fun shouldHaveCorrectTypeInformation() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            val result = valueEvaluator.evaluate("{}")
+            val result = debuggerApi.evaluator.evaluate("{}")
 
             assertThat(result.type).isEqualTo("dict")
             assertThat(result.typeQualifier).isEqualTo("builtins")
@@ -92,9 +92,9 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
     fun shouldHaveCorrectTypeInformationWhenValueIsMultilineString() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            valueEvaluator.execute(
+            debuggerApi.evaluator.execute(
                 """
                 from pandas import DataFrame
                 df = DataFrame.from_dict({
@@ -103,7 +103,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
                 })
                 """.trimIndent()
             )
-            val result = valueEvaluator.evaluate("df")
+            val result = debuggerApi.evaluator.evaluate("df")
 
             assertThat(result.value).isEqualTo(
                 """
@@ -118,9 +118,9 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
     fun shouldAllowToExecuteCode() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
             assertThatNoException().isThrownBy {
-                valueEvaluator.execute(
+                debuggerApi.evaluator.execute(
                     """
                     from urllib.parse import urlparse
             
@@ -133,46 +133,46 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
     fun shouldFailOnInvalidCodeForExec() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                valueEvaluator.execute("import")
+                debuggerApi.evaluator.execute("import")
             }.withMessageContaining("{SyntaxError} invalid syntax")
         }
     }
 
     @Test
     fun shouldBeAbleToAccessPreviousEvaluatedValues() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            valueEvaluator.execute("d = {'a': 10}")
+            debuggerApi.evaluator.execute("d = {'a': 10}")
 
-            assertThat(valueEvaluator.evaluate("d['a']").value).isEqualTo("10")
+            assertThat(debuggerApi.evaluator.evaluate("d['a']").value).isEqualTo("10")
         }
     }
 
     @Test
     fun shouldBeAbleToReferToPreviousEvaluatedValues() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            val dict = valueEvaluator.evaluate("{'a': 10}")
+            val dict = debuggerApi.evaluator.evaluate("{'a': 10}")
 
-            assertThat(valueEvaluator.evaluate("${dict.refExpr}['a']").value).isEqualTo("10")
+            assertThat(debuggerApi.evaluator.evaluate("${dict.refExpr}['a']").value).isEqualTo("10")
         }
     }
 
     @Test
     fun shouldEvaluateValuesFromExecutedCode() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            valueEvaluator.execute(
+            debuggerApi.evaluator.execute(
                 """
                 from urllib.parse import urlparse
             
                 o = urlparse('http://test.123')
                 """.trimIndent()
             )
-            val result = valueEvaluator.evaluate("o.scheme")
+            val result = debuggerApi.evaluator.evaluate("o.scheme")
 
             assertThat(result.value).isEqualTo("http")
             assertThat(result.type).isEqualTo("str")
@@ -182,27 +182,27 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
     fun shouldDeleteEvaluatedResult() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            val dict = valueEvaluator.evaluate("{'a': 12}")
+            val dict = debuggerApi.evaluator.evaluate("{'a': 12}")
 
-            valueEvaluator.execute("del ${dict.refExpr}")
+            debuggerApi.evaluator.execute("del ${dict.refExpr}")
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                valueEvaluator.evaluate("${dict.refExpr}['a']")
+                debuggerApi.evaluator.evaluate("${dict.refExpr}['a']")
             }.withMessageContaining("{NameError} name '${dict.refExpr}' is not defined")
         }
     }
 
     @Test
     fun shouldAllowToReferenceEvalExecObjects() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            val evalDict = valueEvaluator.evaluate("{'a': 12}")
+            val evalDict = debuggerApi.evaluator.evaluate("{'a': 12}")
 
-            valueEvaluator.execute("exec_dict = {'a': ${evalDict.refExpr}['a'] + 1}")
+            debuggerApi.evaluator.execute("exec_dict = {'a': ${evalDict.refExpr}['a'] + 1}")
 
-            val execDict = valueEvaluator.evaluate("exec_dict['a']")
+            val execDict = debuggerApi.evaluator.evaluate("exec_dict['a']")
 
             assertThat(execDict.value).isEqualTo("13")
         }
@@ -210,11 +210,11 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
     fun shouldReturnIdentifierAsRefExprWhenEvaluatingAnIdentifier() {
-        runPythonDebugger { valueEvaluator, _ ->
+        createPythonDebugger { debuggerApi ->
 
-            valueEvaluator.execute("a = []")
+            debuggerApi.evaluator.execute("a = []")
 
-            val result = valueEvaluator.evaluate("a")
+            val result = debuggerApi.evaluator.evaluate("a")
 
             assertThat(result.refExpr).isEqualTo("a")
         }
@@ -222,28 +222,28 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
     @Test
     fun shouldAllowToContinueFromABreakpoint() {
-        runPythonDebuggerWithCodeSnippet(
+        createPythonDebuggerWithCodeSnippet(
             """
             a = 2
             breakpoint()
             a = 5
             breakpoint()
             """.trimIndent()
-        ) { valueEvaluator, debugger ->
+        ) { debuggerApi ->
 
-            val result = valueEvaluator.evaluate("a")
+            val result = debuggerApi.evaluator.evaluate("a")
             assertThat(result.value).isEqualTo("2")
 
-            debugger.submitContinue().get()
+            debuggerApi.continueFromBreakpoint()
 
-            val result2 = valueEvaluator.evaluate("a")
+            val result2 = debuggerApi.evaluator.evaluate("a")
             assertThat(result2.value).isEqualTo("5")
         }
     }
 
     @Test
     fun shouldWorkWithDifferentStackFrames() {
-        runPythonDebuggerWithCodeSnippet(
+        createPythonDebuggerWithCodeSnippet(
             """
             def my_func():
               a = 2
@@ -253,14 +253,14 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
             a = 5
             breakpoint()
             """.trimIndent()
-        ) { valueEvaluator, debugger ->
+        ) { debuggerApi ->
 
-            val result = valueEvaluator.evaluate("a")
+            val result = debuggerApi.evaluator.evaluate("a")
             assertThat(result.value).isEqualTo("2")
 
-            debugger.submitContinue().get()
+            debuggerApi.continueFromBreakpoint()
 
-            val result2 = valueEvaluator.evaluate("a")
+            val result2 = debuggerApi.evaluator.evaluate("a")
             assertThat(result2.value).isEqualTo("5")
         }
     }

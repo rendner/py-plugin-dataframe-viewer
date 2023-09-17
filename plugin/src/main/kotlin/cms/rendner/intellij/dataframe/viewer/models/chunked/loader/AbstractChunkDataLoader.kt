@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,16 +29,13 @@ import java.util.concurrent.Executor
  * The data is fetched by using an [IChunkEvaluator] and validated by an optional [ChunkValidator].
  *
  * Chunks of a specific area of a DataFrame can be requested by calling [loadChunk] and specifying the exact
- * location inside the DataFrame. Since, the underlying pandas DataFrame isn't thread safe, there should not be
- * more than one running request in parallel.
- *
- * See [pandas-docs - Thread-safety](https://pandas.pydata.org/pandas-docs/dev/user_guide/gotchas.html#thread-safety)
- * See [DataFrame.copy(), at least, should be threadsafe](https://github.com/pandas-dev/pandas/issues/2728)
+ * location inside the DataFrame. Chunks are always loaded one after the other to not block the Python side.
  *
  * Note:
  * Subclasses are responsible for:
  * - forwarding the results of a load request to the registered result handler ([setResultHandler])
  * - ensure that only one task, returned by [submitFetchChunkTask], is executed at a time
+ *      - starting more than one doesn't speed up the process because they run all in the same Python thread
  *
  * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
  * @param chunkValidator the validator to validate the generated HTML data for a chunk

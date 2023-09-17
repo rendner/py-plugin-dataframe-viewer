@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ internal class ChunkedDataFrameModelTest {
     private lateinit var model: TableModelFactory.RecordingModel
 
     private fun setup(tableStructure: TableStructure, frameColumnOrgIndexList: List<Int>? = null) {
-        model = tableModelFactory.createModel(tableStructure, "0", frameColumnOrgIndexList).apply {
+        model = tableModelFactory.createModel(tableStructure, frameColumnOrgIndexList).apply {
             enableDataFetching(true)
         }
     }
@@ -97,7 +97,7 @@ internal class ChunkedDataFrameModelTest {
 
     @Test
     fun doesNotFetchRowHeadersIfRowHeaderIsHidden() {
-        setup(tableModelFactory.createTableStructure(hideRowHeader = true))
+        setup(tableModelFactory.createTableStructure().copy(hideRowHeader = true))
 
         model.getValueDataModel().getValueAt(0, 0)
 
@@ -108,7 +108,7 @@ internal class ChunkedDataFrameModelTest {
 
     @Test
     fun doesNotFetchColumnHeadersIfColumnHeaderIsHidden() {
-        setup(tableModelFactory.createTableStructure(hideColumnHeader = true))
+        setup(tableModelFactory.createTableStructure().copy(hideColumnHeader = true))
 
         model.getValueDataModel().getValueAt(0, 0)
 
@@ -119,7 +119,7 @@ internal class ChunkedDataFrameModelTest {
 
     @Test
     fun doesNotFetchHeadersIfAllHeadersAreHidden() {
-        setup(tableModelFactory.createTableStructure(hideRowHeader = true, hideColumnHeader = true))
+        setup(tableModelFactory.createTableStructure().copy(hideRowHeader = true, hideColumnHeader = true))
 
         model.getValueDataModel().getValueAt(0, 0)
 
@@ -132,8 +132,6 @@ internal class ChunkedDataFrameModelTest {
     fun doesThrowIndexOutOfBoundsExceptionForInvalidIndices() {
         setup(
             tableModelFactory.createTableStructure(
-                hideRowHeader = false,
-                hideColumnHeader = false,
                 rowCount = 0,
                 columnCount = 0,
             )
@@ -203,7 +201,7 @@ internal class ChunkedDataFrameModelTest {
 
     @Test
     fun doesExcludeHeadersIfConfigured() {
-        val tableStructure = tableModelFactory.createTableStructure(hideRowHeader = true, hideColumnHeader = true)
+        val tableStructure = tableModelFactory.createTableStructure().copy(hideRowHeader = true, hideColumnHeader = true)
         setup(tableStructure)
 
         // fetch all values

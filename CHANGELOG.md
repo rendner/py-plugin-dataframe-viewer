@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.11.0
+- `Released`: tba
+- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
+- `Min Required IntelliJ Version`: 2021.3
+
+### Added
+#### Support For pandas 2.1
+All already supported `Styler` methods as well as sorting and filtering are now also usable with pandas 2.1.
+
+#### Display Python dicts as DataFrame
+If pandas is installed, Python dictionaries can be displayed as a pandas DataFrame that can be sorted and filtered.
+
+Select a Python dictionary in the debugger variable view, open the context menu and select `View as Styled DataFrame`.
+You can display the `Keys as Columns` (default behavior) or `Keys as Rows`. If the dictionary contains the keys
+`index`, `columns`, `data`, `index_names` and `column_names` it is displayed with `orient='tight'`.
+
+This new feature is available for all supported pandas versions.
+A detailed description about the behavior can be found in the pandas-docs [DataFrame.from_dict](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.from_dict.html#pandas-dataframe-from-dict).
+
+### Fixed
+- plugin fails with Python 3.10
+- filter input: in some cases attribute references couldn't be resolved
+
 ## v0.10.0
 - `Released`: 2023-03-01
 - `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x (tested with 2.0.0rc0)

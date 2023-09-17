@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 package cms.rendner.debugger
 
 import cms.rendner.TestSystemPropertyKey
-import cms.rendner.debugger.impl.DockeredPythonEvalDebugger
-import cms.rendner.debugger.impl.EvaluateRequest
-import cms.rendner.debugger.impl.EvaluateResponse
-import cms.rendner.debugger.impl.PythonEvalDebugger
+import cms.rendner.debugger.impl.*
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.extension.AfterTestExecutionCallback
+import org.junit.jupiter.api.extension.RegisterExtension
+import java.time.LocalDateTime
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -32,16 +32,23 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Abstract class which provides access to a dockered Python interpreter with a pre-configured
- * pip-env environment.
+ * pipenv environment.
  *
  * The docker image to use, has to be specified via the system properties
  * [TestSystemPropertyKey.DOCKER_IMAGE] and [TestSystemPropertyKey.DOCKER_WORKDIR].
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal abstract class AbstractPipEnvEnvironmentTest {
-    private val executorService: ExecutorService = Executors.newSingleThreadExecutor()
-    private var debuggerStarted = false
-    private val debugger = DockeredPythonEvalDebugger(
+    private var executorService: ExecutorService? = null
+    private var debugger: PythonDebugger? = null
+
+    companion object {
+        fun getPipEnvEnvironmentName(): String {
+            return System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR, "?").substringAfterLast("/")
+        }
+    }
+
+    private val pipEnvEnvironment = DockeredPipEnvEnvironment(
         System.getProperty(TestSystemPropertyKey.DOCKER_IMAGE),
         System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR),
         System.getProperty(TestSystemPropertyKey.DOCKER_VOLUMES)?.let { if (it.isEmpty()) null else it.split(";") },
@@ -49,59 +56,83 @@ internal abstract class AbstractPipEnvEnvironmentTest {
 
     @BeforeAll
     protected fun initializeDebuggerContainer() {
-        debugger.startContainer()
+        pipEnvEnvironment.runContainer()
+        afterContainerStart()
     }
+
+    protected open fun afterContainerStart() {}
 
     @AfterAll
     protected fun destroyDebuggerContainer() {
-        debugger.destroyContainer()
-        executorService.shutdown()
-        executorService.awaitTermination(5, TimeUnit.SECONDS)
-    }
-
-    @BeforeEach
-    protected fun resetDebugger() {
-        debugger.reset()
+        pipEnvEnvironment.destroyContainer()
     }
 
     @AfterEach
-    protected fun shutdownDebugger() {
-        debuggerStarted = false
-        debugger.shutdown()
+    protected fun afterEach() {
+        debugger?.quit()
+        debugger = null
+
+        executorService?.shutdownNow()
+        executorService?.awaitTermination(5, TimeUnit.SECONDS)
+        executorService = null
     }
 
-    protected open fun runPythonDebuggerWithCodeSnippet(
+    protected fun uninstallPythonModules(vararg modules: String) {
+        pipEnvEnvironment.uninstallPythonModules(*modules)
+    }
+
+    protected open fun createPythonDebuggerWithCodeSnippet(
         codeSnippet: String,
-        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
-    ) {
-        checkAndSetDebuggerStarted()
-        executorService.submit { debugger.startWithCodeSnippet(codeSnippet) }
-        block(MyValueEvaluator(debugger), debugger)
-    }
+        block: (debuggerApi: IPythonDebuggerApi) -> Unit,
+    ) = runWithDebugger(block) { pipEnvEnvironment.createPythonDebuggerWithCodeSnippet(codeSnippet) }
 
-    protected fun runPythonDebugger(
-        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
-    ) {
-        runPythonDebuggerWithCodeSnippet("breakpoint()", block)
-    }
-
-    protected open fun runPythonDebuggerWithSourceFile(
+    protected open fun createPythonDebuggerWithSourceFile(
         sourceFile: String,
-        block: (evaluator: IPluginPyValueEvaluator, debugger: PythonEvalDebugger) -> Unit,
-    ) {
-        checkAndSetDebuggerStarted()
-        executorService.submit { debugger.startWithSourceFile(sourceFile) }
-        block(MyValueEvaluator(debugger), debugger)
+        block: (debuggerApi: IPythonDebuggerApi) -> Unit,
+    ) = runWithDebugger(block) { pipEnvEnvironment.createPythonDebuggerWithSourceFile(sourceFile) }
+
+    protected fun createPythonDebugger(block: (debuggerApi: IPythonDebuggerApi) -> Unit) {
+        createPythonDebuggerWithCodeSnippet("breakpoint()", block)
     }
 
-    private fun checkAndSetDebuggerStarted() {
-        if (debuggerStarted) {
+    private fun runWithDebugger(
+        block: (debuggerApi: IPythonDebuggerApi) -> Unit,
+        createDebugger: () -> PythonDebugger,
+    ) {
+        if (debugger != null) {
             throw IllegalStateException("Only one debugger instance allowed per testcase.")
         }
-        debuggerStarted = true
+
+        debugger = createDebugger().also {
+            executorService = Executors.newSingleThreadExecutor().also { es ->
+                es.submit { it.start() }
+            }
+            block(MyDebuggerApi(it))
+        }
     }
 
-    private class MyValueEvaluator(private val pythonDebugger: PythonEvalDebugger) : IPluginPyValueEvaluator {
+    @JvmField
+    @RegisterExtension
+    protected var dumpDebuggerTracesOnTestFailure = AfterTestExecutionCallback { context ->
+        if (context.executionException.isPresent) {
+            val testCaseName = context.let {
+                "${it.testClass.get().simpleName}::${it.testMethod.get().name}"
+            }
+            val filePath = "debugger_traces/${getPipEnvEnvironmentName()}/${LocalDateTime.now()}-$testCaseName.traces"
+            debugger?.dumpTracesOnExit(filePath)
+        }
+    }
+
+    private class MyDebuggerApi(private val pythonDebugger: PythonDebugger): IPythonDebuggerApi {
+        override val evaluator = MyValueEvaluator(pythonDebugger)
+
+        override fun continueFromBreakpoint() {
+            pythonDebugger.continueFromBreakpoint()
+        }
+    }
+
+
+    private class MyValueEvaluator(private val pythonDebugger: PythonDebugger) : IPluginPyValueEvaluator {
         override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
             return try {
                 evalOrExec(expression, execute = false, doTrunc = trimResult, EvaluateException.EVAL_FALLBACK_ERROR_MSG)
@@ -121,7 +152,7 @@ internal abstract class AbstractPipEnvEnvironmentTest {
         fun evalOrExec(code: String, execute: Boolean, doTrunc: Boolean, fallbackErrorMessage: String): PluginPyValue {
             return try {
                 createPluginPyValue(
-                    pythonDebugger.submit(EvaluateRequest(code, execute, doTrunc)).get(),
+                    pythonDebugger.evalOrExec(EvalOrExecRequest(code, execute, doTrunc)),
                     fallbackErrorMessage,
                 )
             } catch (ex: ExecutionException) {
@@ -129,7 +160,7 @@ internal abstract class AbstractPipEnvEnvironmentTest {
             }
         }
 
-        private fun createPluginPyValue(response: EvaluateResponse, fallbackErrorMessage: String): PluginPyValue {
+        private fun createPluginPyValue(response: EvalOrExecResponse, fallbackErrorMessage: String): PluginPyValue {
             if (response.isError) {
                 val msg = if (response.value == null) fallbackErrorMessage else "{${response.type}} ${response.value}"
                 throw EvaluateException(msg)

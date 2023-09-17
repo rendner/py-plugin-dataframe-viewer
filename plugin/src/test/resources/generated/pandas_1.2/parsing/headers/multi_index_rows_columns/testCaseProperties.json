@@ -9,6 +9,7 @@
         "row_levels_count": 2,
         "column_levels_count": 2,
         "hide_row_header": false,
-        "hide_column_header": false
+        "hide_column_header": false,
+        "fingerprint": ""
     }
 }

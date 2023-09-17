@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,81 +16,75 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.SystemPropertyKey
+import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
+import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.exporter.ExportTask
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.project.Project
 import com.intellij.xdebugger.XDebuggerUtil
 import com.jetbrains.python.debugger.PyDebugValue
 import java.nio.file.Paths
+
 
 /**
  * Helper action, used to dump test data from the "html_from_styler" Python projects via the PyCharm debugger.
  */
 class ExportDataFrameTestDataAction : AnAction(), DumbAware {
 
-    private val exportDir = System.getProperty(SystemPropertyKey.EXPORT_TEST_DATA_DIR)?.let { Paths.get(it) }
+    private val rootExportDir = System.getProperty(SystemPropertyKey.EXPORT_TEST_DATA_DIR)?.let { Paths.get(it) }
     private var isEnabled = System.getProperty(SystemPropertyKey.ENABLE_TEST_DATA_EXPORT_ACTION, "false") == "true"
 
     override fun update(event: AnActionEvent) {
         super.update(event)
         event.presentation.isEnabled = isEnabled
-        event.presentation.isVisible = exportDir != null && event.project != null && getExportDataValue(event) != null
+        event.presentation.isVisible = rootExportDir != null && event.project != null && getExportDataValue(event) != null
     }
 
     override fun actionPerformed(event: AnActionEvent) {
-        if (exportDir == null) return
+        if (rootExportDir == null) return
         val project = event.project ?: return
-        if (project.isDisposed) return
         val exportDataValue = getExportDataValue(event) ?: return
+
         isEnabled = false
+        val pluginValue = exportDataValue.toPluginType()
         ProgressManager.getInstance().run(
-            MyExportTask(
-                project,
-                ExportTask(exportDir, exportDataValue.toPluginType()),
-            ) {
-                ApplicationManager.getApplication().invokeLater {
+            object: Task.Backgroundable(project, "Exporting test data", true) {
+                override fun run(indicator: ProgressIndicator) {
+                    PythonPluginCodeInjector.injectIfRequired(pluginValue.evaluator)
+                    ExportTask(rootExportDir, pluginValue).run()
+                }
+
+                override fun onFinished() {
+                    println("export done")
                     isEnabled = true
                 }
-            })
+
+                override fun onThrowable(error: Throwable) {
+                    println("export failed")
+                    ErrorNotification("Exception during export", error.localizedMessage, error).notify(project)
+                }
+
+                override fun onCancel() {
+                    println("export canceled")
+                }
+            }
+        )
     }
 
     private fun getExportDataValue(e: AnActionEvent): PyDebugValue? {
         XDebuggerUtil.getInstance().getValueContainer(e.dataContext)?.let {
             if (it is PyDebugValue) {
-                if (it.qualifiedType == PythonQualifiedTypes.Dict && it.name == "export_test_data") {
+                if (it.qualifiedType == PythonQualifiedTypes.List && it.name == "export_test_data") {
                     return it
                 }
             }
         }
         return null
-    }
-
-    private class MyExportTask(
-        project: Project,
-        private val exportTask: ExportTask,
-        private val onFinally: () -> Unit
-    ) : Task.Backgroundable(project, "Exporting test cases", true) {
-        override fun run(indicator: ProgressIndicator) {
-            var failed = false
-            try {
-                exportTask.run()
-            } catch (ex: Exception) {
-                failed = true
-                if (ex is InterruptedException) {
-                    Thread.currentThread().interrupt()
-                }
-            } finally {
-                println("export ${if (failed) "failed" else "done"}")
-                onFinally()
-            }
-        }
     }
 }

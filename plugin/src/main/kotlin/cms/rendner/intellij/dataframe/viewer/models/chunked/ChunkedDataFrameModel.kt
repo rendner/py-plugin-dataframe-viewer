@@ -33,14 +33,12 @@ import javax.swing.table.AbstractTableModel
  *
  * @param tableStructure describes the structure of the model.
  * @param frameColumnOrgIndexList indices of the visible columns in the unfiltered DataFrame.
- * @param dataSourceFingerprint fingerprint of the data source.
  * @param chunkDataLoader used for lazy data loading.
  * @param chunkSize size of the chunks to load.
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
     private val frameColumnOrgIndexList: List<Int>,
-    private val dataSourceFingerprint: String,
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
 ) : IDataFrameModel, IChunkDataResultHandler {
@@ -164,7 +162,7 @@ class ChunkedDataFrameModel(
         return myIndexModel
     }
 
-    override fun getDataSourceFingerprint() = dataSourceFingerprint
+    override fun getDataSourceFingerprint() = tableStructure.fingerprint
 
     private fun enableDataFetching(enabled: Boolean) {
         myDataFetchingEnabled = enabled

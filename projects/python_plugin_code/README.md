@@ -11,7 +11,8 @@ All projects are set up via [pipenv](https://pypi.org/project/pipenv/) and use t
 | pandas    | min required Python version |
 |:----------|:---------------------------:|
 | 1.1 - 1.3 |             3.7             |
-| >= 1.4    |             3.8             |
+| 1.4 - 2.0 |             3.8             |
+| >= 2.1    |             3.9             |
 
 
 It is important to use the specified minimum required version to guarantee that the plugin code is also compatible with the specified Python version.
@@ -121,7 +122,6 @@ Short overview about the public methods of the class:
 
 | Method                | used by the plugin | purpose                                     |
 |:----------------------|:------------------:|:--------------------------------------------|
-| create_fingerprint    |         X          | To create a fingerprint from a `DataFrame`. |
 | create_patched_styler |         X          | To create a `PatchedStyler` instance.       |
 
 ### Directory: test

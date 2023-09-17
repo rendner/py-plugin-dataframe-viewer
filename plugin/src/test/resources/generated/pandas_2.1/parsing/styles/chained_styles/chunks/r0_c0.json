@@ -1,0 +1,283 @@
+{
+    "head": [
+        [
+            {
+                "type": "th",
+                "kind": "blank",
+                "display_value": "&nbsp;",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "0",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "1",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "2",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "3",
+                "css_props": null
+            },
+            {
+                "type": "th",
+                "kind": "col_heading",
+                "display_value": "4",
+                "css_props": null
+            }
+        ]
+    ],
+    "body": [
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "0",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.180065",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.065147",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.295056",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.381788",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "1.172496",
+                "css_props": {
+                    "background-color": "red"
+                }
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "1",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.308297",
+                "css_props": {
+                    "background-color": "#fff7fb",
+                    "color": "#000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-3.010104",
+                "css_props": {
+                    "background-color": "yellow",
+                    "color": "#000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.158011",
+                "css_props": {
+                    "background-color": "#fff7fb",
+                    "color": "#000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.702008",
+                "css_props": {
+                    "background-color": "red",
+                    "color": "#f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "0.538013",
+                "css_props": {
+                    "background-color": "#023858",
+                    "color": "#f1f1f1"
+                }
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "2",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+1.10",
+                "css_props": {
+                    "background-color": "#023858",
+                    "color": "#f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.79",
+                "css_props": {
+                    "background-color": "#023858",
+                    "color": "#f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.16",
+                "css_props": {
+                    "background-color": "#c4cbe3",
+                    "color": "#000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.36",
+                "css_props": {
+                    "background-color": "#a1bbda",
+                    "color": "#000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.63",
+                "css_props": {
+                    "background-color": "#fff7fb",
+                    "color": "#000000"
+                }
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "3",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.08",
+                "css_props": {
+                    "background-color": "#e3e0ee",
+                    "color": "#000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.52",
+                "css_props": {
+                    "background-color": "#034a74",
+                    "color": "#f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.94",
+                "css_props": {
+                    "background-color": "#023858",
+                    "color": "#f1f1f1"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.14",
+                "css_props": {
+                    "background-color": "#fff7fb",
+                    "color": "#000000"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.59",
+                "css_props": {
+                    "background-color": "#faf3f9",
+                    "color": "#000000"
+                }
+            }
+        ],
+        [
+            {
+                "type": "th",
+                "kind": "row_heading",
+                "display_value": "4",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+1.84",
+                "css_props": {
+                    "background-color": "red"
+                }
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.26",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.12",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "-0.79",
+                "css_props": null
+            },
+            {
+                "type": "td",
+                "kind": "",
+                "display_value": "+0.33",
+                "css_props": null
+            }
+        ]
+    ]
+}

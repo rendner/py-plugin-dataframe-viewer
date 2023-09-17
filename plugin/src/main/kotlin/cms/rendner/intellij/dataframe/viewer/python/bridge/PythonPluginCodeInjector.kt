@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,6 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.Evaluate
 /**
  * Injects the Python-specific plugin code into the Python process.
  * The injected code is available until the Python process is terminated.
- *
- * There is no protection to ensure that code is injected only once into a Python process
- * when multiple threads attempt to inject the code. (should be OK for our use case)
  */
 class PythonPluginCodeInjector {
 
@@ -51,30 +48,22 @@ class PythonPluginCodeInjector {
                 evaluator.evaluate("__import__('importlib').util.find_spec('$PLUGIN_MODULE_NAME') is not None").forcedValue
             if (doesExist == "True") return
 
-            val version = try {
+            val pandasVersion = try {
                 PandasVersion.fromString(evaluator.evaluate("__import__('pandas').__version__").forcedValue)
             } catch (ex: EvaluateException) {
                 throw InjectException("Failed to identify version of pandas.", ex)
             }
 
-            val codeResourcePath = getPluginCodeResourcePath(version)
+            val codeResourcePath = getPluginCodeResourcePath(pandasVersion)
             val pluginCode = try {
                 PythonPluginCodeInjector::class.java.getResource(codeResourcePath)!!.readText()
             } catch (ex: Throwable) {
-                throw InjectException("Failed to read Python plugin code for $version.", ex)
+                throw InjectException("Failed to read Python plugin code for $pandasVersion.", ex)
             }
 
             /*
             Some Notes:
 
-            1)
-            The methods of the created MyPluginCodeImporter-instance are called sometime later.
-            Therefore, it is important to define all required imports in the methods themselves, otherwise they are
-            no longer available if they are defined at the top of the Python code snippet.
-
-            Imports via __import__(...) are not visible in the PyCharm debugger afterwards.
-
-            2)
             Linebreak-chars in strings passed to "exec" have to be escaped.
 
             Examples:
@@ -92,22 +81,30 @@ class PythonPluginCodeInjector {
              */
             try {
                 evaluator.execute("""
-                |class MyPluginCodeImporter(__import__('importlib').abc.MetaPathFinder, __import__('importlib').abc.Loader):
-                |   def find_spec(self, fullname, path=None, target=None):
-                |       if fullname == "$PLUGIN_MODULE_NAME":
-                |           return __import__('importlib').util.spec_from_loader(fullname, self)
-                |       return None
+                |def sdfv_plugin_code_injector():
+                |   from importlib import abc
+                |   import sys
                 |
-                |   def exec_module(self, module) -> None:
-                |       exec('''${pluginCodeEscaper(pluginCode)}''', module.__dict__)
+                |   class MyPluginCodeImporter(abc.MetaPathFinder, abc.Loader):
+                |       def find_spec(self, fullname, path=None, target=None):
+                |           if fullname == "$PLUGIN_MODULE_NAME":
+                |               from importlib import util
+                |               return util.spec_from_loader(fullname, self)
+                |           return None
                 |
-                |__import__('sys').meta_path.append(MyPluginCodeImporter())
-                |# cleanup to hide the class after use
-                |del MyPluginCodeImporter
+                |       def exec_module(self, module) -> None:
+                |           exec('''${pluginCodeEscaper(pluginCode)}''', module.__dict__)
+                |
+                |   sys.meta_path.append(MyPluginCodeImporter())
+                |
+                |try:
+                |   sdfv_plugin_code_injector()
+                |finally:
+                |   del sdfv_plugin_code_injector
                 """.trimMargin()
                 )
             } catch (ex: EvaluateException) {
-                throw InjectException("Failed to inject Python plugin code for $version.", ex)
+                throw InjectException("Failed to inject Python plugin code for $pandasVersion.", ex)
             }
         }
 
@@ -123,7 +120,7 @@ class PythonPluginCodeInjector {
                     return "/pandas_1.${version.minor}/plugin_code"
                 }
             } else if (version.major == 2) {
-                if (version.minor in 0..0) {
+                if (version.minor in 0..1) {
                     return "/pandas_2.${version.minor}/plugin_code"
                 }
             }

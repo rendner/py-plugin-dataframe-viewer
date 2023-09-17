@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "cms.rendner.intellij"
-version = "0.10.0"
+version = "0.11.0"
 
 repositories {
     mavenCentral()
@@ -62,10 +62,26 @@ idea {
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
 
-    data class PythonDockerImage(val path: String, val pythonVersion: String, val pipenvEnvironments: List<String>) {
+    val supportedPandasVersions = listOf("1.1", "1.2", "1.3", "1.4", "1.5", "2.0", "2.1")
+
+    data class PythonDockerImage(
+        val path: String,
+        val pythonVersion: String,
+        val pipenvEnvironments: List<String>,
+        val envsAreHtmlFromStylerProjects: Boolean,
+        ) {
+        private val workdir = "/usr/src/app"
         val dockerImageName = "sdfv-plugin-dockered-python_$pythonVersion"
         val contentPath = "$path/content/"
-        fun getWorkdir(pipenvEnvironment: String) = "/usr/src/app/pipenv_environments/$pipenvEnvironment"
+        fun getTransferDirMappings(hostTransferPath: String) = arrayOf(
+            "$hostTransferPath/in:${workdir}/transfer/in:ro",
+            "$hostTransferPath/out:${workdir}/transfer/out",
+        )
+        fun getEnvironmentDir(pipenvEnvironment: String) = "${workdir}/pipenv_environments/$pipenvEnvironment"
+        fun getBuildArgs(): Array<String> {
+            return if (envsAreHtmlFromStylerProjects) emptyArray()
+            else arrayOf("--build-arg", "pipenv_environment=${pipenvEnvironments.first()}")
+        }
     }
 
     val pythonDockerBaseDir = "$projectDir/dockered-python"
@@ -73,14 +89,34 @@ tasks {
         // order of python versions: latest to oldest
         // order of pipenv environments: latest to oldest
         PythonDockerImage(
+            "$pythonDockerBaseDir/python_3.11",
+            "3.11",
+            listOf("python_3.11"),
+            false,
+        ),
+        PythonDockerImage(
+            "$pythonDockerBaseDir/python_3.10",
+            "3.10",
+            listOf("python_3.10"),
+            false,
+        ),
+        PythonDockerImage(
+            "$pythonDockerBaseDir/python_3.9",
+            "3.9",
+            listOf("pandas_2.1"),
+            true,
+        ),
+        PythonDockerImage(
             "$pythonDockerBaseDir/python_3.8",
             "3.8",
             listOf("pandas_2.0", "pandas_1.5", "pandas_1.4"),
+            true,
         ),
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.7",
             "3.7",
             listOf("pandas_1.3", "pandas_1.2", "pandas_1.1"),
+            true,
         ),
     )
     val exportTestDataPath = "$projectDir/src/test/resources/generated/"
@@ -101,44 +137,40 @@ tasks {
             doLast {
                 delete(entry.contentPath)
 
-                entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
-                    val pythonSourceProjectPath = "../projects/html_from_styler/${pipEnvEnvironment}_styler"
+                if (entry.envsAreHtmlFromStylerProjects) {
+                    entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
+                        val pythonSourceProjectPath = "../projects/html_from_styler/${pipEnvEnvironment}_styler"
 
-                    val pipFile = project.file("$pythonSourceProjectPath/Pipfile")
-                    val pipFileLock = project.file("$pythonSourceProjectPath/Pipfile.lock")
-                    if (pipFile.exists() && pipFileLock.exists()) {
-                        copy {
-                            from(pipFile, pipFileLock)
-                            into("${entry.contentPath}/pipenv_environments/$pipEnvEnvironment/")
+                        val pipFile = project.file("$pythonSourceProjectPath/Pipfile")
+                        val pipFileLock = project.file("$pythonSourceProjectPath/Pipfile.lock")
+                        if (pipFile.exists() && pipFileLock.exists()) {
+                            copy {
+                                from(pipFile, pipFileLock)
+                                into("${entry.contentPath}/pipenv_environments/$pipEnvEnvironment/")
+                            }
+                        } else {
+                            throw GradleException("Incomplete Pipfiles for environment: $pipEnvEnvironment")
                         }
-                    } else {
-                        throw GradleException("Incomplete Pipfiles for environment: $pipEnvEnvironment")
-                    }
 
-                    val exportData = project.file("$pythonSourceProjectPath/export_data")
-                    if (exportData.exists() && exportData.isDirectory) {
-                        // The additional content of the pipenv environments (like Python source code, etc.)
-                        // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
-                        // the pipenv environments are re-build whenever a source file has changed.
-                        copy {
-                            from(exportData)
-                            into("${entry.contentPath}/merge_into_pipenv_environments/$pipEnvEnvironment/export_data")
+                        val exportData = project.file("$pythonSourceProjectPath/export_data")
+                        if (exportData.exists() && exportData.isDirectory) {
+                            // The additional content of the pipenv environments (like Python source code, etc.)
+                            // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
+                            // the pipenv environments are re-build whenever a source file has changed.
+                            copy {
+                                from(exportData)
+                                into("${entry.contentPath}/merge_into_pipenv_environments/$pipEnvEnvironment/export_data")
+                            }
+                        } else {
+                            throw GradleException("No export-data found for environment: $pipEnvEnvironment")
                         }
-                    } else {
-                        throw GradleException("No export-data found for environment: $pipEnvEnvironment")
                     }
-                }
-
-                copy {
-                    from(testDockeredSourceSet.resources)
-                    include("**/debugger_helpers.py")
-                    into("${entry.contentPath}/")
                 }
 
                 exec {
                     workingDir = file(entry.path)
                     executable = "docker"
-                    args("build", ".", "-t", entry.dockerImageName)
+                    args("build", *entry.getBuildArgs(), ".", "-t", entry.dockerImageName)
                 }
             }
         }
@@ -147,7 +179,7 @@ tasks {
     register<DefaultTask>("buildPythonDockerImages") {
         description = "Builds all python docker images."
         group = "docker"
-        dependsOn(buildPythonDockerImagesTasks)
+        dependsOn(project.tasks.filter { it.name.startsWith("buildPythonDockerImage_") })
     }
 
     register<DefaultTask>("killAllPythonContainers") {
@@ -186,6 +218,7 @@ tasks {
             register<Test>("integrationTest_$pipEnvEnvironment") {
                 description = "Runs integration test on pipenv environment: $pipEnvEnvironment."
                 group = "verification"
+                outputs.upToDateWhen { false }
 
                 testClassesDirs = testDockeredSourceSet.output.classesDirs
                 classpath = testDockeredSourceSet.runtimeClasspath
@@ -196,13 +229,13 @@ tasks {
                 )
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.workdir",
-                    entry.getWorkdir(pipEnvEnvironment),
+                    entry.getEnvironmentDir(pipEnvEnvironment),
                 )
-                // To make files, for more complex test cases, available in the dockered python interpreter.
-                // Example - how to map a folder of files: "<host_dir>:<container_dir>:ro"
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.volumes",
-                    listOf<String>().joinToString(";"),
+                    listOf(
+                        *entry.getTransferDirMappings("$projectDir/src/test-dockered/transfer"),
+                    ).joinToString(";"),
                 )
                 useJUnitPlatform {
                     include("**/integration/**")
@@ -225,11 +258,12 @@ tasks {
     register<DefaultTask>("integrationTest_all") {
         description = "Runs all integrationTest tasks."
         group = "verification"
-        dependsOn(integrationTestTasks)
+        outputs.upToDateWhen { false }
+        dependsOn(project.tasks.filter { it.name.startsWith("integrationTest_") && it.name != this.name })
     }
 
     val generateTestDataTasks = mutableListOf<Task>()
-    pythonDockerImages.forEach { entry ->
+    pythonDockerImages.filter { it.envsAreHtmlFromStylerProjects }.forEach { entry ->
         entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
 
             val deleteTestData by register<DefaultTask>("deleteTestData_$pipEnvEnvironment") {
@@ -243,6 +277,7 @@ tasks {
             val exportTestData by register<Test>("exportTestData_$pipEnvEnvironment") {
                 testClassesDirs = testDockeredSourceSet.output.classesDirs
                 classpath = testDockeredSourceSet.runtimeClasspath
+                outputs.upToDateWhen { false }
 
                 systemProperty(
                     "cms.rendner.dataframe.viewer.export.test.data.dir",
@@ -254,7 +289,13 @@ tasks {
                 )
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.workdir",
-                    entry.getWorkdir(pipEnvEnvironment),
+                    entry.getEnvironmentDir(pipEnvEnvironment),
+                )
+                systemProperty(
+                    "cms.rendner.dataframe.viewer.docker.volumes",
+                    listOf(
+                        *entry.getTransferDirMappings("$projectDir/src/test-dockered/transfer"),
+                    ).joinToString(";"),
                 )
                 useJUnitPlatform {
                     include("**/export/**")
@@ -288,7 +329,7 @@ tasks {
     register<DefaultTask>("generateTestData_all") {
         description = "Runs all generate-test-data tasks."
         group = "generate"
-        dependsOn(generateTestDataTasks)
+        dependsOn(project.tasks.filter { it.name.startsWith("generateTestData_") && it.name != this.name })
     }
 
     test {
@@ -349,18 +390,16 @@ tasks {
         // - plugin crashes because the resources are not available
         doFirst {
             logger.lifecycle("copy 'plugin_code' files")
-            pythonDockerImages.forEach { entry ->
-                entry.pipenvEnvironments.forEach { pipenvEnvironment ->
-                    val pluginCode =
-                        project.file("../projects/python_plugin_code/${pipenvEnvironment}_code/generated/plugin_code")
-                    if (pluginCode.exists()) {
-                        copy {
-                            from(pluginCode)
-                            into(project.file("src/main/resources/$pipenvEnvironment"))
-                        }
-                    } else {
-                        throw GradleException("Missing file 'plugin_code' for version: $pipenvEnvironment")
+            supportedPandasVersions.forEach { majorMinor ->
+                val pluginCode =
+                    project.file("../projects/python_plugin_code/pandas_${majorMinor}_code/generated/plugin_code")
+                if (pluginCode.exists()) {
+                    copy {
+                        from(pluginCode)
+                        into(project.file("src/main/resources/pandas_$majorMinor"))
                     }
+                } else {
+                    throw GradleException("Missing file 'plugin_code' for pandas version: $majorMinor")
                 }
             }
         }
@@ -375,8 +414,7 @@ tasks {
 
     listProductsReleases {
         sinceVersion.set("2021.3")
-        //untilVersion.set("2022.3")
-        untilVersion.set("231.7515.12") // 2023.1 eap
+        untilVersion.set("2023.2.1")
     }
 }
 

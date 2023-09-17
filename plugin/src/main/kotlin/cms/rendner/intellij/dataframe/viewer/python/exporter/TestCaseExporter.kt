@@ -48,11 +48,11 @@ class TestCaseExporter(private val baseExportDir: Path) {
      * The following data is extracted and stored:
      * - the expected JSON file (extracted from the original DataFrame)
      * - the JSON file for each chunk
-     * - the table structure info
+     * - the table structure info (fingerprint is cleared)
      */
     fun export(testCase: TestCaseExportData) {
         val patchedStyler = createPatchedStyler(testCase)
-        val tableStructure = patchedStyler.evaluateTableStructure()
+        val tableStructure = patchedStyler.evaluateTableStructure().copy(fingerprint = "")
         if (tableStructure.rowsCount > 200) {
             throw IllegalArgumentException("DataFrame has to many rows (${tableStructure.rowsCount}), can't generate test data from it. Please use a DataFrame with max 200 rows.")
         }

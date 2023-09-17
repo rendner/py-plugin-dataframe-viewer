@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,17 @@
  */
 package cms.rendner.junit
 
-import cms.rendner.TestSystemPropertyKey
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import org.junit.jupiter.api.DisplayNameGenerator
 
 class PipEnvDisplayNameGenerator : DisplayNameGenerator.Standard() {
 
     private val pipEnvTestSuperClass = AbstractPipEnvEnvironmentTest::class.java
-    private val workdirFolderName =
-        System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR).substringAfterLast("/")
+    private val pipEnvEnvironmentName = AbstractPipEnvEnvironmentTest.getPipEnvEnvironmentName()
 
     override fun generateDisplayNameForClass(testClass: Class<*>?): String {
         if (testClass != null && pipEnvTestSuperClass.isAssignableFrom(testClass)) {
-            return "[pipenv env: ${workdirFolderName}] ${super.generateDisplayNameForClass(testClass)}"
+            return "[pipenv env: ${pipEnvEnvironmentName}] ${super.generateDisplayNameForClass(testClass)}".replace(".", "_")
         }
         return super.generateDisplayNameForClass(testClass)
     }
