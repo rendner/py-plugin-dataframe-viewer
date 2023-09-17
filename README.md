@@ -2,35 +2,40 @@
 
 Download from JetBrains Marketplace: [Python: Styled DataFrame Viewer](https://plugins.jetbrains.com/plugin/16050-python-styled-dataframe-viewer)
 
-**latest supported pandas version:**  1.5.x and 2.0.x (min required plugin version `0.10.0`)
+**supported pandas versions:**
+* 1.1.x - 1.5.x
+* 2.0.x - 2.1.x
 
 ## What It Is
-View, [sort](./docs/SORTING.md) and [filter](./docs/FILTERING.md) styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` when debugging.
+View, [sort](./docs/SORTING.md) and [filter](./docs/FILTERING.md) styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` or a Python `dict` when debugging.
 
 Apply conditional formatting and visual styling in your Python code, by using `DataFrames.style`.
 The configured style is used to render a styled output of the `DataFrame`.
+
+Note: The plugin requires `pandas` and `jinja2` (used by pandas Styler class).
 
 ![preview of the plugin](./docs/images/preview.png)
 
 ### Supported Styler Methods
 The following `Styler` methods are supported:
 
-| pandas Styler method                                                                                                                             | supported pandas version |
-|--------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------|
-| [Styler.apply](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.apply.html)                             | 1.1.x - 1.5.x, 2.0.x     |
-| [Styler.applymap](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.applymap.html)                       | 1.1.x - 1.5.x, 2.0.x     |
-| [Styler.background_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.background_gradient.html) | 1.1.x - 1.5.x, 2.0.x     |
-| [Styler.format](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.format.html)                           | 1.1.x - 1.5.x, 2.0.x     |
-| [Styler.hide_columns](https://pandas.pydata.org/pandas-docs/version/1.5/reference/api/pandas.io.formats.style.Styler.hide_columns.html)          | 1.1.x - 1.5.x            |
-| [Styler.hide_index](https://pandas.pydata.org/pandas-docs/version/1.5/reference/api/pandas.io.formats.style.Styler.hide_index.html)              | 1.1.x - 1.5.x            |
-| [Styler.hide](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide.html)                               | 1.4.x - 1.5.x, 2.0.x     |
-| [Styler.highlight_between](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_between.html)     | 1.3.x - 1.5.x, 2.0.x     |
-| [Styler.highlight_max](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_max.html)             | 1.1.x - 1.5.x, 2.0.x     |
-| [Styler.highlight_min](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_min.html)             | 1.1.x - 1.5.x, 2.0.x     |
-| [Styler.highlight_null](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_null.html)           | 1.1.x - 1.5.x, 2.0.x     |
-| [Styler.highlight_quantile](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_quantile.html)   | 1.3.x - 1.5.x, 2.0.x     |
-| [Styler.set_properties](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.set_properties.html)           | 1.1.x - 1.5.x, 2.0.x     |
-| [Styler.text_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.text_gradient.html)             | 1.3.x - 1.5.x, 2.0.x     |
+| pandas Styler method                                                                                                                             | supported pandas version     |
+|--------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------|
+| [Styler.apply](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.apply.html)                             | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.applymap](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.applymap.html)                       | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.background_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.background_gradient.html) | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.format](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.format.html)                           | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.hide_columns](https://pandas.pydata.org/pandas-docs/version/1.5/reference/api/pandas.io.formats.style.Styler.hide_columns.html)          | 1.1.x - 1.5.x                |
+| [Styler.hide_index](https://pandas.pydata.org/pandas-docs/version/1.5/reference/api/pandas.io.formats.style.Styler.hide_index.html)              | 1.1.x - 1.5.x                |
+| [Styler.hide](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide.html)                               | 1.4.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.highlight_between](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_between.html)     | 1.3.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.highlight_max](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_max.html)             | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.highlight_min](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_min.html)             | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.highlight_null](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_null.html)           | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.highlight_quantile](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_quantile.html)   | 1.3.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.map](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.map.html)                                 | 2.1.x                        |
+| [Styler.set_properties](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.set_properties.html)           | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
+| [Styler.text_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.text_gradient.html)             | 1.3.x - 1.5.x, 2.0.x - 2.1.x |
 
 
 > A good overview about styling `DataFrames` can be found on the pandas website: [pandas User Guide: Styling](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
@@ -114,7 +119,7 @@ Right-click on styler in the `Debugger` tab to open the context menu. Select `Vi
 ![formatted output](./docs/images/example_formatted_output.png)
 
   
-## Using Styler.apply or Styler.applymap
+## Using Styler.apply or Styler.applymap/Styler.map
 
 > Please read the following section carefully to understand how custom styles must be written to support chunks. Otherwise, it can lead to incorrect output.
 
@@ -136,11 +141,11 @@ Loading data in smaller amounts is great as it allows you to view larger data, b
 #### The Problem
 In general, you pass your custom style function into one of the following methods:
 
-  - `Styler.applymap`
+  - `Styler.applymap` (renamed to `Styler.map` in pandas 2.1.0)
   - `Styler.apply`
 
 Both of those methods take a function (and some other keyword arguments) and applies your function to the `DataFrame` in 
-a certain way. `Styler.applymap` works through the `DataFrame` elementwise, therefore it is safe to use in combination with chunks. 
+a certain way. `Styler.applymap` (`Styler.map`) works through the `DataFrame` elementwise, therefore it is safe to use in combination with chunks. 
 
 `Styler.apply` passes each column or row of your `DataFrame` one-at-a-time or the entire `DataFrame` at once, depending on the axis keyword argument.
 In case of chunks, a passed row or column is taken from the chunk and not from the original `DataFrame`. 
@@ -148,7 +153,7 @@ Same for `axis=None`, here the chunk is passed instead of the original `DataFram
 This leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. 
 Because this value can't be evaluated if your custom styler only get the data from the chunk instead of the original `DataFrame`.
 
-> All builtin styles listed under [supported-styler-methods](#supported-styler-methods), except `apply` and `applymap`, are automatically handled by the plugin and can therefore be used without any changes.
+> All builtin styles listed under [supported-styler-methods](#supported-styler-methods), except `apply` and `applymap` (`map`), are automatically handled by the plugin and can therefore be used without any changes.
 
 ##### The Problem (Example)
 To get a better understanding of the problem, you can run the following example in debug mode:
