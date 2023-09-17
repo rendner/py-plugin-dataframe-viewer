@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "cms.rendner.intellij"
-version = "0.10.0"
+version = "0.11.0"
 
 repositories {
     mavenCentral()
@@ -414,8 +414,7 @@ tasks {
 
     listProductsReleases {
         sinceVersion.set("2021.3")
-        //untilVersion.set("2022.3")
-        untilVersion.set("231.7515.12") // 2023.1 eap
+        untilVersion.set("2023.2.1")
     }
 }
 
