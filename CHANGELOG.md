@@ -1,7 +1,7 @@
 # Changelog
 
 ## v0.11.0
-- `Released`: tba
+- `Released`: 2023-09-18
 - `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
 - `Min Required IntelliJ Version`: 2021.3
 
