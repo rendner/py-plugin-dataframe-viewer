@@ -76,7 +76,6 @@ data class StyleProperties(
 
 interface ITableDataModel : TableModel {
     fun isLeveled(): Boolean
-    fun shouldHideHeaders(): Boolean
     fun getLegendHeader(): IHeaderLabel
     fun getLegendHeaders(): LegendHeaders
 

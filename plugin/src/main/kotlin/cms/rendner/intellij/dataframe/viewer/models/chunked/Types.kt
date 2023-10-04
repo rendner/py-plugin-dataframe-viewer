@@ -134,8 +134,6 @@ data class ChunkSize(val rows: Int, val columns: Int)
  * @param columnsCount number of columns in the DataFrame
  * @param rowLevelsCount number of headers which build the label/index of a row, number >= 0
  * @param columnLevelsCount number of headers which build the label of a column, number >= 0
- * @param hideRowHeader is true when no row-header should be displayed
- * @param hideColumnHeader is true when no column-header should be displayed
  * @param fingerprint fingerprint of the data source
  */
 @Serializable
@@ -146,8 +144,6 @@ data class TableStructure(
     @SerialName("columns_count") val columnsCount: Int,
     @SerialName("row_levels_count") val rowLevelsCount: Int,
     @SerialName("column_levels_count") val columnLevelsCount: Int,
-    @SerialName("hide_row_header") val hideRowHeader: Boolean,
-    @SerialName("hide_column_header") val hideColumnHeader: Boolean,
     @SerialName("fingerprint") val fingerprint: String,
 )
 

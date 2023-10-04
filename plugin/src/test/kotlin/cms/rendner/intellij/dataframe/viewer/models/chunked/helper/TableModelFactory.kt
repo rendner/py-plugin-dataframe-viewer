@@ -47,8 +47,6 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
             columnCount,
             1,
             1,
-            hideRowHeader = false,
-            hideColumnHeader = false,
             fingerprint = "",
         )
     }

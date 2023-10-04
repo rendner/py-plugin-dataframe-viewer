@@ -76,32 +76,28 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
     }
 
     private fun assertHeadersFromIndexDataModel(dataModel: ITableIndexDataModel, tableStructure: TableStructure) {
-        if (tableStructure.hideRowHeader) {
-            assertThat(dataModel.columnCount).isZero
-        } else {
-            assertThat(dataModel.columnCount).isOne
-            if (tableStructure.rowLevelsCount > 1) {
-                dataModel.getColumnHeader().let {
+        assertThat(dataModel.columnCount).isOne
+        if (tableStructure.rowLevelsCount > 1) {
+            dataModel.getColumnHeader().let {
+                assertThat(it).isInstanceOf(LeveledHeaderLabel::class.java)
+                assertThat((it as LeveledHeaderLabel).leadingLevels.size)
+                    .withFailMessage("columnHeaderLabel is not leveled")
+                    .isEqualTo(tableStructure.rowLevelsCount - 1)
+            }
+            for (r in 0 until dataModel.rowCount) {
+                dataModel.getValueAt(r).let {
                     assertThat(it).isInstanceOf(LeveledHeaderLabel::class.java)
                     assertThat((it as LeveledHeaderLabel).leadingLevels.size)
-                        .withFailMessage("columnHeaderLabel is not leveled")
+                        .withFailMessage("rowHeaderLabel is not leveled at: $r")
                         .isEqualTo(tableStructure.rowLevelsCount - 1)
                 }
-                for (r in 0 until dataModel.rowCount) {
-                    dataModel.getValueAt(r).let {
-                        assertThat(it).isInstanceOf(LeveledHeaderLabel::class.java)
-                        assertThat((it as LeveledHeaderLabel).leadingLevels.size)
-                            .withFailMessage("rowHeaderLabel is not leveled at: $r")
-                            .isEqualTo(tableStructure.rowLevelsCount - 1)
-                    }
-                }
-            } else {
-                assertThat(dataModel.getColumnHeader()).isNotInstanceOf(LeveledHeaderLabel::class.java)
-                for (r in 0 until dataModel.rowCount) {
-                    assertThat(dataModel.getValueAt(r))
-                        .withFailMessage("rowHeaderLabel is leveled at: $r")
-                        .isNotInstanceOf(LeveledHeaderLabel::class.java)
-                }
+            }
+        } else {
+            assertThat(dataModel.getColumnHeader()).isNotInstanceOf(LeveledHeaderLabel::class.java)
+            for (r in 0 until dataModel.rowCount) {
+                assertThat(dataModel.getValueAt(r))
+                    .withFailMessage("rowHeaderLabel is leveled at: $r")
+                    .isNotInstanceOf(LeveledHeaderLabel::class.java)
             }
         }
     }
@@ -111,7 +107,6 @@ internal class ChunkValidationTest : BaseResourceValidationTest("chunk-validatio
         assertThat(actual.columnCount).isEqualTo(expected.columnCount)
         assertThat(actual.getLegendHeaders()).isEqualTo(expected.getLegendHeaders())
         assertThat(actual.isLeveled()).isEqualTo(expected.isLeveled())
-        assertThat(actual.shouldHideHeaders()).isEqualTo(expected.shouldHideHeaders())
         assertThat(actual.getLegendHeader()).isEqualTo(expected.getLegendHeader())
 
         for (c in 0 until expected.columnCount) {

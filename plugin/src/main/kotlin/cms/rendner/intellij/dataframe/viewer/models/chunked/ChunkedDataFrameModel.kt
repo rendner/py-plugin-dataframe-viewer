@@ -205,14 +205,14 @@ class ChunkedDataFrameModel(
 
     private fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel {
         checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
-        if (tableStructure.hideColumnHeader) {
-            return getNotYetLoadedHeaderLabel(tableStructure.columnLevelsCount)
-        }
         val firstIndex = getIndexOfFirstColumnInChunk(columnIndex)
         val chunkHeaders = myFetchedChunkColumnHeaderLabels[firstIndex] ?: return getNotYetLoadedHeaderLabel(
             tableStructure.columnLevelsCount
         )
-        return chunkHeaders[columnIndex - firstIndex]
+        val index = columnIndex - firstIndex
+        // todo: recheck if we can have a better approach - don't cheat
+        if (index >= chunkHeaders.size) return myNotYetLoadedHeaderLabel
+        return chunkHeaders[index]
     }
 
     private fun checkIndex(type: String, index: Int, maxBounds: Int) {
@@ -257,8 +257,8 @@ class ChunkedDataFrameModel(
             chunkDataLoader.loadChunk(
                 LoadRequest(
                     chunkRegion,
-                    tableStructure.hideRowHeader || myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] != null,
-                    tableStructure.hideColumnHeader || myFetchedChunkColumnHeaderLabels[chunkRegion.firstColumn] != null
+                    myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] != null,
+                    myFetchedChunkColumnHeaderLabels[chunkRegion.firstColumn] != null
                 )
             )
         }
@@ -393,12 +393,11 @@ class ChunkedDataFrameModel(
         override fun getLegendHeaders() = source.getLegendHeaders()
         override fun convertToFrameColumnIndex(columnIndex: Int) = source.frameColumnOrgIndexList[columnIndex]
         override fun isLeveled() = source.tableStructure.columnLevelsCount > 1
-        override fun shouldHideHeaders() = source.tableStructure.hideColumnHeader
     }
 
     private class IndexModel(private val source: ChunkedDataFrameModel) : AbstractTableModel(), ITableIndexDataModel {
         override fun getRowCount() = source.tableStructure.rowsCount
-        override fun getColumnCount() = if (source.tableStructure.hideRowHeader) 0 else 1
+        override fun getColumnCount() = 1
         override fun getColumnName(columnIndex: Int) = getColumnName()
         override fun enableDataFetching(enabled: Boolean) = source.enableDataFetching(enabled)
         override fun getValueAt(rowIndex: Int) = source.getRowHeaderLabelAt(rowIndex)
@@ -407,6 +406,5 @@ class ChunkedDataFrameModel(
         override fun getLegendHeader() = source.getRowLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
         override fun isLeveled() = source.tableStructure.rowLevelsCount > 1
-        override fun shouldHideHeaders() = source.tableStructure.hideRowHeader
     }
 }

@@ -96,39 +96,6 @@ internal class ChunkedDataFrameModelTest {
     }
 
     @Test
-    fun doesNotFetchRowHeadersIfRowHeaderIsHidden() {
-        setup(tableModelFactory.createTableStructure().copy(hideRowHeader = true))
-
-        model.getValueDataModel().getValueAt(0, 0)
-
-        val loadRequest = model.recordedLoadRequests.first()
-        assertThat(loadRequest.excludeRowHeaders).isTrue
-        assertThat(loadRequest.excludeColumnHeaders).isFalse
-    }
-
-    @Test
-    fun doesNotFetchColumnHeadersIfColumnHeaderIsHidden() {
-        setup(tableModelFactory.createTableStructure().copy(hideColumnHeader = true))
-
-        model.getValueDataModel().getValueAt(0, 0)
-
-        val loadRequest = model.recordedLoadRequests.first()
-        assertThat(loadRequest.excludeRowHeaders).isFalse
-        assertThat(loadRequest.excludeColumnHeaders).isTrue
-    }
-
-    @Test
-    fun doesNotFetchHeadersIfAllHeadersAreHidden() {
-        setup(tableModelFactory.createTableStructure().copy(hideRowHeader = true, hideColumnHeader = true))
-
-        model.getValueDataModel().getValueAt(0, 0)
-
-        val loadRequest = model.recordedLoadRequests.first()
-        assertThat(loadRequest.excludeRowHeaders).isTrue
-        assertThat(loadRequest.excludeColumnHeaders).isTrue
-    }
-
-    @Test
     fun doesThrowIndexOutOfBoundsExceptionForInvalidIndices() {
         setup(
             tableModelFactory.createTableStructure(
@@ -196,26 +163,6 @@ internal class ChunkedDataFrameModelTest {
         model.recordedLoadRequests.first().let {
             assertThat(it.excludeRowHeaders).isFalse
             assertThat(it.excludeColumnHeaders).isFalse
-        }
-    }
-
-    @Test
-    fun doesExcludeHeadersIfConfigured() {
-        val tableStructure = tableModelFactory.createTableStructure().copy(hideRowHeader = true, hideColumnHeader = true)
-        setup(tableStructure)
-
-        // fetch all values
-        val valueModel = model.getValueDataModel()
-        for (r in 0 until tableStructure.rowsCount) {
-            for (c in 0 until tableStructure.columnsCount) {
-                valueModel.getValueAt(r, c)
-            }
-        }
-
-        assertThat(model.recordedLoadRequests).isNotEmpty
-        model.recordedLoadRequests.forEach {
-            assertThat(it.excludeRowHeaders).isTrue
-            assertThat(it.excludeColumnHeaders).isTrue
         }
     }
 }

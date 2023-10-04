@@ -45,8 +45,6 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
                 assertThat(ts.columnsCount).isEqualTo(2)
                 assertThat(ts.rowLevelsCount).isEqualTo(1)
                 assertThat(ts.columnLevelsCount).isEqualTo(1)
-                assertThat(ts.hideRowHeader).isEqualTo(false)
-                assertThat(ts.hideColumnHeader).isEqualTo(false)
             }
         }
     }

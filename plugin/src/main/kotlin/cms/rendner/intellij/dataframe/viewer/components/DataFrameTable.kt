@@ -118,7 +118,7 @@ class DataFrameTable : JScrollPane() {
             setRowHeaderView(if (it.columnCount == 0) null else myIndexTable)
             setCorner(
                 ScrollPaneConstants.UPPER_LEFT_CORNER,
-                if (it.columnCount == 0 || it.shouldHideHeaders()) null else myIndexTable.tableHeader
+                if (it.columnCount == 0) null else myIndexTable.tableHeader
             )
         }
 
@@ -128,7 +128,7 @@ class DataFrameTable : JScrollPane() {
             } else {
                 myValueTable.setModel(it)
             }
-            setColumnHeaderView(if (it.shouldHideHeaders()) null else myValueTable.tableHeader)
+            setColumnHeaderView(myValueTable.tableHeader)
         }
 
         setFocusedCell(cellToFocus)
@@ -1148,6 +1148,7 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
                                 rendererComp.getFontMetrics(rendererComp.font),
                                 rendererComp.text
                             )
+                            // only show a tooltip if text is truncated
                             if (getHeaderRect(viewColumnIndex).width < stringWidth) {
                                 return label
                             }
