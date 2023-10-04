@@ -119,8 +119,6 @@ tasks {
             true,
         ),
     )
-    val exportTestDataPath = "$projectDir/src/test/resources/generated/"
-    val exportTestErrorImagesPath = "$projectDir/src/test/resources/generated-error-images/"
 
     val buildPythonDockerImagesTasks = mutableListOf<Task>()
     pythonDockerImages.forEach { entry ->
@@ -150,19 +148,6 @@ tasks {
                             }
                         } else {
                             throw GradleException("Incomplete Pipfiles for environment: $pipEnvEnvironment")
-                        }
-
-                        val exportData = project.file("$pythonSourceProjectPath/export_data")
-                        if (exportData.exists() && exportData.isDirectory) {
-                            // The additional content of the pipenv environments (like Python source code, etc.)
-                            // The content is separated on purpose to profit from the Docker's layer caching. Without the separation
-                            // the pipenv environments are re-build whenever a source file has changed.
-                            copy {
-                                from(exportData)
-                                into("${entry.contentPath}/merge_into_pipenv_environments/$pipEnvEnvironment/export_data")
-                            }
-                        } else {
-                            throw GradleException("No export-data found for environment: $pipEnvEnvironment")
                         }
                     }
                 }
@@ -262,85 +247,7 @@ tasks {
         dependsOn(project.tasks.filter { it.name.startsWith("integrationTest_") && it.name != this.name })
     }
 
-    val generateTestDataTasks = mutableListOf<Task>()
-    pythonDockerImages.filter { it.envsAreHtmlFromStylerProjects }.forEach { entry ->
-        entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
-
-            val deleteTestData by register<DefaultTask>("deleteTestData_$pipEnvEnvironment") {
-                doLast {
-                    file("$exportTestDataPath$pipEnvEnvironment").let {
-                        if (it.exists()) project.delete(files(it.listFiles()))
-                    }
-                }
-            }
-
-            val exportTestData by register<Test>("exportTestData_$pipEnvEnvironment") {
-                testClassesDirs = testDockeredSourceSet.output.classesDirs
-                classpath = testDockeredSourceSet.runtimeClasspath
-                outputs.upToDateWhen { false }
-
-                systemProperty(
-                    "cms.rendner.dataframe.viewer.export.test.data.dir",
-                    exportTestDataPath,
-                )
-                systemProperty(
-                    "cms.rendner.dataframe.viewer.docker.image",
-                    entry.dockerImageName,
-                )
-                systemProperty(
-                    "cms.rendner.dataframe.viewer.docker.workdir",
-                    entry.getEnvironmentDir(pipEnvEnvironment),
-                )
-                systemProperty(
-                    "cms.rendner.dataframe.viewer.docker.volumes",
-                    listOf(
-                        *entry.getTransferDirMappings("$projectDir/src/test-dockered/transfer"),
-                    ).joinToString(";"),
-                )
-                useJUnitPlatform {
-                    include("**/export/**")
-                }
-                mustRunAfter(deleteTestData)
-            }
-
-            val addFilesToGit by register<Exec>("addTestDataToGit_$pipEnvEnvironment") {
-                workingDir = project.file("$exportTestDataPath$pipEnvEnvironment")
-                executable = "git"
-                args("add", ".")
-                mustRunAfter(exportTestData)
-            }
-
-            register<DefaultTask>("generateTestData_$pipEnvEnvironment") {
-                description = "Generates test-data from pipenv environment: $pipEnvEnvironment."
-                group = "generate"
-                dependsOn(
-                    deleteTestData,
-                    exportTestData,
-                    addFilesToGit,
-                )
-                if (generateTestDataTasks.isNotEmpty()) {
-                    shouldRunAfter(generateTestDataTasks.last())
-                }
-                generateTestDataTasks.add(this)
-            }
-        }
-    }
-
-    register<DefaultTask>("generateTestData_all") {
-        description = "Runs all generate-test-data tasks."
-        group = "generate"
-        dependsOn(project.tasks.filter { it.name.startsWith("generateTestData_") && it.name != this.name })
-    }
-
     test {
-        systemProperty(
-            "cms.rendner.dataframe.viewer.export.test.data.dir",
-            exportTestDataPath,
-        )
-        systemProperty(
-            "cms.rendner.dataframe.viewer.export.test.error.image.dir",
-            exportTestErrorImagesPath,
-        )
         useJUnitPlatform()
     }
 
@@ -353,14 +260,6 @@ tasks {
     }
 
     runIde {
-        systemProperty(
-            "cms.rendner.dataframe.viewer.enable.test.data.export.action",
-            true,
-        )
-        systemProperty(
-            "cms.rendner.dataframe.viewer.export.test.data.dir",
-            exportTestDataPath,
-        )
         // enable debug log for plugin
         // -> https://github.com/JetBrains/gradle-intellij-plugin/issues/708#issuecomment-870442081
         systemProperty(

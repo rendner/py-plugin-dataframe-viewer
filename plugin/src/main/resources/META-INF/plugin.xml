@@ -74,9 +74,6 @@
                     class="cms.rendner.intellij.dataframe.viewer.actions.ShowViewerForDictWithKeysAsRowsAction"
                     text="View as Styled DataFrame (Keys as Rows)">
             </action>
-            <action id="cms.rendner.ExportDataFrameTestDataAction"
-                    class="cms.rendner.intellij.dataframe.viewer.actions.ExportDataFrameTestDataAction"
-                    text="Export DataFrame Test Data"/>
             <!-- found in LangActions.xml -->
             <add-to-group group-id="XDebugger.ValueGroup" relative-to-action="Debugger.ShowReferring" anchor="before"/>
         </group>

@@ -33,5 +33,3 @@ RUN \
         && pipenv sync \
         && cd - \
     ;done
-
-COPY --chown=appuser content/merge_into_pipenv_environments/ pipenv_environments/
