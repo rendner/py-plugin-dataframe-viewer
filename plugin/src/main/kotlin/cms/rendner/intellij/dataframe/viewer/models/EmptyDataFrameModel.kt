@@ -35,7 +35,6 @@ private class MyEmptyValueModel : AbstractTableModel(), ITableValueDataModel {
 
     override fun getRowCount() = 0
     override fun getColumnCount() = 0
-    override fun isLeveled() = false
     override fun enableDataFetching(enabled: Boolean) {}
 
     override fun getValueAt(rowIndex: Int, columnIndex: Int): Value {
@@ -72,7 +71,6 @@ private class MyEmptyIndexModel : AbstractTableModel(), ITableIndexDataModel {
     override fun getRowCount() = 0
     override fun getColumnCount() = 0
     override fun getColumnName(columnIndex: Int) = getColumnName()
-    override fun isLeveled() = false
     override fun enableDataFetching(enabled: Boolean) {}
 
     override fun getValueAt(rowIndex: Int): IHeaderLabel {

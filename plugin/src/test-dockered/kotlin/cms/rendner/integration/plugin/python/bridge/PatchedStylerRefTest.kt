@@ -43,8 +43,6 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
                 assertThat(ts.orgColumnsCount).isEqualTo(2)
                 assertThat(ts.rowsCount).isEqualTo(2)
                 assertThat(ts.columnsCount).isEqualTo(2)
-                assertThat(ts.rowLevelsCount).isEqualTo(1)
-                assertThat(ts.columnLevelsCount).isEqualTo(1)
             }
         }
     }

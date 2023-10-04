@@ -132,8 +132,6 @@ data class ChunkSize(val rows: Int, val columns: Int)
  * @param orgColumnsCount number of visible columns of the original unfiltered DataFrame
  * @param rowsCount number of rows in the DataFrame
  * @param columnsCount number of columns in the DataFrame
- * @param rowLevelsCount number of headers which build the label/index of a row, number >= 0
- * @param columnLevelsCount number of headers which build the label of a column, number >= 0
  * @param fingerprint fingerprint of the data source
  */
 @Serializable
@@ -142,8 +140,6 @@ data class TableStructure(
     @SerialName("org_columns_count") val orgColumnsCount: Int,
     @SerialName("rows_count") val rowsCount: Int,
     @SerialName("columns_count") val columnsCount: Int,
-    @SerialName("row_levels_count") val rowLevelsCount: Int,
-    @SerialName("column_levels_count") val columnLevelsCount: Int,
     @SerialName("fingerprint") val fingerprint: String,
 )
 

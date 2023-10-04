@@ -82,11 +82,6 @@ class ChunkedDataFrameModel(
     private val myNotYetLoadedHeaderLabel = HeaderLabel(EMPTY_TABLE_HEADER_VALUE)
 
     /**
-     * Dummy label for the not yet loaded leveled-header.
-     */
-    private val myNotYetLoadedLeveledHeaderLabel = LeveledHeaderLabel(EMPTY_TABLE_HEADER_VALUE)
-
-    /**
      * Dummy label for the not yet loaded legend-headers.
      */
     private val myNotYetLoadedLegendHeaders: LegendHeaders
@@ -112,11 +107,7 @@ class ChunkedDataFrameModel(
 
     init {
         chunkDataLoader.setResultHandler(this)
-
-        myNotYetLoadedLegendHeaders = LegendHeaders(
-            if (tableStructure.rowLevelsCount > 1) myNotYetLoadedLeveledHeaderLabel else myNotYetLoadedHeaderLabel,
-            if (tableStructure.columnLevelsCount > 1) myNotYetLoadedLeveledHeaderLabel else myNotYetLoadedHeaderLabel
-        )
+        myNotYetLoadedLegendHeaders = LegendHeaders(myNotYetLoadedHeaderLabel, myNotYetLoadedHeaderLabel)
     }
 
     private fun setValueSortKeys(sortKeys: List<SortKey>) {
@@ -182,8 +173,7 @@ class ChunkedDataFrameModel(
     private fun getRowHeaderLabelAt(rowIndex: Int): IHeaderLabel {
         checkIndex("RowIndex", rowIndex, tableStructure.rowsCount)
         val firstIndex = getIndexOfFirstRowInChunk(rowIndex)
-        val chunkHeaders = myFetchedChunkRowHeaderLabels[firstIndex]
-            ?: return getNotYetLoadedHeaderLabel(tableStructure.rowLevelsCount)
+        val chunkHeaders = myFetchedChunkRowHeaderLabels[firstIndex] ?: return myNotYetLoadedHeaderLabel
         return chunkHeaders[rowIndex - firstIndex]
     }
 
@@ -192,23 +182,17 @@ class ChunkedDataFrameModel(
     }
 
     private fun getColumnLegendHeader(): IHeaderLabel {
-        return getLegendHeaders().column ?: getNotYetLoadedHeaderLabel(tableStructure.columnLevelsCount)
+        return getLegendHeaders().column ?: myNotYetLoadedHeaderLabel
     }
 
     private fun getRowLegendHeader(): IHeaderLabel {
-        return getLegendHeaders().row ?: getNotYetLoadedHeaderLabel(tableStructure.rowLevelsCount)
-    }
-
-    private fun getNotYetLoadedHeaderLabel(levels: Int): IHeaderLabel {
-        return if (levels > 1) myNotYetLoadedLeveledHeaderLabel else myNotYetLoadedHeaderLabel
+        return getLegendHeaders().row ?: myNotYetLoadedHeaderLabel
     }
 
     private fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel {
         checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
         val firstIndex = getIndexOfFirstColumnInChunk(columnIndex)
-        val chunkHeaders = myFetchedChunkColumnHeaderLabels[firstIndex] ?: return getNotYetLoadedHeaderLabel(
-            tableStructure.columnLevelsCount
-        )
+        val chunkHeaders = myFetchedChunkColumnHeaderLabels[firstIndex] ?: return myNotYetLoadedHeaderLabel
         val index = columnIndex - firstIndex
         // todo: recheck if we can have a better approach - don't cheat
         if (index >= chunkHeaders.size) return myNotYetLoadedHeaderLabel
@@ -392,7 +376,6 @@ class ChunkedDataFrameModel(
         override fun getLegendHeader() = source.getColumnLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
         override fun convertToFrameColumnIndex(columnIndex: Int) = source.frameColumnOrgIndexList[columnIndex]
-        override fun isLeveled() = source.tableStructure.columnLevelsCount > 1
     }
 
     private class IndexModel(private val source: ChunkedDataFrameModel) : AbstractTableModel(), ITableIndexDataModel {
@@ -405,6 +388,5 @@ class ChunkedDataFrameModel(
         override fun getColumnName() = getLegendHeader().text()
         override fun getLegendHeader() = source.getRowLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
-        override fun isLeveled() = source.tableStructure.rowLevelsCount > 1
     }
 }

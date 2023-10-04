@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,8 @@
 package cms.rendner.intellij.dataframe.viewer.components
 
 import cms.rendner.intellij.dataframe.viewer.components.renderer.CustomizedCellRenderer
-import cms.rendner.intellij.dataframe.viewer.components.renderer.MultiLineCellRenderer
 import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueCellRenderer
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header.CenteredHeaderLabelStyler
-import cms.rendner.intellij.dataframe.viewer.components.renderer.text.header.DefaultHeaderTextProvider
-import cms.rendner.intellij.dataframe.viewer.components.renderer.text.header.LegendHeaderTextProvider
-import cms.rendner.intellij.dataframe.viewer.components.renderer.text.header.LeveledDisplayMode
 import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.events.ChunkTableModelEvent
 import com.intellij.ui.ColorUtil
@@ -339,35 +335,6 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         }
 
         myColumnResizeBehavior.afterColumnLayout()
-    }
-
-    override fun createLeveledTableHeaderRenderer(): TableCellRenderer {
-        /**
-        Note:
-        each [CustomizedCellRenderer] needs an own instance of a defaultHeaderRenderer (can't be shared)
-         */
-        return MultiLineCellRenderer(
-            listOf(
-                CustomizedCellRenderer(
-                    createDefaultHeaderRenderer(),
-                    DefaultHeaderTextProvider(LeveledDisplayMode.LEADING_LEVELS_ONLY),
-                    CenteredHeaderLabelStyler()
-                ),
-                CustomizedCellRenderer(
-                    createDefaultHeaderRenderer(),
-                    DefaultHeaderTextProvider(LeveledDisplayMode.LAST_LEVEL_ONLY),
-                    CenteredHeaderLabelStyler()
-                )
-            )
-        )
-    }
-
-    override fun createTableHeaderRenderer(): TableCellRenderer {
-        return CustomizedCellRenderer(
-            createDefaultHeaderRenderer(),
-            DefaultHeaderTextProvider(),
-            CenteredHeaderLabelStyler()
-        )
     }
 
     private fun castedColumnAt(viewColumnIndex: Int): MyValueTableColumn {
@@ -844,14 +811,7 @@ class MyIndexTable(
         isFocusable = false
         autoResizeMode = JTable.AUTO_RESIZE_OFF
 
-        setDefaultRenderer(
-            Object::class.java,
-            CustomizedCellRenderer(
-                createDefaultHeaderRenderer(),
-                DefaultHeaderTextProvider(),
-                CenteredHeaderLabelStyler(true)
-            )
-        )
+        setDefaultRenderer(Object::class.java, createTableHeaderRenderer(true))
         adjustPreferredScrollableViewportSize()
     }
 
@@ -904,35 +864,6 @@ class MyIndexTable(
         // table should not be clickable but tooltip should work
     }
 
-    override fun createLeveledTableHeaderRenderer(): TableCellRenderer {
-        /**
-        Note:
-        each [CustomizedCellRenderer] needs an own instance of a defaultHeaderRenderer (can't be shared)
-         */
-        return MultiLineCellRenderer(
-            listOf(
-                CustomizedCellRenderer(
-                    createDefaultHeaderRenderer(),
-                    LegendHeaderTextProvider(),
-                    CenteredHeaderLabelStyler()
-                ),
-                CustomizedCellRenderer(
-                    createDefaultHeaderRenderer(),
-                    DefaultHeaderTextProvider(),
-                    CenteredHeaderLabelStyler()
-                )
-            )
-        )
-    }
-
-    override fun createTableHeaderRenderer(): TableCellRenderer {
-        return CustomizedCellRenderer(
-            createDefaultHeaderRenderer(),
-            DefaultHeaderTextProvider(),
-            CenteredHeaderLabelStyler()
-        )
-    }
-
     private fun adjustPreferredScrollableViewportSize() {
         preferredScrollableViewportSize = preferredSize
     }
@@ -947,18 +878,16 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
         rowSelectionAllowed = false
 
         rowSorter = null
-        tableHeader?.reorderingAllowed = false
-        updateDefaultHeaderRenderer()
+        tableHeader?.apply{
+            reorderingAllowed = false
+            defaultRenderer = createTableHeaderRenderer(false)
+        }
     }
 
     override fun setModel(tableModel: TableModel) {
         if (tableModel !is ITableDataModel) throw IllegalArgumentException("The model has to implement ITableDataModel.")
         tableModel.enableDataFetching(false)
-        val oldModel = model
         super.setModel(tableModel)
-        if (oldModel?.isLeveled() != tableModel.isLeveled()) {
-            updateDefaultHeaderRenderer()
-        }
     }
 
     override fun getModel(): M? {
@@ -1014,29 +943,12 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
         model?.enableDataFetching(false)
     }
 
-    protected abstract fun createLeveledTableHeaderRenderer(): TableCellRenderer
-
-    protected abstract fun createTableHeaderRenderer(): TableCellRenderer
-
-    protected fun createDefaultHeaderRenderer(): TableCellRenderer {
-        return getCastedTableHeader().createDefaultRenderer()
+    protected fun createTableHeaderRenderer(isRowHeader: Boolean): TableCellRenderer {
+        return getCastedTableHeader().createTableHeaderRenderer(isRowHeader)
     }
 
     private fun getCastedTableHeader(): MyTable<*>.MyTableHeader {
         return getTableHeader() as MyTable<*>.MyTableHeader
-    }
-
-    private fun updateDefaultHeaderRenderer() {
-        tableHeader?.let {
-            it.defaultRenderer = if (model?.isLeveled() == true) {
-                // todo: __prio_2__ maybe part of the next release
-                //createLeveledTableHeaderRenderer()
-                createTableHeaderRenderer()
-            } else {
-                createTableHeaderRenderer()
-            }
-            it.resizeAndRepaint()
-        }
     }
 
     private inner class MyTableHeader : JBTable.JBTableHeader() {
@@ -1065,6 +977,13 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
             return tooltipText ?: super.getToolTipText(event) ?: ""
         }
 
+        fun createTableHeaderRenderer(isRowHeader: Boolean): TableCellRenderer {
+            return CustomizedCellRenderer(
+                super.createDefaultRenderer(),
+                CenteredHeaderLabelStyler(isRowHeader)
+            )
+        }
+
         private fun setRowSorterShiftKeyFlag(isDown: Boolean) {
             table.rowSorter?.let {
                 if (it is MyExternalDataRowSorter) {
@@ -1073,9 +992,25 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
             }
         }
 
+        private fun hasLeveledHeaderValues(model: ITableDataModel, modelColumnIndex: Int): Boolean {
+            return when (model) {
+                is ITableIndexDataModel -> {
+                    model.getLegendHeaders().let {
+                        it.column is LeveledHeaderLabel || it.row is LeveledHeaderLabel
+                    }
+                }
+
+                is ITableValueDataModel -> {
+                    model.getLegendHeader() is LeveledHeaderLabel || model.getColumnHeaderAt(modelColumnIndex) is LeveledHeaderLabel
+                }
+
+                else -> false
+            }
+        }
+
         private fun createHeaderToolTip(viewColumnIndex: Int, modelColumnIndex: Int): String? {
             model?.let { model ->
-                if (model.isLeveled()) {
+                if (hasLeveledHeaderValues(model, modelColumnIndex)) {
                     val sb = StringBuilder("<html>")
                     // todo: escape potential html chars (<>&) in strings
                     val hexColor = ColorUtil.toHtmlColor(
@@ -1159,7 +1094,6 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
             return null
         }
 
-        // public, so that multiple instances of the renderer can be created by the table
         public override fun createDefaultRenderer(): TableCellRenderer {
             return super.createDefaultRenderer()
         }
