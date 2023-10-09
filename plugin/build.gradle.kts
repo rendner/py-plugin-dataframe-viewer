@@ -68,7 +68,8 @@ tasks {
         val path: String,
         val pythonVersion: String,
         val pipenvEnvironments: List<String>,
-        val envsAreHtmlFromStylerProjects: Boolean,
+        val envsAreLocalPythonProjects: Boolean,
+        val isMigratedToPluginCodeProject: Boolean = false,
         ) {
         private val workdir = "/usr/src/app"
         val dockerImageName = "sdfv-plugin-dockered-python_$pythonVersion"
@@ -79,7 +80,7 @@ tasks {
         )
         fun getEnvironmentDir(pipenvEnvironment: String) = "${workdir}/pipenv_environments/$pipenvEnvironment"
         fun getBuildArgs(): Array<String> {
-            return if (envsAreHtmlFromStylerProjects) emptyArray()
+            return if (envsAreLocalPythonProjects) emptyArray()
             else arrayOf("--build-arg", "pipenv_environment=${pipenvEnvironments.first()}")
         }
     }
@@ -104,6 +105,7 @@ tasks {
             "$pythonDockerBaseDir/python_3.9",
             "3.9",
             listOf("pandas_2.1"),
+            true,
             true,
         ),
         PythonDockerImage(
@@ -135,9 +137,11 @@ tasks {
             doLast {
                 delete(entry.contentPath)
 
-                if (entry.envsAreHtmlFromStylerProjects) {
+                if (entry.envsAreLocalPythonProjects) {
                     entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
-                        val pythonSourceProjectPath = "../projects/html_from_styler/${pipEnvEnvironment}_styler"
+                        val pythonSourceProjectPath = if (entry.isMigratedToPluginCodeProject)
+                            "../projects/python_plugin_code/${pipEnvEnvironment}_code"
+                            else "../projects/html_from_styler/${pipEnvEnvironment}_styler"
 
                         val pipFile = project.file("$pythonSourceProjectPath/Pipfile")
                         val pipFileLock = project.file("$pythonSourceProjectPath/Pipfile.lock")

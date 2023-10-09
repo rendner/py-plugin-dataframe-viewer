@@ -9,9 +9,9 @@ In case you want to test the plugin in another locally installed IntelliJ/PyChar
    1. if IntelliJ is used please install the python plugin from `Jetbrains`
 3. follow the instructions from [install plugin from disk](https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk)
    1. navigate to `<PLUGIN_DIR>/distributions/` and select version to install
-4. open one of the projects from `<PROJECTS_DIR>/html_from_styler/`
+4. open one of the projects from `<PROJECTS_DIR>/python_plugin_code/`
    1. configure the required Python interpreter
-5. use the test file from the `manual_testing` directory
+5. use the test files from the `manual_testing` directory
    1. plugin works as expected if the debugger can load and display data of the styled DataFrame
       1. read [the general documentation](../../README.md#how-does-it-work) for a detailed description how to interact with the debugger
 
@@ -24,6 +24,6 @@ If one of the `generated/plugin_code` has changed, the started PyCharm instance 
 This will automatically copy over the re-generated `plugin_code` files to the plugin, and starts PyCharm with these updated files.
 
 ### 2) Do Tests
-The `<PROJECTS_DIR>/html_from_styler` projects provide test files in the `manual_testing` directories.
+The `<PROJECTS_DIR>/python_plugin_code` projects provide test files in the `manual_testing` directories.
 Run these files with the Python debugger and use the plugin dialog to validate the displayed data.
 
