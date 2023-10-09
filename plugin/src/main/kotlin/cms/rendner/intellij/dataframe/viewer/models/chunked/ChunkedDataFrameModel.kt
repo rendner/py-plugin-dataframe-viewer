@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -255,23 +255,25 @@ class ChunkedDataFrameModel(
 
         myPendingChunks.remove(chunkRegion)
 
-        if (myFetchedLegendHeaders == null) {
-            myFetchedLegendHeaders = chunkData.headerLabels.legend
-            if (chunkData.headerLabels.legend.row != null) {
-                fireIndexModelHeaderUpdated()
+        chunkData.headerLabels?.let { headerLabels ->
+            if (myFetchedLegendHeaders == null && headerLabels.legend != null) {
+                myFetchedLegendHeaders = headerLabels.legend
+                if (headerLabels.legend.row != null) {
+                    fireIndexModelHeaderUpdated()
+                }
             }
-        }
-        if (!myFetchedChunkColumnHeaderLabels.containsKey(chunkRegion.firstColumn)) {
-            myFetchedChunkColumnHeaderLabels[chunkRegion.firstColumn] = chunkData.headerLabels.columns
-            if (chunkData.headerLabels.columns.isNotEmpty()) {
-                fireValueModelHeadersUpdated(chunkRegion)
+            if (!myFetchedChunkColumnHeaderLabels.containsKey(chunkRegion.firstColumn)) {
+                myFetchedChunkColumnHeaderLabels[chunkRegion.firstColumn] = headerLabels.columns
+                if (headerLabels.columns.isNotEmpty()) {
+                    fireValueModelHeadersUpdated(chunkRegion)
+                }
             }
-        }
 
-        if (!myFetchedChunkRowHeaderLabels.containsKey(chunkRegion.firstRow)) {
-            myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] = chunkData.headerLabels.rows
-            if (chunkData.headerLabels.rows.isNotEmpty()) {
-                fireIndexModelValuesUpdated(chunkRegion)
+            if (!myFetchedChunkRowHeaderLabels.containsKey(chunkRegion.firstRow)) {
+                myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] = headerLabels.rows
+                if (headerLabels.rows.isNotEmpty()) {
+                    fireIndexModelValuesUpdated(chunkRegion)
+                }
             }
         }
         setChunkValues(chunkRegion, chunkData.values)

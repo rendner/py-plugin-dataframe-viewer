@@ -109,30 +109,20 @@ interface IPyPatchedStylerRef {
     fun evaluateSetSortCriteria(sortCriteria: SortCriteria?)
 
     /**
-     * Calls the "compute_chunk_html_props_table" method of the Python class "PatchedStyler".
+     * Calls the "compute_chunk_table_frame" method of the Python class "PatchedStyler".
      *
      * @param chunk the region of the data to evaluate
-     * @param excludeRowHeader hides the row headers before creating the html string
-     * @param excludeColumnHeader hides the column headers before creating the html string
-     * @return returns the html props of the chunk.
+     * @param excludeRowHeader if true, row headers are excluded from the result.
+     * @param excludeColumnHeader if true, column headers are excluded from the result.
+     * @return returns a table representation of the chunk.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
-    fun evaluateComputeChunkHTMLPropsTable(
+    fun evaluateComputeChunkTableFrame(
         chunk: ChunkRegion,
         excludeRowHeader: Boolean,
         excludeColumnHeader: Boolean
-    ): HTMLPropsTable
-
-    /**
-     * Calls the "internal_compute_unpatched_html_props_table" method of the Python class "PatchedStyler".
-     * This method is only used to dump small DataFrames to generate test data and during integration tests.
-     *
-     * @return returns the unpatched html props of the underling DataFrame.
-     * @throws EvaluateException in case the evaluation fails.
-     */
-    @Throws(EvaluateException::class)
-    fun evaluateComputeUnpatchedHTMLPropsTable(): HTMLPropsTable
+    ): TableFrame
 
     /**
      * Calls the "get_org_indices_of_visible_columns" method of the Python class "PatchedStyler".
@@ -141,71 +131,19 @@ interface IPyPatchedStylerRef {
     fun evaluateGetOrgIndicesOfVisibleColumns(partStart: Int, maxColumns: Int): List<Int>
 }
 
-/**
- * The HTML properties of a DataFrame or chunk.
- *
- * @param head the columns of a DataFrame. In case of multiindex the list contains more than one row of columns.
- * @param body the values and row headers of a DataFrame.
- */
 @Serializable
-data class HTMLPropsTable(val head: List<List<HTMLPropsRowElement>>, val body: List<List<HTMLPropsRowElement>>)
-
-/**
- * Table header or table data element.
- *
- * @param type indicates if a header or data.
- * @param kind describes what kind of element. Mostly used to describe the type of header.
- * @param displayValue the value displayed by the element.
- * @param cssProps the styling of the value.
- */
-@Serializable
-data class HTMLPropsRowElement(
-    val type: RowElementType,
-    val kind: RowElementKind,
-    @SerialName("display_value") val displayValue: String,
-    @SerialName("css_props") val cssProps: Map<String, String>?,
-)
+data class TableFrameLegend(val index: List<String>, val column: List<String>)
 
 @Serializable
-enum class RowElementType {
-    @SerialName("th")
-    TH,
-    @SerialName("td")
-    TD,
-}
+data class TableFrameCell(val value: String, val css: Map<String, String>?)
 
 @Serializable
-enum class RowElementKind {
-    /**
-     * An empty table header, used for leading empty cells to align columns.
-     */
-    @SerialName("blank")
-    BLANK,
-
-    /**
-     * A table header which contains the name of an index.
-     */
-    @SerialName("index_name")
-    INDEX_NAME,
-
-    /**
-     * A table header which contains the name of a column.
-     */
-    @SerialName("col_heading")
-    COL_HEADING,
-
-    /**
-     * A table header which contains the name of a row header.
-     */
-    @SerialName("row_heading")
-    ROW_HEADING,
-
-    /**
-     * Placeholder value for all other kinds.
-     */
-    @SerialName("")
-    UNKNOWN,
-}
+data class TableFrame(
+    @SerialName("index_labels") val indexLabels: List<List<String>>,
+    @SerialName("column_labels") val columnLabels: List<List<String>>,
+    val cells: List<List<TableFrameCell>>,
+    val legend: TableFrameLegend?,
+    )
 
 enum class DataSourceToFrameHint {
     DictKeysAsRows,

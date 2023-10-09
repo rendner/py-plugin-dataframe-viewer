@@ -82,24 +82,19 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun evaluateComputeChunkHTMLPropsTable_shouldBeCallable() {
+    fun evaluateComputeChunkTableFrame_shouldBeCallable() {
         runWithPatchedStyler {
             assertThat(
-                it.evaluateComputeChunkHTMLPropsTable(
+                it.evaluateComputeChunkTableFrame(
                     ChunkRegion(0, 0, 2, 2),
                     excludeRowHeader = false,
                     excludeColumnHeader = false,
                 )
-            ).matches { propsTable -> propsTable.head.isNotEmpty() && propsTable.body.isNotEmpty() }
-        }
-    }
-
-    @Test
-    fun evaluateComputeUnpatchedHTMLPropsTable_shouldBeCallable() {
-        runWithPatchedStyler {
-            assertThat(
-                it.evaluateComputeUnpatchedHTMLPropsTable()
-            ).matches { propsTable -> propsTable.head.isNotEmpty() && propsTable.body.isNotEmpty() }
+            ).matches { table ->
+                table.indexLabels.isNotEmpty()
+                    && table.columnLabels.isNotEmpty()
+                    && table.cells.isNotEmpty()
+            }
         }
     }
 

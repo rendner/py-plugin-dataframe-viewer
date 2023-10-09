@@ -128,13 +128,13 @@ class PythonCodeBridge {
             )
         }
 
-        override fun evaluateComputeChunkHTMLPropsTable(
+        override fun evaluateComputeChunkTableFrame(
             chunk: ChunkRegion,
             excludeRowHeader: Boolean,
             excludeColumnHeader: Boolean
-        ): HTMLPropsTable {
+        ): TableFrame {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(pythonValue.refExpr, "compute_chunk_html_props_table") {
+                stringifyMethodCall(pythonValue.refExpr, "compute_chunk_table_frame") {
                     numberParam(chunk.firstRow)
                     numberParam(chunk.firstColumn)
                     numberParam(chunk.numberOfRows)
@@ -142,12 +142,6 @@ class PythonCodeBridge {
                     boolParam(excludeRowHeader)
                     boolParam(excludeColumnHeader)
                 }
-            )
-        }
-
-        override fun evaluateComputeUnpatchedHTMLPropsTable(): HTMLPropsTable {
-            return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(pythonValue.refExpr, "internal_compute_unpatched_html_props_table")
             )
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
-import cms.rendner.intellij.dataframe.viewer.python.bridge.HTMLPropsTable
+import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrame
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 
 /**
- * Evaluates the HTML representation for a chunk.
+ * Evaluates the table representation for a chunk.
  *
  * @param patchedStyler the styler from which the chunk is fetched.
  */
@@ -28,16 +28,12 @@ class ChunkEvaluator(
     private val patchedStyler: IPyPatchedStylerRef,
 ) : IChunkEvaluator {
 
-    override fun evaluateHTMLProps(
+    override fun evaluateTableFrame(
         chunkRegion: ChunkRegion,
-        excludeRowHeaders: Boolean,
-        excludeColumnHeaders: Boolean
-    ): HTMLPropsTable {
-        return patchedStyler.evaluateComputeChunkHTMLPropsTable(
-            chunkRegion,
-            excludeRowHeaders,
-            excludeColumnHeaders
-        )
+        excludeRowHeader: Boolean,
+        excludeColumnHeader: Boolean
+    ): TableFrame {
+        return patchedStyler.evaluateComputeChunkTableFrame(chunkRegion, excludeRowHeader, excludeColumnHeader)
     }
 
     override fun setSortCriteria(sortCriteria: SortCriteria) {

@@ -96,7 +96,7 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
             val chunkRegion = request.chunkRegion
             return ChunkData(
                 ChunkHeaderLabels(
-                    LegendHeaders(),
+                    null,
                     createHeaderLabels(if (request.excludeColumnHeaders) 0 else chunkRegion.numberOfColumns),
                     createHeaderLabels(if (request.excludeRowHeaders) 0 else chunkRegion.numberOfRows)
                 ),

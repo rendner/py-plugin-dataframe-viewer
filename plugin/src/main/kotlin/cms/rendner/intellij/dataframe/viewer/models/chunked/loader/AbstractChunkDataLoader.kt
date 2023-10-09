@@ -18,7 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkData
 import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
-import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.htmlprops.HTMLPropsChunkConverter
+import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.TableFrameConverter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ChunkValidator
 import java.util.concurrent.CompletableFuture
@@ -79,7 +79,7 @@ abstract class AbstractChunkDataLoader(
 
                 if (Thread.currentThread().isInterrupted) return@Runnable
                 errMessage = "Fetching data failed"
-                val table = chunkEvaluator.evaluateHTMLProps(
+                val table = chunkEvaluator.evaluateTableFrame(
                     ctx.request.chunkRegion,
                     ctx.request.excludeRowHeaders,
                     ctx.request.excludeColumnHeaders
@@ -87,7 +87,7 @@ abstract class AbstractChunkDataLoader(
 
                 if (Thread.currentThread().isInterrupted) return@Runnable
                 errMessage = "Converting fetched data failed"
-                val chunkData = HTMLPropsChunkConverter().extractData(
+                val chunkData = TableFrameConverter.convert(
                     table,
                     ctx.request.excludeRowHeaders,
                     ctx.request.excludeColumnHeaders,

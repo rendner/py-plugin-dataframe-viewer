@@ -18,7 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
 import cms.rendner.intellij.dataframe.viewer.models.Value
-import cms.rendner.intellij.dataframe.viewer.python.bridge.HTMLPropsTable
+import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrame
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -28,25 +28,21 @@ import kotlinx.serialization.Serializable
  */
 interface IChunkEvaluator {
     /**
-     * Evaluates the HTML properties for a chunk of a pandas DataFrame.
-     *
-     * Pandas generates HTML properties to populate an HTML template when a styler is rendered to HTML.
-     * The Python plugin code transforms these HTML properties into an easier processable data structure.
-     *
+     * Evaluates a table like representation for a chunk of a pandas DataFrame.
      * Excluding already fetched headers reduces the amount of data which to be fetched and parsed.
      *
      * @param chunkRegion the region of the data to evaluate
-     * @param excludeRowHeaders if result should not include the headers of the rows
-     * @param excludeColumnHeaders if result should not include the headers of the columns
-     * @return returns a table like structure, of HTML properties, similar to the evaluated chunk.
+     * @param excludeRowHeader if true, the row headers are excluded from the result.
+     * @param excludeColumnHeader if true, the column headers are excluded from the result.
+     * @return returns a table representation of the chunk.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
-    fun evaluateHTMLProps(
+    fun evaluateTableFrame(
         chunkRegion: ChunkRegion,
-        excludeRowHeaders: Boolean,
-        excludeColumnHeaders: Boolean
-    ): HTMLPropsTable
+        excludeRowHeader: Boolean,
+        excludeColumnHeader: Boolean
+    ): TableFrame
 
     /**
      * Applies the sort criteria to the styled pandas DataFrame.
@@ -84,10 +80,10 @@ data class ChunkValues(val rows: List<ChunkValuesRow>) : IChunkValues {
  *
  * @property legend the legend headers (contain additional information for multi index DataFrames)
  * @property columns list of column headers
- * @property rows list of rows headers
+ * @property rows list of row headers
  */
 data class ChunkHeaderLabels(
-    val legend: LegendHeaders,
+    val legend: LegendHeaders?,
     val columns: List<IHeaderLabel>,
     val rows: List<IHeaderLabel>
 )
@@ -113,7 +109,7 @@ data class ChunkRegion(
  * @property values the values of the chunk.
  */
 data class ChunkData(
-    val headerLabels: ChunkHeaderLabels,
+    val headerLabels: ChunkHeaderLabels?,
     val values: IChunkValues
 )
 
