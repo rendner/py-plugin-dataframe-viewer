@@ -102,17 +102,16 @@ Therefore, it is mandatory that the method signatures of this class match those 
 
 Short overview about the public methods of the class:
 
-| Method                                      | used by the plugin | purpose                                                                                    |
-|:--------------------------------------------|:------------------:|:-------------------------------------------------------------------------------------------|
-| compute_chunk_html_props_table              |         X          | To extract HTML props of a chunk.                                                          |
-| get_org_indices_of_visible_columns          |         X          | Used to identify the right column after filtering, to restore the column state.            |
-| get_style_function_details                  |         X          | To extract information about used styling functions.                                       |
-| get_table_structure                         |         X          | To extract initial information about a DataFrame.                                          |
-| internal_compute_unpatched_html_props_table |         -          | To extract unmodified HTML props. Used to generated test data or during integration tests. |
-| internal_get_context                        |         -          | Required for unit tests.                                                                   |
-| set_sort_criteria                           |         X          | To set the sort criteria for the styled DataFrame.                                         |
-| to_json                                     |         X          | To convert method results into JSON. Simplifies the parsing of the results in the plugin.  |
-| validate_style_functions                    |         X          | To validate styling functions.                                                             |
+| Method                             | used by the plugin | purpose                                                                                   |
+|:-----------------------------------|:------------------:|:------------------------------------------------------------------------------------------|
+| compute_chunk_table_frame          |         X          | To extract a table like structure of a chunk.                                             |
+| get_org_indices_of_visible_columns |         X          | Used to identify the right column after filtering, to restore the column state.           |
+| get_style_function_details         |         X          | To extract information about used styling functions.                                      |
+| get_table_structure                |         X          | To extract initial information about a DataFrame.                                         |
+| internal_get_context               |         -          | Required for unit tests.                                                                  |
+| set_sort_criteria                  |         X          | To set the sort criteria for the styled DataFrame.                                        |
+| to_json                            |         X          | To convert method results into JSON. Simplifies the parsing of the results in the plugin. |
+| validate_style_functions           |         X          | To validate styling functions.                                                            |
 
 #### StyledDataFrameViewerBridge.py
 This class is used by the plugin (Kotlin part) to create `PatchedStyler` instances.

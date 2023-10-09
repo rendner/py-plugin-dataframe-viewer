@@ -21,7 +21,7 @@ from plugin_code.styler_todo import StylerTodo
 from plugin_code.todo_patcher import TodoPatcher
 
 # == copy after here ==
-from typing import Callable, List, Tuple, Optional
+from typing import Callable, Optional
 
 from pandas import DataFrame
 
@@ -29,11 +29,11 @@ from pandas import DataFrame
 class TodosPatcher:
 
     def patch_todos_for_chunk(self,
-                              todos: List[StylerTodo],
+                              todos: list[StylerTodo],
                               org_frame: DataFrame,
                               chunk: DataFrame,
-                              ) -> List[Tuple[Callable, tuple, dict]]:
-        result: List[Tuple[Callable, tuple, dict]] = []
+                              ) -> list[tuple[Callable, tuple, dict]]:
+        result: list[tuple[Callable, tuple, dict]] = []
 
         for t in todos:
 

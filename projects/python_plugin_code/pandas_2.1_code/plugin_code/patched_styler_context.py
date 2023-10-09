@@ -16,7 +16,7 @@ from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple, Callable, Any
+from typing import Optional, Callable, Any
 from dataclasses import dataclass
 import numpy as np
 from pandas import DataFrame, Index
@@ -77,15 +77,15 @@ class Region:
 
 @dataclass(frozen=True)
 class SortCriteria:
-    by_column: Optional[List[int]] = None
-    ascending: Optional[List[bool]] = None
+    by_column: Optional[list[int]] = None
+    ascending: Optional[list[bool]] = None
 
     def is_empty(self) -> bool:
         return self.by_column is None or len(self.by_column) == 0
 
     def __eq__(self, other):
         if isinstance(other, SortCriteria):
-            def _equals(s: Optional[List[Any]], o: Optional[List[Any]]) -> bool:
+            def _equals(s: Optional[list[Any]], o: Optional[list[Any]]) -> bool:
                 # None and [] are interpreted as "no sorting"
                 s_len = 0 if s is None else len(s)
                 o_len = 0 if o is None else len(o)
@@ -120,7 +120,7 @@ class FilterCriteria:
 class PatchedStylerContext:
     def __init__(self, styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
         self.__styler: Styler = styler
-        self.__styler_todos: List[StylerTodo] = [StylerTodo.from_tuple(t) for t in styler._todo]
+        self.__styler_todos: list[StylerTodo] = [StylerTodo.from_tuple(t) for t in styler._todo]
         self.__sort_criteria: SortCriteria = SortCriteria()
         self.__filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
 
@@ -129,7 +129,7 @@ class PatchedStylerContext:
     def is_filtered(self):
         return not self.__filter_criteria.is_empty()
 
-    def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
+    def set_sort_criteria(self, sort_by_column_index: Optional[list[int]], sort_ascending: Optional[list[bool]]):
         self.__sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
         self.__recompute_visible_frame()
 
@@ -160,7 +160,7 @@ class PatchedStylerContext:
     def get_styler(self) -> Styler:
         return self.__styler
 
-    def get_styler_todos(self) -> List[StylerTodo]:
+    def get_styler_todos(self) -> list[StylerTodo]:
         if self.__styler_todos is None:
             self.__styler_todos = [StylerTodo.from_tuple(t) for t in self.__styler._todo]
         return self.__styler_todos
@@ -168,7 +168,7 @@ class PatchedStylerContext:
     def create_patched_todos(self,
                              chunk: DataFrame,
                              todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
-                             ) -> List[Tuple[Callable, tuple, dict]]:
+                             ) -> list[tuple[Callable, tuple, dict]]:
         all_todos = self.get_styler_todos()
         filtered_todos = all_todos if todos_filter is None else list(filter(todos_filter, all_todos))
         return TodosPatcher().patch_todos_for_chunk(filtered_todos, self.__styler.data, chunk)
