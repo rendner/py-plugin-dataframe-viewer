@@ -12,4 +12,5 @@ def my_highlight_max(series):
 
 df = pd.DataFrame(np.random.randint(1, 100, size=(2800, 4)))
 styler = df.style.apply(my_highlight_max, axis='index')
+
 breakpoint()
