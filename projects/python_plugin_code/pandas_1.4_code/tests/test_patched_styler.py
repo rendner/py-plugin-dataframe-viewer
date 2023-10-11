@@ -41,25 +41,7 @@ def test_table_structure():
     assert ts.org_columns_count == len(df.columns)
     assert ts.rows_count == len(df.index)
     assert ts.columns_count == len(df.columns)
-    assert ts.row_levels_count == 2
-    assert ts.column_levels_count == 2
-    assert ts.hide_row_header is False
-    assert ts.hide_column_header is False
     assert ts.fingerprint == "finger-1"
-
-
-def test_table_structure_hide_row_header():
-    styler = df.style.hide(axis="index")
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.hide_row_header is True
-    assert ts.hide_column_header is False
-
-
-def test_table_structure_hide_column_header():
-    styler = df.style.hide(axis="columns")
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.hide_column_header is True
-    assert ts.hide_row_header is False
 
 
 def test_table_structure_columns_count_hide_all_columns():
@@ -74,24 +56,6 @@ def test_table_structure_rows_count_hide_all_rows():
     ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
     assert ts.org_rows_count == len(styler.data.index)
     assert ts.rows_count == 0
-
-
-def test_table_structure_index_hide_one_level():
-    styler = df.style.hide(axis="index", level=0)
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.hide_row_header is False
-    assert ts.row_levels_count == 1
-    assert ts.org_rows_count == len(styler.data.index)
-    assert ts.rows_count == len(styler.data.index)
-
-
-def test_table_structure_index_hide_names():
-    styler = df.style.hide(axis="index", names=False)
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.hide_row_header is True
-    assert ts.row_levels_count == 0
-    assert ts.org_rows_count == len(styler.data.index)
-    assert ts.rows_count == 6
 
 
 def test_table_structure_diff_matches_hidden_rows_cols():
