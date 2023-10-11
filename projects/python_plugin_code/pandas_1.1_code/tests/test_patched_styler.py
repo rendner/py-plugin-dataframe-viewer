@@ -41,18 +41,7 @@ def test_table_structure():
     assert ts.org_columns_count == len(df.columns)
     assert ts.rows_count == len(df.index)
     assert ts.columns_count == len(df.columns)
-    assert ts.row_levels_count == 2
-    assert ts.column_levels_count == 2
-    assert ts.hide_row_header is False
-    assert ts.hide_column_header is False
     assert ts.fingerprint == "finger-1"
-
-
-def test_table_structure_hide_row_header():
-    styler = df.style.hide_index()
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.hide_row_header is True
-    assert ts.hide_column_header is False
 
 
 def test_table_structure_columns_count_hide_all_columns():
@@ -60,7 +49,6 @@ def test_table_structure_columns_count_hide_all_columns():
     ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
     assert ts.org_columns_count == len(styler.data.columns)
     assert ts.columns_count == 0
-    assert ts.hide_column_header is False
 
 
 def test_table_structure_diff_matches_hidden_rows():
@@ -162,8 +150,8 @@ def test_get_style_function_details_df():
 
 
 def test_to_json():
-    ts = PatchedStyler(PatchedStylerContext(df.style), "").to_json({"a": 12, "b": (True, False)})
-    assert ts == '{"a": 12, "b": [true, false]}'
+    json = PatchedStyler(PatchedStylerContext(df.style), "").to_json({"a": 12, "b": (True, False)})
+    assert json == '{"a": 12, "b": [true, false]}'
 
 
 def test_get_org_indices_of_visible_columns():

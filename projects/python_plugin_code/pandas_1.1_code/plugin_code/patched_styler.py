@@ -12,13 +12,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from plugin_code.custom_json_encoder import CustomJSONEncoder
-from plugin_code.html_props_generator import HTMLPropsGenerator
-from plugin_code.html_props_table_builder import HTMLPropsTableBuilder, HTMLPropsTable
-from plugin_code.html_props_table_generator import HTMLPropsTableGenerator
+from plugin_code.table_frame_generator import TableFrame, TableFrameGenerator
 from plugin_code.patched_styler_context import PatchedStylerContext, Region
 from plugin_code.style_function_name_resolver import StyleFunctionNameResolver
-from plugin_code.style_functions_validator import StyleFunctionsValidator, StyleFunctionValidationProblem, \
-    ValidationStrategyType
+from plugin_code.style_functions_validator import StyleFunctionsValidator, ValidationStrategyType, \
+    StyleFunctionValidationProblem
 from plugin_code.todos_patcher import TodosPatcher
 
 # == copy after here ==
@@ -34,11 +32,7 @@ class TableStructure:
     org_columns_count: int
     rows_count: int
     columns_count: int
-    row_levels_count: int
-    column_levels_count: int
-    hide_row_header: bool
     fingerprint: str
-    hide_column_header: bool = False
 
 
 @dataclass(frozen=True)
@@ -76,7 +70,7 @@ class PatchedStyler:
                                  cols: int,
                                  validation_strategy: Optional[ValidationStrategyType] = None,
                                  ) -> List[StyleFunctionValidationProblem]:
-        return StyleFunctionsValidator(self.__context, validation_strategy) \
+        return StyleFunctionsValidator(self.__context, validation_strategy)\
             .validate(Region(first_row, first_col, rows, cols))
 
     def set_sort_criteria(self,
@@ -85,21 +79,19 @@ class PatchedStyler:
                           ):
         self.__context.set_sort_criteria(by_column_index, ascending)
 
-    def compute_chunk_html_props_table(self,
-                                       first_row: int,
-                                       first_col: int,
-                                       rows: int,
-                                       cols: int,
-                                       exclude_row_header: bool = False,
-                                       exclude_col_header: bool = False,  # unused in this version
-                                       ) -> HTMLPropsTable:
-        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).compute_chunk_table(
+    def compute_chunk_table_frame(self,
+                                  first_row: int,
+                                  first_col: int,
+                                  rows: int,
+                                  cols: int,
+                                  exclude_row_header: bool = False,
+                                  exclude_col_header: bool = False,
+                                  ) -> TableFrame:
+        return TableFrameGenerator(self.__context).generate(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
+            exclude_col_header=exclude_col_header,
         )
-
-    def internal_compute_unpatched_html_props_table(self) -> HTMLPropsTable:
-        return HTMLPropsTableGenerator(HTMLPropsGenerator(self.__context)).internal_compute_unpatched_table()
 
     def get_table_structure(self) -> TableStructure:
         visible_frame = self.__context.get_visible_frame()
@@ -115,9 +107,6 @@ class PatchedStyler:
             org_columns_count=org_columns_count,
             rows_count=rows_count,
             columns_count=columns_count,
-            row_levels_count=visible_frame.index.nlevels,
-            column_levels_count=visible_frame.columns.nlevels,
-            hide_row_header=styler.hidden_index,
             fingerprint=self.__fingerprint
         )
 
