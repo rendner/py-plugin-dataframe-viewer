@@ -16,10 +16,8 @@ from typing import Callable
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from tests.helpers.asserts.assert_html_string_values_with_html_props_values import \
-    assert_html_string_values_with_html_props_values
-from tests.helpers.asserts.assert_styler_html_props import create_and_assert_patched_styler_html_props
-from tests.helpers.asserts.assert_styler_html_string import create_and_assert_patched_styler_html_string
+from plugin_code.table_frame_validator import TableFrameValidator
+from plugin_code.patched_styler_context import PatchedStylerContext
 
 
 def create_and_assert_patched_styler(
@@ -28,6 +26,9 @@ def create_and_assert_patched_styler(
         rows_per_chunk: int,
         cols_per_chunk: int,
 ):
-    create_and_assert_patched_styler_html_props(df, init_styler_func, rows_per_chunk, cols_per_chunk)
-    create_and_assert_patched_styler_html_string(df, init_styler_func, rows_per_chunk, cols_per_chunk)
-    assert_html_string_values_with_html_props_values(df, init_styler_func, rows_per_chunk, cols_per_chunk)
+    styler = df.style
+    init_styler_func(styler)
+    ctx = PatchedStylerContext(styler)
+
+    result = TableFrameValidator(ctx).validate(rows_per_chunk, cols_per_chunk)
+    assert result.actual == result.expected

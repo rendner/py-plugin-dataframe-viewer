@@ -17,9 +17,8 @@ from typing import List, Dict, Callable, Optional
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from plugin_code.html_props_table_builder import HTMLPropsTable, HTMLPropsTableRowElement
-from plugin_code.patched_styler import PatchedStyler
-from plugin_code.patched_styler_context import Region, PatchedStylerContext
+from plugin_code.table_frame_generator import TableFrameGenerator, TableFrameCell, TableFrame
+from plugin_code.patched_styler_context import PatchedStylerContext
 
 """
 Q: How can we test that a styled chunk is correctly sorted?
@@ -29,14 +28,14 @@ Q: How can we test that a styled chunk is correctly sorted?
 
     idea:
         - all cell values have to be unique
-        - use a styled expected result (html-props) and a sorted expected result (html-props)
-        - generate the styled and sorted actual result (html-props)
-        - convert each html-props into a dict with the unique cell value as key
-        - pick an actual key and compare the element attributes of it
-            - displayValue
-            - rowIndex
-            - colIndex
-            - cssStyling
+        - create a FrameTable for:
+            - the styled expected result 
+            - the sorted expected result
+            - the styled and sorted actual result (combined from chunks)
+        - convert each table into a dict with the unique cell value as key
+        - iterate over dicts and ensure:
+            - actual cell has the same styling as in the expected styled cells
+            - actual cell has the same position as in the expected sorted cells
 """
 
 
@@ -52,129 +51,65 @@ def create_and_assert_patched_styler_sorting(
     # create: expected styled
     styler = df.style
     init_styler_func(styler)
-    patched_styler = PatchedStyler(PatchedStylerContext(styler), "")
-    styled_table = patched_styler.internal_compute_unpatched_html_props_table()
-    expected_styled_dict = _map_cell_elements_by_unique_display_value(styled_table)
+    styled_table = TableFrameGenerator(PatchedStylerContext(styler)).generate()
+    expected_styled_cells = _map_cells_by_unique_display_value(styled_table)
 
     # create: expected sorted
     sorted_styler = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending).style
     if init_expected_sorted_styler_func is not None:
         init_expected_sorted_styler_func(sorted_styler)
-    sorted_patched_styler = PatchedStyler(PatchedStylerContext(sorted_styler), "")
-    expected_sorted_dict = _map_cell_elements_by_unique_display_value(
-        sorted_patched_styler.internal_compute_unpatched_html_props_table(),
-    )
+    sorted_table = TableFrameGenerator(PatchedStylerContext(sorted_styler)).generate()
+    expected_sorted_cells = _map_cells_by_unique_display_value(sorted_table)
 
     # create: actual styled and sorted
     chunk_styler = df.style
     init_styler_func(chunk_styler)
-    patched_chunk_styler = PatchedStyler(PatchedStylerContext(chunk_styler), "")
-    patched_chunk_styler.set_sort_criteria(sort_by_column_index, sort_ascending)
-    actual_dict = _map_cell_elements_by_unique_display_value(
-        _build_combined_chunk_table(
-            patched_chunk_styler=patched_chunk_styler,
-            rows_per_chunk=rows_per_chunk,
-            cols_per_chunk=cols_per_chunk,
-        ),
+    ps_ctx = PatchedStylerContext(chunk_styler)
+    ps_ctx.set_sort_criteria(sort_by_column_index, sort_ascending)
+    actual_cells = _map_cells_by_unique_display_value(
+        TableFrameGenerator(ps_ctx).generate_by_combining_chunks(rows_per_chunk=rows_per_chunk, cols_per_chunk=cols_per_chunk)
     )
 
-    _compare_element_dicts(
-        actual_dict=actual_dict,
-        expected_styled_dict=expected_styled_dict,
-        expected_sorted_dict=expected_sorted_dict,
+    _compare_cells(
+        actual_cells=actual_cells,
+        expected_styled_cells=expected_styled_cells,
+        expected_sorted_cells=expected_sorted_cells,
     )
 
 
 @dataclass
-class ElementInfo:
-    element: HTMLPropsTableRowElement
+class CellInfo:
+    cell: TableFrameCell
     row: int
     col: int
 
 
-def _compare_element_dicts(
-        actual_dict: Dict[str, ElementInfo],
-        expected_styled_dict: Dict[str, ElementInfo],
-        expected_sorted_dict: Dict[str, ElementInfo],
+def _compare_cells(
+        actual_cells: Dict[str, CellInfo],
+        expected_styled_cells: Dict[str, CellInfo],
+        expected_sorted_cells: Dict[str, CellInfo],
 ):
-    assert len(actual_dict) > 0
-    assert len(actual_dict) == len(expected_styled_dict)
-    assert len(actual_dict) == len(expected_sorted_dict)
+    assert len(actual_cells) > 0
+    assert len(actual_cells) == len(expected_styled_cells)
+    assert len(actual_cells) == len(expected_sorted_cells)
 
-    for key, value in actual_dict.items():
+    for key, value in actual_cells.items():
         # check correct sorting
-        expected_sorted_info = expected_sorted_dict[key]
+        expected_sorted_info = expected_sorted_cells[key]
         assert value.row == expected_sorted_info.row
         assert value.col == expected_sorted_info.col
 
         # check styling
-        expected_styled_info = expected_styled_dict[key]
-        assert value.element.css_props == expected_styled_info.element.css_props
+        expected_styled_info = expected_styled_cells[key]
+        assert value.cell.css == expected_styled_info.cell.css
 
 
-def _map_cell_elements_by_unique_display_value(table: HTMLPropsTable) -> Dict[str, ElementInfo]:
+def _map_cells_by_unique_display_value(table: TableFrame) -> Dict[str, CellInfo]:
     result = {}
-    for ri, row in enumerate(table.body):
-        for ci, element in enumerate(row):
-            if "td" == element.type:
-                if element.display_value in result:
-                    raise KeyError("All cell elements must have a unique value.")
-                result[element.display_value] = ElementInfo(element, ri, ci)
+    for ri, row in enumerate(table.cells):
+        for ci, cell in enumerate(row):
+            if cell.value in result:
+                raise KeyError("All cell elements must have a unique value.")
+            result[cell.value] = CellInfo(cell, ri, ci)
     assert len(result) > 0
     return result
-
-
-def _build_combined_chunk_table(
-        patched_chunk_styler: PatchedStyler,
-        rows_per_chunk: int,
-        cols_per_chunk: int,
-):
-    combined_table: Optional[HTMLPropsTable] = None
-    region = patched_chunk_styler.internal_get_context().get_region_of_visible_frame()
-
-    for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
-        chunk_props_table = patched_chunk_styler.compute_chunk_html_props_table(
-            first_row=region.first_row + chunk_region.first_row,
-            first_col=region.first_col + chunk_region.first_col,
-            rows=chunk_region.rows,
-            cols=chunk_region.cols,
-            exclude_row_header=chunk_region.first_col > 0,
-            exclude_col_header=chunk_region.first_row > 0,
-        )
-
-        if combined_table is None:
-            combined_table = chunk_props_table
-        else:
-            _add_table_part(
-                table=combined_table,
-                part_to_add=chunk_props_table,
-                part_region=chunk_region,
-            )
-
-    return combined_table if combined_table is not None else HTMLPropsTable([], [])
-
-
-def _add_table_part(
-        table: HTMLPropsTable,
-        part_to_add: HTMLPropsTable,
-        part_region: Region,
-):
-    # append header elements
-    if part_region.first_row == 0:
-        for ri, row in enumerate(part_to_add.head):
-            for element in row:
-                if element.kind == "col_heading":
-                    table.head[ri].append(element)
-
-    # append body elements
-    if part_region.first_col == 0:
-        # first part of the row - add header and data
-        table.body.extend(part_to_add.body)
-    else:
-        # continue rows - only add data
-        for ri, row in enumerate(part_to_add.body):
-            target_row = table.body[part_region.first_row + ri]
-            for ei, entry in enumerate(row):
-                if entry.type == 'td':
-                    target_row.extend(row[ei:])
-                    break

@@ -11,8 +11,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from plugin_code.html_props_generator import HTMLPropsGenerator
-from plugin_code.html_props_validator import HTMLPropsValidator
+from plugin_code.table_frame_generator import TableFrameGenerator
+from plugin_code.table_frame_validator import TableFrameValidator
 from plugin_code.patched_styler_context import PatchedStylerContext, Region
 from plugin_code.styler_todo import StylerTodo
 
@@ -86,10 +86,12 @@ class StyleFunctionsValidator:
         self.__apply_todos_count: int = self.__count_apply_todos(styler_context.get_styler_todos())
         self.__validation_strategy: _AbstractValidationStrategy = self.__create_validation_strategy(strategy_type)
 
-    def validate(self, region: Region) -> List[StyleFunctionValidationProblem]:
-
+    def validate(self, region: Region = None) -> List[StyleFunctionValidationProblem]:
         if self.__apply_todos_count == 0:
             return []
+
+        if region is None:
+            region = self.__styler_context.get_region_of_visible_frame()
 
         rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(region.rows, region.cols)
 
@@ -97,8 +99,8 @@ class StyleFunctionsValidator:
             return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
 
         try:
-            validator = HTMLPropsValidator(self.__styler_context)
-            if validator.validate_chunk_region(region, rows_per_chunk, cols_per_chunk).is_equal:
+            validator = TableFrameValidator(self.__styler_context)
+            if validator.validate(rows_per_chunk, cols_per_chunk, region).is_equal:
                 return []
         except Exception:
             pass
@@ -117,8 +119,8 @@ class StyleFunctionsValidator:
             try:
                 if todo.is_applymap():
                     continue
-                validator = HTMLPropsValidator(ctx, HTMLPropsGenerator(ctx, lambda x: x is todo))
-                result = validator.validate_chunk_region(region, rows_per_chunk, cols_per_chunk)
+                validator = TableFrameValidator(ctx, TableFrameGenerator(ctx, lambda x: x is todo))
+                result = validator.validate(rows_per_chunk, cols_per_chunk, region)
                 if not result.is_equal:
                     validation_result.append(StyleFunctionValidationProblem(i, "NOT_EQUAL"))
             except Exception as e:
@@ -130,9 +132,7 @@ class StyleFunctionsValidator:
 
     @staticmethod
     def __count_apply_todos(todos: List[StylerTodo]) -> int:
-        if len(todos) == 0:
-            return 0
-        return len([not t.is_applymap() for t in todos])
+        return 0 if not todos else len([not t.is_applymap() for t in todos])
 
     @staticmethod
     def __create_validation_strategy(strategy_type: Optional[ValidationStrategyType] = None):
