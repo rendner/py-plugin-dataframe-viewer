@@ -22,8 +22,8 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
 import org.junit.jupiter.api.*
-import org.junit.jupiter.api.extension.AfterTestExecutionCallback
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.jupiter.api.extension.TestExecutionExceptionHandler
 import java.time.LocalDateTime
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
@@ -103,7 +103,8 @@ internal abstract class AbstractPipEnvEnvironmentTest {
             throw IllegalStateException("Only one debugger instance allowed per testcase.")
         }
 
-        debugger = createDebugger().also {
+        createDebugger().also {
+            debugger = it
             executorService = Executors.newSingleThreadExecutor().also { es ->
                 es.submit { it.start() }
             }
@@ -113,14 +114,13 @@ internal abstract class AbstractPipEnvEnvironmentTest {
 
     @JvmField
     @RegisterExtension
-    protected var dumpDebuggerTracesOnTestFailure = AfterTestExecutionCallback { context ->
-        if (context.executionException.isPresent) {
-            val testCaseName = context.let {
-                "${it.testClass.get().simpleName}::${it.testMethod.get().name}"
-            }
-            val filePath = "debugger_traces/${getPipEnvEnvironmentName()}/${LocalDateTime.now()}-$testCaseName.traces"
-            debugger?.dumpTracesOnExit(filePath)
+    protected var dumpDebuggerTracesOnTestFailure = TestExecutionExceptionHandler { context, throwable ->
+        val testCaseName = context.let {
+            "${it.testClass.get().simpleName}::${it.testMethod.get().name}"
         }
+        val filePath = "debugger_traces/${getPipEnvEnvironmentName()}/${LocalDateTime.now()}-$testCaseName.traces"
+        debugger?.dumpTracesOnExit(filePath)
+        throw throwable
     }
 
     private class MyDebuggerApi(private val pythonDebugger: PythonDebugger): IPythonDebuggerApi {
