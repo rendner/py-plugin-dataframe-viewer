@@ -1,4 +1,4 @@
-#  Copyright 2022 cms.rendner (Daniel Schmidt)
+#  Copyright 2023 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ def test_empty_df_with_styles(validation_strategy_type: ValidationStrategyType, 
         Region(0, 0, len(df.index) // 2, len(df.columns) // 2),
         Region(0, 0, len(df.index), len(df.columns))
     ])
-def test_df_without_styles(validation_strategy_type: ValidationStrategyType,  region: Region):
+def test_df_without_styles(validation_strategy_type: ValidationStrategyType, region: Region):
     styler = df.style
 
     validator = _create_validator(styler, validation_strategy_type)
@@ -113,15 +113,14 @@ def test_does_not_fail_on_exception(validation_strategy_type: ValidationStrategy
 
     styler = df.style.apply(raise_exception, axis='index')
 
-    region = Region(0, 0, len(df.index), len(df.columns))
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(region)
+    result = validator.validate()
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 1
         assert result[0] == StyleFunctionValidationProblem(index=0, reason="EXCEPTION", message="I don't care")
 
-        result = validator.validate(region)
+        result = validator.validate()
         assert len(result) == 1
         assert result[0] == StyleFunctionValidationProblem(index=0, reason="EXCEPTION", message="I don't care")
     else:
@@ -138,22 +137,21 @@ def test_detect_invalid_styling_function(axis: str, validation_strategy_type: Va
 
     styler = df.style.apply(my_highlight_max, axis=axis)
 
-    region = Region(0, 0, len(df.index), len(df.columns))
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(region)
+    result = validator.validate()
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         if axis == 'index':
             assert len(result) == 0
 
-            result = validator.validate(region)
+            result = validator.validate()
             assert len(result) == 1
             assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
         else:
             assert len(result) == 1
             assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
 
-            result = validator.validate(region)
+            result = validator.validate()
             assert len(result) == 0
     else:
         assert len(result) == 1
@@ -171,15 +169,14 @@ def test_detect_invalid_styling_functions(validation_strategy_type: ValidationSt
 
     styler = df.style.apply(my_highlight_max, axis=0).highlight_max().apply(raise_exception, axis=1)
 
-    region = Region(0, 0, len(df.index), len(df.columns))
     validator = _create_validator(styler, validation_strategy_type)
-    result = validator.validate(region)
+    result = validator.validate()
 
     if validation_strategy_type is ValidationStrategyType.FAST:
         assert len(result) == 1
         assert result[0] == StyleFunctionValidationProblem(index=2, reason="EXCEPTION", message="I don't care")
 
-        result = validator.validate(region)
+        result = validator.validate()
         assert len(result) == 2
         assert result[0] == StyleFunctionValidationProblem(index=0, reason="NOT_EQUAL")
         assert result[1] == StyleFunctionValidationProblem(index=2, reason="EXCEPTION", message="I don't care")
@@ -195,7 +192,7 @@ def test_does_not_fail_if_rows_and_cols_are_hidden():
         .hide_columns(subset=df.columns[2:4])
 
     validator = _create_validator(style_hidden, ValidationStrategyType.PRECISION)
-    result = validator.validate(Region(0, 0, len(df.index), len(df.columns)))
+    result = validator.validate()
     assert len(result) == 0
 
 
@@ -207,5 +204,5 @@ def test_does_not_fail_if_rows_and_cols_are_filtered_out():
         PatchedStylerContext(style_hidden, FilterCriteria.from_frame(filter_frame)),
         ValidationStrategyType.PRECISION,
     )
-    result = validator.validate(Region(0, 0, len(df.index), len(df.columns)))
+    result = validator.validate()
     assert len(result) == 0

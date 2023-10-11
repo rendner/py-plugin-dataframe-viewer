@@ -11,8 +11,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import numpy as np
 import pandas as pd
+import numpy as np
 import pytest
 from pandas import MultiIndex, DataFrame
 
@@ -41,25 +41,7 @@ def test_table_structure():
     assert ts.org_columns_count == len(df.columns)
     assert ts.rows_count == len(df.index)
     assert ts.columns_count == len(df.columns)
-    assert ts.row_levels_count == 2
-    assert ts.column_levels_count == 2
-    assert ts.hide_row_header is False
-    assert ts.hide_column_header is False
     assert ts.fingerprint == "finger-1"
-
-
-def test_table_structure_hide_row_header():
-    styler = df.style.hide_index()
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.hide_row_header is True
-    assert ts.hide_column_header is False
-
-
-def test_table_structure_hide_column_header():
-    styler = df.style.hide_columns()
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.hide_column_header is True
-    assert ts.hide_row_header is False
 
 
 def test_table_structure_columns_count_hide_all_columns():
