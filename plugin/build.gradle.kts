@@ -69,7 +69,6 @@ tasks {
         val pythonVersion: String,
         val pipenvEnvironments: List<String>,
         val envsAreLocalPythonProjects: Boolean,
-        val isMigratedToPluginCodeProject: Boolean = false,
         ) {
         private val workdir = "/usr/src/app"
         val dockerImageName = "sdfv-plugin-dockered-python_$pythonVersion"
@@ -106,7 +105,6 @@ tasks {
             "3.9",
             listOf("pandas_2.1"),
             true,
-            true,
         ),
         PythonDockerImage(
             "$pythonDockerBaseDir/python_3.8",
@@ -139,9 +137,7 @@ tasks {
 
                 if (entry.envsAreLocalPythonProjects) {
                     entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
-                        val pythonSourceProjectPath = if (entry.isMigratedToPluginCodeProject)
-                            "../projects/python_plugin_code/${pipEnvEnvironment}_code"
-                            else "../projects/html_from_styler/${pipEnvEnvironment}_styler"
+                        val pythonSourceProjectPath = "../projects/python_plugin_code/${pipEnvEnvironment}_code"
 
                         val pipFile = project.file("$pythonSourceProjectPath/Pipfile")
                         val pipFileLock = project.file("$pythonSourceProjectPath/Pipfile.lock")
