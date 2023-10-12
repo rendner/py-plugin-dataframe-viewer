@@ -56,6 +56,7 @@ def test_combined_chunks_do_not_include_a_highlighted_min_after_filtering_min_va
 
 def test_combined_chunks_do_include_highlighted_min_values_after_filtering():
     styler = df.style.highlight_min(subset=IndexSlice[2:4])
+    # note: extra space in front of color name (formatting bug in pandas 1.2)
     assert "background-color:  yellow;" in styler.render()
 
     # filter, but include min values
@@ -68,7 +69,8 @@ def test_combined_chunks_do_include_highlighted_min_values_after_filtering():
     for row in table.cells:
         for entry in row:
             if entry.css is not None:
-                if entry.css['background-color'] == ' yellow':
+                # note: extra space in front of color name is removed by the "TableFrameGenerator"
+                if entry.css['background-color'] == 'yellow':
                     highlighted_values_found += 1
 
     assert highlighted_values_found == len(df.columns)

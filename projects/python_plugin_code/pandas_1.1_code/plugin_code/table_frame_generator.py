@@ -493,7 +493,8 @@ class TableFrameGenerator:
                 props = entry['props']
                 if not props:
                     continue
-                css_props = _CSSPropsWithIndex({p[0]: p[1] for p in props}, index)
+                # note: remove extra space in front of the values (formatting bug in pandas 1.1)
+                css_props = _CSSPropsWithIndex({p[0]: p[1].lstrip(' ') for p in props}, index)
                 for s in entry.get('selectors', []):
                     css_dict[s] = css_props
         return css_dict

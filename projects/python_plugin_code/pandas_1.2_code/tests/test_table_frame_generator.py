@@ -183,9 +183,8 @@ def test_highlight_max():
             [TableFrameCell(value='0'), TableFrameCell(value='3')],
             [TableFrameCell(value='1'), TableFrameCell(value='4')],
             [
-                # note: extra space in front of color name (bug in pandas 1.2)
-                TableFrameCell(value='2', css={'background-color': ' red'}),
-                TableFrameCell(value='5', css={'background-color': ' red'}),
+                TableFrameCell(value='2', css={'background-color': 'red'}),
+                TableFrameCell(value='5', css={'background-color': 'red'}),
             ],
         ],
     )
