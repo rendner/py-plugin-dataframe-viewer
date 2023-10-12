@@ -29,7 +29,7 @@ class CSSValueConverter {
     }
 
     fun convertTextAlign(value: String?): TextAlign? {
-        return if(value.isNullOrEmpty()) null else when (value.trim()) {
+        return if(value.isNullOrEmpty()) null else when (value) {
             "left", "start" -> TextAlign.left
             "right", "end" -> TextAlign.right
             "center" -> TextAlign.center
@@ -41,10 +41,7 @@ class CSSValueConverter {
         // https://dzone.com/articles/create-javaawtcolor-from-string-representation
         // https://github.com/beryx/awt-color-factory/blob/master/README.md
         return try {
-            // always remove surrounding spaces to ensure colors can be parsed correctly
-            // for example, pandas 1.1 - 1.2 returns colors like ' #96b6d7' (leading space) from "Styler::background_gradient"
-            val color = ColorFactory.web(colorString.trim(), 1.0)
-            return if (color.alpha == 0) null else color
+             ColorFactory.web(colorString, 1.0).let { if (it.alpha == 0) null else it }
         } catch (ignore: IllegalArgumentException) {
             null
         }
