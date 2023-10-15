@@ -31,7 +31,6 @@ def generate_plugin_code():
         'highlight_extrema_patcher.py',
         'todos_patcher.py',
         'patched_styler_context.py',
-        'display_value_truncator.py',
         'table_frame_generator.py',
         'table_frame_validator.py',
         'style_functions_validator.py',

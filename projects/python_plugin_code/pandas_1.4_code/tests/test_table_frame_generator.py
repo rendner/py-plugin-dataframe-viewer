@@ -1,3 +1,5 @@
+from pandas import option_context
+
 from plugin_code.table_frame_generator import TableFrameGenerator, TableFrame, TableFrameLegend, TableFrameCell
 from plugin_code.patched_styler_context import PatchedStylerContext
 
@@ -146,7 +148,6 @@ def test_hide_column_headers():
     data = [[i] * 4 for i in range(0, 4)]
     df = pd.DataFrame(data, index=idx, columns=cols)
 
-# todo: "names" is for showing/hiding names
     ps_ctx = PatchedStylerContext(df.style.hide(axis='columns'))
     actual = TableFrameGenerator(ps_ctx).generate_by_combining_chunks(2, 2)
     assert actual == TableFrame(
@@ -230,3 +231,62 @@ def test_highlight_max():
             ],
         ],
     )
+
+
+def test_generate_ignores_max_elements_option():
+    with option_context("styler.render.max_elements", 1):
+        df = pd.DataFrame.from_dict({
+            0: [0, 1, 2],
+        })
+
+        ps_ctx = PatchedStylerContext(df.style)
+        actual = TableFrameGenerator(ps_ctx).generate()
+        assert actual == TableFrame(
+            index_labels=[['0'], ['1'], ['2']],
+            column_labels=[['0']],
+            cells=[
+                [TableFrameCell(value='0')],
+                [TableFrameCell(value='1')],
+                [TableFrameCell(value='2')],
+            ],
+        )
+
+
+def test_generate_ignores_max_rows_option():
+    with option_context("styler.render.max_rows", 1):
+        df = pd.DataFrame.from_dict({
+            0: [0, 1, 2],
+        })
+
+        ps_ctx = PatchedStylerContext(df.style)
+        actual = TableFrameGenerator(ps_ctx).generate()
+        assert actual == TableFrame(
+            index_labels=[['0'], ['1'], ['2']],
+            column_labels=[['0']],
+            cells=[
+                [TableFrameCell(value='0')],
+                [TableFrameCell(value='1')],
+                [TableFrameCell(value='2')],
+            ],
+        )
+
+
+def test_generate_ignores_max_columns_option():
+    with option_context("styler.render.max_columns", 1):
+        df = pd.DataFrame.from_dict({
+            0: [0],
+            1: [1],
+            2: [2],
+        })
+
+        ps_ctx = PatchedStylerContext(df.style)
+        actual = TableFrameGenerator(ps_ctx).generate()
+        assert actual == TableFrame(
+            index_labels=[['0']],
+            column_labels=[['0'], ['1'], ['2']],
+            cells=[[
+                TableFrameCell(value='0'),
+                TableFrameCell(value='1'),
+                TableFrameCell(value='2'),
+            ]],
+        )

@@ -11,15 +11,16 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from plugin_code.display_value_truncator import DisplayValueTruncator
 from plugin_code.patched_styler_context import Region, PatchedStylerContext
 from plugin_code.styler_todo import StylerTodo
 
 # == copy after here ==
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Optional, Callable, List, Set, Dict, Tuple
+from typing import Optional, Callable, List, Set, Dict, Tuple, Any
 from pandas.io.formats.style import Styler
+from pandas import option_context
+from pandas.io.formats.printing import pprint_thing
 
 
 @dataclass
@@ -48,7 +49,7 @@ class _CSSPropsWithIndex:
     index: int
 
 
-class _TranslateKeysDict(Mapping):
+class _TranslateKeysDict(Mapping, dict):
 
     def __init__(self, org_dict: dict, translate_key: Callable):
         self._org_dict = org_dict
@@ -80,6 +81,21 @@ class _TranslateKeysDict(Mapping):
 
     def __len__(self):
         return len(self._org_dict)
+
+
+class ValueFormatter:
+
+    @staticmethod
+    def format_column(value: Any) -> str:
+        return pprint_thing(value)
+
+    @staticmethod
+    def format_index(value: Any) -> str:
+        return pprint_thing(value)
+
+    @staticmethod
+    def format_cell(value: Any) -> str:
+        return pprint_thing(value, quote_strings=True, max_seq_items=42)
 
 
 class TableFrameGenerator:
@@ -184,12 +200,18 @@ class TableFrameGenerator:
         chunk_styler.cell_context = _TranslateKeysDict(computed_styler.cell_context, translate_key)
         chunk_styler._display_funcs = _TranslateKeysDict(computed_styler._display_funcs, translate_key)
 
-        html_props = chunk_styler._translate(sparse_index=False, sparse_cols=False)
+        with option_context(
+                "styler.render.max_elements", 262144,
+                "styler.render.max_columns", None,
+                "styler.render.max_rows", None,
+        ):
+            html_props = chunk_styler._translate(sparse_index=False, sparse_cols=False)
 
         return self._convert_to_table_frame(
             html_props,
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
+            formatter=ValueFormatter(),
         )
 
     def __compute_styling(self,
@@ -249,13 +271,14 @@ class TableFrameGenerator:
                                 html_props: dict,
                                 exclude_row_header: bool,
                                 exclude_col_header: bool,
+                                formatter: ValueFormatter,
                                 ) -> TableFrame:
         # html_props => {uuid, table_styles, caption, head, body, cellstyle, table_attributes}
 
-        column_labels = [] if exclude_col_header else self._extract_column_header_labels(html_props)
-        index_labels = [] if exclude_row_header else self._extract_index_header_labels(html_props)
-        cell_values = self._extract_cell_values(html_props)
-        legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(html_props)
+        column_labels = [] if exclude_col_header else self._extract_column_header_labels(html_props, formatter)
+        index_labels = [] if exclude_row_header else self._extract_index_header_labels(html_props, formatter)
+        cell_values = self._extract_cell_values(html_props, formatter)
+        legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(html_props, formatter)
 
         return TableFrame(
             index_labels=index_labels,
@@ -265,7 +288,7 @@ class TableFrameGenerator:
         )
 
     @staticmethod
-    def _extract_legend_label(html_props: dict) -> TableFrameLegend:
+    def _extract_legend_label(html_props: dict, formatter: ValueFormatter) -> TableFrameLegend:
         index_legend = []
         column_legend = []
 
@@ -278,7 +301,9 @@ class TableFrameGenerator:
                 element_classes = set(element.get("class", "").split(" "))
                 if element.get("is_visible", True):
                     if "index_name" in element_classes:
-                        display_value = DisplayValueTruncator(300, False).truncate(element.get("display_value", ""))
+                        display_value = element.get("display_value", "")
+                        if not isinstance(display_value, str):
+                            display_value = formatter.format_index(display_value)
                         index_legend.append(display_value)
                 if "col_heading" in element_classes:
                     # found a column label, row doesn't contain the index-legend
@@ -294,7 +319,9 @@ class TableFrameGenerator:
                         is_index_name = "index_name" in element_classes
 
                         if is_index_name:
-                            display_value = DisplayValueTruncator(300, False).truncate(element.get("display_value", ""))
+                            display_value = element.get("display_value", "")
+                            if not isinstance(display_value, str):
+                                display_value = formatter.format_index(display_value)
                             column_legend.append(display_value)
                             # there should be only one header per row which belongs to the column-legend
                             break
@@ -302,7 +329,7 @@ class TableFrameGenerator:
         return TableFrameLegend(index=index_legend, column=column_legend) if index_legend or column_legend else None
 
     @staticmethod
-    def _extract_column_header_labels(html_props: dict) -> List[List[str]]:
+    def _extract_column_header_labels(html_props: dict, formatter: ValueFormatter) -> List[List[str]]:
         result: List[List[str]] = []
 
         for row in html_props.get("head", []):
@@ -316,7 +343,9 @@ class TableFrameGenerator:
                     is_column_header = "col_heading" in element_classes
 
                     if is_column_header:
-                        display_value = DisplayValueTruncator(300, False).truncate(element.get("display_value", ""))
+                        display_value = element.get("display_value", "")
+                        if not isinstance(display_value, str):
+                            display_value = formatter.format_column(display_value)
                         if is_first_row:
                             result.append([display_value])
                         else:
@@ -326,7 +355,7 @@ class TableFrameGenerator:
         return result
 
     @staticmethod
-    def _extract_index_header_labels(html_props: dict) -> List[List[str]]:
+    def _extract_index_header_labels(html_props: dict, formatter: ValueFormatter) -> List[List[str]]:
         result: List[List[str]] = []
 
         for row in html_props.get("body", []):
@@ -341,7 +370,9 @@ class TableFrameGenerator:
                     is_index_header = "row_heading" in element_classes
 
                     if is_index_header:
-                        display_value = DisplayValueTruncator(300, False).truncate(element.get("display_value", ""))
+                        display_value = element.get("display_value", "")
+                        if not isinstance(display_value, str):
+                            display_value = formatter.format_index(display_value)
                         index_label.append(display_value)
 
             if index_label:
@@ -349,7 +380,7 @@ class TableFrameGenerator:
 
         return result
 
-    def _extract_cell_values(self, html_props: dict) -> List[List[TableFrameCell]]:
+    def _extract_cell_values(self, html_props: dict, formatter: ValueFormatter) -> List[List[TableFrameCell]]:
         result: List[List[TableFrameCell]] = []
 
         css_dict = self.__create_css_dict(html_props)
@@ -364,7 +395,9 @@ class TableFrameGenerator:
                     element_classes = set(element.get("class", "").split(" "))
 
                     if "data" in element_classes:
-                        display_value = DisplayValueTruncator(300, True).truncate(element.get("display_value", ""))
+                        display_value = element.get("display_value", "")
+                        if not isinstance(display_value, str):
+                            display_value = formatter.format_cell(display_value)
                         cells_in_row.append(
                             TableFrameCell(
                                 value=display_value,
