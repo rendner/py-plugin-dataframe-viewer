@@ -44,6 +44,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
@@ -154,6 +155,10 @@ class DataFrameViewerDialog(
     override fun doOKAction() {
         myLastFilterInputState = myFilterInput.getInputState()
         fetchModelData(false)
+    }
+
+    override fun setErrorText(text: String?, component: JComponent?) {
+        super.setErrorText(if (text == null) null else StringUtil.escapeXmlEntities(text), component)
     }
 
     private fun isShouldAbortDataFetchingSilentlyException(throwable: Throwable?): Boolean {
