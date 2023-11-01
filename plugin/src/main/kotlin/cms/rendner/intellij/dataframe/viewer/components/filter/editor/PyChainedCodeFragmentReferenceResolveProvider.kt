@@ -45,7 +45,7 @@ class PyChainedCodeFragmentReferenceResolveProvider : PyReferenceResolveProvider
 
     override fun resolveName(element: PyQualifiedExpression, context: TypeEvalContext): List<RatedResolveResult> {
         if (isSyntheticIdentifierAllowed(element.containingFile?.originalFile) || isSyntheticIdentifierAllowed(context.origin?.originalFile)) {
-            val qName = element.asQualifiedName() ?: return emptyList()
+            val refName = element.referencedName ?: return emptyList()
             var current: PsiElement? = element.context?.containingFile?.originalFile
 
             // unsure if needed but there to prevent endless loops
@@ -55,7 +55,7 @@ class PyChainedCodeFragmentReferenceResolveProvider : PyReferenceResolveProvider
             while (current != null) {
                 if (current is ScopeOwner && !checked.contains(current)) {
                     checked.add(current)
-                    val resolved = PyResolveUtil.resolveQualifiedNameInScope(qName, current, context)
+                    val resolved = PyResolveUtil.resolveLocally(current, refName)
                     if (resolved.isNotEmpty()) {
                         return resolved.map { RatedResolveResult(RatedResolveResult.RATE_NORMAL, it) }
                     }
