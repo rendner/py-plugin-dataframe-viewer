@@ -1,4 +1,4 @@
-#  Copyright 2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,15 +11,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-# == copy after here ==
-import json
-from dataclasses import is_dataclass, asdict
-from typing import Any
-
-
-class CustomJSONEncoder(json.JSONEncoder):
-    def default(self, obj: Any):
-        if is_dataclass(obj):
-            return asdict(obj)
-        return str(obj)
+def copy_file_without_comments(source: str, target: str):
+    with open(target, 'w', encoding='utf8', newline='\n') as outfile:
+        with open(source, encoding='utf8', newline='\n') as file:
+            for line in file:
+                stripped_line = line.lstrip()
+                if not stripped_line.startswith("#"):
+                    outfile.write(line)
