@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,16 +123,34 @@ internal abstract class AbstractPipEnvEnvironmentTest {
         throw throwable
     }
 
-    private class MyDebuggerApi(private val pythonDebugger: PythonDebugger): IPythonDebuggerApi {
-        override val evaluator = MyValueEvaluator(pythonDebugger)
+    private class MyDebuggerApi(private val pythonDebugger: PythonDebugger): IPythonDebuggerApi, IDebuggerInterceptor {
+        private val myInterceptors = mutableListOf<IDebuggerInterceptor>()
+
+        override val evaluator = MyValueEvaluator(pythonDebugger, this)
 
         override fun continueFromBreakpoint() {
             pythonDebugger.continueFromBreakpoint()
         }
+
+        override fun addInterceptor(interceptor: IDebuggerInterceptor) {
+            myInterceptors.add(interceptor)
+        }
+
+        override fun removeInterceptor(interceptor: IDebuggerInterceptor) {
+            myInterceptors.remove(interceptor)
+        }
+
+        override fun onRequest(request: EvalOrExecRequest): EvalOrExecRequest {
+            return myInterceptors.fold(request) { req, interceptor -> interceptor.onRequest(req) }
+        }
+
+        override fun onResponse(response: EvalOrExecResponse): EvalOrExecResponse {
+            return myInterceptors.fold(response) { resp, interceptor -> interceptor.onResponse(resp) }
+        }
     }
 
 
-    private class MyValueEvaluator(private val pythonDebugger: PythonDebugger) : IPluginPyValueEvaluator {
+    private class MyValueEvaluator(private val pythonDebugger: PythonDebugger, private val interceptor: IDebuggerInterceptor) : IPluginPyValueEvaluator {
         override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
             return try {
                 evalOrExec(expression, execute = false, doTrunc = trimResult, EvaluateException.EVAL_FALLBACK_ERROR_MSG)
@@ -151,10 +169,9 @@ internal abstract class AbstractPipEnvEnvironmentTest {
 
         fun evalOrExec(code: String, execute: Boolean, doTrunc: Boolean, fallbackErrorMessage: String): PluginPyValue {
             return try {
-                createPluginPyValue(
-                    pythonDebugger.evalOrExec(EvalOrExecRequest(code, execute, doTrunc)),
-                    fallbackErrorMessage,
-                )
+                val request = interceptor.onRequest(EvalOrExecRequest(code, execute, doTrunc))
+                val response = interceptor.onResponse(pythonDebugger.evalOrExec(request))
+                createPluginPyValue(response, fallbackErrorMessage)
             } catch (ex: ExecutionException) {
                 throw ex.cause ?: EvaluateException(ex.message ?: "Unknown error occurred.")
             }
