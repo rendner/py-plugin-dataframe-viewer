@@ -17,11 +17,9 @@ package cms.rendner.intellij.dataframe.viewer.notifications
 
 import cms.rendner.intellij.dataframe.viewer.DataFrameViewerIcons
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ProblemReason
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionDetails
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.StyleFunctionValidationProblem
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
-import com.intellij.notification.Notification
+import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
+import cms.rendner.intellij.dataframe.viewer.python.bridge.ProblemReason
+import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -39,13 +37,11 @@ import javax.swing.JOptionPane
  * @param region the validated region in the pandas DataFrame
  * @param validationStrategy the used validation strategy
  * @param problems the detected problems
- * @param details additional information about the styling functions registered to the pandas DataFrame
  */
 class ChunkValidationProblemNotification(
     region: ChunkRegion,
     validationStrategy: ValidationStrategyType,
-    problems: List<StyleFunctionValidationProblem>,
-    details: List<StyleFunctionDetails>,
+    problems: List<ValidationProblem>,
 ) : AbstractBalloonNotification(
     "Possible incompatible styling function found",
     "Found ${problems.size} problem(s)\nin $region",
@@ -54,18 +50,17 @@ class ChunkValidationProblemNotification(
 
     init {
         icon = DataFrameViewerIcons.LOGO_16
-        addAction(ShowValidationReportAction(region, validationStrategy, problems, details))
-        addAction(CopyToClipboardAction(region, validationStrategy, problems, details))
+        addAction(ShowValidationReportAction(region, validationStrategy, problems))
+        addAction(CopyToClipboardAction(region, validationStrategy, problems))
     }
 
     private class CopyToClipboardAction(
         private val region: ChunkRegion,
         private val validationStrategy: ValidationStrategyType,
-        private val problems: List<StyleFunctionValidationProblem>,
-        private val details: List<StyleFunctionDetails>,
+        private val problems: List<ValidationProblem>,
     ) : AnAction("Copy To Clipboard"), DumbAware {
         override fun actionPerformed(p0: AnActionEvent) {
-            val message = ClipboardReportGenerator().createReport(region, validationStrategy, problems, details)
+            val message = ClipboardReportGenerator().createReport(region, validationStrategy, problems)
             val selection = StringSelection(message)
             Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
         }
@@ -74,14 +69,13 @@ class ChunkValidationProblemNotification(
     private class ShowValidationReportAction(
         private val region: ChunkRegion,
         private val validationStrategy: ValidationStrategyType,
-        private val problems: List<StyleFunctionValidationProblem>,
-        private val details: List<StyleFunctionDetails>,
+        private val problems: List<ValidationProblem>,
     ) : AnAction("Show Report"), DumbAware {
 
         override fun actionPerformed(event: AnActionEvent) {
             showHtmlMessageDialog(
                 event.project,
-                HTMLReportGenerator().createReport(region, validationStrategy, problems, details),
+                HTMLReportGenerator().createReport(region, validationStrategy, problems),
                 "Chunk Validation Report",
                 JOptionPane.INFORMATION_MESSAGE,
             ) { messageScrollPane ->
@@ -97,22 +91,19 @@ class ChunkValidationProblemNotification(
         fun createReport(
             region: ChunkRegion,
             validationStrategy: ValidationStrategyType,
-            problems: List<StyleFunctionValidationProblem>,
-            details: List<StyleFunctionDetails>,
+            problems: List<ValidationProblem>,
         ): String {
-            return stringify(region, validationStrategy, groupByReason(problems), details)
+            return stringify(region, validationStrategy, groupByReason(problems))
         }
 
         protected abstract fun stringify(
             region: ChunkRegion,
             validationStrategy: ValidationStrategyType,
             sections: List<Section>,
-            details: List<StyleFunctionDetails>,
         ): String
 
         protected fun extractReportableValues(
-            problem: StyleFunctionValidationProblem,
-            details: StyleFunctionDetails,
+            problem: ValidationProblem,
             valueTransformer: ((key: ReportableValue, value: Any) -> String) = { _, value -> value.toString() },
         ): Map<ReportableValue, String> {
             return mutableMapOf<ReportableValue, String>().apply {
@@ -120,25 +111,27 @@ class ChunkValidationProblemNotification(
                 if (problem.message.isNotEmpty()) {
                     addValue(ReportableValue.MESSAGE, problem.message)
                 }
-                addValue(ReportableValue.INDEX, details.index.toString())
-                addValue(ReportableValue.FUNC_NAME, details.resolvedName)
-                if (details.qname != details.resolvedName) {
-                    addValue(ReportableValue.FUNC_QNAME, details.qname)
-                }
-                if (details.isPandasBuiltin) {
-                    addValue(ReportableValue.IS_PANDAS_BUILTIN, true)
-                    addValue(ReportableValue.IS_SUPPORTED_BY_PLUGIN, details.isSupported)
-                } else {
-                    addValue(ReportableValue.IS_ARG_CHUNK_PARENT, details.isChunkParentRequested)
-                }
-                if (details.isApply) {
-                    // only the apply-method has an axis param
-                    addValue(ReportableValue.ARG_AXIS, details.axis)
+                problem.funcInfo.let {
+                    addValue(ReportableValue.INDEX, it.index.toString())
+                    addValue(ReportableValue.FUNC_NAME, it.resolvedName)
+                    if (it.qname != it.resolvedName) {
+                        addValue(ReportableValue.FUNC_QNAME, it.qname)
+                    }
+                    if (it.isPandasBuiltin) {
+                        addValue(ReportableValue.IS_PANDAS_BUILTIN, true)
+                        addValue(ReportableValue.IS_SUPPORTED_BY_PLUGIN, it.isSupported)
+                    } else {
+                        addValue(ReportableValue.IS_ARG_CHUNK_PARENT, it.isChunkParentRequested)
+                    }
+                    if (it.isApply) {
+                        // only the apply-method has an axis param
+                        addValue(ReportableValue.ARG_AXIS, it.axis)
+                    }
                 }
             }
         }
 
-        private fun groupByReason(problems: List<StyleFunctionValidationProblem>): List<Section> {
+        private fun groupByReason(problems: List<ValidationProblem>): List<Section> {
             val warnings = Section("Warnings", "Exception during validation")
             val errors = Section("Errors", "Styling function is not chunk aware (compared results didn't match)")
 
@@ -173,7 +166,7 @@ class ChunkValidationProblemNotification(
         data class Section(
             val title: String,
             val reason: String,
-            val entries: MutableList<StyleFunctionValidationProblem> = mutableListOf()
+            val entries: MutableList<ValidationProblem> = mutableListOf()
         )
     }
 
@@ -182,11 +175,10 @@ class ChunkValidationProblemNotification(
             region: ChunkRegion,
             validationStrategy: ValidationStrategyType,
             sections: List<Section>,
-            details: List<StyleFunctionDetails>
         ): String {
             return StringBuilder().apply {
                 appendHeaderInfo(this, region, validationStrategy)
-                sections.forEach { appendSection(this, it, details) }
+                sections.forEach { appendSection(this, it) }
             }.toString()
         }
 
@@ -205,23 +197,22 @@ class ChunkValidationProblemNotification(
             }
         }
 
-        private fun appendSection(sb: StringBuilder, section: Section, details: List<StyleFunctionDetails>) {
+        private fun appendSection(sb: StringBuilder, section: Section) {
             with(sb) {
                 appendLine("${section.title}:")
-                section.entries.forEach { appendSectionEntry(sb, it, details[it.index], section.reason) }
+                section.entries.forEach { appendSectionEntry(sb, it, section.reason) }
                 appendLine()
             }
         }
 
         private fun appendSectionEntry(
             sb: StringBuilder,
-            entry: StyleFunctionValidationProblem,
-            details: StyleFunctionDetails,
+            entry: ValidationProblem,
             reason: String,
         ) {
             with(sb) {
                 appendRow("reason", reason)
-                extractReportableValues(entry, details).forEach { (key, value) -> appendRow(key.label, value) }
+                extractReportableValues(entry).forEach { (key, value) -> appendRow(key.label, value) }
                 appendLine()
             }
         }
@@ -236,12 +227,11 @@ class ChunkValidationProblemNotification(
             region: ChunkRegion,
             validationStrategy: ValidationStrategyType,
             sections: List<Section>,
-            details: List<StyleFunctionDetails>
         ): String {
             return StringBuilder().apply {
                 append("<html>")
                 appendHeaderInfo(this, region, validationStrategy)
-                sections.forEach { appendSection(this, it, details) }
+                sections.forEach { appendSection(this, it) }
                 append("</html>")
             }.toString()
         }
@@ -262,13 +252,13 @@ class ChunkValidationProblemNotification(
             }
         }
 
-        private fun appendSection(sb: StringBuilder, section: Section, details: List<StyleFunctionDetails>) {
+        private fun appendSection(sb: StringBuilder, section: Section) {
             with(sb) {
                 append("<h2>${section.title}:</h2>")
                 append("<ol>")
                 section.entries.forEach {
                     append("<li>")
-                    appendSectionEntry(sb, it, details[it.index], section.reason)
+                    appendSectionEntry(sb, it, section.reason)
                     append("</li>")
                 }
                 append("</ol>")
@@ -277,11 +267,10 @@ class ChunkValidationProblemNotification(
 
         private fun appendSectionEntry(
             sb: StringBuilder,
-            entry: StyleFunctionValidationProblem,
-            details: StyleFunctionDetails,
+            entry: ValidationProblem,
             reason: String
         ) {
-            val labeledValues = extractReportableValues(entry, details) { key, value ->
+            val labeledValues = extractReportableValues(entry) { key, value ->
                 val result = value.toString()
                 when (key) {
                     ReportableValue.MESSAGE -> StringUtil.escapeXmlEntities(result)

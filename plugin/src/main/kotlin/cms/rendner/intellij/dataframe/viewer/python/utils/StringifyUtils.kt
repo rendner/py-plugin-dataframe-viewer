@@ -43,6 +43,13 @@ fun stringifyMethodCall(instance: String, methodName: String, init: (PythonCallB
     return builder.toString()
 }
 
+fun stringifyImportWithObjectRef(moduleName: String, objectName: String): String {
+    val firstPeriod = moduleName.indexOf('.')
+    // __import__ returns always the first module of the module path
+    // therefore the module path to the specified object has to be appended, excluding the first package, afterward
+    return "__import__('${moduleName}')${moduleName.substring(firstPeriod)}.$objectName"
+}
+
 class PythonCallBuilder(
     private val name: String,
     private val instance: String? = null,

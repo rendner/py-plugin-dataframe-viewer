@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  */
 package cms.rendner.integration.plugin.python.bridge
 
+import cms.rendner.debugger.impl.EvalOrExecRequest
+import cms.rendner.debugger.impl.EvalOrExecResponse
+import cms.rendner.debugger.impl.IDebuggerInterceptor
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectException
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
-import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
@@ -32,7 +33,7 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
     @Test
     fun shouldInjectCodeWithoutAnError() {
         runPythonDebuggerWithoutPluginCode { debuggerApi ->
-            PythonPluginCodeInjector.injectIfRequired(debuggerApi.evaluator, ::pluginCodeEscaper)
+            registerCodeProviders(debuggerApi.evaluator)
         }
     }
 
@@ -41,25 +42,21 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
         runPythonDebuggerWithoutPluginCode { debuggerApi ->
 
             val pandasVersion = getPandasVersion(debuggerApi.evaluator)
+
             val nonExistingPandasVersion = "99.99.0"
-            val patchedEvaluator = object: IPluginPyValueEvaluator {
-                override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
-                    return debuggerApi.evaluator.evaluate(expression, trimResult).let {
-                        if (it.forcedValue != pandasVersion) it
-                        else it.copy(value = nonExistingPandasVersion)
+            debuggerApi.addInterceptor(object: IDebuggerInterceptor {
+                override fun onResponse(response: EvalOrExecResponse): EvalOrExecResponse {
+                    if (response.value == pandasVersion) {
+                        return response.copy(value = nonExistingPandasVersion)
                     }
+                    return response
                 }
-
-                override fun execute(statements: String) {
-                    return debuggerApi.evaluator.execute(statements)
-                }
-            }
-
+            })
 
             Assertions.assertThatExceptionOfType(InjectException::class.java).isThrownBy {
-                PythonPluginCodeInjector.injectIfRequired(patchedEvaluator, ::pluginCodeEscaper)
+                registerCodeProviders(debuggerApi.evaluator)
             }.withMessageContaining(
-                "Unsupported ${PandasVersion(major=99, minor=99, rest="0")}",
+                "Unsupported ${PandasVersion.fromString(nonExistingPandasVersion)}",
             )
         }
     }
@@ -69,19 +66,15 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
         runPythonDebuggerWithoutPluginCode { debuggerApi ->
 
             var codeInjectDetected = 0
-            val patchedEvaluator = object: IPluginPyValueEvaluator {
-                override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
-                    return debuggerApi.evaluator.evaluate(expression, trimResult)
+            debuggerApi.addInterceptor(object: IDebuggerInterceptor {
+                override fun onRequest(request: EvalOrExecRequest): EvalOrExecRequest {
+                    if (request.expression.contains("SDFVPluginModulesImporter") ) codeInjectDetected++
+                    return request
                 }
-
-                override fun execute(statements: String) {
-                    if (statements.contains("MyPluginCodeImporter") ) codeInjectDetected++
-                    return debuggerApi.evaluator.execute(statements)
-                }
-            }
+            })
 
             repeat(3) {
-                PythonPluginCodeInjector.injectIfRequired(patchedEvaluator, ::pluginCodeEscaper)
+                registerCodeProviders(debuggerApi.evaluator)
             }
 
             assertThat(codeInjectDetected).isOne()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge
 
-import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectException
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyImportWithObjectRef
 
 /**
  * Injects the Python-specific plugin code into the Python process.
@@ -25,106 +26,56 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.Evaluate
  */
 class PythonPluginCodeInjector {
 
-    companion object {
-        private const val PLUGIN_MODULE_NAME = "sdfv_plugin_code"
+    private data class RegisteredModulesInfo(val moduleImporterAvailable: Boolean, private val registeredModules: List<String>) {
+        fun isRegistered(moduleId: String) = registeredModules.contains(moduleId)
+    }
 
-        /**
-         * Returns the expression for accessing a specified class of the plugin-code module.
-         */
-        fun getFromPluginModuleExpr(name: String): String {
-            // It is on purpose that the internal classes of the module can't be imported directly.
-            // Since the module is only used by this plugin it is totally fine to use this exotic syntax
-            // to access the classes of the module.
-            return "__import__('$PLUGIN_MODULE_NAME').__dict__.get('$name')"
-        }
+    companion object {
 
         @Synchronized
         fun injectIfRequired(
             evaluator: IPluginPyValueEvaluator,
-            pluginCodeEscaper: (code: String) -> String = ::defaultCodeEscaper,
+            codeProvider: ITableSourceCodeProvider,
         ) {
-            // check if the code was already injected into the current Python process
-            val doesExist =
-                evaluator.evaluate("__import__('importlib').util.find_spec('$PLUGIN_MODULE_NAME') is not None").forcedValue
-            if (doesExist == "True") return
+            val registeredModulesInfo = getRegisteredModulesInfo(evaluator)
 
-            val pandasVersion = try {
-                PandasVersion.fromString(evaluator.evaluate("__import__('pandas').__version__").forcedValue)
-            } catch (ex: EvaluateException) {
-                throw InjectException("Failed to identify version of pandas.", ex)
+            if (!registeredModulesInfo.moduleImporterAvailable) {
+                val importer = PythonPluginCodeInjector::class.java.getResource("/sdfv_base/plugin_modules_importer")!!.readText()
+                evaluator.execute(importer)
+
+                val base = PythonPluginCodeInjector::class.java.getResource("/sdfv_base/plugin_modules_dump.json")!!.readText()
+                registerModulesDump(evaluator, "base", base)
             }
 
-            val codeResourcePath = getPluginCodeResourcePath(pandasVersion)
-            val pluginCode = try {
-                PythonPluginCodeInjector::class.java.getResource(codeResourcePath)!!.readText()
-            } catch (ex: Throwable) {
-                throw InjectException("Failed to read Python plugin code for $pandasVersion.", ex)
+            if (!registeredModulesInfo.isRegistered(codeProvider.getModulesDumpId())) {
+                val dump = codeProvider.getModulesDump(evaluator)
+                val dumpId = codeProvider.getModulesDumpId()
+                registerModulesDump(evaluator, dumpId, dump)
             }
+        }
 
-            /*
-            Some Notes:
-
-            Linebreak-chars in strings passed to "exec" have to be escaped.
-
-            Examples:
-
-                default string behavior:
-                    "a\nb".split("\n")                  => ['a', 'b']
-                    "a\\nb".split("\n")                 => ['a\\nb']
-
-                strings passed to exec:
-                    exec("a = 'a\nb'.split('\n')")      => {SyntaxError}EOL while scanning string literal (<string>, line 1)
-                    exec("a = 'a\\nb'.split('\\n')")    => ['a', 'b']
-                    exec("a = 'a\\nb'")                 => 'a\nb'
-
-              To refer to the un-escaped linebreak-chars in the "pluginCode", '\\n' has to be used.
-             */
-            try {
-                evaluator.execute("""
-                |def sdfv_plugin_code_injector():
-                |   from importlib import abc
-                |   import sys
-                |
-                |   class MyPluginCodeImporter(abc.MetaPathFinder, abc.Loader):
-                |       def find_spec(self, fullname, path=None, target=None):
-                |           if fullname == "$PLUGIN_MODULE_NAME":
-                |               from importlib import util
-                |               return util.spec_from_loader(fullname, self)
-                |           return None
-                |
-                |       def exec_module(self, module) -> None:
-                |           exec('''${pluginCodeEscaper(pluginCode)}''', module.__dict__)
-                |
-                |   sys.meta_path.append(MyPluginCodeImporter())
-                |
-                |try:
-                |   sdfv_plugin_code_injector()
-                |finally:
-                |   del sdfv_plugin_code_injector
-                """.trimMargin()
+        private fun getRegisteredModulesInfo(evaluator: IPluginPyValueEvaluator): RegisteredModulesInfo {
+            val methodRef = stringifyImportWithObjectRef("cms_rendner_sdfv.package_registry", "get_registered_dump_ids")
+            return try {
+                RegisteredModulesInfo(
+                    true,
+                    evaluator
+                        .evaluate("$methodRef()")
+                        .forcedValue
+                        .removeSurrounding("[", "]").split(", ")
+                        .map { it.removeSurrounding("'") },
                 )
             } catch (ex: EvaluateException) {
-                throw InjectException("Failed to inject Python plugin code for $pandasVersion.", ex)
+                RegisteredModulesInfo(false, emptyList())
+            } catch (ex: NullPointerException) {
+                RegisteredModulesInfo(false, emptyList())
             }
         }
 
-        private fun defaultCodeEscaper(code: String): String {
-            return code
-                .replace("\\n", "\\\\n")
-                .replace("\\t", "\\\\t")
-        }
-
-        private fun getPluginCodeResourcePath(version: PandasVersion): String {
-            if (version.major == 1) {
-                if (version.minor in 1..5) {
-                    return "/pandas_1.${version.minor}/plugin_code"
-                }
-            } else if (version.major == 2) {
-                if (version.minor in 0..1) {
-                    return "/pandas_2.${version.minor}/plugin_code"
-                }
-            }
-            throw InjectException("Unsupported $version.")
+        private fun registerModulesDump(evaluator: IPluginPyValueEvaluator, dumpId: String, dump: String) {
+            val methodRef = stringifyImportWithObjectRef("cms_rendner_sdfv.package_registry", "register_package_dump")
+            // don't wrap json string with extra "" - it is a valid Python dict out of the box
+            evaluator.execute("$methodRef('$dumpId', $dump)")
         }
     }
 }

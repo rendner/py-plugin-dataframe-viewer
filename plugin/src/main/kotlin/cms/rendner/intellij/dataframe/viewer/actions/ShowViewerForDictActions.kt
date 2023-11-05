@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceToFrameHint
+import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasAvailableInSessionProvider
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.xdebugger.XDebuggerManager
@@ -31,7 +31,7 @@ open class ShowViewerForDictAction: AbstractShowViewerAction() {
 
     private fun couldCreateFrameFromSelectedValue(event: AnActionEvent): Boolean {
         val value = getSelectedDebugValue(event) ?: return false
-        if (value.qualifiedType == PythonQualifiedTypes.Dict) {
+        if (value.qualifiedType == PythonQualifiedTypes.DICT) {
             val project = event.project ?: return false
             val session = XDebuggerManager.getInstance(project).currentSession ?: return false
             return PandasAvailableInSessionProvider.isAvailable(session) == true
@@ -41,5 +41,5 @@ open class ShowViewerForDictAction: AbstractShowViewerAction() {
 }
 
 class ShowViewerForDictWithKeysAsRowsAction: ShowViewerForDictAction() {
-    override fun getDataSourceToFrameHint(value: PyDebugValue) = DataSourceToFrameHint.DictKeysAsRows
+    override fun getDataSourceTransformHint(value: PyDebugValue) = DataSourceTransformHint.DictKeysAsRows
 }

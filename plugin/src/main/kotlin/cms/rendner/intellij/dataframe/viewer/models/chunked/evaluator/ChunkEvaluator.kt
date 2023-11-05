@@ -17,15 +17,15 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrame
-import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyTableSourceRef
 
 /**
  * Evaluates the table representation for a chunk.
  *
- * @param patchedStyler the styler from which the chunk is fetched.
+ * @param tableSourceRef the source from which the chunk is fetched.
  */
 class ChunkEvaluator(
-    private val patchedStyler: IPyPatchedStylerRef,
+    private val tableSourceRef: IPyTableSourceRef,
 ) : IChunkEvaluator {
 
     override fun evaluateTableFrame(
@@ -33,10 +33,10 @@ class ChunkEvaluator(
         excludeRowHeader: Boolean,
         excludeColumnHeader: Boolean
     ): TableFrame {
-        return patchedStyler.evaluateComputeChunkTableFrame(chunkRegion, excludeRowHeader, excludeColumnHeader)
+        return tableSourceRef.evaluateComputeChunkTableFrame(chunkRegion, excludeRowHeader, excludeColumnHeader)
     }
 
     override fun setSortCriteria(sortCriteria: SortCriteria) {
-        patchedStyler.evaluateSetSortCriteria(sortCriteria)
+        tableSourceRef.evaluateSetSortCriteria(sortCriteria)
     }
 }

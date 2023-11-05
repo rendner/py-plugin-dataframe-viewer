@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.validator
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionInfo
+import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
 
 /**
  * Validates that registered pandas styling functions produce a stable result when these are applied to the chunks.
@@ -38,19 +40,21 @@ class ChunkValidator(
     private val problemHandler: IChunkValidationProblemHandler,
 ) {
     @Volatile
-    private var details: List<StyleFunctionDetails>? = null
+    private var functionInfo: List<StyleFunctionInfo>? = null
 
     fun validate(region: ChunkRegion) {
         val result = patchedStyler.evaluateValidateStyleFunctions(region, validationStrategy)
         if (result.isNotEmpty()) {
-            ensureDetails()
-            details?.let { problemHandler.handleValidationProblems(region, validationStrategy, result, it) }
+            val info = fetchFunctionInfoIfNotPresent()
+            problemHandler.handleValidationProblems(
+                region,
+                validationStrategy,
+                result.map { p -> ValidationProblem(info[p.index], p.reason, p.message) },
+            )
         }
     }
 
-    private fun ensureDetails() {
-        if (details == null) {
-            details = patchedStyler.evaluateStyleFunctionDetails()
-        }
+    private fun fetchFunctionInfoIfNotPresent(): List<StyleFunctionInfo> {
+        return functionInfo ?: patchedStyler.evaluateStyleFunctionInfo().also { functionInfo = it }
     }
 }

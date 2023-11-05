@@ -86,12 +86,12 @@ fun PyDebugValue.toValueEvalExpr(): PyDebugValueEvalExpr {
  * For this reason, they must be re-evaluated if the frame has changed.
  *
  * @param reEvalExpr a "path" to re-evaluate the value after stack frame change.
- * @param currentFrameRefExpr the "evaluationExpression" of a [PyDebugValue] to access the object.
+ * @param currentStackFrameRefExpr the "evaluationExpression" of a [PyDebugValue] to access the object.
  * @param qualifiedType the qualified type of the referenced value.
  */
 data class PyDebugValueEvalExpr(
     val reEvalExpr: String,
-    val currentFrameRefExpr: String,
+    val currentStackFrameRefExpr: String,
     val qualifiedType: String?,
 ) {
     fun canBeReEvaluated(): Boolean {
@@ -100,10 +100,6 @@ data class PyDebugValueEvalExpr(
 
     companion object {
         const val TEMP_NAME_PREFIX = "__py_debug_temp_var_"
-    }
-
-    fun withUpdatedRefExpr(currentFrameRefExpr: String): PyDebugValueEvalExpr {
-        return PyDebugValueEvalExpr(reEvalExpr, currentFrameRefExpr, qualifiedType)
     }
 }
 

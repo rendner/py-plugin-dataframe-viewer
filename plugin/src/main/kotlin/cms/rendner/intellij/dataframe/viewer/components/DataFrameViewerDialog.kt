@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,15 +28,9 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.Ch
 import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
 import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
-import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerErrorKind
-import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerFailure
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceToFrameHint
-import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.*
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
-import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
-import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
-import cms.rendner.intellij.dataframe.viewer.python.pycharm.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.runInEdt
@@ -52,23 +46,22 @@ import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.UIUtil.FontColor
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebugSessionListener
-import com.jetbrains.python.debugger.PyDebugValue
 import java.awt.Dimension
 import java.text.NumberFormat
 import javax.swing.JComponent
 
 class DataFrameViewerDialog(
     private val myDebugSession: XDebugSession,
-    dataSource: PyDebugValue,
-    private val dataSourceToFrameHint: DataSourceToFrameHint?,
+    private val myEvaluator: IPluginPyValueEvaluator,
+    dataSourceInfo: DataSourceInfo,
+    private val dataSourceTransformHint: DataSourceTransformHint?,
     ) :
         DialogWrapper(myDebugSession.project, false),
         IChunkValidationProblemHandler,
         IChunkDataLoaderErrorHandler,
         XDebugSessionListener {
 
-    private var myDataSourceEvalExpr: PyDebugValueEvalExpr
-    private val myEvaluator: IPluginPyValueEvaluator
+    private var myDataSourceInfo: DataSourceInfo
     private var myLastFilterInputState: FilterInputState
     private val myFilterInput: AbstractEditorComponent
     private val myTable: DataFrameTable
@@ -78,8 +71,7 @@ class DataFrameViewerDialog(
     private var myLastStartedDataFetcher: ActiveDataFetcher? = null
 
     init {
-        myDataSourceEvalExpr = dataSource.toValueEvalExpr()
-        myEvaluator = dataSource.toPluginType().evaluator
+        myDataSourceInfo = dataSourceInfo
 
         myFilterInput = FilterInputFactory.createComponent(myDebugSession.project, myDebugSession.currentPosition)
         myFilterInput.setChangedListener(object : IEditorChangedListener {
@@ -90,7 +82,7 @@ class DataFrameViewerDialog(
         myLastFilterInputState = myFilterInput.getInputState()
 
         isModal = false
-        title = myDataSourceEvalExpr.reEvalExpr
+        title = myDataSourceInfo.source.reEvalExpr
 
         setOKButtonText("Apply Filter")
         setCancelButtonText("Close")
@@ -144,11 +136,11 @@ class DataFrameViewerDialog(
     }
 
     override fun stackFrameChanged() = runInEdt {
-        if (!myDataSourceEvalExpr.canBeReEvaluated()) {
-            setErrorText("Can't re-evaluate '${myDataSourceEvalExpr.reEvalExpr}'")
+        if (!myDataSourceInfo.source.canBeReEvaluated()) {
+            setErrorText("Can't re-evaluate '${myDataSourceInfo.source.reEvalExpr}'")
         } else {
             myDebugSession.currentPosition.let { myFilterInput.setSourcePosition(it) }
-            fetchModelData(myDataSourceEvalExpr.reEvalExpr != myDataSourceEvalExpr.currentFrameRefExpr)
+            fetchModelData(myDataSourceInfo.source.reEvalExpr != myDataSourceInfo.source.currentStackFrameRefExpr)
         }
     }
 
@@ -174,11 +166,11 @@ class DataFrameViewerDialog(
         cancelLastStartedDataFetcherAndDisposeModel()
 
         val request = ModelDataFetcher.Request(
-            myDataSourceEvalExpr,
+            myDataSourceInfo,
             myLastFilterInputState,
             reEvaluateDataSource,
             myTable.getDataFrameModel().getDataSourceFingerprint(),
-            dataSourceToFrameHint,
+            dataSourceTransformHint,
         )
         val fetcher = MyModelDataFetcher(myEvaluator)
         myLastStartedDataFetcher = ActiveDataFetcher(
@@ -221,12 +213,14 @@ class DataFrameViewerDialog(
     }
 
     private fun createChunkLoader(
-        patchedStyler: IPyPatchedStylerRef,
+        tableSourceRef: IPyTableSourceRef,
         settings: ApplicationSettingsService.MyState,
     ): IChunkDataLoader {
         return AsyncChunkDataLoader(
-            ChunkEvaluator(patchedStyler),
-            createChunkValidator(patchedStyler, settings.validationStrategyType),
+            ChunkEvaluator(tableSourceRef),
+            if (tableSourceRef is IPyPatchedStylerRef)
+                createChunkValidator(tableSourceRef, settings.validationStrategyType)
+            else null,
             this,
         )
     }
@@ -243,15 +237,13 @@ class DataFrameViewerDialog(
     override fun handleValidationProblems(
         region: ChunkRegion,
         validationStrategy: ValidationStrategyType,
-        problems: List<StyleFunctionValidationProblem>,
-        details: List<StyleFunctionDetails>,
+        problems: List<ValidationProblem>,
     ) {
         if (problems.isNotEmpty()) {
             ChunkValidationProblemNotification(
                 region,
                 validationStrategy,
                 problems,
-                details,
             ).notify(myDebugSession.project)
         }
     }
@@ -273,21 +265,21 @@ class DataFrameViewerDialog(
 
     private inner class MyModelDataFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator) {
 
-        override fun handleFetchFailure(request: Request, failure: CreatePatchedStylerFailure) = runInEdt {
+        override fun handleFetchFailure(request: Request, failure: CreateTableSourceFailure) = runInEdt {
             if (shouldHandleFetcherAction(this)) {
                 updateApplyFilterButtonState()
                 when (failure.errorKind) {
-                    CreatePatchedStylerErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
-                    CreatePatchedStylerErrorKind.INVALID_FINGERPRINT -> close(CANCEL_EXIT_CODE)
+                    CreateTableSourceErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
+                    CreateTableSourceErrorKind.INVALID_FINGERPRINT -> close(CANCEL_EXIT_CODE)
 
-                    CreatePatchedStylerErrorKind.FILTER_FRAME_EVAL_FAILED ->
+                    CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED ->
                         myFilterInput.showErrorMessage("Failed to evaluate filter from expression: ${failure.info}")
 
-                    CreatePatchedStylerErrorKind.FILTER_FRAME_OF_WRONG_TYPE ->
+                    CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE ->
                         myFilterInput.showErrorMessage("Expression returned invalid filter of type: ${failure.info}")
 
-                    CreatePatchedStylerErrorKind.EVAL_EXCEPTION,
-                    CreatePatchedStylerErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE -> setErrorText(failure.info)
+                    CreateTableSourceErrorKind.EVAL_EXCEPTION,
+                    CreateTableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE -> setErrorText(failure.info)
                 }
             }
         }
@@ -303,10 +295,10 @@ class DataFrameViewerDialog(
 
                 val settings = ApplicationSettingsService.instance.state
                 // note: loader doesn't sync on settings, user has to re-open the dialog after settings are changed
-                val chunkLoader = createChunkLoader(result.patchedStyler, settings)
+                val chunkLoader = createChunkLoader(result.tableSourceRef, settings)
                 ChunkedDataFrameModel(
                     result.tableStructure,
-                    result.frameColumnIndexList,
+                    result.columnIndexTranslator,
                     chunkLoader,
                     ChunkSize(30, 20),
                 ).let { model ->
@@ -318,7 +310,10 @@ class DataFrameViewerDialog(
                 }
 
                 if (request.reEvaluateDataSource) {
-                    myDataSourceEvalExpr = result.updatedDataSourceExpr
+                    val updatedSource = myDataSourceInfo.source.copy(
+                        currentStackFrameRefExpr = result.dataSourceCurrentStackFrameRefExpr,
+                    )
+                    myDataSourceInfo = myDataSourceInfo.copy(source = updatedSource)
                 }
 
                 if (request.filterInputState.text.isNotEmpty()  && request.filterInputState.text == myFilterInput.getText()) {

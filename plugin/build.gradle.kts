@@ -289,16 +289,19 @@ tasks {
         // - plugin crashes because the resources are not available
         doFirst {
             logger.lifecycle("copy 'plugin_code' files")
+            copy {
+                from(project.file("../projects/python_plugin_code/sdfv_base/generated"))
+                into(project.file("src/main/resources/sdfv_base"))
+            }
             supportedPandasVersions.forEach { majorMinor ->
-                val pluginCode =
-                    project.file("../projects/python_plugin_code/pandas_${majorMinor}_code/generated/plugin_code")
-                if (pluginCode.exists()) {
+                val generatedCodeDir = project.file("../projects/python_plugin_code/pandas_${majorMinor}_code/generated")
+                if (generatedCodeDir.exists()) {
                     copy {
-                        from(pluginCode)
+                        from(generatedCodeDir)
                         into(project.file("src/main/resources/pandas_$majorMinor"))
                     }
                 } else {
-                    throw GradleException("Missing file 'plugin_code' for pandas version: $majorMinor")
+                    // throw GradleException("Missing file 'plugin_code' for pandas version: $majorMinor")
                 }
             }
         }

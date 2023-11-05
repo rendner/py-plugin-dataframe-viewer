@@ -16,14 +16,14 @@
 package cms.rendner.intellij.dataframe.viewer.python
 
 object PythonQualifiedTypes {
-    const val None = "builtins.NoneType"
-    const val List = "builtins.list"
-    const val Tuple = "builtins.tuple"
-    const val Dict = "builtins.dict"
-    const val Function = "builtins.function"
-    const val Int = "builtins.int"
-    const val Float = "builtins.float"
-    const val Module = "builtins.module"
+    const val NONE = "builtins.NoneType"
+    const val LIST = "builtins.list"
+    const val TUPLE = "builtins.tuple"
+    const val DICT = "builtins.dict"
+    const val FUNCTION = "builtins.function"
+    const val INT = "builtins.int"
+    const val FLOAT = "builtins.float"
+    const val MODULE = "builtins.module"
 }
 
 object PandasTypes {

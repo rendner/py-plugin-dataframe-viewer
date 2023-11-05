@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,12 @@ package cms.rendner.integration.plugin
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import cms.rendner.debugger.impl.IPythonDebuggerApi
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
+import cms.rendner.intellij.dataframe.viewer.python.bridge.*
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.PatchedStylerCodeProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.DataFrameCodeProvider
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
 /**
  * Abstract class to run tests with a Python interpreter.
@@ -30,7 +35,7 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         block: (debuggerApi: IPythonDebuggerApi) -> Unit,
     ) {
         super.createPythonDebuggerWithSourceFile(sourceFile) { debuggerApi ->
-            PythonPluginCodeInjector.injectIfRequired(debuggerApi.evaluator, ::pluginCodeEscaper)
+            registerCodeProviders(debuggerApi.evaluator)
             block(debuggerApi)
         }
     }
@@ -40,7 +45,7 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         block: (debuggerApi: IPythonDebuggerApi) -> Unit,
     ) {
         super.createPythonDebuggerWithCodeSnippet(codeSnippet) { debuggerApi ->
-            PythonPluginCodeInjector.injectIfRequired(debuggerApi.evaluator, ::pluginCodeEscaper)
+            registerCodeProviders(debuggerApi.evaluator)
             block(debuggerApi)
         }
     }
@@ -53,9 +58,36 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         }
     }
 
-    protected fun pluginCodeEscaper(code: String): String {
-        return code
-            .replace("\\n", "\\\n")
-            .replace("\\t", "\\\t")
+    protected fun registerCodeProviders(evaluator: IPluginPyValueEvaluator) {
+        TableSourceCodeProviderRegistry.getProviders().forEach { PythonPluginCodeInjector.injectIfRequired(evaluator, it) }
+    }
+
+    protected fun createPatchedStyler(
+        evaluator: IPluginPyValueEvaluator,
+        dataSourceExpr: String,
+        config: CreateTableSourceConfig? = null,
+        ): IPyPatchedStylerRef {
+        val patchedStyler = createTableSource(evaluator, PatchedStylerCodeProvider().getFactoryImport(), dataSourceExpr, config)
+        check(patchedStyler is IPyPatchedStylerRef)
+        return patchedStyler
+    }
+
+    protected fun createTableSource(
+        evaluator: IPluginPyValueEvaluator,
+        dataSourceExpr: String,
+        config: CreateTableSourceConfig? = null,
+    ): IPyTableSourceRef {
+        val tableSource = createTableSource(evaluator, DataFrameCodeProvider().getFactoryImport(), dataSourceExpr, config)
+        check(tableSource !is IPyPatchedStylerRef)
+        return tableSource
+    }
+
+    protected fun createTableSource(
+        evaluator: IPluginPyValueEvaluator,
+        tableSourceFactory: TableSourceFactoryImport,
+        dataSourceExpr: String,
+        config: CreateTableSourceConfig? = null,
+        ): IPyTableSourceRef {
+        return TableSourceFactory.create(evaluator, tableSourceFactory, dataSourceExpr, config)
     }
 }

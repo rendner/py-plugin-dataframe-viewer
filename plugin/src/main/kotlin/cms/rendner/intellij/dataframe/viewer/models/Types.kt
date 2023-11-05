@@ -85,10 +85,9 @@ interface ITableDataModel : TableModel {
      * JTables instantiate renderers to measure all kind of things.
      * Values for these renderers are read from the model of the table.
      * In case of an async table model, the data has to be fetched from an underlying data source.
-     * Such a model usually returns a temporary value (maybe empty string) until the data is loaded.
-     * This leads to wrong calculated values, because an empty string was returned, and the
-     * "fetch data"-requests block the loading of required data, because the requests are mostly
-     * processed in the order in which they are received.
+     * Such a model usually returns fallback values (maybe empty string) until the data is loaded.
+     * To not trigger fetching of data during internal measuring, the data fetching should be
+     * disabled most of the time.
      *
      * @param enabled indicates if data fetching should be enabled or not.
      */

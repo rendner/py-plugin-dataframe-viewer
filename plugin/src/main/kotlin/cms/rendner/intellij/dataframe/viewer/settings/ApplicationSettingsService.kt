@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.settings
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ValidationStrategyType
+import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State

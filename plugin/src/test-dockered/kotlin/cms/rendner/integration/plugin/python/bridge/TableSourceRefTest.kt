@@ -18,10 +18,7 @@ package cms.rendner.integration.plugin.python.bridge
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
-import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
-import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionInfo
-import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionValidationProblem
-import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
+import cms.rendner.intellij.dataframe.viewer.python.bridge.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.junit.jupiter.api.Order
@@ -32,11 +29,25 @@ import org.junit.jupiter.api.Test
  * The functionality of the methods is tested in the Python plugin-code projects.
  */
 @Order(3)
-internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
+internal class TableSourceRefTest : AbstractPluginCodeTest() {
+
+    override fun afterContainerStart() {
+        /*
+        The TableSource doesn't use jinja2.
+        To proof that a normal TableSource also works without jinja2, the module has to be removed.
+
+        Normally this test should be done in the Python project. But this would require a Python project
+        without jinja2 for the TableSource code and one with jinja for the PatchedStyler.
+        Having two separate Python projects for each supported version of pandas doesn't scale well.
+         */
+
+        // long-running process
+        uninstallPythonModules("jinja2")
+    }
 
     @Test
     fun evaluateTableStructure_shouldBeCallable() {
-        runWithPatchedStyler {
+        runWithTableSource {
             it.evaluateTableStructure().let { ts ->
                 assertThat(ts.orgRowsCount).isEqualTo(2)
                 assertThat(ts.orgColumnsCount).isEqualTo(2)
@@ -47,42 +58,8 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun evaluateStyleFunctionInfo_shouldBeCallable() {
-        runWithPatchedStyler {
-            assertThat(it.evaluateStyleFunctionInfo()).isEqualTo(
-                listOf(
-                    StyleFunctionInfo(
-                        0,
-                        "<lambda>",
-                        "<lambda>",
-                        "",
-                        isPandasBuiltin = false,
-                        isSupported = true,
-                        isApply = false,
-                        isChunkParentRequested = false
-                    )
-                )
-            )
-        }
-    }
-
-    @Test
-    fun evaluateValidateStyleFunctions_shouldBeCallable() {
-        runWithPatchedStyler {
-            assertThat(
-                it.evaluateValidateStyleFunctions(
-                    ChunkRegion(0, 0, 2, 2),
-                    ValidationStrategyType.DISABLED,
-                )
-            ).isEqualTo(
-                emptyList<StyleFunctionValidationProblem>()
-            )
-        }
-    }
-
-    @Test
     fun evaluateComputeChunkTableFrame_shouldBeCallable() {
-        runWithPatchedStyler {
+        runWithTableSource {
             assertThat(
                 it.evaluateComputeChunkTableFrame(
                     ChunkRegion(0, 0, 2, 2),
@@ -99,7 +76,7 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
     fun evaluateSetSortCriteria_shouldBeCallable() {
-        runWithPatchedStyler {
+        runWithTableSource {
             assertThatNoException().isThrownBy {
                 it.evaluateSetSortCriteria(SortCriteria(listOf(0), listOf(true)))
             }
@@ -108,16 +85,16 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
     fun evaluateGetOrgIndicesOfVisibleColumns_shouldBeCallable() {
-        runWithPatchedStyler {
+        runWithTableSource {
             assertThatNoException().isThrownBy {
                 it.evaluateGetOrgIndicesOfVisibleColumns(0, 999)
             }
         }
     }
 
-    private fun runWithPatchedStyler(block: (patchedStyler: IPyPatchedStylerRef) -> Unit) {
+    private fun runWithTableSource(block: (patchedStyler: IPyTableSourceRef) -> Unit) {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
-            block(createPatchedStyler(debuggerApi.evaluator, "df.style.applymap(lambda x: 'color: red')"))
+            block(createTableSource(debuggerApi.evaluator, "df"))
         }
     }
 

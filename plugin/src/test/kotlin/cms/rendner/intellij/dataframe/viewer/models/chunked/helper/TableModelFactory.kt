@@ -29,7 +29,7 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
         val loader = RecordingLoader()
         val model = ChunkedDataFrameModel(
             tableStructure,
-            frameColumnOrgIndexList ?: List(tableStructure.columnsCount) { it },
+            ColumnIndexTranslator(frameColumnOrgIndexList),
             loader,
             chunkSize,
         )

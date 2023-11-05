@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,43 +17,62 @@ package cms.rendner.integration.plugin.python.bridge
 
 import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
-import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerConfig
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonCodeBridge
+import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceConfig
+import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
 @Order(2)
-internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
+internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
+
+    override fun afterContainerStart() {
+        /*
+        The TableSource doesn't use jinja2.
+        To proof that a normal TableSource also works without jinja2, the module has to be removed.
+
+        Normally this test should be done in the Python project. But this would require a Python project
+        without jinja2 for the TableSource code and one with jinja for the PatchedStyler.
+        Having two separate Python projects for each supported version of pandas doesn't scale well.
+         */
+
+        // long-running process
+        uninstallPythonModules("jinja2")
+    }
 
     @Test
-    fun createPatchedStyler_shouldBeCallableWithAStyler() {
+    fun shouldFailIfJinja2IsNotInstalled() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "df.style")).isNotNull
+            Assertions.assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
+                createTableSource(debuggerApi.evaluator, "df.style")
+            }.withMessageContaining(
+                "{ImportError} Missing optional dependency 'Jinja2'. DataFrame.style requires jinja2.",
+            )
         }
     }
 
     @Test
-    fun createPatchedStyler_shouldBeCallableWithADataFrame() {
+    fun shouldWorkWithPandasDataFrameAsDataSource() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "df")).isNotNull
+            assertThat(createTableSource(debuggerApi.evaluator, "df")).isNotNull
         }
     }
 
     @Test
-    fun createPatchedStyler_shouldBeCallableWithADictionary() {
+    fun shouldWorkWithPythonDictAsDataSource() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "d")).isNotNull
+            assertThat(createTableSource(debuggerApi.evaluator, "d")).isNotNull
         }
     }
 
     @Test
-    fun createPatchedStyler_shouldBeCallableWithAFilterFrame() {
+    fun shouldBeCallableWithAFilterFrame() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(PythonCodeBridge.createPatchedStyler(
+            assertThat(createTableSource(
                 debuggerApi.evaluator,
-                "df.style",
-                CreatePatchedStylerConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
+                "df",
+                CreateTableSourceConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
             )).isNotNull
         }
     }
@@ -84,22 +103,22 @@ internal class PythonCodeBridgeTest : AbstractPluginCodeTest() {
         ) { debuggerApi ->
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "df1")).isNotNull
+            assertThat(createTableSource(debuggerApi.evaluator,"df1")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("2")
-            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator,"df2")).isNotNull
+            assertThat(createTableSource(debuggerApi.evaluator,"df2")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("3")
-            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator, "df3")).isNotNull
+            assertThat(createTableSource(debuggerApi.evaluator, "df3")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(PythonCodeBridge.createPatchedStyler(debuggerApi.evaluator,"df1")).isNotNull
+            assertThat(createTableSource(debuggerApi.evaluator,"df1")).isNotNull
         }
     }
 

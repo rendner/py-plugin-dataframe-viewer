@@ -32,13 +32,13 @@ import javax.swing.table.AbstractTableModel
  * The [IChunkDataLoader.dispose] method of the [chunkDataLoader] is automatically called when the model is disposed.
  *
  * @param tableStructure describes the structure of the model.
- * @param frameColumnOrgIndexList indices of the visible columns in the unfiltered DataFrame.
+ * @param columnIndexTranslator indices of the visible columns in the unfiltered table source.
  * @param chunkDataLoader used for lazy data loading.
  * @param chunkSize size of the chunks to load.
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
-    private val frameColumnOrgIndexList: List<Int>,
+    private val columnIndexTranslator: ColumnIndexTranslator,
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
 ) : IDataFrameModel, IChunkDataResultHandler {
@@ -377,7 +377,9 @@ class ChunkedDataFrameModel(
         override fun getColumnName(columnIndex: Int) = getColumnHeaderAt(columnIndex).text()
         override fun getLegendHeader() = source.getColumnLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
-        override fun convertToFrameColumnIndex(columnIndex: Int) = source.frameColumnOrgIndexList[columnIndex]
+        override fun convertToFrameColumnIndex(columnIndex: Int): Int {
+            return source.columnIndexTranslator.translateToOriginalIndex(columnIndex)
+        }
     }
 
     private class IndexModel(private val source: ChunkedDataFrameModel) : AbstractTableModel(), ITableIndexDataModel {

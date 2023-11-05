@@ -15,6 +15,6 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions
 
-import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerFailure
+import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceFailure
 
-class CreatePatchedStylerException(val failure: CreatePatchedStylerFailure) : Exception()
+class CreateTableSourceException(val failure: CreateTableSourceFailure) : Exception()

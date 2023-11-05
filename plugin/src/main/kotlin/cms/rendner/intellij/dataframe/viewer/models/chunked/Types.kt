@@ -122,6 +122,22 @@ data class ChunkData(
 data class ChunkSize(val rows: Int, val columns: Int)
 
 /**
+ * Translates the index of a visible columns into the original index of the unfiltered dataSource (pandas DataFrame).
+ *
+ * In pandas, filter can filter out whole columns. To keep the ui-state of the displayed columns (width, sorting, etc.),
+ * after a sorting or reaching another breakpoint, the original index is used to identify the columns.
+ * Column labels don't have to be unique in a pandas DataFrame, and they are loaded when a columns become visible the first time.
+ * Therefore, this information can't be used to identify a column.
+ *
+ * @param orgIndices the original indices.
+ */
+data class ColumnIndexTranslator(private val orgIndices: List<Int>? = null) {
+    fun translateToOriginalIndex(index: Int): Int {
+        return orgIndices?.let { it[index] } ?: index
+    }
+}
+
+/**
  * Describes the table structure of a pandas DataFrame.
  *
  * @param orgRowsCount number of rows of the original unfiltered DataFrame

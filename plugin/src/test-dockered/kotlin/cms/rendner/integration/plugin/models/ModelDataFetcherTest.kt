@@ -15,9 +15,14 @@
  */
 package cms.rendner.integration.plugin.models
 
+import cms.rendner.debugger.impl.EvalOrExecRequest
+import cms.rendner.debugger.impl.EvalOrExecResponse
+import cms.rendner.debugger.impl.IDebuggerInterceptor
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInputState
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
-import cms.rendner.intellij.dataframe.viewer.python.bridge.CreatePatchedStylerErrorKind
+import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceErrorKind
+import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.DataFrameCodeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -27,18 +32,18 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldFetchRequiredDataForDataFrame() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
-                ModelDataFetcher.Request(dataSource.toValueEvalExpr(), FilterInputState(""), false)
+                ModelDataFetcher.Request(dataSourceInfo, FilterInputState(""), false)
             )
 
             assertThat(fetcher.result).isNotNull
             fetcher.result!!.let {
-                assertThat(it.patchedStyler).isNotNull
+                assertThat(it.tableSourceRef).isNotNull
                 assertThat(it.tableStructure).isNotNull
-                assertThat(it.frameColumnIndexList).isNotNull
-                assertThat(it.updatedDataSourceExpr).isEqualTo(dataSource.toValueEvalExpr())
+                assertThat(it.columnIndexTranslator).isNotNull
+                assertThat(it.dataSourceCurrentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
             }
         }
     }
@@ -47,18 +52,18 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldFetchRequiredDataForStyler() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df.style")
+            val dataSourceInfo = debuggerApi.evaluator.evaluate("df.style").toDataSourceInfo()
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
-                ModelDataFetcher.Request(dataSource.toValueEvalExpr(), FilterInputState(""), false)
+                ModelDataFetcher.Request(dataSourceInfo, FilterInputState(""), false)
             )
 
             assertThat(fetcher.result).isNotNull
             fetcher.result!!.let {
-                assertThat(it.patchedStyler).isNotNull
+                assertThat(it.tableSourceRef).isNotNull
                 assertThat(it.tableStructure).isNotNull
-                assertThat(it.frameColumnIndexList).isNotNull
-                assertThat(it.updatedDataSourceExpr).isEqualTo(dataSource.toValueEvalExpr())
+                assertThat(it.columnIndexTranslator).isNotNull
+                assertThat(it.dataSourceCurrentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
             }
         }
     }
@@ -67,91 +72,73 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReEvaluateIfRequested() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            // use identifier
-            val dataSource = debuggerApi.evaluator.evaluate("df")
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(dataSource.toValueEvalExpr(), FilterInputState(""), true)
-            )
+            val interceptor = object: IDebuggerInterceptor {
+                var runningRequest: EvalOrExecRequest? = null
+                override fun onRequest(request: EvalOrExecRequest): EvalOrExecRequest {
+                    runningRequest = request
+                    return request
+                }
 
-            assertThat(fetcher.result).isNotNull
-            fetcher.result!!.let {
-                assertThat(it.updatedDataSourceExpr).isEqualTo(dataSource.toValueEvalExpr())
+                override fun onResponse(response: EvalOrExecResponse): EvalOrExecResponse {
+                    runningRequest?.let {
+                        if (it.expression == "df") {
+                            return response.copy(refId = "df_evaluated")
+                        }
+                    }
+                    return response
+                }
             }
 
-            // use a new created instance
-            val dataSource2 = debuggerApi.evaluator.evaluate("DataFrame()")
-            val fetcher2 = MyTestFetcher(debuggerApi.evaluator)
-            fetcher2.fetchModelData(
-                ModelDataFetcher.Request(dataSource2.toValueEvalExpr(), FilterInputState(""), true)
-            )
+            // create a var for the "patched" identifier (otherwise the fetcher will break)
+            debuggerApi.evaluator.execute("df_evaluated = df")
 
-            assertThat(fetcher2.result).isNotNull
-            fetcher2.result!!.let {
-                assertThat(it.updatedDataSourceExpr).isNotEqualTo(dataSource.toValueEvalExpr())
+            //  - without reEvaluate
+            debuggerApi.evaluator.evaluate("df").toDataSourceInfo().let {
+                debuggerApi.addInterceptor(interceptor)
+                try {
+                    val fetcher = MyTestFetcher(debuggerApi.evaluator)
+                    fetcher.fetchModelData(ModelDataFetcher.Request(it, FilterInputState(""), false))
+
+                    assertThat(fetcher.result).isNotNull
+                    assertThat(fetcher.result!!.dataSourceCurrentStackFrameRefExpr).isEqualTo("df")
+                } finally {
+                    debuggerApi.removeInterceptor(interceptor)
+                }
+            }
+
+            //  - with reEvaluate
+            debuggerApi.evaluator.evaluate("df").toDataSourceInfo().let {
+                debuggerApi.addInterceptor(interceptor)
+                try {
+                    val fetcher = MyTestFetcher(debuggerApi.evaluator)
+                    fetcher.fetchModelData(ModelDataFetcher.Request(it, FilterInputState(""), true))
+
+                    assertThat(fetcher.result).isNotNull
+                    assertThat(fetcher.result!!.dataSourceCurrentStackFrameRefExpr).isEqualTo("df_evaluated")
+                } finally {
+                    debuggerApi.removeInterceptor(interceptor)
+                }
             }
         }
     }
 
     @Test
-    fun shouldFilterDataForDataFrame() {
+    fun shouldFilterDataForSyntheticIdentifier() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr(),
-                    FilterInputState("${dataSource.refExpr}[['col_0']]"),
+                    dataSourceInfo,
+                    FilterInputState("_df.filter(items=[1], axis='index')", true),
                     false,
                 )
             )
 
             assertThat(fetcher.result).isNotNull
             fetcher.result!!.let {
-                assertThat(it.tableStructure.columnsCount).isLessThan(it.tableStructure.orgColumnsCount)
-            }
-        }
-    }
-
-    @Test
-    fun shouldFilterDataForStyler() {
-        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
-
-            val dataSource = debuggerApi.evaluator.evaluate("df.style")
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr(),
-                    FilterInputState("${dataSource.refExpr}.data[['col_0']]"),
-                    false,
-                )
-            )
-
-            assertThat(fetcher.result).isNotNull
-            fetcher.result!!.let {
-                assertThat(it.tableStructure.columnsCount).isLessThan(it.tableStructure.orgColumnsCount)
-            }
-        }
-    }
-
-    @Test
-    fun shouldFilterDataForDataFrameSpecifiedAsSyntheticIdentifier() {
-        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
-
-            val dataSource = debuggerApi.evaluator.evaluate("df")
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr(),
-                    FilterInputState("_df[['col_0']]", true),
-                    false,
-                )
-            )
-
-            assertThat(fetcher.result).isNotNull
-            fetcher.result!!.let {
-                assertThat(it.tableStructure.columnsCount).isLessThan(it.tableStructure.orgColumnsCount)
+                assertThat(it.tableStructure.rowsCount).isLessThan(it.tableStructure.orgRowsCount)
             }
         }
     }
@@ -160,20 +147,20 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReportFailureIfReEvaluationFails() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
             debuggerApi.evaluator.execute("del df")
 
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr(),
+                    dataSourceInfo,
                     FilterInputState(""),
                     true,
                 )
             )
 
             assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreatePatchedStylerErrorKind.EVAL_EXCEPTION)
+            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.EVAL_EXCEPTION)
         }
     }
 
@@ -181,20 +168,20 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReportFailureIfReEvaluationEvaluatesToWrongType() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
             debuggerApi.evaluator.execute("df = {}")
 
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr(),
+                    dataSourceInfo,
                     FilterInputState(""),
                     true,
                 )
             )
 
             assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreatePatchedStylerErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE)
+            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE)
         }
     }
 
@@ -202,19 +189,19 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReportFailureIfFilterEvaluationFails() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
 
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr(),
+                    dataSourceInfo,
                     FilterInputState("xyz"),
                     false,
                 )
             )
 
             assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreatePatchedStylerErrorKind.FILTER_FRAME_EVAL_FAILED)
+            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED)
         }
     }
 
@@ -222,19 +209,19 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReportFailureIfFilterEvaluatesToWrongType() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
 
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr(),
+                    dataSourceInfo,
                     FilterInputState("123"),
                     false,
                 )
             )
 
             assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreatePatchedStylerErrorKind.FILTER_FRAME_OF_WRONG_TYPE)
+            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE)
         }
     }
 
@@ -242,12 +229,12 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReportFailureIfFingerprintDoesNotMatch() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
 
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr(),
+                    dataSourceInfo,
                     FilterInputState(""),
                     false,
                     "fingerprint"
@@ -255,7 +242,7 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
             )
 
             assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreatePatchedStylerErrorKind.INVALID_FINGERPRINT)
+            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.INVALID_FINGERPRINT)
         }
     }
 
@@ -263,19 +250,22 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReportFailureIfModelDataEvaluationFails() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo = DataSourceInfo(
+                debuggerApi.evaluator.evaluate("df").toValueEvalExpr().copy(reEvalExpr = "invalidExpression!!!!"),
+                DataFrameCodeProvider().getFactoryImport(),
+            )
 
             val fetcher = MyTestFetcher(debuggerApi.evaluator)
             fetcher.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource.toValueEvalExpr().copy(reEvalExpr = "invalidExpression!!!!"),
+                    dataSourceInfo,
                     FilterInputState(""),
                     true,
                 )
             )
 
             assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreatePatchedStylerErrorKind.EVAL_EXCEPTION)
+            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.EVAL_EXCEPTION)
         }
     }
 
@@ -283,22 +273,22 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldHaveSameFingerprint() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource1 = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo1 = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
             val fetcher1 = MyTestFetcher(debuggerApi.evaluator)
             fetcher1.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource1.toValueEvalExpr(),
+                    dataSourceInfo1,
                     FilterInputState(""),
                     false,
                 )
             )
             assertThat(fetcher1.result).isNotNull
 
-            val dataSource2 = debuggerApi.evaluator.evaluate("df.style.data")
+            val dataSourceInfo2 = debuggerApi.evaluator.evaluate("df.style.data").toDataSourceInfo()
             val fetcher2 = MyTestFetcher(debuggerApi.evaluator)
             fetcher2.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource2.toValueEvalExpr(),
+                    dataSourceInfo2,
                     FilterInputState(""),
                     false,
                 )
@@ -317,22 +307,22 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldHaveDifferentFingerprint() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSource1 = debuggerApi.evaluator.evaluate("df")
+            val dataSourceInfo1 = debuggerApi.evaluator.evaluate("df").toDataSourceInfo()
             val fetcher1 = MyTestFetcher(debuggerApi.evaluator)
             fetcher1.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource1.toValueEvalExpr(),
+                    dataSourceInfo1,
                     FilterInputState(""),
                     false,
                 )
             )
             assertThat(fetcher1.result).isNotNull
 
-            val dataSource2 = debuggerApi.evaluator.evaluate("df.copy()")
+            val dataSourceInfo2 = debuggerApi.evaluator.evaluate("df.copy()").toDataSourceInfo()
             val fetcher2 = MyTestFetcher(debuggerApi.evaluator)
             fetcher2.fetchModelData(
                 ModelDataFetcher.Request(
-                    dataSource2.toValueEvalExpr(),
+                    dataSourceInfo2,
                     FilterInputState(""),
                     false,
                 )

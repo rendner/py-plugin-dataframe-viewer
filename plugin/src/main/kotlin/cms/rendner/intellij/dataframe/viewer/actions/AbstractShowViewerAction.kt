@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,12 @@ package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.components.DataFrameViewerDialog
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceToFrameHint
+import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
+import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
+import cms.rendner.intellij.dataframe.viewer.python.pycharm.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -45,9 +48,19 @@ abstract class AbstractShowViewerAction: AnAction(), DumbAware {
         val debugSession = XDebuggerManager.getInstance(project).currentSession ?: return
         val parentDisposable = project.service<ParentDisposableService>()
 
+        val evaluator = dataSource.toPluginType().evaluator
+
         BackgroundTaskUtil.executeOnPooledThread(parentDisposable) {
-            try {
-                PythonPluginCodeInjector.injectIfRequired(dataSource.toPluginType().evaluator)
+            val dataSourceInfo = try {
+                    val dataSourceEvalExpr = dataSource.toValueEvalExpr()
+                    if (dataSourceEvalExpr.qualifiedType == null) {
+                        throw IllegalStateException("Selected value has missing type information.")
+                    }
+                    val codeProvider = TableSourceCodeProviderRegistry.getApplicableProvider(dataSourceEvalExpr.qualifiedType)
+                        ?: throw IllegalStateException("No applicable TableSourceFactory available for ${dataSourceEvalExpr.qualifiedType}")
+
+                    PythonPluginCodeInjector.injectIfRequired(evaluator, codeProvider)
+                    DataSourceInfo(dataSourceEvalExpr, codeProvider.getFactoryImport())
             } catch (ex: Throwable) {
                 ErrorNotification(
                     "Initialize plugin code failed",
@@ -59,7 +72,7 @@ abstract class AbstractShowViewerAction: AnAction(), DumbAware {
 
             runInEdt {
                 if (debugSession.isStopped || parentDisposable.isDisposed || project.isDisposed) return@runInEdt
-                DataFrameViewerDialog(debugSession, dataSource, getDataSourceToFrameHint(dataSource)).apply {
+                DataFrameViewerDialog(debugSession, evaluator, dataSourceInfo, getDataSourceTransformHint(dataSource)).apply {
                     if (!debugSession.isStopped) {
                         Disposer.register(parentDisposable, disposable)
                         startListeningAndFetchInitialData()
@@ -72,7 +85,7 @@ abstract class AbstractShowViewerAction: AnAction(), DumbAware {
         }
     }
 
-    protected open fun getDataSourceToFrameHint(value: PyDebugValue): DataSourceToFrameHint? = null
+    protected open fun getDataSourceTransformHint(value: PyDebugValue): DataSourceTransformHint? = null
 
     protected fun getSelectedDebugValue(event: AnActionEvent): PyDebugValue? {
         return XDebuggerUtil.getInstance().getValueContainer(event.dataContext)?.let {
