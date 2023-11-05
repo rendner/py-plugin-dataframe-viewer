@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@
 package cms.rendner.debugger.impl
 
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
 
-private const val NEW_LINE_MARKER = "@_@NL@_@"
 private const val RESULT_MARKER = "@_@RESULT@_@"
 private const val EXC_MARKER = "@_@EXC@_@"
 
@@ -193,7 +194,7 @@ abstract class PythonDebugger {
                 checkProcessIsAlive(pythonProcess)
 
                 if (checkForInputPrompt && pythonProcess.canRead()) {
-                    lines = unescapeDebuggerOutput(pythonProcess.readLinesNonBlocking())
+                    lines = pythonProcess.readLinesNonBlocking()
                     stoppedAtInputPrompt = lastLineIsPrompt(lines)
                 }
 
@@ -211,7 +212,7 @@ abstract class PythonDebugger {
                         activeTask = openTasks.take().also { task ->
                             nextDebugCommand = when (task) {
                                 is EvaluateTask -> {
-                                    escapeDebuggerInput(task.request.expression).let {
+                                    Json.encodeToString(task.request.expression).let {
                                         if (task.request.execute) {
                                             "!__import__('debugger_helpers').DebuggerInternals.exec($it)"
                                         } else {
@@ -299,19 +300,6 @@ abstract class PythonDebugger {
                 it,
             )
         }
-    }
-
-    private fun unescapeDebuggerOutput(output: List<String>): List<String> {
-        return output.map { it.replace(NEW_LINE_MARKER, "\n") }
-    }
-
-    private fun escapeDebuggerInput(input: String): String {
-        val sanitizedInput = input
-            // new lines have to be escaped to forward multiline expressions as a single line
-            .replace("\n", NEW_LINE_MARKER)
-            // single quotes have to be escaped to be able to surround the expression with ''
-            .replace("'", "\\'")
-        return "'$sanitizedInput'"
     }
 
     private class ContinueTask: Task<Unit>()

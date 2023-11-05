@@ -1,4 +1,4 @@
-#  Copyright 2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
 #  limitations under the License.
 
 import inspect
-import traceback
 import os
+import traceback
 
 
 class DebuggerInternals:
@@ -26,12 +26,8 @@ class DebuggerInternals:
 
     @staticmethod
     def eval(expression):
-        if isinstance(expression, str):
-            expression = DebuggerInternals.__unescape(expression)
-
         callers_frame = inspect.currentframe().f_back
-
-        DebuggerInternals.__trace_input(expression, callers_frame)
+        DebuggerInternals.__trace_input("eval", expression, callers_frame)
 
         try:
             result = eval(expression, callers_frame.f_globals, callers_frame.f_locals)
@@ -40,9 +36,6 @@ class DebuggerInternals:
             return
 
         DebuggerInternals.__trace_output(result)
-
-        if isinstance(result, str):
-            result = DebuggerInternals.__escape(result)
 
         ref_key = None
         if result is not None and not isinstance(result, DebuggerInternals.__excluded_result_types):
@@ -58,12 +51,8 @@ class DebuggerInternals:
 
     @staticmethod
     def exec(value):
-        if isinstance(value, str):
-            value = DebuggerInternals.__unescape(value)
-
         callers_frame = inspect.currentframe().f_back
-
-        DebuggerInternals.__trace_input(value, callers_frame)
+        DebuggerInternals.__trace_input("exec", value, callers_frame)
 
         try:
             exec(value, callers_frame.f_globals, callers_frame.f_locals)
@@ -84,15 +73,7 @@ class DebuggerInternals:
         print(f'@_@EXC@_@{DebuggerInternals.__full_type(exc)} {exc}@_@EXC@_@')
 
     @staticmethod
-    def __unescape(value: str) -> str:
-        return value.replace("@_@NL@_@", "\n")
-
-    @staticmethod
-    def __escape(value: str) -> str:
-        return value.replace("\n", "@_@NL@_@")
-
-    @staticmethod
-    def __trace_input(value: str, frame):
+    def __trace_input(cmd: str, value: str, frame):
         DebuggerInternals.__trace_step += 1
         if DebuggerInternals.__trace_step > 1:
             DebuggerInternals.__traces.append("\n")
@@ -109,7 +90,7 @@ class DebuggerInternals:
             DebuggerInternals.__traces.append(f"frame_index: ?")
             DebuggerInternals.__traces.append(f"locals: ?")
 
-        DebuggerInternals.__traces.append(f"in[{DebuggerInternals.__trace_step}]: {value}")
+        DebuggerInternals.__traces.append(f"in[{DebuggerInternals.__trace_step}][{cmd}]: {value}")
 
     @staticmethod
     def __trace_output(value: str):
