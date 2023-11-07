@@ -5,8 +5,6 @@ name = "pypi"
 
 [dev-packages]
 pytest = "==7.2.1"
-cssutils = "==2.6.0"
-semantic-version = "==2.10.0"
 
 [requires]
 python_version = "3.8"
