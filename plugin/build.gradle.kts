@@ -301,7 +301,7 @@ tasks {
                         into(project.file("src/main/resources/pandas_$majorMinor"))
                     }
                 } else {
-                    // throw GradleException("Missing file 'plugin_code' for pandas version: $majorMinor")
+                    throw GradleException("Missing file 'plugin_code' for pandas version: $majorMinor")
                 }
             }
         }

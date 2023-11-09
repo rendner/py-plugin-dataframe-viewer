@@ -38,7 +38,7 @@ abstract class BaseCodeProvider: ITableSourceCodeProvider {
     private fun getPluginCodeResourcePath(version: PandasVersion): String {
         if (version.major == 1) {
             if (version.minor in 1..5) {
-                return "/pandas_1.${version.minor}/plugin_code"
+                return "/pandas_1.${version.minor}/plugin_modules_dump.json"
             }
         } else if (version.major == 2) {
             if (version.minor in 0..1) {
