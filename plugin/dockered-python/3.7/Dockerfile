@@ -1,5 +1,5 @@
-# https://hub.docker.com/_/python?tab=description
-FROM python:3.9.17-slim-buster
+# https://hub.docker.com/_/python
+FROM python:3.7.12-slim-buster
 
 RUN pip install pipenv
 

@@ -1,4 +1,4 @@
-# https://hub.docker.com/_/python?tab=description
+# https://hub.docker.com/_/python
 FROM python:3.8.12-slim-buster
 
 RUN pip install pipenv

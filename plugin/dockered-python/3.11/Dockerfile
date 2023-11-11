@@ -1,5 +1,7 @@
-# https://hub.docker.com/_/python?tab=description
-FROM python:3.7.12-slim-buster
+# https://hub.docker.com/_/python
+FROM python:3.11.4-slim-buster
+
+ARG pipenv_environment
 
 RUN pip install pipenv
 
@@ -23,13 +25,11 @@ ENV \
     PYTHONPATH=/usr/src/app/transfer/in/python_helpers/ \
     TRANSFER_OUT_DIR=/usr/src/app/transfer/out
 
-COPY --chown=appuser content/pipenv_environments/ pipenv_environments/
+COPY --chown=appuser requirements.txt requirements.txt
 
-# build all pipenv environments
+# create pipenv environment
 RUN \
-    for i in ./pipenv_environments/* \
-    ;do \
-        cd "$i" \
-        && pipenv sync \
-        && cd - \
-    ;done
+    mkdir -p ./pipenv_environments/$pipenv_environment \
+    && cd ./pipenv_environments/$pipenv_environment \
+    && pipenv --python 3.11 \
+    && pipenv install -r /usr/src/app/requirements.txt

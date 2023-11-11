@@ -1,4 +1,4 @@
-# https://hub.docker.com/_/python?tab=description
+# https://hub.docker.com/_/python
 FROM python:3.10.12-slim-buster
 
 ARG pipenv_environment

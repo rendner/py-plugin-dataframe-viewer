@@ -61,62 +61,74 @@ idea {
 
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
-
-    val supportedPandasVersions = listOf("1.1", "1.2", "1.3", "1.4", "1.5", "2.0", "2.1")
+    data class PipenvEnvironment(val name: String, val pipfileRoot: File? = null)
 
     data class PythonDockerImage(
-        val path: String,
         val pythonVersion: String,
-        val pipenvEnvironments: List<String>,
-        val envsAreLocalPythonProjects: Boolean,
+        val dockerFileBaseDir: String,
+        val environments: List<PipenvEnvironment>,
+        val buildArgs: List<String> = emptyList(),
         ) {
         private val workdir = "/usr/src/app"
         val dockerImageName = "sdfv-plugin-dockered-python_$pythonVersion"
-        val contentPath = "$path/content/"
+        val additionalBuildContentDir = "$dockerFileBaseDir/content/"
+
         fun getTransferDirMappings(hostTransferPath: String) = arrayOf(
             "$hostTransferPath/in:${workdir}/transfer/in:ro",
             "$hostTransferPath/out:${workdir}/transfer/out",
         )
-        fun getEnvironmentDir(pipenvEnvironment: String) = "${workdir}/pipenv_environments/$pipenvEnvironment"
-        fun getBuildArgs(): Array<String> {
-            return if (envsAreLocalPythonProjects) emptyArray()
-            else arrayOf("--build-arg", "pipenv_environment=${pipenvEnvironments.first()}")
+
+        fun getPathInContainer(pipenvEnvironment: PipenvEnvironment): String {
+            return "${workdir}/pipenv_environments/${pipenvEnvironment.name}"
         }
     }
 
-    val pythonDockerBaseDir = "$projectDir/dockered-python"
+    fun multiPipenvEnvironmentImage(
+        pythonVersion: String,
+        baseDir: String,
+        projects: List<String>,
+    ): PythonDockerImage {
+        val providerDir = "../projects/python_plugin_code/$baseDir"
+        return PythonDockerImage(
+            pythonVersion,
+            "$projectDir/dockered-python/$pythonVersion",
+            projects.map {
+                PipenvEnvironment(it, project.file("$providerDir/$it"))
+            }
+        )
+    }
+
+    fun singlePipenvEnvironmentImage(
+        pythonVersion: String,
+        environment: PipenvEnvironment,
+    ): PythonDockerImage {
+        return PythonDockerImage(
+            pythonVersion,
+            "$projectDir/dockered-python/$pythonVersion",
+            listOf(environment),
+            listOf("--build-arg", "pipenv_environment=${environment.name}")
+        )
+    }
+
     val pythonDockerImages = listOf(
         // order of python versions: latest to oldest
         // order of pipenv environments: latest to oldest
-        PythonDockerImage(
-            "$pythonDockerBaseDir/python_3.11",
-            "3.11",
-            listOf("python_3.11"),
-            false,
-        ),
-        PythonDockerImage(
-            "$pythonDockerBaseDir/python_3.10",
-            "3.10",
-            listOf("python_3.10"),
-            false,
-        ),
-        PythonDockerImage(
-            "$pythonDockerBaseDir/python_3.9",
+        singlePipenvEnvironmentImage("3.11", PipenvEnvironment("python_3.11")),
+        singlePipenvEnvironmentImage("3.10", PipenvEnvironment("python_3.10")),
+        multiPipenvEnvironmentImage(
             "3.9",
+            "pandas",
             listOf("pandas_2.1"),
-            true,
         ),
-        PythonDockerImage(
-            "$pythonDockerBaseDir/python_3.8",
+        multiPipenvEnvironmentImage(
             "3.8",
+            "pandas",
             listOf("pandas_2.0", "pandas_1.5", "pandas_1.4"),
-            true,
         ),
-        PythonDockerImage(
-            "$pythonDockerBaseDir/python_3.7",
+        multiPipenvEnvironmentImage(
             "3.7",
+            "pandas",
             listOf("pandas_1.3", "pandas_1.2", "pandas_1.1"),
-            true,
         ),
     )
 
@@ -133,29 +145,28 @@ tasks {
             buildPythonDockerImagesTasks.add(this)
 
             doLast {
-                delete(entry.contentPath)
+                delete(entry.additionalBuildContentDir)
 
-                if (entry.envsAreLocalPythonProjects) {
-                    entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
-                        val pythonSourceProjectPath = "../projects/python_plugin_code/${pipEnvEnvironment}_code"
+                entry.environments.forEach { pipEnv ->
 
-                        val pipFile = project.file("$pythonSourceProjectPath/Pipfile")
-                        val pipFileLock = project.file("$pythonSourceProjectPath/Pipfile.lock")
+                    pipEnv.pipfileRoot?.let {
+                        val pipFile = it.resolve("Pipfile")
+                        val pipFileLock = it.resolve("Pipfile.lock")
                         if (pipFile.exists() && pipFileLock.exists()) {
                             copy {
                                 from(pipFile, pipFileLock)
-                                into("${entry.contentPath}/pipenv_environments/$pipEnvEnvironment/")
+                                into("${entry.additionalBuildContentDir}/pipenv_environments/${pipEnv.name}/")
                             }
                         } else {
-                            throw GradleException("Incomplete Pipfiles for environment: $pipEnvEnvironment")
+                            throw GradleException("Incomplete Pipfiles for environment: $pipEnv")
                         }
                     }
                 }
 
                 exec {
-                    workingDir = file(entry.path)
+                    workingDir = file(entry.dockerFileBaseDir)
                     executable = "docker"
-                    args("build", *entry.getBuildArgs(), ".", "-t", entry.dockerImageName)
+                    args("build", *entry.buildArgs.toTypedArray(), ".", "-t", entry.dockerImageName)
                 }
             }
         }
@@ -199,9 +210,9 @@ tasks {
 
     val integrationTestTasks = mutableListOf<Task>()
     pythonDockerImages.forEach { entry ->
-        entry.pipenvEnvironments.forEach { pipEnvEnvironment ->
-            register<Test>("integrationTest_$pipEnvEnvironment") {
-                description = "Runs integration test on pipenv environment: $pipEnvEnvironment."
+        entry.environments.forEach { pipenvEnvironment ->
+            register<Test>("integrationTest_${pipenvEnvironment.name}") {
+                description = "Runs integration test on pipenv environment: ${pipenvEnvironment.name}."
                 group = "verification"
                 outputs.upToDateWhen { false }
 
@@ -214,7 +225,7 @@ tasks {
                 )
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.workdir",
-                    entry.getEnvironmentDir(pipEnvEnvironment),
+                    entry.getPathInContainer(pipenvEnvironment),
                 )
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.volumes",
@@ -288,20 +299,22 @@ tasks {
         // - try to use the plugin code (by inspecting a DataFrame.style)
         // - plugin crashes because the resources are not available
         doFirst {
-            logger.lifecycle("copy 'plugin_code' files")
+            logger.lifecycle("copy Python 'plugin_code' files")
             copy {
                 from(project.file("../projects/python_plugin_code/sdfv_base/generated"))
                 into(project.file("src/main/resources/sdfv_base"))
             }
-            supportedPandasVersions.forEach { majorMinor ->
-                val generatedCodeDir = project.file("../projects/python_plugin_code/pandas_${majorMinor}_code/generated")
-                if (generatedCodeDir.exists()) {
-                    copy {
-                        from(generatedCodeDir)
-                        into(project.file("src/main/resources/pandas_$majorMinor"))
+            project.file("../projects/python_plugin_code/pandas/").let { pandasProjectsRoot ->
+                pandasProjectsRoot.listFiles { f -> f.isDirectory }?.forEach { projectDir ->
+                    val pluginCode = projectDir.resolve("generated/plugin_modules_dump.json")
+                    if (pluginCode.exists()) {
+                        copy {
+                            from(pluginCode)
+                            into(project.file("src/main/resources/${projectDir.name}"))
+                        }
+                    } else {
+                        throw GradleException("Missing file 'plugin_modules_dump.json' for: ${projectDir.name}")
                     }
-                } else {
-                    throw GradleException("Missing file 'plugin_code' for pandas version: $majorMinor")
                 }
             }
         }
