@@ -1,5 +1,5 @@
 # Initial Setup
-These instructions will help you build the plugin.
+These instructions will help you to build the plugin.
 
 ## Building The Plugin
 Version 2021.3 or newer of IntelliJ IDEA Community Edition or IntelliJ IDEA Ultimate Edition is required to build and develop the plugin.

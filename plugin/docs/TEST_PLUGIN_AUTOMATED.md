@@ -17,7 +17,7 @@ Run the gradle-task `test` (group `verification`).
 
 ### 2) Run Integration-Tests
 #### Plugin Code Is UpToDate
-Please double-check that, for every modified project under `<PROJECTS_DIR>/python_plugin_code` the `main.py` was executed to generate an updated `generated/plugin_code` file for these projects.
+Please double-check that, for every modified project under `<PROJECTS_DIR>/python_plugin_code` the `main.py` was executed to generate an updated `generated/plugin_modules_dump.json` file for these projects.
 
 #### Rebuild Docker Image
 Required if the `pipfiles` of these projects have been modified.
