@@ -25,7 +25,6 @@ import com.jetbrains.python.debugger.PyDebugValue
 open class ShowViewerForDictAction: AbstractShowViewerAction() {
 
     override fun update(event: AnActionEvent) {
-        super.update(event)
         event.presentation.isEnabledAndVisible = event.project != null && couldCreateFrameFromSelectedValue(event)
     }
 

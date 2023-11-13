@@ -22,7 +22,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 class ShowViewerForFrameOrStylerAction : AbstractShowViewerAction() {
 
     override fun update(event: AnActionEvent) {
-        super.update(event)
         event.presentation.isEnabledAndVisible = event.project != null && selectedItemIsFrameOrStyler(event)
     }
 
