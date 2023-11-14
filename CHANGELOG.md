@@ -1,4 +1,27 @@
 # Changelog
+## v0.12.0
+- `Released`: 2023-11-15
+- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
+- `Min Required IntelliJ Version`: 2021.3
+
+### Added
+#### No Jinja2 required
+You can now view a pandas `DataFrame` without having `Jinja2` installed.
+In the previous versions, a `Styler` was created from the `DataFrame`, for which `Jinja2` had to be installed.
+
+### Changed
+- replace custom value formatting logic with pandas `pprint_thing`
+
+### Removed
+- internal helper project `projects/html_from_styler` used to validate fetched data
+
+### Fixed
+- filter input: broken code completion
+  - The previous "filter input"-fix broke other use cases.
+
+### Other
+- use unified data structure to retrieve version-independent data from pandas
+- restructure loading of Python plugin code
 
 ## v0.11.0
 - `Released`: 2023-09-18

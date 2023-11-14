@@ -9,7 +9,7 @@
     -->
 
     <description><![CDATA[
-    View, <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/SORTING.md">sort</a> and <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/FILTERING.md">filter</a> styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> or a Python <i>dict</i> when debugging.
+    View, <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/SORTING.md">sort</a> and <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/FILTERING.md">filter</a> <i>DataFrames</i>, styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> or a Python <i>dict</i> when debugging.
     <br/><br/>
     Apply conditional formatting and visual styling in your Python code, by using <i>DataFrame.style</i>.
     The configured style is used to render a styled output of the <i>DataFrame</i>.
@@ -18,7 +18,7 @@
     <br/><br/>
     For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
     <br/><br/>
-    Note: The plugin requires <i>pandas</i> and <i>jinja2</i> (used by pandas Styler class).
+    Note: The plugin requires <i>pandas</i>.
     <br/><br/>
     Supported pandas versions:
     <ul>
@@ -31,24 +31,15 @@
 
     <change-notes><![CDATA[
     <br/>
-    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md#v0110">full changelog (all versions)</a>
+    <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md">full changelog (all versions)</a>
     <br/>
     <h2>Added</h2>
-    <h3>Support For pandas 2.1</h3>
-    All already supported <i>Styler</i> methods as well as sorting and filtering are now also usable with pandas 2.1.
-    <h3>Display Python dicts as DataFrame</h3>
-    If pandas is installed, Python dictionaries can be displayed as a pandas DataFrame that can be sorted and filtered.
-    <br/><br/>
-    Select a Python dictionary in the debugger variable view, open the context menu and select <i>View as Styled DataFrame</i>.
-    You can display the <i>Keys as Columns</i> (default behavior) or <i>Keys as Rows</i>. If the dictionary contains the keys
-    <i>index, columns, data, index_names and column_names</i> it is displayed with <i>orient='tight'</i>.
-    <br/><br/>
-    This new feature is available for all supported pandas versions.
-    A detailed description about the behavior can be found in the pandas-docs <a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.from_dict.html#pandas-dataframe-from-dict">DataFrame.from_dict</a>.
+    <h3>No Jinja2 required</h3>
+    You can now view a pandas <i>DataFrame</i> without having <i>Jinja2</i> installed.
+    In the previous versions, a <i>Styler</i> was created from the <i>DataFrame</i>, for which <i>Jinja2</i> had to be installed.
     <h2>Fixed</h2>
     <ul>
-        <li>plugin fails with Python 3.10</li>
-        <li>filter input: in some cases attribute references couldn't be resolved</li>
+        <li>filter input: broken code completion</li>
     </ul>
     ]]></change-notes>
 

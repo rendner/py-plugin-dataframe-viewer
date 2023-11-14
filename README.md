@@ -7,12 +7,12 @@ Download from JetBrains Marketplace: [Python: Styled DataFrame Viewer](https://p
 * 2.0.x - 2.1.x
 
 ## What It Is
-View, [sort](./docs/SORTING.md) and [filter](./docs/FILTERING.md) styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` or a Python `dict` when debugging.
+View, [sort](./docs/SORTING.md) and [filter](./docs/FILTERING.md) `DataFrames`, styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` or a Python `dict` when debugging.
 
 Apply conditional formatting and visual styling in your Python code, by using `DataFrames.style`.
 The configured style is used to render a styled output of the `DataFrame`.
 
-Note: The plugin requires `pandas` and `jinja2` (used by pandas Styler class).
+Note: The plugin requires `pandas`.
 
 ![preview of the plugin](./docs/images/preview.png)
 
