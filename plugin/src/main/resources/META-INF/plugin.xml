@@ -85,7 +85,6 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService"/>
-        <projectService serviceImplementation="cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService"/>
         <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON" isLogByDefault="true"/>
         <applicationConfigurable
                 parentId="tools"

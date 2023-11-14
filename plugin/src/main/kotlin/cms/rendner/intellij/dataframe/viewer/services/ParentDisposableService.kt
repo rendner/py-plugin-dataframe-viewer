@@ -17,6 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.services
 
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasAvailableInSessionProvider
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 
 /**
@@ -30,6 +31,7 @@ import com.intellij.openapi.project.Project
  * Source: https://jetbrains.org/intellij/sdk/docs/basics/disposers.html#automatically-disposed-objects
  */
 // https://plugins.jetbrains.com/docs/intellij/disposers.html#diagnosing-disposer-leaks
+@Service(Service.Level.PROJECT)
 class ParentDisposableService(private val project: Project): Disposable {
 
     init {
