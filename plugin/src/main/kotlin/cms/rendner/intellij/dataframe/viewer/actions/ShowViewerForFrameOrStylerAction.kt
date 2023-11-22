@@ -15,7 +15,8 @@
  */
 package cms.rendner.intellij.dataframe.viewer.actions
 
-import cms.rendner.intellij.dataframe.viewer.python.PandasTypes
+import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
 import com.intellij.openapi.actionSystem.AnActionEvent
 
 
@@ -27,7 +28,10 @@ class ShowViewerForFrameOrStylerAction : AbstractShowViewerAction() {
 
     private fun selectedItemIsFrameOrStyler(event: AnActionEvent): Boolean {
         return getSelectedDebugValue(event)?.let {
-            return PandasTypes.isStyler(it.qualifiedType) || PandasTypes.isDataFrame(it.qualifiedType)
+            return it.qualifiedType?.let {  type ->
+                type != PythonQualifiedTypes.DICT
+                && TableSourceCodeProviderRegistry.getApplicableProvider(type) != null
+            } ?: false
         } ?: false
     }
 }

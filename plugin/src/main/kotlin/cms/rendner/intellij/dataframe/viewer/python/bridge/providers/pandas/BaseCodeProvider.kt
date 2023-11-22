@@ -15,11 +15,14 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas
 
+import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectException
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 
 abstract class BaseCodeProvider: ITableSourceCodeProvider {
     final override fun getModulesDumpId() = "pandas"
@@ -34,6 +37,17 @@ abstract class BaseCodeProvider: ITableSourceCodeProvider {
         val resourcePath = getPluginCodeResourcePath(pandasVersion)
         return PatchedStylerCodeProvider::class.java.getResource(resourcePath)!!.readText()
     }
+
+    override fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo {
+        return DataSourceInfo(
+            source,
+            getFactoryImport(),
+            sortable = true,
+            filterable = true,
+        )
+    }
+
+    protected abstract fun getFactoryImport(): TableSourceFactoryImport
 
     private fun getPluginCodeResourcePath(version: PandasVersion): String {
         if (version.major == 1) {

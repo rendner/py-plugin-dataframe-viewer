@@ -58,7 +58,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
      */
     data class Request(
         val dataSourceInfo: DataSourceInfo,
-        val filterInputState: FilterInputState,
+        val filterInputState: FilterInputState?,
         val reEvaluateDataSource: Boolean,
         val oldDataSourceFingerprint: String? = null,
         val dataSourceTransformHint: DataSourceTransformHint? = null,
@@ -131,8 +131,8 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
                 CreateTableSourceConfig(
                     dataSourceTransformHint = request.dataSourceTransformHint,
                     previousFingerprint = request.oldDataSourceFingerprint,
-                    filterEvalExpr = request.filterInputState.text,
-                    filterEvalExprProvideFrame = request.filterInputState.containsSyntheticFrameIdentifier,
+                    filterEvalExpr = request.filterInputState?.text,
+                    filterEvalExprProvideFrame = request.filterInputState?.containsSyntheticFrameIdentifier == true,
                 ),
             )
         } catch (ex: CreateTableSourceException) {
@@ -147,7 +147,9 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
 
         val tableStructure = tableSourceRef.evaluateTableStructure()
         val columnIndexTranslator =
-            if (tableStructure.columnsCount > 0 && tableStructure.columnsCount != tableStructure.orgColumnsCount) {
+            if (request.dataSourceInfo.filterable &&
+                tableStructure.columnsCount > 0 &&
+                tableStructure.columnsCount != tableStructure.orgColumnsCount) {
             var entryOffset = 0
             val maxEntries = 1000
             val frameColumnIndexList = mutableListOf<Int>()

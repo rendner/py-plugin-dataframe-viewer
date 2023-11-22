@@ -17,7 +17,6 @@ package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.components.DataFrameViewerDialog
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
@@ -60,7 +59,7 @@ abstract class AbstractShowViewerAction: AnAction(), DumbAware {
                         ?: throw IllegalStateException("No applicable TableSourceFactory available for ${dataSourceEvalExpr.qualifiedType}")
 
                     PythonPluginCodeInjector.injectIfRequired(evaluator, codeProvider)
-                    DataSourceInfo(dataSourceEvalExpr, codeProvider.getFactoryImport())
+                    codeProvider.createSourceInfo(dataSourceEvalExpr, evaluator)
             } catch (ex: Throwable) {
                 ErrorNotification(
                     "Initialize plugin code failed",

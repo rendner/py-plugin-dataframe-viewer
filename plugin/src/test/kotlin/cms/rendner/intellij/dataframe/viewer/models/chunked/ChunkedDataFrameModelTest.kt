@@ -26,8 +26,8 @@ internal class ChunkedDataFrameModelTest {
     private val tableModelFactory = TableModelFactory(chunkSize)
     private lateinit var model: TableModelFactory.RecordingModel
 
-    private fun setup(tableStructure: TableStructure, frameColumnOrgIndexList: List<Int>? = null) {
-        model = tableModelFactory.createModel(tableStructure, frameColumnOrgIndexList).apply {
+    private fun setup(tableStructure: TableStructure) {
+        model = tableModelFactory.createModel(tableStructure).apply {
             enableDataFetching(true)
         }
     }

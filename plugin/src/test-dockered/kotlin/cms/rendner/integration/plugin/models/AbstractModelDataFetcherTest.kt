@@ -18,12 +18,7 @@ package cms.rendner.integration.plugin.models
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceFailure
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
-import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
-import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 import org.junit.jupiter.api.Order
 
 @Order(4)
@@ -39,18 +34,6 @@ internal open class AbstractModelDataFetcherTest : AbstractPluginCodeTest() {
     |
     |breakpoint()
 """.trimMargin()
-
-    protected fun PluginPyValue.toDataSourceInfo(factoryImport: TableSourceFactoryImport? = null): DataSourceInfo {
-        val evalExpr = this.toValueEvalExpr()
-        return DataSourceInfo(
-            this.toValueEvalExpr(),
-            factoryImport ?: TableSourceCodeProviderRegistry.getApplicableProvider(evalExpr.qualifiedType!!)!!.getFactoryImport(),
-        )
-    }
-
-    protected fun PluginPyValue.toValueEvalExpr(): PyDebugValueEvalExpr {
-        return PyDebugValueEvalExpr(refExpr, refExpr, qualifiedType)
-    }
 
     protected class MyTestFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator) {
         var result: Result? = null

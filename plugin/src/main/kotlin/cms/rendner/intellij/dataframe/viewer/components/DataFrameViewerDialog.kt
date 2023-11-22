@@ -48,6 +48,7 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebugSessionListener
 import java.awt.Dimension
 import java.text.NumberFormat
+import javax.swing.Action
 import javax.swing.JComponent
 
 class DataFrameViewerDialog(
@@ -62,8 +63,8 @@ class DataFrameViewerDialog(
         XDebugSessionListener {
 
     private var myDataSourceInfo: DataSourceInfo
-    private var myLastFilterInputState: FilterInputState
-    private val myFilterInput: AbstractEditorComponent
+    private var myLastFilterInputState: FilterInputState? = null
+    private val myFilterInput: AbstractEditorComponent?
     private val myTable: DataFrameTable
     private val myTableFooterLabel = JBLabel("", UIUtil.ComponentStyle.SMALL, FontColor.BRIGHTER)
 
@@ -73,13 +74,16 @@ class DataFrameViewerDialog(
     init {
         myDataSourceInfo = dataSourceInfo
 
-        myFilterInput = FilterInputFactory.createComponent(myDebugSession.project, myDebugSession.currentPosition)
-        myFilterInput.setChangedListener(object : IEditorChangedListener {
-            override fun editorInputChanged() {
-                updateApplyFilterButtonState()
+        myFilterInput = if (myDataSourceInfo.filterable) {
+            FilterInputFactory.createComponent(myDebugSession.project, myDebugSession.currentPosition).also {
+                it.setChangedListener(object : IEditorChangedListener {
+                    override fun editorInputChanged() {
+                        updateApplyFilterButtonState()
+                    }
+                })
+                myLastFilterInputState = it.getInputState()
             }
-        })
-        myLastFilterInputState = myFilterInput.getInputState()
+        } else null
 
         isModal = false
         title = myDataSourceInfo.source.reEvalExpr
@@ -124,7 +128,7 @@ class DataFrameViewerDialog(
     override fun beforeSessionResume() = runInEdt {
         disableApplyFilterButton()
         cancelLastStartedDataFetcherAndDisposeModel()
-        myFilterInput.setSourcePosition(null)
+        myFilterInput?.setSourcePosition(null)
     }
 
     private fun disableApplyFilterButton() {
@@ -132,25 +136,37 @@ class DataFrameViewerDialog(
     }
 
     private fun updateApplyFilterButtonState() {
-        myOKAction.isEnabled = myLastFilterInputState.text != myFilterInput.getText()
+        if (myDataSourceInfo.filterable) {
+            myOKAction.isEnabled = myLastFilterInputState!!.text != myFilterInput!!.getText()
+        }
     }
 
     override fun stackFrameChanged() = runInEdt {
         if (!myDataSourceInfo.source.canBeReEvaluated()) {
             setErrorText("Can't re-evaluate '${myDataSourceInfo.source.reEvalExpr}'")
         } else {
-            myDebugSession.currentPosition.let { myFilterInput.setSourcePosition(it) }
+            if (myDataSourceInfo.filterable) {
+                myDebugSession.currentPosition.let { myFilterInput!!.setSourcePosition(it) }
+            }
             fetchModelData(myDataSourceInfo.source.reEvalExpr != myDataSourceInfo.source.currentStackFrameRefExpr)
         }
     }
 
     override fun doOKAction() {
-        myLastFilterInputState = myFilterInput.getInputState()
+        myLastFilterInputState = myFilterInput?.getInputState()
         fetchModelData(false)
     }
 
     override fun setErrorText(text: String?, component: JComponent?) {
         super.setErrorText(if (text == null) null else StringUtil.escapeXmlEntities(text), component)
+    }
+
+    override fun createActions(): Array<Action> {
+        val actions = super.createActions()
+        if (!myDataSourceInfo.filterable) {
+            return actions.filter { it != myOKAction }.toTypedArray()
+        }
+        return actions
     }
 
     private fun isShouldAbortDataFetchingSilentlyException(throwable: Throwable?): Boolean {
@@ -162,7 +178,7 @@ class DataFrameViewerDialog(
 
     private fun fetchModelData(reEvaluateDataSource:Boolean) {
         disableApplyFilterButton()
-        myFilterInput.hideErrorMessage()
+        myFilterInput?.hideErrorMessage()
         cancelLastStartedDataFetcherAndDisposeModel()
 
         val request = ModelDataFetcher.Request(
@@ -200,7 +216,11 @@ class DataFrameViewerDialog(
             .addComponent(myTable)
             .addComponent(myTableFooterLabel)
             .addVerticalGap(10)
-            .addComponent(myFilterInput.getMainComponent())
+            .apply {
+                if (myDataSourceInfo.filterable) {
+                    this.addComponent(myFilterInput!!.getMainComponent())
+                }
+            }
             .panel
     }
 
@@ -273,10 +293,10 @@ class DataFrameViewerDialog(
                     CreateTableSourceErrorKind.INVALID_FINGERPRINT -> close(CANCEL_EXIT_CODE)
 
                     CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED ->
-                        myFilterInput.showErrorMessage("Failed to evaluate filter from expression: ${failure.info}")
+                        myFilterInput!!.showErrorMessage("Failed to evaluate filter from expression: ${failure.info}")
 
                     CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE ->
-                        myFilterInput.showErrorMessage("Expression returned invalid filter of type: ${failure.info}")
+                        myFilterInput!!.showErrorMessage("Expression returned invalid filter of type: ${failure.info}")
 
                     CreateTableSourceErrorKind.EVAL_EXCEPTION,
                     CreateTableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE -> setErrorText(failure.info)
@@ -301,6 +321,7 @@ class DataFrameViewerDialog(
                     result.columnIndexTranslator,
                     chunkLoader,
                     ChunkSize(30, 20),
+                    request.dataSourceInfo.sortable,
                 ).let { model ->
                     myLastDataModelDisposable = Disposer.newDisposable(disposable, "modelDisposable").also {
                         Disposer.register(it, model)
@@ -316,8 +337,10 @@ class DataFrameViewerDialog(
                     myDataSourceInfo = myDataSourceInfo.copy(source = updatedSource)
                 }
 
-                if (request.filterInputState.text.isNotEmpty()  && request.filterInputState.text == myFilterInput.getText()) {
-                    myFilterInput.saveInputInHistory()
+                if (myDataSourceInfo.filterable) {
+                    if (request.filterInputState!!.text.isNotEmpty() && request.filterInputState.text == myFilterInput!!.getText()) {
+                        myFilterInput.saveInputInHistory()
+                    }
                 }
 
                 updateFooterLabel(result.tableStructure)

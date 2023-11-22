@@ -49,10 +49,6 @@ private class MyEmptyValueModel : AbstractTableModel(), ITableValueDataModel {
         throw UnsupportedOperationException("Operation 'setSortKeys' isn't supported.")
     }
 
-    override fun convertToFrameColumnIndex(columnIndex: Int): Int {
-        throw UnsupportedOperationException("Operation 'convertToFrameColumnIndex' isn't supported.")
-    }
-
     override fun getColumnName(columnIndex: Int): String {
         throw UnsupportedOperationException("Operation 'getColumnName' isn't supported.")
     }

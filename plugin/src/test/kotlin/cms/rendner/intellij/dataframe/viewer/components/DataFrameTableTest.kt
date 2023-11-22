@@ -30,9 +30,10 @@ internal class DataFrameTableTest {
 
     private fun createModel(
         tableStructure: TableStructure,
+        sortable: Boolean = true,
         frameColumnOrgIndexList: List<Int>? = null
     ): TableModelFactory.RecordingModel {
-        return tableModelFactory.createModel(tableStructure, frameColumnOrgIndexList).apply {
+        return tableModelFactory.createModel(tableStructure, sortable, frameColumnOrgIndexList).apply {
             enableDataFetching(true)
         }
     }
@@ -111,6 +112,13 @@ internal class DataFrameTableTest {
             it.markFixed(lastColIndex)
             assertThat(it.isFixed(lastColIndex)).isFalse
         }
+    }
+
+    @Test
+    fun valueTable_rowSorter_shouldBeNull() {
+        val model = createModel(tableModelFactory.createTableStructure(), sortable = false)
+        val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
+        assertThat(tableComponent.getValueTable().rowSorter).isNull()
     }
 
     @Test
@@ -227,7 +235,7 @@ internal class DataFrameTableTest {
     fun valueTable_rowSorter_shouldKeepSortStateOnModelChangeIfSameDataSource() {
         val dataSourceFingerprint = "X"
         val tsA = tableModelFactory.createTableStructure().copy(fingerprint = dataSourceFingerprint)
-        val modelA = createModel(tsA, List(tsA.columnsCount) { it })
+        val modelA = createModel(tsA, frameColumnOrgIndexList = List(tsA.columnsCount) { it })
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
         tableComponent.getValueTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.DESCENDING, true)
@@ -239,7 +247,7 @@ internal class DataFrameTableTest {
         val expectedSortCriteria = SortCriteria(listOf(7, 6), listOf(false, false))
 
         val tsB = tableModelFactory.createTableStructure().copy(fingerprint = dataSourceFingerprint)
-        val modelB = createModel(tsB, List(tsB.columnsCount) { if (it == 0) 0 else it + 1 }.reversed())
+        val modelB = createModel(tsB, frameColumnOrgIndexList = List(tsB.columnsCount) { if (it == 0) 0 else it + 1 }.reversed())
         tableComponent.setDataFrameModel(modelB)
         assertThat(modelB.recordedSortCriteria).isEqualTo(expectedSortCriteria)
     }
@@ -264,7 +272,7 @@ internal class DataFrameTableTest {
         val dataSourceFingerprint = "X"
 
         val tsA = tableModelFactory.createTableStructure().copy(fingerprint = dataSourceFingerprint)
-        val modelA = createModel(tsA, List(tsA.columnsCount) { it })
+        val modelA = createModel(tsA, frameColumnOrgIndexList = List(tsA.columnsCount) { it })
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
         val oldColumn = tableComponent.getValueTable().columnModel.getColumn(1).also {
                 it.width = 123
@@ -273,7 +281,7 @@ internal class DataFrameTableTest {
         }
 
         val tsB = tableModelFactory.createTableStructure().copy(fingerprint = dataSourceFingerprint)
-        val modelB = createModel(tsB, List(tsB.columnsCount) { it }.reversed())
+        val modelB = createModel(tsB, frameColumnOrgIndexList = List(tsB.columnsCount) { it }.reversed())
         tableComponent.setDataFrameModel(modelB)
         tableComponent.getValueTable().columnModel.getColumn(tsB.columnsCount - 2).let { c ->
             assertThat(c.identifier).isEqualTo(oldColumn.identifier)

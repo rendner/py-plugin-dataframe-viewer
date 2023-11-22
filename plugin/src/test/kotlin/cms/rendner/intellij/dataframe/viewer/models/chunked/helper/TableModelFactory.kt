@@ -25,13 +25,16 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
 
     fun createModel(
         tableStructure: TableStructure,
-        frameColumnOrgIndexList: List<Int>? = null): RecordingModel {
+        sortable: Boolean = true,
+        frameColumnOrgIndexList: List<Int>? = null,
+        ): RecordingModel {
         val loader = RecordingLoader()
         val model = ChunkedDataFrameModel(
             tableStructure,
             ColumnIndexTranslator(frameColumnOrgIndexList),
             loader,
             chunkSize,
+            sortable,
         )
         return RecordingModel(model, loader)
     }

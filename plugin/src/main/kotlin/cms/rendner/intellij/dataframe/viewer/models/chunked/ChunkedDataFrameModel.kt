@@ -35,12 +35,14 @@ import javax.swing.table.AbstractTableModel
  * @param columnIndexTranslator indices of the visible columns in the unfiltered table source.
  * @param chunkDataLoader used for lazy data loading.
  * @param chunkSize size of the chunks to load.
+ * @param sortable true if model can be sorted.
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
     private val columnIndexTranslator: ColumnIndexTranslator,
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
+    private val sortable: Boolean = false,
 ) : IDataFrameModel, IChunkDataResultHandler {
 
     private val myValueModel = ValueModel(this)
@@ -111,6 +113,9 @@ class ChunkedDataFrameModel(
     }
 
     private fun setValueSortKeys(sortKeys: List<SortKey>) {
+        if (!sortable) {
+            throw IllegalStateException("Model is not sortable.")
+        }
         val sortCriteria = sortKeys.fold(Pair(mutableListOf<Int>(), mutableListOf<Boolean>()))
         { pair, sortKey ->
             pair.first.add(sortKey.column)
@@ -374,6 +379,7 @@ class ChunkedDataFrameModel(
         override fun getValueAt(rowIndex: Int, columnIndex: Int) = source.getValueAt(rowIndex, columnIndex)
         override fun getColumnHeaderAt(columnIndex: Int) = source.getColumnHeaderAt(columnIndex)
         override fun setSortKeys(sortKeys: List<SortKey>) = source.setValueSortKeys(sortKeys)
+        override fun isSortable() = source.sortable
         override fun getColumnName(columnIndex: Int) = getColumnHeaderAt(columnIndex).text()
         override fun getLegendHeader() = source.getColumnLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()

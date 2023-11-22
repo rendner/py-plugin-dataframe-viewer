@@ -18,15 +18,16 @@ package cms.rendner.integration.plugin.models
 import cms.rendner.debugger.impl.EvalOrExecRequest
 import cms.rendner.debugger.impl.EvalOrExecResponse
 import cms.rendner.debugger.impl.IDebuggerInterceptor
+import cms.rendner.integration.plugin.toDataSourceInfo
+import cms.rendner.integration.plugin.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInputState
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceErrorKind
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.DataFrameCodeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
+internal class ModelDataFetcherTest : AbstractModelDataFetcherTest() {
 
     @Test
     fun shouldFetchRequiredDataForDataFrame() {
@@ -72,7 +73,7 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReEvaluateIfRequested() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val interceptor = object: IDebuggerInterceptor {
+            val interceptor = object : IDebuggerInterceptor {
                 var runningRequest: EvalOrExecRequest? = null
                 override fun onRequest(request: EvalOrExecRequest): EvalOrExecRequest {
                     runningRequest = request
@@ -250,9 +251,9 @@ internal class ModelDataFetcherTest: AbstractModelDataFetcherTest() {
     fun shouldReportFailureIfModelDataEvaluationFails() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSourceInfo = DataSourceInfo(
+            val dataSourceInfo = DataFrameCodeProvider().createSourceInfo(
                 debuggerApi.evaluator.evaluate("df").toValueEvalExpr().copy(reEvalExpr = "invalidExpression!!!!"),
-                DataFrameCodeProvider().getFactoryImport(),
+                debuggerApi.evaluator,
             )
 
             val fetcher = MyTestFetcher(debuggerApi.evaluator)

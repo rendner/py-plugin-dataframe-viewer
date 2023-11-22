@@ -112,6 +112,14 @@ interface ITableIndexDataModel : ITableDataModel {
 interface ITableValueDataModel : ITableDataModel {
     override fun getValueAt(rowIndex: Int, columnIndex: Int): Value
     fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel
+    fun isSortable(): Boolean = false
+
+    /**
+     * Sets the sort keys.
+     * If the sort keys have changed this triggers a sort.
+     *
+     * @throws [IllegalStateException] if model is not sortable
+     */
     fun setSortKeys(sortKeys: List<SortKey>)
 
     /**
@@ -123,7 +131,7 @@ interface ITableValueDataModel : ITableDataModel {
      *
      * @return the index of the column in the original DataFrame.
      */
-    fun convertToFrameColumnIndex(columnIndex: Int): Int
+    fun convertToFrameColumnIndex(columnIndex: Int) = columnIndex
 }
 
 interface IDataFrameModel : Disposable {

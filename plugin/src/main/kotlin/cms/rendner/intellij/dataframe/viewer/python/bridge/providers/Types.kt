@@ -15,7 +15,9 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 
+import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 
 enum class TableSourceKind {
     TABLE_SOURCE,
@@ -49,10 +51,15 @@ interface ITableSourceCodeProvider {
     fun getModulesDumpId(): String
 
     /**
-     * Returns the import information to import and create a Python TableSourceFactory
-     * from the modules dump.
+     * Creates a source info for the [PyDebugValueEvalExpr].
+     *
+     * The [evaluator] can be used to check for the shape (dimension) of the table source to create
+     * to decide if it is sortable/filterable or not.
+     *
+     * @param source the source.
+     * @param evaluator an evaluator to retrieve information from Python.
      */
-    fun getFactoryImport(): TableSourceFactoryImport
+    fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo
 
     /**
      * Returns the modules dump. The dump contains Python code required to fetch the table frame like data

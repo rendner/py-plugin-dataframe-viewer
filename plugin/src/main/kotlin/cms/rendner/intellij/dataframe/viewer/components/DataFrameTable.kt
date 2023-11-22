@@ -278,20 +278,23 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         while (columnCount > 0) removeColumn(columnModel.getColumn(0))
         newColumns.forEach { addColumn(it) }
 
-        rowSorter = MyExternalDataRowSorter(tableModel).apply {
-            if (keepSortKeyState) {
-                rowSorter?.sortKeys?.let { oldSortKeys ->
-                    val newColumnCache = newColumns.associateBy { ColumnCacheKey.orgFrameIndex(it.orgFrameIndex) }
-                    sortKeys = oldSortKeys.mapNotNull {
-                        val orgFrameIndex = prevColumnCache[ColumnCacheKey.modelIndex(it.column)]?.orgFrameIndex
-                            ?: return@mapNotNull null
-                        val newModelIndex = newColumnCache[ColumnCacheKey.orgFrameIndex(orgFrameIndex)]?.modelIndex
-                            ?: return@mapNotNull null
-                        if (newModelIndex == -1) null else SortKey(newModelIndex, it.sortOrder)
+        rowSorter = if (tableModel.isSortable()) {
+            MyExternalDataRowSorter(tableModel).apply {
+                if (keepSortKeyState) {
+                    rowSorter?.sortKeys?.let { oldSortKeys ->
+                        val newColumnCache = newColumns.associateBy { ColumnCacheKey.orgFrameIndex(it.orgFrameIndex) }
+                        sortKeys = oldSortKeys.mapNotNull {
+                            val orgFrameIndex = prevColumnCache[ColumnCacheKey.modelIndex(it.column)]?.orgFrameIndex
+                                ?: return@mapNotNull null
+                            val newModelIndex = newColumnCache[ColumnCacheKey.orgFrameIndex(orgFrameIndex)]?.modelIndex
+                                ?: return@mapNotNull null
+                            if (newModelIndex == -1) null else SortKey(newModelIndex, it.sortOrder)
+                        }
                     }
                 }
             }
-        }
+        } else null
+
 
         if (myBaseClassIsFullyInitialized) {
             myColumnResizeBehavior.ensureLastColumnIsNotFixed()

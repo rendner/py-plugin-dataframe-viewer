@@ -20,7 +20,6 @@ import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.PatchedStylerCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.DataFrameCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
@@ -67,7 +66,8 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         dataSourceExpr: String,
         config: CreateTableSourceConfig? = null,
         ): IPyPatchedStylerRef {
-        val patchedStyler = createTableSource(evaluator, PatchedStylerCodeProvider().getFactoryImport(), dataSourceExpr, config)
+        val evalExpr = evaluator.evaluate(dataSourceExpr).toValueEvalExpr()
+        val patchedStyler = createTableSource(evaluator, PatchedStylerCodeProvider().createSourceInfo(evalExpr, evaluator), config)
         check(patchedStyler is IPyPatchedStylerRef)
         return patchedStyler
     }
@@ -77,17 +77,22 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         dataSourceExpr: String,
         config: CreateTableSourceConfig? = null,
     ): IPyTableSourceRef {
-        val tableSource = createTableSource(evaluator, DataFrameCodeProvider().getFactoryImport(), dataSourceExpr, config)
+        val evalExpr = evaluator.evaluate(dataSourceExpr).toValueEvalExpr()
+        val tableSource = createTableSource(evaluator, DataFrameCodeProvider().createSourceInfo(evalExpr, evaluator), config)
         check(tableSource !is IPyPatchedStylerRef)
         return tableSource
     }
 
-    protected fun createTableSource(
+    private fun createTableSource(
         evaluator: IPluginPyValueEvaluator,
-        tableSourceFactory: TableSourceFactoryImport,
-        dataSourceExpr: String,
+        dataSourceInfo: DataSourceInfo,
         config: CreateTableSourceConfig? = null,
         ): IPyTableSourceRef {
-        return TableSourceFactory.create(evaluator, tableSourceFactory, dataSourceExpr, config)
+        return TableSourceFactory.create(
+            evaluator,
+            dataSourceInfo.tableSourceFactoryImport,
+            dataSourceInfo.source.currentStackFrameRefExpr,
+            config,
+        )
     }
 }
