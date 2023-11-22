@@ -5,7 +5,7 @@ import pytest
 from pandas import DataFrame, MultiIndex, Series
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.pandas.shared.table_frame_validator import TableFrameValidator
+from cms_rendner_sdfv.base.table_frame_validator import TableFrameValidator
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 
 np.random.seed(123456)

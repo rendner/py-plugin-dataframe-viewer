@@ -40,7 +40,7 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
             org_columns_count=len(self._source_frame.columns),
             rows_count=rows_count,
             columns_count=columns_count,
-            fingerprint=fingerprint
+            fingerprint=fingerprint,
         )
 
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
@@ -54,20 +54,6 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
 
     def get_region_of_frame(self) -> Region:
         return self._visible_region
-
-    def compute_frame_intersection(self, region: Region) -> Region:
-        if region.is_empty():
-            return region
-        if self._visible_region.is_empty():
-            return self._visible_region
-        assert region.is_valid()
-        first_row = min(region.first_row, self._visible_region.rows - 1)
-        first_col = min(region.first_col, self._visible_region.cols - 1)
-        rows_left = self._visible_region.rows - (0 if first_row == 0 else first_row + 1)
-        cols_left = self._visible_region.cols - (0 if first_col == 0 else first_col + 1)
-        rows = min(region.rows, rows_left)
-        cols = min(region.cols, cols_left)
-        return Region(first_row, first_col, rows, cols)
 
     def get_chunk(self, region: Region) -> DataFrame:
         frame = self._source_frame

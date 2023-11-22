@@ -14,8 +14,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
 
+from cms_rendner_sdfv.base.table_frame_validator import TableFrameValidator
 from cms_rendner_sdfv.base.types import Region
-from cms_rendner_sdfv.pandas.shared.table_frame_validator import TableFrameValidator
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator

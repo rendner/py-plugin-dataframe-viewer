@@ -2,9 +2,9 @@ import pandas as pd
 import pytest
 from pandas import DataFrame, option_context
 
+from cms_rendner_sdfv.base.table_frame_validator import TableFrameValidator
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.frame.table_frame_generator import TableFrameGenerator
-from cms_rendner_sdfv.pandas.shared.table_frame_validator import TableFrameValidator
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],

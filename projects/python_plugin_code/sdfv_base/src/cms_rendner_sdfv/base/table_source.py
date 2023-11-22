@@ -78,17 +78,12 @@ class AbstractTableSourceContext(ABC):
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
         pass
 
-    # some data sources support to filter out columns - in these cases this method has to return
-    # the index of a column before the filtering
     def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> List[int]:
-        pass
+        end = min(part_start + max_columns, self.get_region_of_frame().cols)
+        return [] if end <= part_start or part_start < 0 else list(range(part_start, end))
 
     @abstractmethod
     def get_region_of_frame(self) -> Region:
-        pass
-
-    @abstractmethod
-    def compute_frame_intersection(self, region: Region) -> Region:
         pass
 
     @abstractmethod

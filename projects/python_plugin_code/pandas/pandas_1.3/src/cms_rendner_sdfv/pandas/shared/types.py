@@ -18,13 +18,6 @@ from pandas import DataFrame, Index
 
 
 @dataclass(frozen=True)
-class TableFrameValidationResult:
-    actual: str
-    expected: str
-    is_equal: bool
-
-
-@dataclass(frozen=True)
 class FilterCriteria:
     index: Optional[Index] = None
     columns: Optional[Index] = None

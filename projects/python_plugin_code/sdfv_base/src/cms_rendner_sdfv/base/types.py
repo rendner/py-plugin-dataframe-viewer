@@ -46,6 +46,13 @@ class TableFrame:
 
 
 @dataclass(frozen=True)
+class TableFrameValidationResult:
+    actual: str
+    expected: str
+    is_equal: bool
+
+
+@dataclass(frozen=True)
 class Region:
     first_row: int = 0
     first_col: int = 0
@@ -59,6 +66,11 @@ class Region:
         return self.first_row >= 0 and self.first_col >= 0 and self.rows >= 0 and self.cols >= 0
 
     def iterate_chunkwise(self, rows_per_chunk: int, cols_per_chunk: int):
+        if not self.is_valid():
+            raise ValueError("Invalid Regions can't be iterated chunkwise.")
+        if rows_per_chunk <= 0 or cols_per_chunk <= 0:
+            raise ValueError(f"rows_per_chunk ({rows_per_chunk}) and cols_per_chunk ({cols_per_chunk}) must be > 0")
+
         rows_processed = 0
         while rows_processed < self.rows:
             rows = min(rows_per_chunk, self.rows - rows_processed)
@@ -70,6 +82,21 @@ class Region:
 
                 cols_in_row_processed += cols
             rows_processed += rows
+
+    def get_bounded_region(self, region_to_bound: 'Region') -> 'Region':
+        if not self.is_valid():
+            raise ValueError("No valid bounds.")
+        if not region_to_bound.is_valid():
+            raise ValueError("Can't compute a bounded region against an invalid Region.")
+        first_row = max(region_to_bound.first_row, self.first_row)
+        first_col = max(region_to_bound.first_col, self.first_col)
+        last_row = min(region_to_bound.first_row + region_to_bound.rows, self.first_row + self.rows)
+        last_col = min(region_to_bound.first_col + region_to_bound.cols, self.first_col + self.cols)
+        result = Region(first_row, first_col, last_row - first_row, last_col - first_col)
+        return result if result.is_valid() else Region(
+            first_row=region_to_bound.first_row,
+            first_col=region_to_bound.first_col
+        )
 
 
 @dataclass(frozen=True)

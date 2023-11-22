@@ -15,8 +15,7 @@ from typing import Optional
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator, AbstractTableSourceContext
 from cms_rendner_sdfv.base.transforms import to_json
-from cms_rendner_sdfv.base.types import Region
-from cms_rendner_sdfv.pandas.shared.types import TableFrameValidationResult
+from cms_rendner_sdfv.base.types import Region, TableFrameValidationResult
 
 
 class TableFrameValidator:
@@ -32,7 +31,7 @@ class TableFrameValidator:
         if region is None:
             region = self.__table_source_context.get_region_of_frame()
         else:
-            region = self.__table_source_context.compute_frame_intersection(region)
+            region = self.__table_source_context.get_region_of_frame().get_bounded_region(region)
 
         if region.is_empty():
             return TableFrameValidationResult('', '', True)
