@@ -150,15 +150,14 @@ tasks {
                 entry.environments.forEach { pipEnv ->
 
                     pipEnv.pipfileRoot?.let {
-                        val pipFile = it.resolve("Pipfile")
                         val pipFileLock = it.resolve("Pipfile.lock")
-                        if (pipFile.exists() && pipFileLock.exists()) {
+                        if (pipFileLock.exists()) {
                             copy {
-                                from(pipFile, pipFileLock)
+                                from(pipFileLock)
                                 into("${entry.additionalBuildContentDir}/pipenv_environments/${pipEnv.name}/")
                             }
                         } else {
-                            throw GradleException("Incomplete Pipfiles for environment: $pipEnv")
+                            throw GradleException("Missing Pipfile.lock for environment: $pipEnv")
                         }
                     }
                 }
