@@ -69,7 +69,6 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
 
         fun enableDataFetching(enabled: Boolean) {
             getValueDataModel().enableDataFetching(enabled)
-            getIndexDataModel().enableDataFetching(enabled)
         }
     }
 

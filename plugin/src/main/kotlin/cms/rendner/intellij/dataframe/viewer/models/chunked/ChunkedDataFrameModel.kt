@@ -36,6 +36,7 @@ import javax.swing.table.AbstractTableModel
  * @param chunkDataLoader used for lazy data loading.
  * @param chunkSize size of the chunks to load.
  * @param sortable true if model can be sorted.
+ * @param hasIndexLabels true if model should provide an [ITableIndexDataModel].
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
@@ -43,6 +44,7 @@ class ChunkedDataFrameModel(
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
     private val sortable: Boolean = false,
+    private val hasIndexLabels: Boolean = false,
 ) : IDataFrameModel, IChunkDataResultHandler {
 
     private val myValueModel = ValueModel(this)
@@ -154,8 +156,8 @@ class ChunkedDataFrameModel(
         return myValueModel
     }
 
-    override fun getIndexDataModel(): ITableIndexDataModel {
-        return myIndexModel
+    override fun getIndexDataModel(): ITableIndexDataModel? {
+        return if (hasIndexLabels) myIndexModel else null
     }
 
     override fun getDataSourceFingerprint() = tableStructure.fingerprint
@@ -274,7 +276,7 @@ class ChunkedDataFrameModel(
                 }
             }
 
-            if (!myFetchedChunkRowHeaderLabels.containsKey(chunkRegion.firstRow)) {
+            if (headerLabels.rows != null && !myFetchedChunkRowHeaderLabels.containsKey(chunkRegion.firstRow)) {
                 myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] = headerLabels.rows
                 if (headerLabels.rows.isNotEmpty()) {
                     fireIndexModelValuesUpdated(chunkRegion)
@@ -392,7 +394,6 @@ class ChunkedDataFrameModel(
         override fun getRowCount() = source.tableStructure.rowsCount
         override fun getColumnCount() = 1
         override fun getColumnName(columnIndex: Int) = getColumnName()
-        override fun enableDataFetching(enabled: Boolean) = source.enableDataFetching(enabled)
         override fun getValueAt(rowIndex: Int) = source.getRowHeaderLabelAt(rowIndex)
         override fun getColumnHeader() = getLegendHeader()
         override fun getColumnName() = getLegendHeader().text()

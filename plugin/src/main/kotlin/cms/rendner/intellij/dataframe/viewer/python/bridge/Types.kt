@@ -59,14 +59,16 @@ data class PandasVersion(val major: Int, val minor: Int, val rest: String = "") 
  *
  * @param source the source for a [IPyTableSourceRef]
  * @param tableSourceFactoryImport the factory to create a [IPyTableSourceRef] on Python side
+ * @param hasIndexLabels true if table has index labels
  * @param sortable true if table source can be sorted
  * @param filterable true if table source can be filtered
  */
 data class DataSourceInfo(
     val source: PyDebugValueEvalExpr,
     val tableSourceFactoryImport: TableSourceFactoryImport,
-    val sortable: Boolean = false,
-    val filterable: Boolean = false,
+    val hasIndexLabels: Boolean,
+    val sortable: Boolean,
+    val filterable: Boolean,
 )
 
 /**
@@ -262,7 +264,7 @@ data class TableFrameCell(val value: String, val css: Map<String, String>?)
 
 @Serializable
 data class TableFrame(
-    @SerialName("index_labels") val indexLabels: List<List<String>>,
+    @SerialName("index_labels") val indexLabels: List<List<String>>?,
     @SerialName("column_labels") val columnLabels: List<List<String>>,
     val cells: List<List<TableFrameCell>>,
     val legend: TableFrameLegend?,

@@ -37,21 +37,9 @@ internal class ChunkedDataFrameModelTest {
         setup(tableModelFactory.createTableStructure())
 
         model.getValueDataModel().enableDataFetching(false)
-        model.getIndexDataModel().enableDataFetching(false)
 
         model.getValueDataModel().getValueAt(0, 0)
-        model.getIndexDataModel().getValueAt(0)
 
-        assertThat(model.recordedLoadRequests.size).isEqualTo(0)
-    }
-
-    @Test
-    fun doesNotFetchChunkIfValueForIndexIsRequested() {
-        setup(tableModelFactory.createTableStructure())
-
-        model.getIndexDataModel().getValueAt(0)
-
-        // only "model.getValueDataModel().getValueAt(r, c)" fetches data
         assertThat(model.recordedLoadRequests.size).isEqualTo(0)
     }
 
@@ -112,7 +100,7 @@ internal class ChunkedDataFrameModelTest {
         }
 
         assertThatExceptionOfType(IndexOutOfBoundsException::class.java).isThrownBy {
-            model.getIndexDataModel().getValueAt(1)
+            model.getIndexDataModel()!!.getValueAt(1)
         }
     }
 

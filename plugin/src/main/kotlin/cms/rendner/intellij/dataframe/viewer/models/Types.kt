@@ -77,21 +77,6 @@ data class StyleProperties(
 interface ITableDataModel : TableModel {
     fun getLegendHeader(): IHeaderLabel
     fun getLegendHeaders(): LegendHeaders
-
-    /**
-     * Enables or disables data fetching.
-     * Data fetching should only be temporarily enabled during the painting process of a table.
-     *
-     * JTables instantiate renderers to measure all kind of things.
-     * Values for these renderers are read from the model of the table.
-     * In case of an async table model, the data has to be fetched from an underlying data source.
-     * Such a model usually returns fallback values (maybe empty string) until the data is loaded.
-     * To not trigger fetching of data during internal measuring, the data fetching should be
-     * disabled most of the time.
-     *
-     * @param enabled indicates if data fetching should be enabled or not.
-     */
-    fun enableDataFetching(enabled: Boolean)
 }
 
 interface ITableIndexDataModel : ITableDataModel {
@@ -132,11 +117,34 @@ interface ITableValueDataModel : ITableDataModel {
      * @return the index of the column in the original DataFrame.
      */
     fun convertToFrameColumnIndex(columnIndex: Int) = columnIndex
+
+    /**
+     * Enables or disables data fetching.
+     * Data fetching should only be temporarily enabled during the painting process of a table.
+     *
+     * JTables instantiate renderers to measure all kind of things.
+     * Values for these renderers are read from the model of the table.
+     * In case of an async table model, the data has to be fetched from an underlying data source.
+     * Such a model usually returns fallback values (maybe empty string) until the data is loaded.
+     * To not trigger fetching of data during internal measuring, the data fetching should be
+     * disabled most of the time.
+     *
+     * @param enabled indicates if data fetching should be enabled or not.
+     */
+    fun enableDataFetching(enabled: Boolean)
 }
 
 interface IDataFrameModel : Disposable {
+    /**
+     * Returns the model which provides the cell values and column labels.
+     */
     fun getValueDataModel(): ITableValueDataModel
-    fun getIndexDataModel(): ITableIndexDataModel
+
+    /**
+     * Returns the model which provides the index labels.
+     * null if no index labels should be displayed.
+     */
+    fun getIndexDataModel(): ITableIndexDataModel?
 
     /**
      * Fingerprint of the underlying data source from where the data was/is retrieved from.

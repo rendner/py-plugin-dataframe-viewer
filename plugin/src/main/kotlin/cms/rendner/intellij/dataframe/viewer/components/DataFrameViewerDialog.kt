@@ -322,6 +322,7 @@ class DataFrameViewerDialog(
                     chunkLoader,
                     ChunkSize(30, 20),
                     request.dataSourceInfo.sortable,
+                    request.dataSourceInfo.hasIndexLabels,
                 ).let { model ->
                     myLastDataModelDisposable = Disposer.newDisposable(disposable, "modelDisposable").also {
                         Disposer.register(it, model)

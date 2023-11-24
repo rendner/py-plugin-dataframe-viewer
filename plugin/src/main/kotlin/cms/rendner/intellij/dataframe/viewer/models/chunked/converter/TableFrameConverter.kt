@@ -37,7 +37,7 @@ class TableFrameConverter {
             return ChunkHeaderLabels(
                 legend = convertLegendLabels(table.legend),
                 columns = convertHeaderLabels(table.columnLabels),
-                rows = convertHeaderLabels(table.indexLabels),
+                rows = table.indexLabels.let { if (it == null) null else convertHeaderLabels(it) },
             )
         }
 

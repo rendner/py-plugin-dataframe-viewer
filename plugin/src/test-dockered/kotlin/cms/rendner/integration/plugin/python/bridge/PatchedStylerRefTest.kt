@@ -90,7 +90,7 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
                     excludeColumnHeader = false,
                 )
             ).matches { table ->
-                table.indexLabels.isNotEmpty()
+                table.indexLabels!!.isNotEmpty()
                     && table.columnLabels.isNotEmpty()
                     && table.cells.isNotEmpty()
             }

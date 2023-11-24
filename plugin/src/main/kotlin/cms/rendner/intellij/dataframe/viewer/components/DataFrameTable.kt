@@ -49,16 +49,10 @@ data class CellPosition(val rowIndex: Int, val columnIndex: Int)
 class DataFrameTable : JScrollPane() {
 
     private var myDataFrameModel: IDataFrameModel = EmptyDataFrameModel()
-    private val myIndexTable: MyIndexTable
+    private var myIndexTable: MyIndexTable? = null
     private val myValueTable: MyValueTable = MyValueTable(myDataFrameModel.getValueDataModel())
 
     init {
-        myIndexTable = MyIndexTable(
-            myValueTable,
-            max(MIN_COLUMN_WIDTH, MIN_TABLE_WIDTH - MIN_COLUMN_WIDTH),
-            myDataFrameModel.getIndexDataModel(),
-        )
-
         setViewportView(myValueTable)
         minimumSize = Dimension(MIN_TABLE_WIDTH, 200)
     }
@@ -109,13 +103,27 @@ class DataFrameTable : JScrollPane() {
          */
         val cellToFocus = if (isSameDataSource) getFocusedCell() else CellPosition(0, 0)
 
-        model.getIndexDataModel().let {
-            myIndexTable.setModel(it)
-            setRowHeaderView(if (it.columnCount == 0) null else myIndexTable)
-            setCorner(
-                ScrollPaneConstants.UPPER_LEFT_CORNER,
-                if (it.columnCount == 0) null else myIndexTable.tableHeader
-            )
+        model.getIndexDataModel().let { newIndexModel ->
+            if (newIndexModel == null) {
+                myIndexTable = null
+                setRowHeaderView(null)
+                setCorner(ScrollPaneConstants.UPPER_LEFT_CORNER, null)
+            } else {
+                myIndexTable.let {
+                    if (it == null) {
+                        myIndexTable = MyIndexTable(
+                            myValueTable,
+                            max(MIN_COLUMN_WIDTH, MIN_TABLE_WIDTH - MIN_COLUMN_WIDTH),
+                        ).also { indexTable ->
+                            indexTable.setModel(newIndexModel)
+                            setRowHeaderView(indexTable)
+                            setCorner(ScrollPaneConstants.UPPER_LEFT_CORNER, indexTable.tableHeader)
+                        }
+                    } else {
+                        it.setModel(newIndexModel)
+                    }
+                }
+            }
         }
 
         model.getValueDataModel().let {
@@ -261,6 +269,8 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     override fun setModel(tableModel: TableModel) {
         if (tableModel !is ITableValueDataModel) throw IllegalArgumentException("The model has to implement ITableValueDataModel.")
 
+        tableModel.enableDataFetching(false)
+
         val prevColumnCache = mutableMapOf<ColumnCacheKey, MyValueTableColumn>()
         val keepSortKeyState = myModelHasSameDataSource && rowSorter?.sortKeys?.isNotEmpty() == true
 
@@ -338,6 +348,30 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         }
 
         myColumnResizeBehavior.afterColumnLayout()
+    }
+
+    /**
+     * Fetching data which is not yet loaded to calculate things outside the painting process is unwanted
+     * because it can block the model from fetching other required data while loading unwanted data.
+     *
+     * Examples where not yet loaded data shouldn't be fetched:
+     *  - [JBTable.getExpandedColumnWidth]
+     *  - [AbstractExpandableItemsHandler.createToolTipImage]
+     *  - [JBTable.JBTableHeader.packColumn]
+     *  - [JBTable.calculateRowHeight]
+     *  - ...
+     *
+     *  Therefore, the data fetching is only activated during the [paintComponent] method.
+     *  (It doesn't have to be enabled for the table header - it's on purpose.)
+     */
+    override fun paintComponent(g: Graphics) {
+        model?.enableDataFetching(true)
+        super.paintComponent(g)
+        model?.enableDataFetching(false)
+    }
+
+    override fun createDefaultDataModel(): TableModel {
+        return EmptyDataFrameModel().getValueDataModel()
     }
 
     private fun castedColumnAt(viewColumnIndex: Int): MyValueTableColumn {
@@ -802,8 +836,7 @@ class MyExternalDataRowSorter(private val model: ITableValueDataModel) : RowSort
 class MyIndexTable(
     private val mainTable: MyValueTable,
     private val maxColumnWidth: Int,
-    model: ITableIndexDataModel,
-) : MyTable<ITableIndexDataModel>(model) {
+) : MyTable<ITableIndexDataModel>() {
 
     init {
         // disable automatic row height adjustment - use the value from the mainTable
@@ -871,9 +904,12 @@ class MyIndexTable(
         preferredScrollableViewportSize = preferredSize
     }
 
+    override fun createDefaultDataModel(): TableModel {
+        return EmptyDataFrameModel().getIndexDataModel()
+    }
 }
 
-abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
+abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) {
 
     init {
         emptyText.text = ""
@@ -885,12 +921,6 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
             reorderingAllowed = false
             defaultRenderer = createTableHeaderRenderer(false)
         }
-    }
-
-    override fun setModel(tableModel: TableModel) {
-        if (tableModel !is ITableDataModel) throw IllegalArgumentException("The model has to implement ITableDataModel.")
-        tableModel.enableDataFetching(false)
-        super.setModel(tableModel)
     }
 
     override fun getModel(): M? {
@@ -924,26 +954,6 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
         } else {
             super.onTableChanged(event)
         }
-    }
-
-    /**
-     * Fetching data which is not yet loaded to calculate things outside the painting process is unwanted
-     * because it can block the model from fetching other required data while loading unwanted data.
-     *
-     * Examples where not yet loaded data shouldn't be fetched:
-     *  - [JBTable.getExpandedColumnWidth]
-     *  - [AbstractExpandableItemsHandler.createToolTipImage]
-     *  - [JBTable.JBTableHeader.packColumn]
-     *  - [JBTable.calculateRowHeight]
-     *  - ...
-     *
-     *  Therefore, the data fetching is only activated during the [paintComponent] method.
-     *  (It doesn't have to be enabled for the table header - it's on purpose.)
-     */
-    override fun paintComponent(g: Graphics) {
-        model?.enableDataFetching(true)
-        super.paintComponent(g)
-        model?.enableDataFetching(false)
     }
 
     protected fun createTableHeaderRenderer(isRowHeader: Boolean): TableCellRenderer {
@@ -995,7 +1005,7 @@ abstract class MyTable<M : ITableDataModel>(model: M) : JBTable(model) {
             }
         }
 
-        private fun hasLeveledHeaderValues(model: ITableDataModel, modelColumnIndex: Int): Boolean {
+        private fun hasLeveledHeaderValues(model: TableModel?, modelColumnIndex: Int): Boolean {
             return when (model) {
                 is ITableIndexDataModel -> {
                     model.getLegendHeaders().let {

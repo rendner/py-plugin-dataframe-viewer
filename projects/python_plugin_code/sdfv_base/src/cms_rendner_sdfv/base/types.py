@@ -13,7 +13,7 @@
 #  limitations under the License.
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 @dataclass(frozen=True)
@@ -39,10 +39,10 @@ class TableFrameLegend:
 
 @dataclass
 class TableFrame:
-    index_labels: List[List[str]]
+    index_labels: Union[None, List[List[str]]]
     column_labels: List[List[str]]
     cells: List[List[TableFrameCell]]
-    legend: Optional[TableFrameLegend] = None
+    legend: Union[None, TableFrameLegend] = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +58,10 @@ class Region:
     first_col: int = 0
     rows: int = 0
     cols: int = 0
+
+    @classmethod
+    def from_shape(cls, shape: Tuple[int, int]):
+        return cls(rows=shape[0], cols=shape[1])
 
     def is_empty(self) -> bool:
         return self.rows == 0 or self.cols == 0

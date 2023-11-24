@@ -67,7 +67,6 @@ private class MyEmptyIndexModel : AbstractTableModel(), ITableIndexDataModel {
     override fun getRowCount() = 0
     override fun getColumnCount() = 0
     override fun getColumnName(columnIndex: Int) = getColumnName()
-    override fun enableDataFetching(enabled: Boolean) {}
 
     override fun getValueAt(rowIndex: Int): IHeaderLabel {
         throw UnsupportedOperationException("Operation 'getValueAt' isn't supported.")

@@ -45,8 +45,8 @@ class AbstractTableFrameGenerator(ABC):
 
         for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
 
-            exclude_row_header = chunk_region.first_col > 0
-            exclude_col_header = chunk_region.first_row > 0
+            chunk_contains_elements_of_first_row = chunk_region.first_row == 0
+            chunk_contains_row_start_element = chunk_region.first_col == 0
 
             chunk_table = self.generate(
                 region=Region(
@@ -55,17 +55,20 @@ class AbstractTableFrameGenerator(ABC):
                     chunk_region.rows,
                     chunk_region.cols,
                 ),
-                exclude_row_header=exclude_row_header,
-                exclude_col_header=exclude_col_header,
+                # request headers only once
+                exclude_row_header=not chunk_contains_row_start_element,
+                exclude_col_header=not chunk_contains_elements_of_first_row,
             )
 
             if result is None:
                 result = chunk_table
             else:
-                if not exclude_col_header:
+                if chunk_contains_elements_of_first_row:
                     result.column_labels.extend(chunk_table.column_labels)
-                if not exclude_row_header:
-                    result.index_labels.extend(chunk_table.index_labels)
+                if chunk_contains_row_start_element:
+                    if result.index_labels is not None:
+                        assert chunk_table.index_labels is not None
+                        result.index_labels.extend(chunk_table.index_labels)
                     result.cells.extend(chunk_table.cells)
                 else:
                     for i, row in enumerate(chunk_table.cells):

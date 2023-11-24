@@ -42,6 +42,7 @@ abstract class BaseCodeProvider: ITableSourceCodeProvider {
         return DataSourceInfo(
             source,
             getFactoryImport(),
+            hasIndexLabels = true,
             sortable = true,
             filterable = true,
         )

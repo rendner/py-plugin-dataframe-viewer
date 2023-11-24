@@ -80,12 +80,12 @@ data class ChunkValues(val rows: List<ChunkValuesRow>) : IChunkValues {
  *
  * @property legend the legend headers (contain additional information for multi index DataFrames)
  * @property columns list of column headers
- * @property rows list of row headers
+ * @property rows list of row headers, null if there are no row labels
  */
 data class ChunkHeaderLabels(
     val legend: LegendHeaders?,
     val columns: List<IHeaderLabel>,
-    val rows: List<IHeaderLabel>
+    val rows: List<IHeaderLabel>?
 )
 
 /**
