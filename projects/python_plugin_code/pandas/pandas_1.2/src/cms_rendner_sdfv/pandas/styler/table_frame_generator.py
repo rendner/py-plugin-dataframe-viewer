@@ -16,10 +16,11 @@ from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
+from pandas import Series
 from pandas.io.formats.style import Styler
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
-from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameLegend
+from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn, TableFrameLegend
 from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
@@ -77,6 +78,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                  styler_context: PatchedStylerContext,
                  todos_filter: Optional[Callable[[StylerTodo], bool]] = None,
                  ):
+        super().__init__(styler_context.visible_frame)
         self.__styler_context: PatchedStylerContext = styler_context
         self.__todos_filter: Optional[Callable[[StylerTodo], bool]] = todos_filter
 
@@ -88,15 +90,14 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                  exclude_row_header: bool = False,
                  exclude_col_header: bool = False,
                  ) -> TableFrame:
-        region = self._region_or_region_of_frame(region)
-
-        # -- Computing of styling
+        # -- Compute styling
         # The plugin only renders the visible (non-hidden cols/rows) of the styler DataFrame
         # therefore the chunk is created from the visible data.
-        chunk = self.__styler_context.get_chunk(region)
+        chunk = self.__styler_context.visible_frame.get_chunk(region)
+        chunk_df = chunk.to_frame()
 
         # The apply/map params are patched to not operate outside the chunk bounds.
-        chunk_aware_todos = self.__styler_context.create_patched_todos(chunk, self.__todos_filter)
+        chunk_aware_todos = self.__styler_context.create_patched_todos(chunk_df, self.__todos_filter)
 
         # Compute the styling for the chunk by operating on the original DataFrame.
         # The computed styler contains only entries for the cells of the chunk,
@@ -113,7 +114,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         # The styling was computed on the original DataFrame but only for the cells of the chunk. To generate only
         # the html-props of the chunk, a styler which refers to the chunk DataFrame has to be created with the
         # already computed styling.
-        chunk_styler = chunk.style
+        chunk_styler = chunk_df.style
         self.__copy_styler_state(source=computed_styler, target=chunk_styler)
 
         # The styler of the original DataFrame can contain additional configuration for styling the rendered html table.
@@ -121,21 +122,19 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         # instead of the value.
         # To use these additional configurations, an index mapping is used to translate a chunk row/col index into a
         # row/col index of the original DataFrame.
-        ri = self.__styler_context.translate_chunk_index_to_initial_frame_index_positions(chunk)
-        ci = self.__styler_context.translate_chunk_columns_to_initial_frame_column_positions(chunk)
-
-        # translate keys from "chunk_styler" into keys of "computed_styler"
-        def translate_key(k):
-            return ri[k[0]], ci[k[1]]
+        translate_key = chunk.create_cell_iloc_into_org_frame_translator()
+        rit = chunk.create_row_into_org_frame_translator()
+        cit = chunk.create_col_into_org_frame_translator()
 
         chunk_styler.ctx = _TranslateKeysDict(computed_styler.ctx, translate_key)
-        self.__copy_over_cell_context(source=computed_styler, target=chunk_styler, ri_translator=ri, ci_translator=ci)
+        self.__copy_over_cell_context(source=computed_styler, target=chunk_styler, ri_translator=rit, ci_translator=cit)
         chunk_styler._display_funcs = _TranslateKeysDict(computed_styler._display_funcs, translate_key)
 
         html_props = chunk_styler._translate()
 
         return self._convert_to_table_frame(
             html_props,
+            chunk_df.dtypes,
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
             formatter=ValueFormatter(),
@@ -145,8 +144,8 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
     def __copy_over_cell_context(
             source: Styler,
             target: Styler,
-            ri_translator: np.ndarray,
-            ci_translator: np.ndarray,
+            ri_translator: Callable[[int], int],
+            ci_translator: Callable[[int], int],
     ):
         if source.cell_context is not None and "data" in source.cell_context:
 
@@ -154,13 +153,13 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
             target_data = {}
 
             def translate_column_key(k):
-                return ci_translator[k]
+                return ci_translator(k)
 
             for source_row_key, source_row in source_data.items():
                 if len(source_row) > 0:
                     target_data[source_row_key] = _TranslateKeysDict(source_row, translate_column_key)
 
-            target.cell_context = {"data": _TranslateKeysDict(target_data, lambda k: ri_translator[k])}
+            target.cell_context = {"data": _TranslateKeysDict(target_data, lambda k: ri_translator(k))}
 
     def __compute_styling(self,
                           chunk_aware_todos: List[Tuple[Callable, tuple, dict]],
@@ -201,7 +200,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         # "_todo"
         #   - will be overwritten with the patched ones in a later step
         # "hidden_columns"
-        #   - already used to calculate "self.__styler_context.get_visible_frame()"
+        #   - already used to calculate "self.__styler_context.visible_frame"
         #     and therefore not needed any more
         # "ctx"
         #   - gets modified/filled when generating html
@@ -211,6 +210,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
     def _convert_to_table_frame(self,
                                 html_props: dict,
+                                dtypes: Series,
                                 exclude_row_header: bool,
                                 exclude_col_header: bool,
                                 formatter: ValueFormatter,
@@ -220,7 +220,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         self._resolve_spans(html_props, "head")
         self._resolve_spans(html_props, "body")
 
-        column_labels = [] if exclude_col_header else self._extract_column_header_labels(html_props, formatter)
+        column_labels = [] if exclude_col_header else self._extract_column_header_labels(html_props, dtypes, formatter)
         index_labels = [] if exclude_row_header else self._extract_index_header_labels(html_props, formatter)
         cell_values = self._extract_cell_values(html_props, formatter)
         legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(html_props, formatter)
@@ -343,9 +343,10 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         return TableFrameLegend(index=index_legend, column=column_legend) if index_legend or column_legend else None
 
     @staticmethod
-    def _extract_column_header_labels(html_props: dict, formatter: ValueFormatter) -> List[List[str]]:
-        result: List[List[str]] = []
+    def _extract_column_header_labels(html_props: dict, dtypes: Series, formatter: ValueFormatter) -> List[TableFrameColumn]:
+        result: List[TableFrameColumn] = []
 
+        # leveled column names span multiple rows (one level per row)
         for row in html_props.get("head", []):
 
             is_first_row = not result
@@ -361,9 +362,11 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                         if not isinstance(display_value, str):
                             display_value = formatter.format_column(display_value)
                         if is_first_row:
-                            result.append([display_value])
+                            result.append(
+                                TableFrameColumn(dtype=str(dtypes.iloc[col_heading_index]), labels=[display_value])
+                            )
                         else:
-                            result[col_heading_index].append(display_value)
+                            result[col_heading_index].labels.append(display_value)
                         col_heading_index += 1
 
         return result

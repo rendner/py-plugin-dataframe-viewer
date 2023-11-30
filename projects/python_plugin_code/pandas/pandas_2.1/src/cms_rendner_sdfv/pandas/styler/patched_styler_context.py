@@ -16,7 +16,7 @@ from typing import Callable, Optional
 from pandas import DataFrame, Index
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
+from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator, TableFrameValidator
 from cms_rendner_sdfv.pandas.shared.pandas_table_source_context import PandasTableSourceContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
@@ -45,6 +45,10 @@ class PatchedStylerContext(PandasTableSourceContext):
 
     def get_styler_todos(self):
         return self._styler_todos
+
+    def get_todo_validator(self, todo: StylerTodo) -> TableFrameValidator:
+        from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
+        return TableFrameValidator(self.visible_frame.region, TableFrameGenerator(self, lambda x: x is todo))
 
     def create_patched_todos(self,
                              chunk: DataFrame,

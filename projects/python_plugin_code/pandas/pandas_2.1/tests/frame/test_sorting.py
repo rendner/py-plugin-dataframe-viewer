@@ -6,7 +6,6 @@ import pytest
 from pandas import DataFrame, MultiIndex
 
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
-from cms_rendner_sdfv.pandas.frame.table_frame_generator import TableFrameGenerator
 
 df = DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -30,18 +29,20 @@ def _assert_frame_sorting(
     # create: expected
     sorted_df = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending)
     expected_ctx = FrameContext(sorted_df)
-    expected_cells = TableFrameGenerator(expected_ctx).generate().cells
+    expected_cells = expected_ctx.get_table_frame_generator().generate().cells
 
     # create: actual
     actual_ctx = FrameContext(df)
     actual_ctx.set_sort_criteria(sort_by_column_index, sort_ascending)
-    actual_cells = TableFrameGenerator(actual_ctx).generate_by_combining_chunks(
+    actual_cells = actual_ctx.get_table_frame_generator().generate_by_combining_chunks(
         rows_per_chunk=rows_per_chunk,
         cols_per_chunk=cols_per_chunk,
     ).cells
 
-    assert list(actual_ctx.get_frame_columns()) == list(expected_ctx.get_frame_columns())
-    assert list(actual_ctx.get_frame_index()) == list(expected_ctx.get_frame_index())
+    actual = actual_ctx.visible_frame.get_chunk().to_frame()
+    expected = expected_ctx.visible_frame.get_chunk().to_frame()
+    assert list(actual.columns) == list(expected.columns)
+    assert list(actual.index) == list(expected.index)
     assert len(list(chain(*expected_cells))) == math.prod(sorted_df.shape)
     assert actual_cells == expected_cells
 

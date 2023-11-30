@@ -18,13 +18,27 @@ from typing import Any, List, Optional, Union
 
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, TableFrame, \
-    TableSourceKind, TableStructure
+    TableFrameValidationResult, TableSourceKind, TableStructure
+
+
+class AbstractVisibleFrame(ABC):
+    @property
+    @abstractmethod
+    def region(self) -> Region:
+        pass
+
+    def get_column_indices(self, part_start: int, max_columns: int) -> typing.List[int]:
+        # default implementation (has to be overwritten in case columns are excluded or reordered)
+        end = min(part_start + max_columns, self.region.cols)
+        return [] if end <= part_start or part_start < 0 else list(range(part_start, end))
+
+
+VF = typing.TypeVar('VF', bound=AbstractVisibleFrame)
 
 
 class AbstractTableFrameGenerator(ABC):
-    @abstractmethod
-    def _region_or_region_of_frame(self, region: Region = None) -> Region:
-        pass
+    def __init__(self, visible_frame: VF):
+        self._visible_frame: VF = visible_frame
 
     @abstractmethod
     def generate(self,
@@ -41,7 +55,8 @@ class AbstractTableFrameGenerator(ABC):
                                      ) -> TableFrame:
         result = None
 
-        region = self._region_or_region_of_frame(region)
+        if region is None:
+            region = self._visible_frame.region
 
         for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
 
@@ -77,16 +92,37 @@ class AbstractTableFrameGenerator(ABC):
         return result if result is not None else TableFrame(index_labels=[], column_labels=[], legend=None, cells=[])
 
 
+class TableFrameValidator:
+    def __init__(self, frame_region: Region, generator: AbstractTableFrameGenerator):
+        self.__frame_region = frame_region
+        self.__generator = generator
+
+    def validate(self,
+                 rows_per_chunk: int,
+                 cols_per_chunk: int,
+                 region: Region = None,
+                 ) -> TableFrameValidationResult:
+        if region is None:
+            region = self.__frame_region
+        else:
+            region = self.__frame_region.get_bounded_region(region)
+
+        if region.is_empty():
+            return TableFrameValidationResult('', '', True)
+        combined_table = self.__generator.generate_by_combining_chunks(rows_per_chunk, cols_per_chunk, region)
+        expected_table = self.__generator.generate(region)
+        combined_json = to_json(combined_table, indent=2)
+        expected_json = to_json(expected_table, indent=2)
+        return TableFrameValidationResult(combined_json, expected_json, combined_json == expected_json)
+
+
 class AbstractTableSourceContext(ABC):
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
         pass
 
-    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> List[int]:
-        end = min(part_start + max_columns, self.get_region_of_frame().cols)
-        return [] if end <= part_start or part_start < 0 else list(range(part_start, end))
-
+    @property
     @abstractmethod
-    def get_region_of_frame(self) -> Region:
+    def visible_frame(self) -> AbstractVisibleFrame:
         pass
 
     @abstractmethod
@@ -96,6 +132,9 @@ class AbstractTableSourceContext(ABC):
     @abstractmethod
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
         pass
+
+    def get_table_frame_validator(self) -> TableFrameValidator:
+        return TableFrameValidator(self.visible_frame.region, self.get_table_frame_generator())
 
 
 T = typing.TypeVar('T', bound=AbstractTableSourceContext)
@@ -115,7 +154,7 @@ class AbstractTableSource(ABC):
         return to_json(data)
 
     def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> List[int]:
-        return self._context.get_org_indices_of_visible_columns(part_start, max_columns)
+        return self._context.visible_frame.get_column_indices(part_start, max_columns)
 
     def get_table_structure(self) -> TableStructure:
         return self._context.get_table_structure(self._fingerprint)

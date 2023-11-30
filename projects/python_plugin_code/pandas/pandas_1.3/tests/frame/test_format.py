@@ -2,9 +2,7 @@ import pandas as pd
 import pytest
 from pandas import DataFrame, option_context
 
-from cms_rendner_sdfv.base.table_frame_validator import TableFrameValidator
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
-from cms_rendner_sdfv.pandas.frame.table_frame_generator import TableFrameGenerator
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -16,7 +14,7 @@ df = pd.DataFrame.from_dict({
 
 
 def _assert_frame_formatting(df: DataFrame, rows_per_chunk: int, cols_per_chunk: int):
-    result = TableFrameValidator(FrameContext(df)).validate(rows_per_chunk, cols_per_chunk)
+    result = FrameContext(df).get_table_frame_validator().validate(rows_per_chunk, cols_per_chunk)
     assert result.actual == result.expected
 
 
@@ -33,7 +31,7 @@ def test_use_option__display_precision():
     df_with_floats = DataFrame(data=[1.0123456789, [1.0123456789], {'a': 1.0123456789}, 123456789])
 
     with option_context('display.precision', 2):
-        table_frame = TableFrameGenerator(FrameContext(df_with_floats)).generate()
+        table_frame = FrameContext(df_with_floats).get_table_frame_generator().generate()
 
     assert table_frame.cells[0][0].value == "1.01"
     # precision isn't applied to nested data
@@ -46,11 +44,8 @@ def test_use_option__display_precision():
 def test_use_option__display_float_format():
     df_with_floats = DataFrame(data=[1.0123456789, [1.0123456789], {'a': 1.0123456789}, 123456789])
 
-    pd.set_option('display.float_format', '${:,.6f}'.format)
-    pd.set_option('display.precision', 4)
-
     with option_context('display.float_format', '${:,.2f}'.format):
-        table_frame = TableFrameGenerator(FrameContext(df_with_floats)).generate()
+        table_frame = FrameContext(df_with_floats).get_table_frame_generator().generate()
 
     assert table_frame.cells[0][0].value == "$1.01"
     # float_format isn't applied to nested data
@@ -67,6 +62,6 @@ def test_use_option__display_float_format_is_preferred_over_display_precision():
             'display.float_format', '${:,.2f}'.format,
             'display.precision', 4,
     ):
-        table_frame = TableFrameGenerator(FrameContext(df_with_floats)).generate()
+        table_frame = FrameContext(df_with_floats).get_table_frame_generator().generate()
 
     assert table_frame.cells[0][0].value == "$1.01"

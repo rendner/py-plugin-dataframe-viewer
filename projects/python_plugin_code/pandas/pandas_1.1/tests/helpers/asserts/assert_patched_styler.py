@@ -16,7 +16,6 @@ from typing import Callable
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.table_frame_validator import TableFrameValidator
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 
 
@@ -30,5 +29,5 @@ def assert_patched_styler(
     init_styler_func(styler)
     ctx = PatchedStylerContext(styler)
 
-    result = TableFrameValidator(ctx).validate(rows_per_chunk, cols_per_chunk)
+    result = ctx.get_table_frame_validator().validate(rows_per_chunk, cols_per_chunk)
     assert result.actual == result.expected

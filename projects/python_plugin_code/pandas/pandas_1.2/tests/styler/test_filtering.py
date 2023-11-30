@@ -71,11 +71,11 @@ def test_filter_by_columns():
     ctx = PatchedStylerContext(df.style, FilterCriteria(None, filter_frame.columns))
 
     expected_columns = filter_frame.columns
-    actual_columns = ctx.get_frame_columns()
+    actual_columns = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual_columns) == list(expected_columns)
 
     expected_org_indices = [0, 4]
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
     assert actual_org_indices == expected_org_indices
 
 
@@ -84,7 +84,7 @@ def test_filter_by_rows():
     ctx = PatchedStylerContext(df.style, FilterCriteria(filter_frame.index, None))
 
     expected = filter_frame.index
-    actual = ctx.get_frame_index()
+    actual = ctx.visible_frame.get_chunk().to_frame().index
     assert list(actual) == list(expected)
 
 
@@ -92,16 +92,13 @@ def test_filter_by_rows_and_columns():
     filter_frame = df.loc[df['col_0'] < 3, ['col_0', 'col_4']]
     ctx = PatchedStylerContext(df.style, FilterCriteria.from_frame(filter_frame))
 
-    expected_index = filter_frame.index
-    actual_index = ctx.get_frame_index()
-    assert list(actual_index) == list(expected_index)
+    actual = ctx.visible_frame.get_chunk().to_frame()
 
-    expected_columns = filter_frame.columns
-    actual_columns = ctx.get_frame_columns()
-    assert list(actual_columns) == list(expected_columns)
+    assert list(actual.index) == list(filter_frame.index)
+    assert list(actual.columns) == list(filter_frame.columns)
 
     expected_org_indices = [0, 4]
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual.columns))
     assert actual_org_indices == expected_org_indices
 
 
@@ -109,7 +106,7 @@ def test_filter_with_empty_rows():
     filter_frame = DataFrame()
     ctx = PatchedStylerContext(df.style, FilterCriteria(filter_frame.index, None))
 
-    actual = ctx.get_frame_index()
+    actual = ctx.visible_frame.get_chunk().to_frame().index
     assert list(actual) == []
 
 
@@ -117,10 +114,10 @@ def test_filter_with_empty_columns():
     filter_frame = DataFrame()
     ctx = PatchedStylerContext(df.style, FilterCriteria(None, filter_frame.columns))
 
-    actual_columns = ctx.get_frame_columns()
+    actual_columns = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual_columns) == []
 
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
     assert actual_org_indices == []
 
 
@@ -128,24 +125,20 @@ def test_filter_with_empty_rows_and_columns():
     filter_frame = DataFrame()
     ctx = PatchedStylerContext(df.style, FilterCriteria.from_frame(filter_frame))
 
-    actual_index = ctx.get_frame_index()
-    assert list(actual_index) == []
-
-    actual_columns = ctx.get_frame_columns()
-    assert list(actual_columns) == []
+    actual = ctx.visible_frame.get_chunk().to_frame()
+    assert list(actual.index) == []
+    assert list(actual.columns) == []
 
 
 def test_filter_with_non_existing_rows_and_columns():
     filter_frame = DataFrame(index=[7, 8, 9], columns=["col_7", "col_8", "col_9"])
     ctx = PatchedStylerContext(df.style, FilterCriteria.from_frame(filter_frame))
 
-    actual_index = ctx.get_frame_index()
-    assert list(actual_index) == []
+    actual = ctx.visible_frame.get_chunk().to_frame()
+    assert list(actual.index) == []
+    assert list(actual.columns) == []
 
-    actual_columns = ctx.get_frame_columns()
-    assert list(actual_columns) == []
-
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual.columns))
     assert actual_org_indices == []
 
 
@@ -157,11 +150,11 @@ def test_filter_with_non_intersecting_hidden_columns():
     )
 
     expected_columns = filter_frame.columns
-    actual_columns = ctx.get_frame_columns()
+    actual_columns = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual_columns) == list(expected_columns)
 
     expected_org_indices = [0, 4]
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
     assert actual_org_indices == expected_org_indices
 
 
@@ -173,11 +166,11 @@ def test_filter_with_intersecting_hidden_columns():
     )
 
     expected_columns = Index(["col_0"])
-    actual_columns = ctx.get_frame_columns()
+    actual_columns = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual_columns) == list(expected_columns)
 
     expected_org_indices = [0]
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
     assert actual_org_indices == expected_org_indices
 
 
@@ -186,7 +179,7 @@ def test_filter_with_df_filter():
     ctx = PatchedStylerContext(df.style, FilterCriteria(None, filter_frame.columns))
 
     expected = filter_frame.columns
-    actual = ctx.get_frame_columns()
+    actual = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual) == list(expected)
 
 
@@ -196,13 +189,9 @@ def test_filtered_frame_keeps_index_and_column_order():
     filter_frame = df.copy().iloc[::-1, ::-1]
     ctx = PatchedStylerContext(df.style, FilterCriteria(None, filter_frame.columns))
 
-    expected_rows = df.index
-    actual_rows = ctx.get_frame_index()
-    assert list(actual_rows) == list(expected_rows)
-
-    expected_cols = df.columns
-    actual_cols = ctx.get_frame_columns()
-    assert list(actual_cols) == list(expected_cols)
+    actual = ctx.visible_frame.get_chunk().to_frame()
+    assert list(actual.index) == list(df.index)
+    assert list(actual.columns) == list(df.columns)
 
 
 @pytest.mark.parametrize("subset", [

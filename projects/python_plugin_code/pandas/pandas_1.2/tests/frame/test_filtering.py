@@ -3,7 +3,6 @@ from itertools import chain
 from pandas import DataFrame
 
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
-from cms_rendner_sdfv.pandas.frame.table_frame_generator import TableFrameGenerator
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 
 df = DataFrame.from_dict({
@@ -20,10 +19,10 @@ def test_combined_chunks_do_not_include_filtered_out_values():
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
     expected = filter_frame.columns
-    actual = ctx.get_frame_columns()
+    actual = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual) == list(expected)
 
-    table = TableFrameGenerator(ctx).generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
+    table = ctx.get_table_frame_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
     cell_values = list(map(lambda c: c.value, chain(*table.cells)))
     cell_values.sort()
     assert {0, 2, 5, 7, 10, 12, 15, 17, 20, 22}.intersection(set(cell_values)) == set()
@@ -37,11 +36,11 @@ def test_filter_by_columns():
     ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
 
     expected_columns = filter_frame.columns
-    actual_columns = ctx.get_frame_columns()
+    actual_columns = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual_columns) == list(expected_columns)
 
     expected_org_indices = [0, 4]
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
     assert actual_org_indices == expected_org_indices
 
 
@@ -50,7 +49,7 @@ def test_filter_by_rows():
     ctx = FrameContext(df, FilterCriteria(filter_frame.index, None))
 
     expected = filter_frame.index
-    actual = ctx.get_frame_index()
+    actual = ctx.visible_frame.get_chunk().to_frame().index
     assert list(actual) == list(expected)
 
 
@@ -58,16 +57,12 @@ def test_filter_by_rows_and_columns():
     filter_frame = df.loc[df['col_0'] < 3, ['col_0', 'col_4']]
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
-    expected_index = filter_frame.index
-    actual_index = ctx.get_frame_index()
-    assert list(actual_index) == list(expected_index)
-
-    expected_columns = filter_frame.columns
-    actual_columns = ctx.get_frame_columns()
-    assert list(actual_columns) == list(expected_columns)
+    actual = ctx.visible_frame.get_chunk().to_frame()
+    assert list(actual.index) == list(filter_frame.index)
+    assert list(actual.columns) == list(filter_frame.columns)
 
     expected_org_indices = [0, 4]
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual.columns))
     assert actual_org_indices == expected_org_indices
 
 
@@ -75,7 +70,7 @@ def test_filter_with_empty_rows():
     filter_frame = DataFrame()
     ctx = FrameContext(df, FilterCriteria(filter_frame.index, None))
 
-    actual = ctx.get_frame_index()
+    actual = ctx.visible_frame.get_chunk().to_frame().index
     assert list(actual) == []
 
 
@@ -83,10 +78,10 @@ def test_filter_with_empty_columns():
     filter_frame = DataFrame()
     ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
 
-    actual_columns = ctx.get_frame_columns()
+    actual_columns = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual_columns) == []
 
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
     assert actual_org_indices == []
 
 
@@ -94,24 +89,20 @@ def test_filter_with_empty_rows_and_columns():
     filter_frame = DataFrame()
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
-    actual_index = ctx.get_frame_index()
-    assert list(actual_index) == []
-
-    actual_columns = ctx.get_frame_columns()
-    assert list(actual_columns) == []
+    actual = ctx.visible_frame.get_chunk().to_frame()
+    assert list(actual.index) == []
+    assert list(actual.columns) == []
 
 
 def test_filter_with_non_existing_rows_and_columns():
     filter_frame = DataFrame(index=[7, 8, 9], columns=["col_7", "col_8", "col_9"])
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
-    actual_index = ctx.get_frame_index()
-    assert list(actual_index) == []
+    actual = ctx.visible_frame.get_chunk().to_frame()
+    assert list(actual.index) == []
+    assert list(actual.columns) == []
 
-    actual_columns = ctx.get_frame_columns()
-    assert list(actual_columns) == []
-
-    actual_org_indices = ctx.get_org_indices_of_visible_columns(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual.columns))
     assert actual_org_indices == []
 
 
@@ -121,13 +112,9 @@ def test_filtered_frame_keeps_index_and_column_order():
     filter_frame = df.copy().iloc[::-1, ::-1]
     ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
 
-    expected_rows = df.index
-    actual_rows = ctx.get_frame_index()
-    assert list(actual_rows) == list(expected_rows)
-
-    expected_cols = df.columns
-    actual_cols = ctx.get_frame_columns()
-    assert list(actual_cols) == list(expected_cols)
+    actual = ctx.visible_frame.get_chunk().to_frame()
+    assert list(actual.index) == list(df.index)
+    assert list(actual.columns) == list(df.columns)
 
 
 def test_filter_with_df_filter():
@@ -135,5 +122,5 @@ def test_filter_with_df_filter():
     ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
 
     expected = filter_frame.columns
-    actual = ctx.get_frame_columns()
+    actual = ctx.visible_frame.get_chunk().to_frame().columns
     assert list(actual) == list(expected)

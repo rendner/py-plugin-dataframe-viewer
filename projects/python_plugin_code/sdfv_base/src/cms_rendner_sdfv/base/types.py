@@ -32,6 +32,12 @@ class TableFrameCell:
 
 
 @dataclass
+class TableFrameColumn:
+    dtype: str
+    labels: List[str]
+
+
+@dataclass
 class TableFrameLegend:
     index: List[str]
     column: List[str]
@@ -40,7 +46,7 @@ class TableFrameLegend:
 @dataclass
 class TableFrame:
     index_labels: Union[None, List[List[str]]]
-    column_labels: List[List[str]]
+    column_labels: Union[None, List[TableFrameColumn]]
     cells: List[List[TableFrameCell]]
     legend: Union[None, TableFrameLegend] = None
 
@@ -60,7 +66,7 @@ class Region:
     cols: int = 0
 
     @classmethod
-    def from_shape(cls, shape: Tuple[int, int]):
+    def with_frame_shape(cls, shape: Tuple[int, int]):
         return cls(rows=shape[0], cols=shape[1])
 
     def is_empty(self) -> bool:
@@ -68,6 +74,10 @@ class Region:
 
     def is_valid(self) -> bool:
         return self.first_row >= 0 and self.first_col >= 0 and self.rows >= 0 and self.cols >= 0
+
+    @property
+    def frame_shape(self) -> Tuple[int, int]:
+        return self.rows, self.cols
 
     def iterate_chunkwise(self, rows_per_chunk: int, cols_per_chunk: int):
         if not self.is_valid():

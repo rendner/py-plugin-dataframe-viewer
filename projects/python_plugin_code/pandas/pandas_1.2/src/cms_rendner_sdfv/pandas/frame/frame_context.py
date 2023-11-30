@@ -18,4 +18,4 @@ from cms_rendner_sdfv.pandas.shared.pandas_table_source_context import PandasTab
 
 class FrameContext(PandasTableSourceContext):
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
-        return TableFrameGenerator(self)
+        return TableFrameGenerator(self.visible_frame)

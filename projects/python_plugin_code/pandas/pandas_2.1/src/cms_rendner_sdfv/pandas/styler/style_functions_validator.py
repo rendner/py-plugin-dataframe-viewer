@@ -14,11 +14,9 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from cms_rendner_sdfv.base.table_frame_validator import TableFrameValidator
 from cms_rendner_sdfv.base.types import Region
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
-from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
 from cms_rendner_sdfv.pandas.styler.types import StyleFunctionValidationProblem, ValidationStrategyType
 
 
@@ -68,9 +66,9 @@ class _FastValidationStrategy(_AbstractValidationStrategy):
 
 
 class StyleFunctionsValidator:
-    def __init__(self, styler_context: PatchedStylerContext, strategy_type: Optional[ValidationStrategyType] = None):
-        self.__styler_context: PatchedStylerContext = styler_context
-        self.__apply_todos_count: int = self.__count_apply_todos(styler_context.get_styler_todos())
+    def __init__(self, ctx: PatchedStylerContext, strategy_type: Optional[ValidationStrategyType] = None):
+        self.__ctx: PatchedStylerContext = ctx
+        self.__apply_todos_count: int = self.__count_apply_todos(ctx.get_styler_todos())
         self.__validation_strategy: _AbstractValidationStrategy = self.__create_validation_strategy(strategy_type)
 
     def validate(self, region: Region = None) -> list[StyleFunctionValidationProblem]:
@@ -78,7 +76,7 @@ class StyleFunctionsValidator:
             return []
 
         if region is None:
-            region = self.__styler_context.get_region_of_frame()
+            region = self.__ctx.visible_frame.region
 
         rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(region.rows, region.cols)
 
@@ -86,7 +84,7 @@ class StyleFunctionsValidator:
             return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
 
         try:
-            validator = TableFrameValidator(self.__styler_context)
+            validator = self.__ctx.get_table_frame_validator()
             if validator.validate(rows_per_chunk, cols_per_chunk, region).is_equal:
                 return []
         except Exception:
@@ -101,12 +99,11 @@ class StyleFunctionsValidator:
                                     ) -> list[StyleFunctionValidationProblem]:
         validation_result = []
 
-        ctx = self.__styler_context
-        for i, todo in enumerate(ctx.get_styler_todos()):
+        for i, todo in enumerate(self.__ctx.get_styler_todos()):
             try:
                 if todo.is_map():
                     continue
-                validator = TableFrameValidator(ctx, TableFrameGenerator(ctx, lambda x: x is todo))
+                validator = self.__ctx.get_todo_validator(todo)
                 result = validator.validate(rows_per_chunk, cols_per_chunk, region)
                 if not result.is_equal:
                     validation_result.append(StyleFunctionValidationProblem(i, "NOT_EQUAL"))

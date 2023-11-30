@@ -13,8 +13,6 @@
 #  limitations under the License.
 from typing import Any, Callable, List, Optional
 
-from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
-from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell
 from pandas import get_option
 from pandas.core.dtypes.common import (
     is_complex,
@@ -22,8 +20,10 @@ from pandas.core.dtypes.common import (
     is_integer,
 )
 
-from cms_rendner_sdfv.pandas.shared.pandas_table_source_context import PandasTableSourceContext
+from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
+from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn, TableFrameLegend
 from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
+from cms_rendner_sdfv.pandas.shared.visible_frame import Chunk, VisibleFrame
 
 
 class _ValueFormatter(ValueFormatter):
@@ -52,51 +52,51 @@ class _ValueFormatter(ValueFormatter):
 
 
 class TableFrameGenerator(AbstractTableFrameGenerator):
-    def __init__(self, source_context: PandasTableSourceContext):
-        self.__source_context = source_context
-
-    def _region_or_region_of_frame(self, region: Region = None) -> Region:
-        return region if region is not None else self.__source_context.get_region_of_frame()
+    def __init__(self, visible_frame: VisibleFrame):
+        super().__init__(visible_frame)
 
     def generate(self,
                  region: Region = None,
                  exclude_row_header: bool = False,
                  exclude_col_header: bool = False,
                  ) -> TableFrame:
-        region = self._region_or_region_of_frame(region)
-        chunk = self.__source_context.get_chunk(region)
 
-        dict_props = chunk.to_dict(orient="split")
+        chunk = self._visible_frame.get_chunk(region)
         formatter = _ValueFormatter()
 
-        column_labels = [] if exclude_col_header else self._extract_column_header_labels(dict_props, formatter)
-        index_labels = [] if exclude_row_header else self._extract_index_header_labels(dict_props, formatter)
-        cell_values = self._extract_cell_values(dict_props, formatter)
+        column_labels = [] if exclude_col_header else self._extract_column_header_labels(chunk, formatter)
+        index_labels = [] if exclude_row_header else self._extract_index_header_labels(chunk, formatter)
+        cell_values = self._extract_cell_values(chunk, formatter)
+        legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(chunk,
+                                                                                                         formatter)
 
         return TableFrame(
             index_labels=index_labels,
             column_labels=column_labels,
-            legend=None,
+            legend=legend_label,
             cells=cell_values,
         )
 
     @staticmethod
-    def _extract_column_header_labels(dict_props: dict, formatter: ValueFormatter) -> List[List[str]]:
-        result: List[List[str]] = []
+    def _extract_column_header_labels(chunk: Chunk, formatter: ValueFormatter) -> List[TableFrameColumn]:
+        result: List[TableFrameColumn] = []
 
-        for col_name in dict_props.get("columns", []):
+        for c in range(chunk.region.cols):
+            col_name = chunk.column_at(c)
             if isinstance(col_name, tuple):
-                result.append([formatter.format_column(h) for h in col_name])
+                labels = [formatter.format_column(h) for h in col_name]
             else:
-                result.append([formatter.format_column(col_name)])
+                labels = [formatter.format_column(col_name)]
+            result.append(TableFrameColumn(dtype=str(chunk.dtype_at(c)), labels=labels))
 
         return result
 
     @staticmethod
-    def _extract_index_header_labels(dict_props: dict, formatter: ValueFormatter) -> List[List[str]]:
+    def _extract_index_header_labels(chunk: Chunk, formatter: ValueFormatter) -> List[List[str]]:
         result: List[List[str]] = []
 
-        for index_name in dict_props.get("index", []):
+        for r in range(chunk.region.rows):
+            index_name = chunk.index_at(r)
             if isinstance(index_name, tuple):
                 result.append([formatter.format_index(h) for h in index_name])
             else:
@@ -105,10 +105,17 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         return result
 
     @staticmethod
-    def _extract_cell_values(dict_props: dict, formatter: ValueFormatter) -> List[List[TableFrameCell]]:
+    def _extract_cell_values(chunk: Chunk, formatter: ValueFormatter) -> List[List[TableFrameCell]]:
         result: List[List[TableFrameCell]] = []
 
-        for row in dict_props.get("data", []):
-            result.append([TableFrameCell(value=formatter.format_cell(c)) for c in row])
+        col_range = range(chunk.region.cols)
+        for r in range(chunk.region.rows):
+            result.append([TableFrameCell(value=formatter.format_cell(chunk.cell_value_at(r, c))) for c in col_range])
 
         return result
+
+    @staticmethod
+    def _extract_legend_label(chunk: Chunk, formatter: ValueFormatter) -> TableFrameLegend:
+        index_legend = [formatter.format_index(n) for n in chunk.index_names() if n is not None]
+        column_legend = [formatter.format_index(n) for n in chunk.column_names() if n is not None]
+        return TableFrameLegend(index=index_legend, column=column_legend) if index_legend or column_legend else None

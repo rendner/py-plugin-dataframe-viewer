@@ -6,7 +6,7 @@ import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableSourceKind
+    TableFrameColumn, TableSourceKind
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
 from cms_rendner_sdfv.pandas.frame.table_source_factory import TableSourceFactory
 
@@ -45,7 +45,10 @@ def test_create_for_dict_orient_columns():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert table_frame.column_labels == [['col_0'], ['col_1']]
+    assert table_frame.column_labels == [
+        TableFrameColumn(dtype='int64', labels=['col_0']),
+        TableFrameColumn(dtype='int64', labels=['col_1']),
+    ]
     assert table_frame.index_labels == [['0'], ['1'], ['2']]
     assert table_frame.legend is None
     assert list(map(lambda c: c.value, chain(*table_frame.cells))) == ['1', '4', '2', '5', '3', '6']
@@ -60,7 +63,11 @@ def test_create_for_dict_orient_index():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert table_frame.column_labels == [['0'], ['1'], ['2']]
+    assert table_frame.column_labels == [
+        TableFrameColumn(dtype='int64', labels=['0']),
+        TableFrameColumn(dtype='int64', labels=['1']),
+        TableFrameColumn(dtype='int64', labels=['2']),
+    ]
     assert table_frame.index_labels == [['col_0'], ['col_1']]
     assert table_frame.legend is None
     assert list(map(lambda c: c.value, chain(*table_frame.cells))) == ['1', '2', '3', '4', '5', '6']
@@ -127,7 +134,10 @@ def test_create_with_filter():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert table_frame.column_labels == [['col_0'], ['col_1']]
+    assert table_frame.column_labels == [
+        TableFrameColumn(dtype='int64', labels=['col_0']),
+        TableFrameColumn(dtype='int64', labels=['col_1']),
+    ]
     assert table_frame.index_labels == [['1'], ['2']]
     assert table_frame.legend is None
     assert list(map(lambda c: c.value, chain(*table_frame.cells))) == ['2', '5', '3', '6']

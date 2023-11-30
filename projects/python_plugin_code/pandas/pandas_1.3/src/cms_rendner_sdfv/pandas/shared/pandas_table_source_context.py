@@ -14,12 +14,12 @@
 from abc import ABC
 from typing import List, Optional
 
-import numpy as np
-from pandas import DataFrame, Index
+from pandas import DataFrame
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext
-from cms_rendner_sdfv.base.types import Region, SortCriteria, TableStructure
+from cms_rendner_sdfv.base.types import SortCriteria, TableStructure
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
+from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame
 
 
 class PandasTableSourceContext(AbstractTableSourceContext, ABC):
@@ -27,12 +27,15 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
         self._source_frame = source_frame
         self._sort_criteria: SortCriteria = SortCriteria()
         self._filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
+        self._visible_frame: VisibleFrame = self._recompute_visible_frame()
 
-        self._recompute_visible_frame()
+    @property
+    def visible_frame(self) -> VisibleFrame:
+        return self._visible_frame
 
     def get_table_structure(self, fingerprint: str) -> TableStructure:
-        rows_count = len(self._visible_index)
-        columns_count = len(self._visible_columns)
+        rows_count = self._visible_frame.region.rows
+        columns_count = self._visible_frame.region.cols
         if rows_count == 0 or columns_count == 0:
             rows_count = columns_count = 0
         return TableStructure(
@@ -44,39 +47,15 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
         )
 
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
-        self._sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
-        self._recompute_visible_frame()
-
-    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> List[int]:
-        part = self._visible_columns[part_start:part_start + max_columns]
-        scalar_or_list = self._source_frame.columns.get_indexer_for(part).tolist()
-        return scalar_or_list if isinstance(scalar_or_list, list) else [scalar_or_list]
-
-    def get_region_of_frame(self) -> Region:
-        return self._visible_region
-
-    def get_chunk(self, region: Region) -> DataFrame:
-        frame = self._source_frame
-        ind = frame.index.get_indexer_for(self._visible_index[region.first_row:region.first_row + region.rows])
-        cols = frame.columns.get_indexer_for(self._visible_columns[region.first_col:region.first_col + region.cols])
-        return frame.iloc[ind, cols]
-
-    def get_frame_index(self) -> Index:
-        return self._visible_index
-
-    def get_frame_columns(self) -> Index:
-        return self._visible_columns
-
-    def translate_chunk_index_to_initial_frame_index_positions(self, chunk: DataFrame) -> np.ndarray:
-        return self._source_frame.index.get_indexer_for(chunk.index)
-
-    def translate_chunk_columns_to_initial_frame_column_positions(self, chunk: DataFrame) -> np.ndarray:
-        return self._source_frame.columns.get_indexer_for(chunk.columns)
+        new_sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
+        if new_sort_criteria != self._sort_criteria:
+            self._sort_criteria = new_sort_criteria
+            self._visible_frame = self._recompute_visible_frame()
 
     def _get_initial_visible_frame_indexes(self):
         return self._source_frame.index, self._source_frame.columns
 
-    def _recompute_visible_frame(self):
+    def _recompute_visible_frame(self) -> VisibleFrame:
         index, columns = self._get_initial_visible_frame_indexes()
 
         if self._filter_criteria.index is not None:
@@ -94,6 +73,8 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
             )
             index = frame.index
 
-        self._visible_index = index
-        self._visible_columns = columns
-        self._visible_region = Region(0, 0, len(index), len(columns))
+        return VisibleFrame(
+            self._source_frame,
+            self._source_frame.index.get_indexer_for(index),
+            self._source_frame.columns.get_indexer_for(columns),
+        )
