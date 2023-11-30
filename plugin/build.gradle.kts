@@ -8,8 +8,9 @@ plugins {
     id("org.jetbrains.intellij") version "1.13.0"
     // Kotlin JVM plugin to add support for Kotlin
     // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#kotlin-standard-library
-    kotlin("jvm") version "1.6.21"
-    kotlin("plugin.serialization") version "1.6.21"
+    kotlin("jvm") version "1.7.0"
+    // https://kotlinlang.org/docs/serialization.html#example-json-serialization
+    kotlin("plugin.serialization") version "1.7.0"
 }
 
 group = "cms.rendner.intellij"
@@ -36,7 +37,7 @@ dependencies {
 // https://intellij-support.jetbrains.com/hc/en-us/community/posts/206590865-Creating-PyCharm-plugins
 intellij {
     plugins.add("python-ce") // is required even if we specify a PyCharm IDE
-    version.set("2021.3")
+    version.set("2022.3")
     type.set("PC")
     downloadSources.set(true)
     updateSinceUntilBuild.set(false)
@@ -303,8 +304,11 @@ tasks {
                 from(project.file("../projects/python_plugin_code/sdfv_base/generated"))
                 into(project.file("src/main/resources/sdfv_base"))
             }
-            project.file("../projects/python_plugin_code/pandas/").let { pandasProjectsRoot ->
-                pandasProjectsRoot.listFiles { f -> f.isDirectory }?.forEach { projectDir ->
+            listOf(
+                project.file("../projects/python_plugin_code/pandas/"),
+                project.file("../projects/python_plugin_code/polars/"),
+            ).forEach { dataFrameLibraryRoot ->
+                dataFrameLibraryRoot.listFiles { f -> f.isDirectory }?.forEach { projectDir ->
                     val pluginCode = projectDir.resolve("generated/plugin_modules_dump.json")
                     if (pluginCode.exists()) {
                         copy {
@@ -323,22 +327,18 @@ tasks {
     runPluginVerifier {
         // See https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#tasks-runpluginverifier
         // See https://data.services.jetbrains.com/products?fields=code,name,releases.version,releases.build,releases.type&code=PC
-        //ideVersions.addAll(listOf("PC-2021.3", "PC-2021.3.2", "PC-2022.1"))
+        //ideVersions.addAll(listOf("PC-2022.3", "PC-2023.1"))
     }
 
     listProductsReleases {
-        sinceVersion.set("2021.3")
+        sinceVersion.set("2022.3")
         untilVersion.set("2023.2.1")
     }
 }
 
 tasks.withType<KotlinCompile>().configureEach {
     kotlinOptions {
-        jvmTarget = "11"
-        freeCompilerArgs = listOf(
-            // to allow experimental "Json.decodeFromString()"
-            "-opt-in=kotlin.RequiresOptIn",
-        )
+        jvmTarget = "17"
     }
 }
 

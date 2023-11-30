@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
@@ -45,10 +46,9 @@ data class TableSourceFactoryImport(
  */
 interface ITableSourceCodeProvider {
     /**
-     * Returns a unique identifier to identify the dump provided by this instance.
-     * The returned value has to be stable.
+     * Returns the name of the data frame library supported by the code provider.
      */
-    fun getModulesDumpId(): String
+    fun getDataFrameLibrary(): DataFrameLibrary
 
     /**
      * Creates a source info for the [PyDebugValueEvalExpr].

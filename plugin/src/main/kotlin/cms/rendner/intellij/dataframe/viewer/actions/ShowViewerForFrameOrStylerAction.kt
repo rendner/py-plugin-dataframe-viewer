@@ -16,22 +16,25 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.jetbrains.python.debugger.PyDebugValue
 
 
-class ShowViewerForFrameOrStylerAction : AbstractShowViewerAction() {
-
+class ShowViewerForFrameOrStylerAction : BaseShowViewerAction() {
     override fun update(event: AnActionEvent) {
-        event.presentation.isEnabledAndVisible = event.project != null && selectedItemIsFrameOrStyler(event)
+        event.presentation.isEnabledAndVisible = getSelectedDebugValue(event)?.let {
+            getApplicableCodeProviders(event, it).isNotEmpty()
+        } ?: false
     }
 
-    private fun selectedItemIsFrameOrStyler(event: AnActionEvent): Boolean {
-        return getSelectedDebugValue(event)?.let {
-            return it.qualifiedType?.let {  type ->
-                type != PythonQualifiedTypes.DICT
-                && TableSourceCodeProviderRegistry.getApplicableProvider(type) != null
-            } ?: false
-        } ?: false
+    override fun getApplicableCodeProviders(event: AnActionEvent, dataSource: PyDebugValue): List<ITableSourceCodeProvider> {
+        dataSource.qualifiedType?.let {
+            if (it != PythonQualifiedTypes.DICT) {
+                return TableSourceCodeProviderRegistry.getApplicableProviders(it)
+            }
+        }
+        return emptyList()
     }
 }

@@ -18,9 +18,8 @@ package cms.rendner.integration.plugin
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.PatchedStylerCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.DataFrameCodeProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PandasCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
 /**
@@ -58,7 +57,7 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
     }
 
     protected fun registerCodeProviders(evaluator: IPluginPyValueEvaluator) {
-        TableSourceCodeProviderRegistry.getProviders().forEach { PythonPluginCodeInjector.injectIfRequired(evaluator, it) }
+        TableSourceCodeProviderRegistry.getProviders().values.forEach { PythonPluginCodeInjector.injectIfRequired(evaluator, it) }
     }
 
     protected fun createPatchedStyler(
@@ -67,7 +66,7 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         config: CreateTableSourceConfig? = null,
         ): IPyPatchedStylerRef {
         val evalExpr = evaluator.evaluate(dataSourceExpr).toValueEvalExpr()
-        val patchedStyler = createTableSource(evaluator, PatchedStylerCodeProvider().createSourceInfo(evalExpr, evaluator), config)
+        val patchedStyler = createTableSource(evaluator, PandasCodeProvider().createSourceInfo(evalExpr, evaluator), config)
         check(patchedStyler is IPyPatchedStylerRef)
         return patchedStyler
     }
@@ -78,7 +77,7 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         config: CreateTableSourceConfig? = null,
     ): IPyTableSourceRef {
         val evalExpr = evaluator.evaluate(dataSourceExpr).toValueEvalExpr()
-        val tableSource = createTableSource(evaluator, DataFrameCodeProvider().createSourceInfo(evalExpr, evaluator), config)
+        val tableSource = createTableSource(evaluator, PandasCodeProvider().createSourceInfo(evalExpr, evaluator), config)
         check(tableSource !is IPyPatchedStylerRef)
         return tableSource
     }

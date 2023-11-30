@@ -18,6 +18,8 @@ package cms.rendner.intellij.dataframe.viewer.python.bridge
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.intellij.dataframe.viewer.python.utils.parsePythonList
+import cms.rendner.intellij.dataframe.viewer.python.utils.parsePythonString
 import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyImportWithObjectRef
 
 /**
@@ -26,7 +28,10 @@ import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyImportWithObj
  */
 class PythonPluginCodeInjector {
 
-    private data class RegisteredModulesInfo(val moduleImporterAvailable: Boolean, private val registeredModules: List<String>) {
+    private data class RegisteredModulesInfo(
+        val moduleImporterAvailable: Boolean,
+        private val registeredModules: List<String>
+    ) {
         fun isRegistered(moduleId: String) = registeredModules.contains(moduleId)
     }
 
@@ -40,16 +45,18 @@ class PythonPluginCodeInjector {
             val registeredModulesInfo = getRegisteredModulesInfo(evaluator)
 
             if (!registeredModulesInfo.moduleImporterAvailable) {
-                val importer = PythonPluginCodeInjector::class.java.getResource("/sdfv_base/plugin_modules_importer")!!.readText()
+                val importer =
+                    PythonPluginCodeInjector::class.java.getResource("/sdfv_base/plugin_modules_importer")!!.readText()
                 evaluator.execute(importer)
 
-                val base = PythonPluginCodeInjector::class.java.getResource("/sdfv_base/plugin_modules_dump.json")!!.readText()
+                val base =
+                    PythonPluginCodeInjector::class.java.getResource("/sdfv_base/plugin_modules_dump.json")!!.readText()
                 registerModulesDump(evaluator, "base", base)
             }
 
-            if (!registeredModulesInfo.isRegistered(codeProvider.getModulesDumpId())) {
+            if (!registeredModulesInfo.isRegistered(codeProvider.getDataFrameLibrary().moduleName)) {
                 val dump = codeProvider.getModulesDump(evaluator)
-                val dumpId = codeProvider.getModulesDumpId()
+                val dumpId = codeProvider.getDataFrameLibrary().moduleName
                 registerModulesDump(evaluator, dumpId, dump)
             }
         }
@@ -59,11 +66,7 @@ class PythonPluginCodeInjector {
             return try {
                 RegisteredModulesInfo(
                     true,
-                    evaluator
-                        .evaluate("$methodRef()")
-                        .forcedValue
-                        .removeSurrounding("[", "]").split(", ")
-                        .map { it.removeSurrounding("'") },
+                    parsePythonList(evaluator.evaluate("$methodRef()").forcedValue).map(::parsePythonString),
                 )
             } catch (ex: EvaluateException) {
                 RegisteredModulesInfo(false, emptyList())

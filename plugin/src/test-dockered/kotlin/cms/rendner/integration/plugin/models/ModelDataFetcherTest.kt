@@ -23,7 +23,7 @@ import cms.rendner.integration.plugin.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInputState
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceErrorKind
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.DataFrameCodeProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PandasCodeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -251,7 +251,7 @@ internal class ModelDataFetcherTest : AbstractModelDataFetcherTest() {
     fun shouldReportFailureIfModelDataEvaluationFails() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
-            val dataSourceInfo = DataFrameCodeProvider().createSourceInfo(
+            val dataSourceInfo = PandasCodeProvider().createSourceInfo(
                 debuggerApi.evaluator.evaluate("df").toValueEvalExpr().copy(reEvalExpr = "invalidExpression!!!!"),
                 debuggerApi.evaluator,
             )

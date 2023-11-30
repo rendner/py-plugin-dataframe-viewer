@@ -15,21 +15,25 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.DataFrameCodeProvider
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas.PatchedStylerCodeProvider
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 
 class TableSourceCodeProviderRegistry {
     companion object {
-        private val myProviders: List<ITableSourceCodeProvider> = listOf(
-            DataFrameCodeProvider(),
-            PatchedStylerCodeProvider(),
-        )
+        private val myProviders = listOf(
+            PandasCodeProvider(),
+            PolarsCodeProvider(),
+        ).associateBy({ it.getDataFrameLibrary() }, { it })
 
         fun getApplicableProvider(qName: String): ITableSourceCodeProvider? {
             if (qName.isEmpty()) return null
-            return myProviders.firstOrNull { it.isApplicable(qName) }
+            return myProviders.values.firstOrNull { it.isApplicable(qName) }
         }
 
-        fun getProviders(): List<ITableSourceCodeProvider> = myProviders
+        fun getApplicableProviders(qName: String): List<ITableSourceCodeProvider> {
+            if (qName.isEmpty()) return emptyList()
+            return myProviders.values.filter { it.isApplicable(qName) }
+        }
+
+        fun getProviders(): Map<DataFrameLibrary, ITableSourceCodeProvider> = myProviders
     }
 }

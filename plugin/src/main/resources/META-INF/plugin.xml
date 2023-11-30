@@ -27,7 +27,7 @@
     </ul>
     ]]></description>
 
-    <idea-version since-build="213.5744.248" until-build="233.*"/>
+    <idea-version since-build="223" until-build="233.*"/>
 
     <change-notes><![CDATA[
     <br/>
@@ -89,12 +89,4 @@
 
         <completion.contributor language="Python" implementationClass="cms.rendner.intellij.dataframe.viewer.components.filter.editor.MyAdjustAutoCompletionFilter" order="first"/>
     </extensions>
-
-    <projectListeners>
-        <listener class="cms.rendner.intellij.dataframe.viewer.python.pycharm.listeners.DebuggerListener"
-                  topic="com.intellij.xdebugger.XDebuggerManagerListener"
-                  activeInHeadlessMode="false"
-                  activeInTestMode="false"
-        />
-    </projectListeners>
 </idea-plugin>

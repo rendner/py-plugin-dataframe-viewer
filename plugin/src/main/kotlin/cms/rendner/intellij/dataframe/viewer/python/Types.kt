@@ -15,6 +15,9 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python
 
+import cms.rendner.intellij.dataframe.viewer.python.utils.parsePythonDictionary
+import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyString
+
 object PythonQualifiedTypes {
     const val NONE = "builtins.NoneType"
     const val LIST = "builtins.list"
@@ -29,4 +32,30 @@ object PythonQualifiedTypes {
 object PandasTypes {
     fun isDataFrame(qualifiedType: String?): Boolean = qualifiedType == "pandas.core.frame.DataFrame"
     fun isStyler(qualifiedType: String?): Boolean = qualifiedType == "pandas.io.formats.style.Styler"
+}
+
+data class DataFrameLibrary(val moduleName: String) {
+    companion object {
+        val PANDAS = DataFrameLibrary("pandas")
+        val POLARS = DataFrameLibrary("polars")
+
+        val supportedLibraries = listOf(
+            PANDAS,
+            POLARS,
+        )
+    }
+}
+
+interface IEvalAvailableDataFrameLibraries {
+    fun getEvalExpression(): String {
+        val libsToCheck = DataFrameLibrary.supportedLibraries.map { stringifyString(it.moduleName) }
+        // the check is not guarded with a try/catch therefore one exception aborts the whole check
+        return "(lambda i, s: {p: p in s.modules or i.util.find_spec(p) is not None for p in $libsToCheck})(__import__('importlib'), __import__('sys'))"
+    }
+
+    fun convertResult(result: String): List<DataFrameLibrary> {
+        return parsePythonDictionary(result).entries.mapNotNull {
+            if (it.value == "True") DataFrameLibrary(it.key) else null
+        }
+    }
 }

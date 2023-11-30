@@ -13,21 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.python.bridge.providers.pandas
+package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
+import cms.rendner.intellij.dataframe.viewer.python.PandasTypes
+import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectException
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 
-abstract class BaseCodeProvider: ITableSourceCodeProvider {
-    final override fun getModulesDumpId() = "pandas"
+class PandasCodeProvider : ITableSourceCodeProvider {
+    override fun getDataFrameLibrary() = DataFrameLibrary.PANDAS
 
-    final override fun getModulesDump(evaluator: IPluginPyValueEvaluator): String {
+    override fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo {
+        return DataSourceInfo(
+            source,
+            if (PandasTypes.isStyler(source.qualifiedType)) getPatchedStylerFactoryImport() else getTableSourceFactoryImport(),
+            hasIndexLabels = true,
+            sortable = true,
+            filterable = true,
+        )
+    }
+
+    override fun isApplicable(fqClassName: String): Boolean {
+        return PandasTypes.isStyler(fqClassName) ||
+                PandasTypes.isDataFrame(fqClassName) ||
+                fqClassName == PythonQualifiedTypes.DICT
+    }
+
+    override fun getModulesDump(evaluator: IPluginPyValueEvaluator): String {
         val pandasVersion = try {
             PandasVersion.fromString(evaluator.evaluate("__import__('pandas').__version__").forcedValue)
         } catch (ex: EvaluateException) {
@@ -35,20 +52,24 @@ abstract class BaseCodeProvider: ITableSourceCodeProvider {
         }
 
         val resourcePath = getPluginCodeResourcePath(pandasVersion)
-        return PatchedStylerCodeProvider::class.java.getResource(resourcePath)!!.readText()
+        return PandasCodeProvider::class.java.getResource(resourcePath)!!.readText()
     }
 
-    override fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo {
-        return DataSourceInfo(
-            source,
-            getFactoryImport(),
-            hasIndexLabels = true,
-            sortable = true,
-            filterable = true,
+    private fun getTableSourceFactoryImport(): TableSourceFactoryImport {
+        return TableSourceFactoryImport(
+            "cms_rendner_sdfv.pandas.frame.table_source_factory",
+            "TableSourceFactory",
+            TableSourceKind.TABLE_SOURCE,
         )
     }
 
-    protected abstract fun getFactoryImport(): TableSourceFactoryImport
+    private fun getPatchedStylerFactoryImport(): TableSourceFactoryImport {
+        return TableSourceFactoryImport(
+            "cms_rendner_sdfv.pandas.styler.table_source_factory",
+            "TableSourceFactory",
+            TableSourceKind.PATCHED_STYLER,
+        )
+    }
 
     private fun getPluginCodeResourcePath(version: PandasVersion): String {
         if (version.major == 1) {
