@@ -38,6 +38,10 @@ interface IHeaderLabel {
     fun text(): String
 }
 
+data class ColumnHeader(val dtype: String?, val label: IHeaderLabel) : IHeaderLabel {
+    override fun text() = label.text()
+}
+
 data class HeaderLabel(val label: String = "") : IHeaderLabel {
     override fun text() = label
 
@@ -96,7 +100,7 @@ interface ITableIndexDataModel : ITableDataModel {
 
 interface ITableValueDataModel : ITableDataModel {
     override fun getValueAt(rowIndex: Int, columnIndex: Int): Value
-    fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel
+    fun getColumnHeaderAt(columnIndex: Int): ColumnHeader
     fun isSortable(): Boolean = false
 
     /**

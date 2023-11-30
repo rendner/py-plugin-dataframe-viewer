@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
+import cms.rendner.intellij.dataframe.viewer.models.ColumnHeader
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
 import cms.rendner.intellij.dataframe.viewer.models.Value
@@ -84,7 +85,7 @@ data class ChunkValues(val rows: List<ChunkValuesRow>) : IChunkValues {
  */
 data class ChunkHeaderLabels(
     val legend: LegendHeaders?,
-    val columns: List<IHeaderLabel>,
+    val columns: List<ColumnHeader>,
     val rows: List<IHeaderLabel>?
 )
 

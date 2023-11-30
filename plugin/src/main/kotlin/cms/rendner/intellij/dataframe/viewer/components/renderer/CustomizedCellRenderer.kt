@@ -17,7 +17,6 @@ package cms.rendner.intellij.dataframe.viewer.components.renderer
 
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.IRendererComponentStyler
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
-import cms.rendner.intellij.dataframe.viewer.models.LeveledHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.Value
 import java.awt.Component
 import javax.swing.JTable
@@ -43,7 +42,6 @@ class CustomizedCellRenderer(
 
     private fun getLabel(value: Any?): String {
         return when (value) {
-            is LeveledHeaderLabel -> value.text()
             is IHeaderLabel -> value.text()
             is Value -> value.text()
             is String -> value

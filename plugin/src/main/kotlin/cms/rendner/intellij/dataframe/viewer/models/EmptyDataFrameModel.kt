@@ -41,7 +41,7 @@ private class MyEmptyValueModel : AbstractTableModel(), ITableValueDataModel {
         throw UnsupportedOperationException("Operation 'getValueAt' isn't supported.")
     }
 
-    override fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel {
+    override fun getColumnHeaderAt(columnIndex: Int): ColumnHeader {
         throw UnsupportedOperationException("Operation 'getColumnHeaderAt' isn't supported.")
     }
 

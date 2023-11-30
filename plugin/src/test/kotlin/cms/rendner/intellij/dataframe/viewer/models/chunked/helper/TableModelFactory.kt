@@ -35,6 +35,7 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
             loader,
             chunkSize,
             sortable,
+            true,
         )
         return RecordingModel(model, loader)
     }
@@ -99,7 +100,7 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
             return ChunkData(
                 ChunkHeaderLabels(
                     null,
-                    createHeaderLabels(if (request.excludeColumnHeaders) 0 else chunkRegion.numberOfColumns),
+                    createColumnHeader(if (request.excludeColumnHeaders) 0 else chunkRegion.numberOfColumns),
                     createHeaderLabels(if (request.excludeRowHeaders) 0 else chunkRegion.numberOfRows)
                 ),
                 ChunkValuesPlaceholder(StringValue("col")),
@@ -111,6 +112,15 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
                 emptyList()
             } else {
                 val header = HeaderLabel()
+                return List(size) { header }
+            }
+        }
+
+        private fun createColumnHeader(size: Int): List<ColumnHeader> {
+            return if (size == 0) {
+                emptyList()
+            } else {
+                val header = ColumnHeader(null, HeaderLabel())
                 return List(size) { header }
             }
         }

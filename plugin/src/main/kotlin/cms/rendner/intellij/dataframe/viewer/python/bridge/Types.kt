@@ -260,12 +260,15 @@ interface IPyPatchedStylerRef: IPyTableSourceRef {
 data class TableFrameLegend(val index: List<String>, val column: List<String>)
 
 @Serializable
+data class TableFrameColumn(val dtype: String, val labels: List<String>)
+
+@Serializable
 data class TableFrameCell(val value: String, val css: Map<String, String>?)
 
 @Serializable
 data class TableFrame(
     @SerialName("index_labels") val indexLabels: List<List<String>>?,
-    @SerialName("column_labels") val columnLabels: List<List<String>>,
+    @SerialName("column_labels") val columnLabels: List<TableFrameColumn>,
     val cells: List<List<TableFrameCell>>,
     val legend: TableFrameLegend?,
     )

@@ -984,7 +984,7 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
             val modelColumnIndex = convertColumnIndexToModel(viewColumnIndex)
             var tooltipText: String? = null
             if (modelColumnIndex >= 0) {
-                tooltipText = createHeaderToolTip(viewColumnIndex, modelColumnIndex)
+                tooltipText = createHeaderToolTip(modelColumnIndex)
             }
             // "super.getToolTipText(event)" can return null, so it has to be handled
             return tooltipText ?: super.getToolTipText(event) ?: ""
@@ -1005,103 +1005,48 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
             }
         }
 
-        private fun hasLeveledHeaderValues(model: TableModel?, modelColumnIndex: Int): Boolean {
-            return when (model) {
-                is ITableIndexDataModel -> {
-                    model.getLegendHeaders().let {
-                        it.column is LeveledHeaderLabel || it.row is LeveledHeaderLabel
-                    }
-                }
-
-                is ITableValueDataModel -> {
-                    model.getLegendHeader() is LeveledHeaderLabel || model.getColumnHeaderAt(modelColumnIndex) is LeveledHeaderLabel
-                }
-
-                else -> false
-            }
-        }
-
-        private fun createHeaderToolTip(viewColumnIndex: Int, modelColumnIndex: Int): String? {
+        private fun createHeaderToolTip(modelColumnIndex: Int): String? {
             model?.let { model ->
-                if (hasLeveledHeaderValues(model, modelColumnIndex)) {
-                    val sb = StringBuilder("<html>")
-                    // todo: escape potential html chars (<>&) in strings
-                    val hexColor = ColorUtil.toHtmlColor(
-                        ColorUtil.mix(
-                            colorFromUI("ToolTip.background", Color.BLACK),
-                            colorFromUI("ToolTip.foreground", Color.WHITE),
-                            0.6
-                        )
+                val sb = StringBuilder("<html>")
+                // todo: escape potential html chars (<>&) in strings
+                val hexColor = ColorUtil.toHtmlColor(
+                    ColorUtil.mix(
+                        colorFromUI("ToolTip.background", Color.BLACK),
+                        colorFromUI("ToolTip.foreground", Color.WHITE),
+                        0.6
                     )
-                    val colorizedText = { text: String -> "<font color='${hexColor}'>$text</font>" }
-                    val separator = colorizedText("/")
+                )
+                val colorizedText = { text: String -> "<font color='${hexColor}'>$text</font>" }
+                val separator = colorizedText("/")
 
-                    if (model is ITableIndexDataModel) {
-                        model.getLegendHeaders().let {
-                            if (it.column is LeveledHeaderLabel) {
-                                sb.append("${colorizedText("index &rarr;: ")} ${it.column.text(separator)}")
-                                sb.append("<br/>")
-                            }
-                            if (it.row is LeveledHeaderLabel) {
-                                sb.append("${colorizedText("index &darr;: ")} ${it.row.text(separator)}")
-                                sb.append("<br/>")
-                            }
+                if (model is ITableIndexDataModel) {
+                    model.getLegendHeaders().let {
+                        if (it.column is LeveledHeaderLabel) {
+                            sb.append("${colorizedText("levels &rarr;: ")} ${it.column.text(separator)}")
+                            sb.append("<br/>")
                         }
-                    } else if (model is ITableValueDataModel) {
-                        model.getLegendHeader().let {
-                            if (it is LeveledHeaderLabel) {
-                                sb.append("${colorizedText("index: ")} ${it.text(separator)}")
-                                sb.append("<br/>")
-                            }
-                        }
-                        model.getColumnHeaderAt(modelColumnIndex).let {
-                            if (it is LeveledHeaderLabel) {
-                                sb.append("${colorizedText("label: ")} ${it.text(separator)}")
-                                sb.append("<br/>")
-                            }
+                        if (it.row is LeveledHeaderLabel) {
+                            sb.append("${colorizedText("levels &darr;: ")} ${it.row.text(separator)}")
+                            sb.append("<br/>")
                         }
                     }
-
-                    return sb.append("</html>").toString()
-                } else {
-                    val label = when (model) {
-                        is ITableValueDataModel -> {
-                            model.getColumnHeaderAt(modelColumnIndex).text()
-                        }
-
-                        is ITableIndexDataModel -> {
-                            model.getColumnHeader().text()
-                        }
-
-                        else -> ""
+                } else if (model is ITableValueDataModel) {
+                    model.getColumnHeaderAt(modelColumnIndex).let {
+                        val label = if (it.label is LeveledHeaderLabel) it.label.text(separator) else it.text()
+                        sb.append("<h3 style='margin-top: 0px; margin-bottom: 6px'>${label}</h3>")
+                        sb.append("${colorizedText("dtype: ")} ${it.dtype ?: "?"}")
+                        sb.append("<br/>")
                     }
-                    if (label.isEmpty() || label == EMPTY_TABLE_HEADER_VALUE) {
-                        return ""
-                    } else {
-                        val column = this.getColumnModel().getColumn(viewColumnIndex)
-                        var renderer = column.headerRenderer
-                        if (renderer == null) {
-                            renderer = defaultRenderer
-                        }
-                        val rendererComp = renderer.getTableCellRendererComponent(
-                            this.table,
-                            column.headerValue,
-                            false,
-                            false,
-                            -1,
-                            viewColumnIndex
-                        )
-                        if (rendererComp is JLabel) {
-                            val stringWidth = SwingUtilities.computeStringWidth(
-                                rendererComp.getFontMetrics(rendererComp.font),
-                                rendererComp.text
-                            )
-                            // only show a tooltip if text is truncated
-                            if (getHeaderRect(viewColumnIndex).width < stringWidth) {
-                                return label
-                            }
+                    model.getLegendHeader().let {
+                        if (it is LeveledHeaderLabel) {
+                            sb.append("${colorizedText("levels: ")} ${it.text(separator)}")
+                            sb.append("<br/>")
                         }
                     }
+                }
+
+                return sb.append("</html>").toString().let {
+                    if (it == "<html></html>") null else it
                 }
             }
             return null

@@ -63,7 +63,7 @@ class ChunkedDataFrameModel(
     /**
      * The successfully loaded column headers.
      */
-    private val myFetchedChunkColumnHeaderLabels: MutableMap<Int, List<IHeaderLabel>> = HashMap()
+    private val myFetchedChunkColumnHeaderLabels: MutableMap<Int, List<ColumnHeader>> = HashMap()
 
     /**
      * The successfully loaded legend headers.
@@ -81,9 +81,14 @@ class ChunkedDataFrameModel(
     private val myPendingChunks: MutableSet<ChunkRegion> = HashSet()
 
     /**
-     * Dummy label for the not yet loaded header.
+     * Dummy label for the not yet loaded header label.
      */
     private val myNotYetLoadedHeaderLabel = HeaderLabel(EMPTY_TABLE_HEADER_VALUE)
+
+    /**
+     * Dummy label for the not yet loaded column-header.
+     */
+    private val myNotYetLoadedColumnHeader = ColumnHeader(dtype = null, myNotYetLoadedHeaderLabel)
 
     /**
      * Dummy label for the not yet loaded legend-headers.
@@ -196,13 +201,13 @@ class ChunkedDataFrameModel(
         return getLegendHeaders().row ?: myNotYetLoadedHeaderLabel
     }
 
-    private fun getColumnHeaderAt(columnIndex: Int): IHeaderLabel {
+    private fun getColumnHeaderAt(columnIndex: Int): ColumnHeader {
         checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
         val firstIndex = getIndexOfFirstColumnInChunk(columnIndex)
-        val chunkHeaders = myFetchedChunkColumnHeaderLabels[firstIndex] ?: return myNotYetLoadedHeaderLabel
+        val chunkHeaders = myFetchedChunkColumnHeaderLabels[firstIndex] ?: return myNotYetLoadedColumnHeader
         val index = columnIndex - firstIndex
         // todo: recheck if we can have a better approach - don't cheat
-        if (index >= chunkHeaders.size) return myNotYetLoadedHeaderLabel
+        if (index >= chunkHeaders.size) return myNotYetLoadedColumnHeader
         return chunkHeaders[index]
     }
 

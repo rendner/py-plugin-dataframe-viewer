@@ -19,6 +19,7 @@ import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrame
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrameCell
+import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrameColumn
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrameLegend
 import com.intellij.util.SmartList
 
@@ -36,8 +37,8 @@ class TableFrameConverter {
         private fun toChunkHeaderLabels(table: TableFrame): ChunkHeaderLabels {
             return ChunkHeaderLabels(
                 legend = convertLegendLabels(table.legend),
-                columns = convertHeaderLabels(table.columnLabels),
-                rows = table.indexLabels.let { if (it == null) null else convertHeaderLabels(it) },
+                columns = convertColumnHeaderLabels(table.columnLabels),
+                rows = table.indexLabels.let { if (it == null) null else convertRowHeaderLabels(it) },
             )
         }
 
@@ -73,17 +74,21 @@ class TableFrameConverter {
             )
         }
 
-        private fun convertHeaderLabels(labels: List<List<String>>): List<IHeaderLabel> {
-            return SmartList(labels.mapNotNull {  convertHeaderLabel(it) })
+        private fun convertRowHeaderLabels(labels: List<List<String>>): List<IHeaderLabel> {
+            return SmartList(labels.map {  convertHeaderLabel(it) })
+        }
+
+        private fun convertColumnHeaderLabels(labels: List<TableFrameColumn>): List<ColumnHeader> {
+            return SmartList(labels.map {  ColumnHeader(it.dtype, convertHeaderLabel(it.labels)) })
         }
 
         private fun convertLegendLabels(legend: TableFrameLegend?): LegendHeaders? {
             return if (legend == null) null else LegendHeaders(convertHeaderLabel(legend.index), convertHeaderLabel(legend.column))
         }
 
-        private fun convertHeaderLabel(label: List<String>?): IHeaderLabel? {
+        private fun convertHeaderLabel(label: List<String>?): IHeaderLabel {
             return when(label?.size) {
-                0, null -> null
+                0, null -> HeaderLabel()
                 1 -> HeaderLabel(label[0])
                 else -> LeveledHeaderLabel(label.last(), SmartList(label.subList(0, label.size - 1)))
             }
