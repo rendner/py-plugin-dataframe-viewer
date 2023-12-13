@@ -62,7 +62,7 @@ idea {
 
 // https://github.com/nazmulidris/idea-plugin-example/blob/main/build.gradle.kts
 tasks {
-    data class PipenvEnvironment(val name: String, val pipfileRoot: File? = null)
+    data class PipenvEnvironment(val name: String, val dataFrameLibraries: List<String>, val pipfileRoot: File? = null)
 
     data class PythonDockerImage(
         val pythonVersion: String,
@@ -84,19 +84,23 @@ tasks {
         }
     }
 
-    fun multiPipenvEnvironmentImage(
-        pythonVersion: String,
-        baseDir: String,
-        projects: List<String>,
-    ): PythonDockerImage {
-        val providerDir = "../projects/python_plugin_code/$baseDir"
-        return PythonDockerImage(
-            pythonVersion,
-            "$projectDir/dockered-python/$pythonVersion",
-            projects.map {
-                PipenvEnvironment(it, project.file("$providerDir/$it"))
-            }
-        )
+    data class MultiPipenvImageBuilder(val pythonVersion: String) {
+        private val projectsToAdd = mutableMapOf<String, List<String>>()
+        private val environmentsToAdd = mutableListOf<PipenvEnvironment>()
+
+        fun addGroupedProjects(baseDir: String, projects: List<String>) = apply { projectsToAdd[baseDir] = projects }
+        fun addPipenvEnvironment(environment: PipenvEnvironment) = apply { environmentsToAdd.add(environment) }
+
+        fun build(project: Project): PythonDockerImage {
+            return PythonDockerImage(
+                pythonVersion,
+                "${project.projectDir}/dockered-python/$pythonVersion",
+                projectsToAdd.flatMap { entry ->
+                    val providerDir = "../projects/python_plugin_code/${entry.key}"
+                    entry.value.map { PipenvEnvironment(it, listOf(entry.key), project.file("$providerDir/$it")) }
+                }.toMutableList().apply { addAll(environmentsToAdd) }
+            )
+        }
     }
 
     fun singlePipenvEnvironmentImage(
@@ -114,23 +118,24 @@ tasks {
     val pythonDockerImages = listOf(
         // order of python versions: latest to oldest
         // order of pipenv environments: latest to oldest
-        singlePipenvEnvironmentImage("3.11", PipenvEnvironment("python_3.11")),
-        singlePipenvEnvironmentImage("3.10", PipenvEnvironment("python_3.10")),
-        multiPipenvEnvironmentImage(
-            "3.9",
-            "pandas",
-            listOf("pandas_2.1"),
+        singlePipenvEnvironmentImage(
+            "3.11",
+            PipenvEnvironment("python_3.11", listOf("pandas", "polars")),
         ),
-        multiPipenvEnvironmentImage(
-            "3.8",
-            "pandas",
-            listOf("pandas_2.0", "pandas_1.5", "pandas_1.4"),
+        singlePipenvEnvironmentImage(
+            "3.10",
+            PipenvEnvironment("python_3.10", listOf("pandas", "polars")),
         ),
-        multiPipenvEnvironmentImage(
-            "3.7",
-            "pandas",
-            listOf("pandas_1.3", "pandas_1.2", "pandas_1.1"),
-        ),
+        MultiPipenvImageBuilder("3.9")
+            .addGroupedProjects("pandas", listOf("pandas_2.1"))
+            .build(project),
+        MultiPipenvImageBuilder("3.8")
+            .addGroupedProjects("polars", listOf("polars_x.y"))
+            .addGroupedProjects("pandas", listOf("pandas_2.0", "pandas_1.5", "pandas_1.4"))
+            .build(project),
+        MultiPipenvImageBuilder("3.7")
+            .addGroupedProjects("pandas", listOf("pandas_1.3", "pandas_1.2", "pandas_1.1"))
+            .build(project),
     )
 
     val buildPythonDockerImagesTasks = mutableListOf<Task>()
@@ -219,6 +224,10 @@ tasks {
                 testClassesDirs = testDockeredSourceSet.output.classesDirs
                 classpath = testDockeredSourceSet.runtimeClasspath
 
+                systemProperty(
+                    "cms.rendner.dataframe.viewer.dataframe.libraries",
+                    pipenvEnvironment.dataFrameLibraries,
+                )
                 systemProperty(
                     "cms.rendner.dataframe.viewer.docker.image",
                     entry.dockerImageName,

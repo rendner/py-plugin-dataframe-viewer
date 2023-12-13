@@ -20,9 +20,11 @@ import cms.rendner.debugger.impl.IDebuggerInterceptor
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.python.IEvalAvailableDataFrameLibraries
+import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
+@RequiresPandas
 internal class EvalAvailableDataFrameLibrariesTest : AbstractPluginCodeTest() {
     @Test
     fun shouldFindExistingPandasWithoutPreviousImport() {

@@ -19,6 +19,7 @@ import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
+import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.junit.jupiter.api.Order
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test
  * The functionality of the methods is tested in the Python plugin-code projects.
  */
 @Order(3)
+@RequiresPandas
 internal class TableSourceRefTest : AbstractPluginCodeTest() {
 
     override fun afterContainerStart() {
@@ -94,7 +96,7 @@ internal class TableSourceRefTest : AbstractPluginCodeTest() {
 
     private fun runWithTableSource(block: (patchedStyler: IPyTableSourceRef) -> Unit) {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
-            block(createTableSource(debuggerApi.evaluator, "df"))
+            block(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df"))
         }
     }
 

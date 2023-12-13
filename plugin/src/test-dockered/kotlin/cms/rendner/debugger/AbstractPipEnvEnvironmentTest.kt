@@ -15,7 +15,7 @@
  */
 package cms.rendner.debugger
 
-import cms.rendner.TestSystemPropertyKey
+import cms.rendner.TestProperty
 import cms.rendner.debugger.impl.*
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
@@ -34,8 +34,8 @@ import java.util.concurrent.TimeUnit
  * Abstract class which provides access to a dockered Python interpreter with a pre-configured
  * pipenv environment.
  *
- * The docker image to use, has to be specified via the system properties
- * [TestSystemPropertyKey.DOCKER_IMAGE] and [TestSystemPropertyKey.DOCKER_WORKDIR].
+ * The docker image to use, has to be specified via the system properties used in
+ * [TestProperty.getDockerImage] and [TestProperty.getDockerWorkdir].
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal abstract class AbstractPipEnvEnvironmentTest {
@@ -44,14 +44,14 @@ internal abstract class AbstractPipEnvEnvironmentTest {
 
     companion object {
         fun getPipEnvEnvironmentName(): String {
-            return System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR, "?").substringAfterLast("/")
+            return TestProperty.getDockerWorkdir().substringAfterLast("/").ifEmpty { "?" }
         }
     }
 
     private val pipEnvEnvironment = DockeredPipEnvEnvironment(
-        System.getProperty(TestSystemPropertyKey.DOCKER_IMAGE),
-        System.getProperty(TestSystemPropertyKey.DOCKER_WORKDIR),
-        System.getProperty(TestSystemPropertyKey.DOCKER_VOLUMES)?.let { if (it.isEmpty()) null else it.split(";") },
+        TestProperty.getDockerImage(),
+        TestProperty.getDockerWorkdir(),
+        TestProperty.getDockerVolumes(),
     )
 
     @BeforeAll

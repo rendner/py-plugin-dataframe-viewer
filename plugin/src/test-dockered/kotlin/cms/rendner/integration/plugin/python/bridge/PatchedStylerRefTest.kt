@@ -22,6 +22,7 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionInfo
 import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionValidationProblem
 import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
+import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.junit.jupiter.api.Order
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.Test
  * The functionality of the methods is tested in the Python plugin-code projects.
  */
 @Order(3)
+@RequiresPandas
 internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
@@ -117,7 +119,7 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     private fun runWithPatchedStyler(block: (patchedStyler: IPyPatchedStylerRef) -> Unit) {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
-            block(createPatchedStyler(debuggerApi.evaluator, "df.style.applymap(lambda x: 'color: red')"))
+            block(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style.applymap(lambda x: 'color: red')"))
         }
     }
 

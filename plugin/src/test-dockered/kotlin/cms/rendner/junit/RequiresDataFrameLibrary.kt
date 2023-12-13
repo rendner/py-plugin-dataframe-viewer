@@ -13,22 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner
+package cms.rendner.junit
 
-object TestSystemPropertyKey {
-    /**
-     * The docker image to run.
-     */
-    const val DOCKER_IMAGE = "cms.rendner.dataframe.viewer.docker.image"
+import org.junit.jupiter.api.extension.ExtendWith
 
-    /**
-     * The working directory inside the docker container.
-     */
-    const val DOCKER_WORKDIR = "cms.rendner.dataframe.viewer.docker.workdir"
+@Target(
+    AnnotationTarget.CLASS,
+    AnnotationTarget.FUNCTION,
+    AnnotationTarget.PROPERTY_GETTER,
+    AnnotationTarget.PROPERTY_SETTER
+)
+@Retention(AnnotationRetention.RUNTIME)
+@ExtendWith(RequiresPandasCondition::class)
+annotation class RequiresPandas
 
-    /**
-     * The volumes to map inside the docker container.
-     * The string can contain multiple volumes, separated by ";".
-     */
-    const val DOCKER_VOLUMES = "cms.rendner.dataframe.viewer.docker.volumes"
-}
+@Target(
+    AnnotationTarget.CLASS,
+    AnnotationTarget.FUNCTION,
+    AnnotationTarget.PROPERTY_GETTER,
+    AnnotationTarget.PROPERTY_SETTER
+)
+@Retention(AnnotationRetention.RUNTIME)
+@ExtendWith(RequiresPolarsCondition::class)
+annotation class RequiresPolars

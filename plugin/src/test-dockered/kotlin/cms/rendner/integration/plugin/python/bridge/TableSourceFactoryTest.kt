@@ -18,13 +18,17 @@ package cms.rendner.integration.plugin.python.bridge
 import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceConfig
+import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyTableSourceRef
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
 @Order(2)
+@RequiresPandas
 internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
 
     override fun afterContainerStart() {
@@ -45,7 +49,7 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
     fun shouldFailIfJinja2IsNotInstalled() {
         runWithDefaultSnippet { debuggerApi ->
             Assertions.assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                createTableSource(debuggerApi.evaluator, "df.style")
+                createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style")
             }.withMessageContaining(
                 "{ImportError} Missing optional dependency 'Jinja2'. DataFrame.style requires jinja2.",
             )
@@ -55,21 +59,21 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
     @Test
     fun shouldWorkWithPandasDataFrameAsDataSource() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createTableSource(debuggerApi.evaluator, "df")).isNotNull
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df")).isNotNull
         }
     }
 
     @Test
     fun shouldWorkWithPythonDictAsDataSource() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createTableSource(debuggerApi.evaluator, "d")).isNotNull
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "d")).isNotNull
         }
     }
 
     @Test
     fun shouldBeCallableWithAFilterFrame() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createTableSource(
+            assertThat(createPandasTableSource<IPyTableSourceRef>(
                 debuggerApi.evaluator,
                 "df",
                 CreateTableSourceConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
@@ -103,22 +107,22 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
         ) { debuggerApi ->
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(createTableSource(debuggerApi.evaluator,"df1")).isNotNull
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator,"df1")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("2")
-            assertThat(createTableSource(debuggerApi.evaluator,"df2")).isNotNull
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator,"df2")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("3")
-            assertThat(createTableSource(debuggerApi.evaluator, "df3")).isNotNull
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df3")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(createTableSource(debuggerApi.evaluator,"df1")).isNotNull
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator,"df1")).isNotNull
         }
     }
 

@@ -13,11 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.integration.plugin
+package cms.rendner.integration.plugin.models
 
-import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
-import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PolarsCodeProvider
+import cms.rendner.junit.RequiresPolars
 
-fun PluginPyValue.toValueEvalExpr(): PyDebugValueEvalExpr {
-    return PyDebugValueEvalExpr(refExpr, refExpr, qualifiedType)
+@RequiresPolars
+internal class PolarsModelDataFetcherTest : AbstractModelDataFetcherTest(PolarsCodeProvider()) {
+
+    override fun createDataFrameSnippet() = """
+    |import polars
+    |
+    |df = polars.from_dict({
+    |    "col_0": [0, 1],
+    |    "col_1": [2, 3],
+    |})
+    |
+    |breakpoint()
+""".trimMargin()
 }

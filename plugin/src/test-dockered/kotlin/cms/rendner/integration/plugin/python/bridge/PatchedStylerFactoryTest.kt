@@ -18,24 +18,27 @@ package cms.rendner.integration.plugin.python.bridge
 import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceConfig
+import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
+import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
 @Order(2)
+@RequiresPandas
 internal class PatchedStylerFactoryTest : AbstractPluginCodeTest() {
 
     @Test
     fun shouldWorkWithPandasStylerAsDataSource() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createPatchedStyler(debuggerApi.evaluator, "df.style")).isNotNull
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style")).isNotNull
         }
     }
 
     @Test
     fun shouldBeCallableWithAFilterFrame() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createPatchedStyler(
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(
                 debuggerApi.evaluator,
                 "df.style",
                 CreateTableSourceConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
@@ -69,22 +72,22 @@ internal class PatchedStylerFactoryTest : AbstractPluginCodeTest() {
         ) { debuggerApi ->
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(createPatchedStyler(debuggerApi.evaluator,"df1.style")).isNotNull
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator,"df1.style")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("2")
-            assertThat(createPatchedStyler(debuggerApi.evaluator,"df2.style")).isNotNull
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator,"df2.style")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("3")
-            assertThat(createPatchedStyler(debuggerApi.evaluator, "df3.style")).isNotNull
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df3.style")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
             assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(createPatchedStyler(debuggerApi.evaluator,"df1.style")).isNotNull
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator,"df1.style")).isNotNull
         }
     }
 

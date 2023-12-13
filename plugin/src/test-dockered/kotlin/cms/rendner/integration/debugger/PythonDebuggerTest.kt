@@ -17,6 +17,7 @@ package cms.rendner.integration.debugger
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -91,6 +92,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     }
 
     @Test
+    @RequiresPandas
     fun shouldHaveCorrectTypeInformationWhenValueIsMultilineString() {
         createPythonDebugger { debuggerApi ->
 

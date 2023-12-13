@@ -22,6 +22,7 @@ import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectException
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
@@ -38,6 +39,7 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
     }
 
     @Test
+    @RequiresPandas
     fun shouldThrowExceptionForUnsupportedPandasVersion() {
         runPythonDebuggerWithoutPluginCode { debuggerApi ->
 
