@@ -1,5 +1,5 @@
 # Filtering
-> New in version 0.9.0.
+*Since Version: 0.9.0*
 
 A common operation in data analysis is to filter values based on a condition or multiple conditions. 
 Pandas provides a variety of ways to filter a `DataFrame`.

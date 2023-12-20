@@ -54,20 +54,22 @@ class SettingsComponent {
     init {
         val dataFetchingSettingsPanel = FormBuilder.createFormBuilder()
             .addLabeledComponent("Validation strategy: ", myValidationStrategyComboBox)
-            .addTooltip("Automatic validation of used styling functions")
+            .addTooltip("Automatic validation of used styling functions.")
+            .addTooltip("(For styled pandas DataFrames)")
             .panel
         dataFetchingSettingsPanel.border = createTitleBorder("Data fetching")
 
         val featureSwitchPanel = FormBuilder.createFormBuilder()
             .addComponent(myFSUseFilterInputFromInternalApiCheckBox)
             .addTooltip("Stores the filter history. May not be available due to internal API changes.")
+            .addTooltip("(For pandas DataFrames)")
             .panel
         featureSwitchPanel.border = createTitleBorder("Feature switches")
 
         myPanel = FormBuilder.createFormBuilder()
             .addComponent(
                 JBLabel(
-                    "Changed settings are only applied to newly opened dialogs.",
+                    "Changes are only applied to newly opened dialogs.",
                     UIUtil.ComponentStyle.SMALL,
                     UIUtil.FontColor.BRIGHTER,
                 )

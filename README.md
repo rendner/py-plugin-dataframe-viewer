@@ -2,217 +2,54 @@
 
 Download from JetBrains Marketplace: [Python: Styled DataFrame Viewer](https://plugins.jetbrains.com/plugin/16050-python-styled-dataframe-viewer)
 
-**supported pandas versions:**
-* 1.1.x - 1.5.x
-* 2.0.x - 2.1.x
-
 ## What It Is
 View, [sort](./docs/SORTING.md) and [filter](./docs/FILTERING.md) `DataFrames`, styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` or a Python `dict` when debugging.
 
-Apply conditional formatting and visual styling in your Python code, by using `DataFrames.style`.
-The configured style is used to render a styled output of the `DataFrame`.
+Note: The plugin requires one of the supported Python DataFrame libraries:
+- `pandas`
+- `polars` (experimental)
 
-Note: The plugin requires `pandas`.
+![preview of the plugin](./docs/images/plugin_preview.png)
 
-![preview of the plugin](./docs/images/preview.png)
-
-### Supported Styler Methods
-The following `Styler` methods are supported:
-
-| pandas Styler method                                                                                                                             | supported pandas version     |
-|--------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------|
-| [Styler.apply](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.apply.html)                             | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.applymap](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.applymap.html)                       | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.background_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.background_gradient.html) | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.format](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.format.html)                           | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.hide_columns](https://pandas.pydata.org/pandas-docs/version/1.5/reference/api/pandas.io.formats.style.Styler.hide_columns.html)          | 1.1.x - 1.5.x                |
-| [Styler.hide_index](https://pandas.pydata.org/pandas-docs/version/1.5/reference/api/pandas.io.formats.style.Styler.hide_index.html)              | 1.1.x - 1.5.x                |
-| [Styler.hide](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.hide.html)                               | 1.4.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.highlight_between](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_between.html)     | 1.3.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.highlight_max](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_max.html)             | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.highlight_min](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_min.html)             | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.highlight_null](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_null.html)           | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.highlight_quantile](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.highlight_quantile.html)   | 1.3.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.map](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.map.html)                                 | 2.1.x                        |
-| [Styler.set_properties](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.set_properties.html)           | 1.1.x - 1.5.x, 2.0.x - 2.1.x |
-| [Styler.text_gradient](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.text_gradient.html)             | 1.3.x - 1.5.x, 2.0.x - 2.1.x |
-
-
-> A good overview about styling `DataFrames` can be found on the pandas website: [pandas User Guide: Styling](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
+## Supported DataFrame Libraries
+- [pandas DataFrame](./docs/PANDAS_DATAFRAME.md)
+- [polars DataFrame (experimental)](./docs/POLARS_DATAFRAME.md)
 
 ## Features
 - [filtering](./docs/FILTERING.md)
 - [sorting](./docs/SORTING.md)
-- [automatic detection of not chunk aware styling functions](./docs/VALIDATING_STYLE_FUNCTIONS.md)
-- [many keyboard shortcuts to work efficiently](./docs/KEYBOARD_SHORTCUTS.md)
+- [keyboard shortcuts to work efficiently](./docs/KEYBOARD_SHORTCUTS.md)
 - [settings to configure plugin behavior](./docs/SETTINGS.md)
 
 ## How Does It Work
-Generate a `DataFrame` and configure the `Styler` returned by `DataFrame.style`:
+
+### Quick Example:
+Generate a `DataFrame`:
 ```python
-import numpy as np
+# code for pandas
 import pandas as pd
 
-np.random.seed(123456789)
-
-# create a DataFrame
-df = pd.DataFrame(np.random.randn(500, 4))
-
-# the Styler highlights the maximum value in each column
-styler = df.style.highlight_max(axis='index')
-
-breakpoint()
-```
-When you run the code in debug mode in IntelliJ, the program stops at the line with the `breakpoint()` command.
-
-Select the `Debugger` tab (as seen in the screenshot below). Now you can see all the variables of the current stackframe listed. In this case the variables
-`df` and `styler`. Right-click on `styler` to open the context menu. Select `View as Styled DataFrame`.
-
-![select view as action](./docs/images/select_view_as_action.png)
-
-This opens a new window which shows the styled output of the `DataFrame` `df` using the configured `styler`:
-
-![styled output](./docs/images/example_styled_output.png)
-
-You can also right-click on the `df` in the `Debugger` and select `View as Styled DataFrame`. In that case all values are displayed without applied styles.
-
-### Supported CSS Properties
-The following CSS properties are supported by the plugin:
-
-| CSS property       | mapping                                                              |
-|--------------------|----------------------------------------------------------------------|
-| `color`            | table cell text color                                                |
-| `background-color` | table cell background color                                          |
-| `text-align`       | align cell text (supported values are: `left`, `right` and `center`) |
-
-All other properties are ignored.
-
-> Inheritance of CSS properties is not supported because it would require to implement a complete CSS engine which can also handle partial results (chunks).
-
-## Examples
-#### About The Code Snippets
-All code snippets on this page are intentionally chosen very minimalistic to demonstrate the possibilities of the plugin.
-
-The `breakpoint()` command in the snippets require at least Python 3.7.
-
-### Format Displayed Values
-You can also format the displayed data as you like:
-```python
-import numpy as np
-import pandas as pd
-
-np.random.seed(123456789)
-
-# create a DataFrame
-df = pd.DataFrame(np.random.randn(500, 4))
-
-# the Styler formats all values of the first column
-styler = df.style\
-    .format({0: '{:+.2f}'})\
-    .set_properties(**{'text-align': 'center', 'background-color': 'yellow'}, subset=[0])
+df = pd.DataFrame.from_dict({"a": range(200), "b": range(100, 300), "c": range(200, 400)})
 
 breakpoint()
 ```
 
-Right-click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame`:
-
-![formatted output](./docs/images/example_formatted_output.png)
-
-  
-## Using Styler.apply or Styler.applymap/Styler.map
-
-> Please read the following section carefully to understand how custom styles must be written to support chunks. Otherwise, it can lead to incorrect output.
-
-To support large `DataFrames` the data is fetched in smaller parts (chunks) from the `DataFrame`. 
-Whenever you scroll the content of the displayed `DataFrame`, the data is loaded on demand instead of 
-fetching all the data at the beginning.
-
-### Why Chunks
-Fetching the HTML output for large `DataFrames` and converting it is very time-consuming. 
-In general, there are two expensive steps involved when fetching the data:
-- calling the method `style.to_html()` on Python side to generate the HTML representation of the `DataFrame`
-- parsing and converting the fetched data in the plugin
-
-Fetching the styled `DataFrame` in chunks is way faster and less memory consuming than fetching the whole content at once.
-
-### Handle Chunks In Custom Styles
-Loading data in smaller amounts is great as it allows you to view larger data, but of course there is one problem when it comes to custom style functions.
-
-#### The Problem
-In general, you pass your custom style function into one of the following methods:
-
-  - `Styler.applymap` (renamed to `Styler.map` in pandas 2.1.0)
-  - `Styler.apply`
-
-Both of those methods take a function (and some other keyword arguments) and applies your function to the `DataFrame` in 
-a certain way. `Styler.applymap` (`Styler.map`) works through the `DataFrame` elementwise, therefore it is safe to use in combination with chunks. 
-
-`Styler.apply` passes each column or row of your `DataFrame` one-at-a-time or the entire `DataFrame` at once, depending on the axis keyword argument.
-In case of chunks, a passed row or column is taken from the chunk and not from the original `DataFrame`. 
-Same for `axis=None`, here the chunk is passed instead of the original `DataFrame`.
-This leads to problems if you want for example highlight the largest value in each column of a `DataFrame`. 
-Because this value can't be evaluated if your custom styler only get the data from the chunk instead of the original `DataFrame`.
-
-> All builtin styles listed under [supported-styler-methods](#supported-styler-methods), except `apply` and `applymap` (`map`), are automatically handled by the plugin and can therefore be used without any changes.
-
-##### The Problem (Example)
-To get a better understanding of the problem, you can run the following example in debug mode:
 ```python
-import numpy as np
-import pandas as pd
+# code for polars
+import polars as pl
 
-np.random.seed(123456789)
-
-# create a DataFrame
-df = pd.DataFrame(np.random.randint(1, 100, size=(2800, 4)))
-
-
-def my_highlight_max(series):
-  is_max = series == series.max()
-  return ['background-color: red' if cell else '' for cell in is_max]
-
-
-# the Styler highlights the maximum value in each column
-# (spoiler: this is not the case)
-styler = df.style.apply(my_highlight_max, axis='index')
+df = pl.from_dict({"a": range(200), "b": range(100, 300), "c": range(200, 400)})
 
 breakpoint()
 ```
-Right-click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame` and scroll to the place where you can see the rows `597` and `605`:
 
-![wrong max value](./docs/images/example_chunked_wrong_max_value.png)
+Run the code in debug mode in IntelliJ. The program stops at the line with the `breakpoint()` command.
 
-You can clearly see that in column `3` there are two different values highlighted, which is wrong.
+Select the `Threads & Variables` tab of the debugger (as seen in the screenshot below).
+Right-click on `df` to open the context menu. Select `View as Styled DataFrame`.
 
-##### Solving The Problem
-You can signal the plugin that you need also the un-chunked part which is normally used when calling your custom style 
-function. To do this you have to adjust the custom style function `my_highlight_max`.
-```python
-def my_highlight_max(series, chunk_parent=None):
-    max = (series if chunk_parent is None else chunk_parent).max()
-    return ['background-color: red' if cell == max else '' for cell in series]
-```
-Add an optional argument named `chunk_parent`. The name of this argument has to be `chunk_parent`, otherwise the 
-plugin can't detect that the un-chunked data should be provided.
+![select view as action](./docs/images/quick_example-view_as_action.png)
 
-> The `chunk_parent` is only provided by the plugin. Therefore, it is a good idea to always make it optional so that the custom styler also work when used without the plugin.
+This opens a new window which shows the `DataFrame` `df`:
 
-Right-click on styler in the `Debugger` tab to open the context menu. Select `View as Styled DataFrame` and scroll to the place where you can see the rows `597` and `605`:
-
-![right max value](./docs/images/example_chunked_right_max_value.png)
-
-The output now displays the expected result.
-
-Instead of the optional `chunk_parent` you could also use `**kwargs` to tell the plugin that you want to have the un-chunked data.
-
-```python
-def my_highlight_max_using_kwargs(series, **kwargs):
-    max = kwargs.get("chunk_parent", series).max()
-    return ['background-color: red' if cell == max else '' for cell in series]
-```
-
-##### Automatic Problem Detection
-Depending on the complexity of a custom styling function it can be hard to determine if the displayed result is always correct.
-
-The plugin can do some of the work for you and automatically try to detect problems in the background.
-Check [Validating Style Functions](./docs/VALIDATING_STYLE_FUNCTIONS.md)
+![styled output](./docs/images/quick_example-dialog.png)

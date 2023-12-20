@@ -64,10 +64,10 @@ The structure below lists only the important folders/files.
 ├── manual_testing
 ├── src
 │   └── cms_rendner_sdfv
-│       ├── pandas
-│       ├── frame
-│       ├── shared
-│       └── styler
+│       └──  pandas
+│            ├── frame
+│            ├── shared
+│            └── styler
 └── tests
 ```
 

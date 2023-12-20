@@ -14,8 +14,9 @@ The `sdfv_base` project provides an import mechanism for the plugin, which allow
 The modules in the "package dump" must meet the following requirements:
 - No `__init__.py` files.
 - No relative imports.
-- The package structure has to start with `cms_rendner_sdfv` followed by a unique package name
-  - In general, the name of the library should be used here. For pandas the unique package name is `pandas`.
+- The top level package has to be `cms_rendner_sdfv`.
+- Inside the top level package should be a sub package named after the `DataFrame` library.
+  - For pandas the name is `pandas`.
 - The unit tests must not be located in the directory to be dumped.
 
 Changing code in this project may require adjustments to the following things:
