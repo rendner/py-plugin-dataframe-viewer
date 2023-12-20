@@ -1,4 +1,22 @@
 # Changelog
+## v0.13.0
+- `Released`: 2023-12-?
+- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
+- `Min Required IntelliJ Version`: 2022.3
+
+### Added
+#### Experimental Support for polars DataFrames
+Experimental support for the lighting-fast DataFrame library [polars](https://pola.rs/).
+You can view and sort polars `DataFrames`. 
+
+It is also possible to view Python dictionaries as a polars `DataFrame`.
+
+#### Column DataType In Tooltip
+The column data type is now included in the column header tooltip.
+This feature is available for pandas and polars `DataFrames`.
+
+![x](./docs/images/changelog/0.13.x/dtype_in_tooltip.png)
+
 ## v0.12.0
 - `Released`: 2023-11-15
 - `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
@@ -176,7 +194,7 @@ The feature switch is called: `Use new data structure when loading chunks`
 ### Added
 #### Validation of styling functions
 Since the plugin generates the rendered output of a `DataFrame` chunk-wise, custom styling functions have to handle chunks correctly.
-You can read more about it here: [The Problem](./README.md#the-problem)
+You can read more about it here: [The Problem](./docs/PANDAS_DATAFRAME.md#the-problem)
 
 Ensuring that custom functions, registered via `Styler.apply`, work properly can be time-consuming and in some cases very cumbersome.
 The plugin now offers the possibility to validate styling functions automatically in the background.

@@ -11,19 +11,12 @@
     <description><![CDATA[
     View, <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/SORTING.md">sort</a> and <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/FILTERING.md">filter</a> <i>DataFrames</i>, styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> or a Python <i>dict</i> when debugging.
     <br/><br/>
-    Apply conditional formatting and visual styling in your Python code, by using <i>DataFrame.style</i>.
-    The configured style is used to render a styled output of the <i>DataFrame</i>.
+    <a href="https://github.com/rendner/py-plugin-dataframe-viewer">Short introduction</a>
     <br/><br/>
-    <a href="https://github.com/rendner/py-plugin-dataframe-viewer">How does it work</a>
-    <br/><br/>
-    For more information about styling a <i>DataFrame</i>: <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html">pandas User Guide: Styling</a>
-    <br/><br/>
-    Note: The plugin requires <i>pandas</i>.
-    <br/><br/>
-    Supported pandas versions:
+    Note: The plugin requires one of the supported Python DataFrame libraries:
     <ul>
-        <li>1.1.x - 1.5.x</li>
-        <li>2.0.x - 2.1.x</li>
+        <li>pandas</li>
+        <li>polars (experimental)</li>
     </ul>
     ]]></description>
 
@@ -33,14 +26,6 @@
     <br/>
     <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/CHANGELOG.md">full changelog (all versions)</a>
     <br/>
-    <h2>Added</h2>
-    <h3>No Jinja2 required</h3>
-    You can now view a pandas <i>DataFrame</i> without having <i>Jinja2</i> installed.
-    In the previous versions, a <i>Styler</i> was created from the <i>DataFrame</i>, for which <i>Jinja2</i> had to be installed.
-    <h2>Fixed</h2>
-    <ul>
-        <li>filter input: broken code completion</li>
-    </ul>
     ]]></change-notes>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
