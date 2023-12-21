@@ -88,7 +88,7 @@ As we already know, `Styler.applymap` (`Styler.map`) works through the `DataFram
 In case of chunks, a passed row or column is taken from the chunk and not from the original `DataFrame`.
 Same for `axis=None`, here the chunk is passed instead of the original `DataFrame`.
 This leads to problems if you want for example highlight the largest value in each column of a `DataFrame`.
-Because this value can't be evaluated if your custom styling function only get the chunk instead of the original `DataFrame`.
+Because this value can't be evaluated if your custom styling function only receives a part of the entire column.
 
 > All builtin styles listed under [supported-styler-methods](#supported-styler-methods), except `apply` and `applymap` (`map`), are automatically handled by the plugin and can therefore be used without any changes.
 

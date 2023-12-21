@@ -43,7 +43,7 @@ df = pl.from_dict({"a": range(200), "b": range(100, 300), "c": range(200, 400)})
 breakpoint()
 ```
 
-Run the code in debug mode in IntelliJ. The program stops at the line with the `breakpoint()` command.
+Run the code in debug mode in your JetBrains IDE. The program stops at the line with the `breakpoint()` command.
 
 Select the `Threads & Variables` tab of the debugger (as seen in the screenshot below).
 Right-click on `df` to open the context menu. Select `View as Styled DataFrame`.

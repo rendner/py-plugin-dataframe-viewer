@@ -1,11 +1,11 @@
 # Changelog
 ## v0.13.0
-- `Released`: 2023-12-?
+- `Released`: 2023-12-21
 - `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Added
-#### Experimental Support for polars DataFrames
+#### Experimental Support For polars DataFrames
 Experimental support for the lighting-fast DataFrame library [polars](https://pola.rs/).
 You can view and sort polars `DataFrames`. 
 
@@ -23,7 +23,7 @@ This feature is available for pandas and polars `DataFrames`.
 - `Min Required IntelliJ Version`: 2021.3
 
 ### Added
-#### No Jinja2 required
+#### No Jinja2 Required
 You can now view a pandas `DataFrame` without having `Jinja2` installed.
 In the previous versions, a `Styler` was created from the `DataFrame`, for which `Jinja2` had to be installed.
 
