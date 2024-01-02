@@ -69,7 +69,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
         for sci in src_col_idx:
             series = source_frame.get_column(source_frame.columns[sci])
-            is_string = dtypes[sci] is pl.Utf8
+            is_string = isinstance(dtypes[sci], pl.Utf8)
             should_create_row = not result
             for ri, sri in enumerate(src_row_idx):
                 if is_string:

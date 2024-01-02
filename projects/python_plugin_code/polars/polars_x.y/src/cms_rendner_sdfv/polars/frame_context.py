@@ -64,7 +64,11 @@ class FrameContext(AbstractTableSourceContext):
             # ensures that we always have our own col which starts with a zero index
             # in case the user has configured something else
             row_idx_col_name: str = "cms_render_sdfv__row_nr"
-            frame_with_index = self._source_frame.with_row_count(row_idx_col_name)
+
+            if hasattr(self._source_frame, 'with_row_index'):
+                frame_with_index = self._source_frame.with_row_index(row_idx_col_name)
+            else:
+                frame_with_index = self._source_frame.with_row_count(row_idx_col_name)
 
             by_names = [col_names[i] for i in self._sort_criteria.by_column]
             row_idx = frame_with_index \
