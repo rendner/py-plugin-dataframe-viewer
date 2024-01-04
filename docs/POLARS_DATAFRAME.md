@@ -8,5 +8,4 @@ The plugin allows you to view Python `dicts` and polars `DataFrames`.
 
 **Features:**
 - [sortable](./SORTING.md)
-- [filterable](./FILTERING.md)
 - [keyboard shortcuts to work efficiently](./KEYBOARD_SHORTCUTS.md)
