@@ -77,7 +77,7 @@ class PandasCodeProvider : ITableSourceCodeProvider {
                 return "/pandas_1.${version.minor}/plugin_modules_dump.json"
             }
         } else if (version.major == 2) {
-            if (version.minor in 0..1) {
+            if (version.minor in 0..2) {
                 return "/pandas_2.${version.minor}/plugin_modules_dump.json"
             }
         }

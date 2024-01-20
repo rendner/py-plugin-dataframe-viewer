@@ -127,7 +127,7 @@ tasks {
             PipenvEnvironment("python_3.10", listOf("pandas", "polars")),
         ),
         MultiPipenvImageBuilder("3.9")
-            .addGroupedProjects("pandas", listOf("pandas_2.1"))
+            .addGroupedProjects("pandas", listOf("pandas_2.2", "pandas_2.1"))
             .build(project),
         MultiPipenvImageBuilder("3.8")
             .addGroupedProjects("polars", listOf("polars_x.y"))
