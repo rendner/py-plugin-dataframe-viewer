@@ -341,7 +341,8 @@ tasks {
 
     listProductsReleases {
         sinceVersion.set("2022.3")
-        untilVersion.set("2023.2.1")
+        // untilVersion.set("2024.3")
+        untilVersion.set("241.8102.133")
     }
 }
 
