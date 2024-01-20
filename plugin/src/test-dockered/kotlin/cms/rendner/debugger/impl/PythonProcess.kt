@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package cms.rendner.debugger.impl
 
 import java.io.*
-import java.nio.charset.StandardCharsets
 
 class PythonProcess(
     private val lineSeparator: String,
@@ -30,16 +29,29 @@ class PythonProcess(
     private var singleCharArray = CharArray(1)
     private val stringBuilder = StringBuilder()
 
+    /*
+    To detect BdbQuit error message:
+
+    Traceback (most recent call last):
+      File "/usr/local/lib/python3.11/bdb.py", line 94, in trace_dispatch
+        return self.dispatch_return(frame, arg)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/usr/local/lib/python3.11/bdb.py", line 156, in dispatch_return
+        if self.quitting: raise BdbQuit
+                          ^^^^^^^^^^^^^
+    bdb.BdbQuit
+
+     */
+    private val BDP_QUIT_REGEX = Regex("Traceback \\(most recent call last\\):([\\S,\\s])+bdb\\.BdbQuit\n")
+
     /**
      * @param processArgs the arguments containing the program to start and its arguments.
      */
     fun start(processArgs: List<String>) {
-        process = ProcessBuilder(processArgs)
-            .redirectErrorStream(true)
-            .start()
+        process = ProcessBuilder(processArgs).start()
 
-        reader = BufferedReader(InputStreamReader(process.inputStream, StandardCharsets.UTF_8))
-        writer = BufferedWriter(OutputStreamWriter(process.outputStream, StandardCharsets.UTF_8))
+        reader = process.inputStream.bufferedReader()
+        writer = process.outputStream.bufferedWriter()
     }
 
     /**
@@ -90,6 +102,13 @@ class PythonProcess(
      * Closes the input and output stream of the process and destroys the underlying process.
      */
     fun cleanup() {
+        process.errorStream.bufferedReader().use { errReader ->
+            // If pdb quit command was sent, a traceback like that occurs because there is nothing
+            // to catch the BdbQuit exception raised when the debugger quits.
+            errReader.readText().replace(BDP_QUIT_REGEX, "").let {
+                if (it.isNotEmpty()) print(it)
+            }
+        }
         closeSilently(reader)
         closeSilently(writer)
         process.destroy()

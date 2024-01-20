@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ abstract class PythonDebugger {
     }
 
     /**
-     * §valuates an expression or executes statements.
+     * Evaluates an expression or executes statements.
      * Blocks the caller thread until the operation is complete.
      */
     fun evalOrExec(request: EvalOrExecRequest): EvalOrExecResponse {
@@ -263,10 +263,7 @@ abstract class PythonDebugger {
 
     private fun lastLineIsPrompt(lines: List<String>): Boolean {
         // The last line, if prompt, only contains "(Pdb) ".
-        // But in the past I had a case where the last lines was:
-        // "(Pdb) <string>:658: FutureWarning: ..."
-        // To be safe, use "startsWith" to check for prompt.
-        return lines.lastOrNull()?.startsWith(LinePrefixes.DEBUGGER_PROMPT) == true
+        return lines.lastOrNull() == LinePrefixes.DEBUGGER_PROMPT
     }
 
     private fun getMarkedResult(lines: List<String>): MarkedResult? {
