@@ -1,7 +1,21 @@
 # Changelog
+## v0.14.0 WIP
+- `Released`: 2024-01-20
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Min Required IntelliJ Version`: 2022.3
+
+#### Support For pandas 2.2
+All already supported `Styler` methods as well as sorting and filtering are now also usable with pandas 2.2.
+
+### Fixed
+- [polars] broken string detection when formatting string values
+
+### Other
+- configure plugin compatibility "until 2024.3"
+
 ## v0.13.0
 - `Released`: 2023-12-21
-- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.1.x
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Added
@@ -19,7 +33,7 @@ This feature is available for pandas and polars `DataFrames`.
 
 ## v0.12.0
 - `Released`: 2023-11-15
-- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.1.x
 - `Min Required IntelliJ Version`: 2021.3
 
 ### Added
@@ -43,7 +57,7 @@ In the previous versions, a `Styler` was created from the `DataFrame`, for which
 
 ## v0.11.0
 - `Released`: 2023-09-18
-- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x - 2.1.x (tested with 2.1.0)
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.1.x
 - `Min Required IntelliJ Version`: 2021.3
 
 ### Added
@@ -66,7 +80,7 @@ A detailed description about the behavior can be found in the pandas-docs [DataF
 
 ## v0.10.0
 - `Released`: 2023-03-01
-- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.3), 2.0.x (tested with 2.0.0rc0)
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x
 - `Min Required IntelliJ Version`: 2021.3
 
 ### Added
@@ -79,7 +93,7 @@ All already supported `Styler` methods as well as sorting and filtering are now 
 
 ## v0.9.1
 - `Released`: 2022-11-29
-- `Supported pandas Versions`: 1.1.x - 1.5.x (tested with 1.5.2)
+- `Supported pandas Versions`: 1.1.x - 1.5.x
 - `Min Required IntelliJ Version`: 2021.3
 
 ### Added
@@ -91,7 +105,7 @@ All already supported `Styler` methods are now also usable with pandas 1.5.
 
 ## v0.9.0
 - `Released`: 2022-11-22
-- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.4)
+- `Supported pandas Versions`: 1.1.x - 1.4.x
 - `Min Required IntelliJ Version`: 2021.3
 
 ### Added
@@ -132,7 +146,7 @@ Lists, for example, always have a closing `]`, even if the shortened value excee
 
 ## v0.8.0
 - `Released`: 2022-07-25
-- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.3)
+- `Supported pandas Versions`: 1.1.x - 1.4.x
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added
@@ -157,7 +171,7 @@ These are now documented: [Keyboard Shortcuts](./docs/KEYBOARD_SHORTCUTS.md)
 
 ## v0.7.1
 - `Released`: 2022-07-03
-- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.3)
+- `Supported pandas Versions`: 1.1.x - 1.4.x
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Changed
@@ -188,7 +202,7 @@ The feature switch is called: `Use new data structure when loading chunks`
 
 ## v0.7.0
 - `Released`: 2022-06-24
-- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.3)
+- `Supported pandas Versions`: 1.1.x - 1.4.x
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added
@@ -212,7 +226,7 @@ Curious? [Here we go](./docs/VALIDATING_STYLE_FUNCTIONS.md)
 
 ## v0.6.0
 - `Released`: 2022-02-23
-- `Supported pandas Versions`: 1.1.x - 1.4.x (tested with 1.4.1)
+- `Supported pandas Versions`: 1.1.x - 1.4.x
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added
@@ -257,7 +271,7 @@ In case of an incompatibility problem I will release a new version.
 
 ## v0.5.1
 - `Released`: 2021-12-01
-- `Supported pandas Versions`: 1.1.x - 1.3.x (tested with 1.3.4)
+- `Supported pandas Versions`: 1.1.x - 1.3.x
 - `Min Required IntelliJ Version`: 2020.3
 
 The source code of the plugin is finally available.
@@ -268,7 +282,7 @@ This was planned for quite a while, but it took some time to improve the testabi
 - upgrade dependency `jsoup` to 1.14.3
 ## v0.5.0
 - `Released`: 2021-09-19
-- `Supported pandas Versions`: 1.1.x - 1.3.x (tested with 1.3.3)
+- `Supported pandas Versions`: 1.1.x - 1.3.x
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added
