@@ -1,9 +1,10 @@
 # Changelog
-## v0.14.0 WIP
+## v0.14.0
 - `Released`: 2024-01-20
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
 - `Min Required IntelliJ Version`: 2022.3
 
+### Added
 #### Support For pandas 2.2
 All already supported `Styler` methods as well as sorting and filtering are now also usable with pandas 2.2.
 
