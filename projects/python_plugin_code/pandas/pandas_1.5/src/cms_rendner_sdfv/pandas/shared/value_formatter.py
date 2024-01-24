@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -13,7 +13,8 @@
 #  limitations under the License.
 from typing import Any
 
-from pandas.io.formats.printing import pprint_thing
+from pandas.errors import OptionError
+from pandas.io.formats.printing import pprint_thing, get_option
 
 
 class ValueFormatter:
@@ -28,4 +29,9 @@ class ValueFormatter:
 
     @staticmethod
     def format_cell(value: Any) -> str:
-        return pprint_thing(value, max_seq_items=42)
+        max_seq_items = None
+        try:
+            max_seq_items = get_option("display.max_seq_items", True)
+        except OptionError:
+            pass
+        return pprint_thing(value, max_seq_items=max_seq_items or 42)

@@ -65,3 +65,12 @@ def test_use_option__display_float_format_is_preferred_over_display_precision():
         table_frame = FrameContext(df_with_floats).get_table_frame_generator().generate()
 
     assert table_frame.cells[0][0].value == "$1.01"
+
+
+def test_use_option__max_seq_items():
+    df_with_seq = DataFrame(data=[[range(5)]])
+
+    with option_context('display.max_seq_items', 2):
+        table_frame = FrameContext(df_with_seq).get_table_frame_generator().generate()
+
+    assert table_frame.cells[0][0].value == "(0, 1, ...)"
