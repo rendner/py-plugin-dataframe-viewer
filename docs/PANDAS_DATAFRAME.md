@@ -12,6 +12,37 @@ The plugin allows you to view Python `dicts`, pandas `DataFrames` and styled one
 - [automatic detection of not chunk aware styling functions](./VALIDATING_STYLE_FUNCTIONS.md)
 
 
+## Data Formatting
+The plugin uses the following pandas options when generating the output of a `DataFrame`:
+
+- `display.float_format`
+- `display.precision`
+- `display.max_seq_items` (but maximal 42 items)
+
+You can also use the `set_eng_float_format()` function to alter the floating-point formatting.
+These options are ignored when generating the output of styled `DataFrames`, use `Styler::format` instead.
+
+For column specific formatting use a styler object:
+```python
+import numpy as np
+import pandas as pd
+
+np.random.seed(123456789)
+
+# create a DataFrame
+df = pd.DataFrame(np.random.randn(500, 4))
+
+# the Styler formats all values of the first column
+styler = df.style\
+    .format({0: '{:+.2f}'})\
+    .set_properties(**{'text-align': 'center', 'background-color': 'yellow'}, subset=[0])
+
+breakpoint()
+```
+
+![formatted output](./images/example_formatted_output.png)
+
+
 ## Styled DataFrames
 > A good overview about styling `DataFrames` can be found on the pandas website: [pandas User Guide: Styling](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
 
