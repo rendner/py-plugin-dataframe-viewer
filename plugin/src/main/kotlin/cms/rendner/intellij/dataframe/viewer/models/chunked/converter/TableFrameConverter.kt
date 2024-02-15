@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ class TableFrameConverter {
         private fun toChunkHeaderLabels(table: TableFrame): ChunkHeaderLabels {
             return ChunkHeaderLabels(
                 legend = convertLegendLabels(table.legend),
-                columns = convertColumnHeaderLabels(table.columnLabels),
+                columns = convertColumnHeaderLabels(table.columns),
                 rows = table.indexLabels.let { if (it == null) null else convertRowHeaderLabels(it) },
             )
         }
@@ -79,7 +79,7 @@ class TableFrameConverter {
         }
 
         private fun convertColumnHeaderLabels(labels: List<TableFrameColumn>): List<ColumnHeader> {
-            return SmartList(labels.map {  ColumnHeader(it.dtype, convertHeaderLabel(it.labels)) })
+            return SmartList(labels.map {  ColumnHeader(it.dtype, convertHeaderLabel(it.labels), it.describe) })
         }
 
         private fun convertLegendLabels(legend: TableFrameLegend?): LegendHeaders? {

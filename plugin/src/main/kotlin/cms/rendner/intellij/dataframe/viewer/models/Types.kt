@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ interface IHeaderLabel {
     fun text(): String
 }
 
-data class ColumnHeader(val dtype: String?, val label: IHeaderLabel) : IHeaderLabel {
+data class ColumnHeader(val dtype: String?, val label: IHeaderLabel, val describe: Map<String, String>? = null) : IHeaderLabel {
     override fun text() = label.text()
 }
 

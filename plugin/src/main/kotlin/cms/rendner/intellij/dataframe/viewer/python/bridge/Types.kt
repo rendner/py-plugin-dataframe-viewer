@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -260,7 +260,7 @@ interface IPyPatchedStylerRef: IPyTableSourceRef {
 data class TableFrameLegend(val index: List<String>, val column: List<String>)
 
 @Serializable
-data class TableFrameColumn(val dtype: String, val labels: List<String>)
+data class TableFrameColumn(val dtype: String, val labels: List<String>, val describe: Map<String, String>? = null)
 
 @Serializable
 data class TableFrameCell(val value: String, val css: Map<String, String>?)
@@ -268,7 +268,7 @@ data class TableFrameCell(val value: String, val css: Map<String, String>?)
 @Serializable
 data class TableFrame(
     @SerialName("index_labels") val indexLabels: List<List<String>>?,
-    @SerialName("column_labels") val columnLabels: List<TableFrameColumn>,
+    val columns: List<TableFrameColumn>,
     val cells: List<List<TableFrameCell>>,
     val legend: TableFrameLegend?,
     )

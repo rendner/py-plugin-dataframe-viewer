@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,12 @@ import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueCellRender
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header.CenteredHeaderLabelStyler
 import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.events.ChunkTableModelEvent
+import com.intellij.ide.IdeTooltip
+import com.intellij.ide.IdeTooltipManager
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.ui.ColorUtil
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.table.JBTable
 import org.intellij.lang.annotations.MagicConstant
 import java.awt.*
@@ -266,10 +271,10 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         myModelHasSameDataSource = false
     }
 
-    override fun setModel(tableModel: TableModel) {
-        if (tableModel !is ITableValueDataModel) throw IllegalArgumentException("The model has to implement ITableValueDataModel.")
+    override fun setModel(model: TableModel) {
+        if (model !is ITableValueDataModel) throw IllegalArgumentException("The model has to implement ITableValueDataModel.")
 
-        tableModel.enableDataFetching(false)
+        model.enableDataFetching(false)
 
         val prevColumnCache = mutableMapOf<ColumnCacheKey, MyValueTableColumn>()
         val keepSortKeyState = myModelHasSameDataSource && rowSorter?.sortKeys?.isNotEmpty() == true
@@ -282,14 +287,14 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
             }
         }
 
-        super.setModel(tableModel)
+        super.setModel(model)
 
-        val newColumns = createColumns(tableModel, prevColumnCache)
+        val newColumns = createColumns(model, prevColumnCache)
         while (columnCount > 0) removeColumn(columnModel.getColumn(0))
         newColumns.forEach { addColumn(it) }
 
-        rowSorter = if (tableModel.isSortable()) {
-            MyExternalDataRowSorter(tableModel).apply {
+        rowSorter = if (model.isSortable()) {
+            MyExternalDataRowSorter(model).apply {
                 if (keepSortKeyState) {
                     rowSorter?.sortKeys?.let { oldSortKeys ->
                         val newColumnCache = newColumns.associateBy { ColumnCacheKey.orgFrameIndex(it.orgFrameIndex) }
@@ -304,7 +309,6 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
                 }
             }
         } else null
-
 
         if (myBaseClassIsFullyInitialized) {
             myColumnResizeBehavior.ensureLastColumnIsNotFixed()
@@ -869,8 +873,8 @@ class MyIndexTable(
         adjustPreferredScrollableViewportSize()
     }
 
-    override fun setModel(tableModel: TableModel) {
-        super.setModel(tableModel)
+    override fun setModel(model: TableModel) {
+        super.setModel(model)
         adjustPreferredScrollableViewportSize()
     }
 
@@ -956,6 +960,11 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
         }
     }
 
+    override fun setModel(model: TableModel) {
+        (tableHeader as? MyTable<*>.MyTableHeader)?.resetTooltip()
+        super.setModel(model)
+    }
+
     protected fun createTableHeaderRenderer(isRowHeader: Boolean): TableCellRenderer {
         return getCastedTableHeader().createTableHeaderRenderer(isRowHeader)
     }
@@ -965,6 +974,16 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
     }
 
     private inner class MyTableHeader : JBTable.JBTableHeader() {
+
+        private var myToolTip = MyHeaderToolTip(this)
+
+        init {
+            if (ApplicationManager.getApplication() != null) {
+                this.putClientProperty(IdeTooltip.TOOLTIP_DISMISS_DELAY_KEY, 25_000)
+                IdeTooltipManager.getInstance().setCustomTooltip(this, myToolTip)
+            }
+        }
+
         override fun processMouseEvent(e: MouseEvent?) {
             if (e?.id == MouseEvent.MOUSE_RELEASED) setRowSorterShiftKeyFlag(e.isShiftDown)
             super.processMouseEvent(e)
@@ -979,15 +998,13 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
             }
         }
 
+        fun resetTooltip() {
+            myToolTip.reset()
+        }
+
         override fun getToolTipText(event: MouseEvent): String {
-            val viewColumnIndex = this.columnAtPoint(event.point)
-            val modelColumnIndex = convertColumnIndexToModel(viewColumnIndex)
-            var tooltipText: String? = null
-            if (modelColumnIndex >= 0) {
-                tooltipText = createHeaderToolTip(modelColumnIndex)
-            }
-            // "super.getToolTipText(event)" can return null, so it has to be handled
-            return tooltipText ?: super.getToolTipText(event) ?: ""
+            myToolTip.updateHoveredColumn(this.columnAtPoint(event.point), event.point)
+            return ""
         }
 
         fun createTableHeaderRenderer(isRowHeader: Boolean): TableCellRenderer {
@@ -1005,10 +1022,43 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
             }
         }
 
-        private fun createHeaderToolTip(modelColumnIndex: Int): String? {
+        public override fun createDefaultRenderer(): TableCellRenderer {
+            return super.createDefaultRenderer()
+        }
+    }
+
+    private inner class MyHeaderToolTip(component: JComponent) : IdeTooltip(component, Point(), null, component) {
+
+        private var myViewColumnIndex: Int = -1
+
+        init {
+            preferredPosition = Balloon.Position.below
+        }
+
+        fun updateHoveredColumn(viewColumnIndex: Int, p: Point) {
+            if (viewColumnIndex != myViewColumnIndex) {
+                myViewColumnIndex = viewColumnIndex
+                this.hide()
+            }
+            point = p
+        }
+
+        fun reset() {
+            updateHoveredColumn(-1, Point())
+        }
+
+        override fun beforeShow(): Boolean {
+            val text = createToolTipText() ?: return false
+            if (tipComponent == null) {
+                tipComponent = JBLabel(text)
+            } else (tipComponent as JBLabel).text = text
+            return true
+        }
+
+        private fun createToolTipText(): String? {
+            val modelColumnIndex = convertColumnIndexToModel(myViewColumnIndex)
             model?.let { model ->
                 val sb = StringBuilder("<html>")
-                // todo: escape potential html chars (<>&) in strings
                 val hexColor = ColorUtil.toHtmlColor(
                     ColorUtil.mix(
                         colorFromUI("ToolTip.background", Color.BLACK),
@@ -1043,6 +1093,22 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
                             sb.append("<br/>")
                         }
                     }
+                    model.getColumnHeaderAt(modelColumnIndex).describe?.let {
+                        if (it.isNotEmpty()) {
+                            sb.append("<hr style='margin-top: 3px; margin-bottom: 3px'>")
+                            sb.append("<h3 style='margin-top: 0px; margin-bottom: 0px'>Describe</h3>")
+                            sb.append("<table>")
+                            it.forEach { (k, v) ->
+                                sb.append("<tr>")
+                                sb.append("<td>${colorizedText("$k: ")}</td>")
+                                sb.append("<td width='8' />")
+                                // Use 'nowrap' to not break the formatting in case values are too long.
+                                sb.append("<td style='white-space: nowrap;'>$v</td>")
+                                sb.append("</tr>")
+                            }
+                            sb.append("</table>")
+                        }
+                    }
                 }
 
                 return sb.append("</html>").toString().let {
@@ -1050,10 +1116,6 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
                 }
             }
             return null
-        }
-
-        public override fun createDefaultRenderer(): TableCellRenderer {
-            return super.createDefaultRenderer()
         }
     }
 }
