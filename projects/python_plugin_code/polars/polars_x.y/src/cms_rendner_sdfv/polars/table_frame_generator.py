@@ -18,7 +18,7 @@ import polars as pl
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
 from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn
-from cms_rendner_sdfv.polars.visible_frame import VisibleFrame
+from cms_rendner_sdfv.polars.visible_frame import VisibleFrame, Chunk
 
 
 class TableFrameGenerator(AbstractTableFrameGenerator):
@@ -30,48 +30,47 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                  exclude_row_header: bool = False,
                  exclude_col_header: bool = False,
                  ) -> TableFrame:
-        frame = self._visible_frame
+        chunk = self._visible_frame.get_chunk(region)
 
-        if region is None:
-            region = frame.region
-        else:
-            region = frame.region.get_bounded_region(region)
-
-        column_labels = [] if exclude_col_header else self._extract_column_header_labels(frame, region)
-        cell_values = self._extract_cell_values(frame, region)
+        columns = [] if exclude_col_header else self._extract_columns(chunk)
+        cells = self._extract_cells(chunk)
 
         return TableFrame(
             index_labels=None,
-            column_labels=column_labels,
+            columns=columns,
             legend=None,
-            cells=cell_values,
+            cells=cells,
         )
 
-    @staticmethod
-    def _extract_column_header_labels(frame: VisibleFrame, region: Region) -> List[TableFrameColumn]:
-        col_names = frame.source_frame.columns
-        dtypes = frame.source_frame.dtypes
-        return [TableFrameColumn(dtype=str(dtypes[i]), labels=[col_names[i]]) for i in frame.get_col_idx_in_source(region)]
+    def _extract_columns(self, chunk: Chunk) -> List[TableFrameColumn]:
+        result: List[TableFrameColumn] = []
+
+        for col_offset in range(chunk.region.cols):
+            series = chunk.series_at(col_offset)
+            result.append(
+                TableFrameColumn(
+                    dtype=str(series.dtype),
+                    labels=[series.name],
+                    describe=None if self._exclude_column_describe else chunk.describe(series)
+                )
+            )
+
+        return result
 
     @staticmethod
-    def _extract_cell_values(frame: VisibleFrame, region: Region) -> List[List[TableFrameCell]]:
+    def _extract_cells(chunk: Chunk) -> List[List[TableFrameCell]]:
         result: List[List[TableFrameCell]] = []
 
-        if frame.region.is_empty():
+        if chunk.region.is_empty():
             return result
-
-        source_frame = frame.source_frame
-        dtypes = source_frame.dtypes
-        src_col_idx = frame.get_col_idx_in_source(region)
-        src_row_idx = frame.get_row_idx_in_source(region)
 
         str_lengths = int(os.environ.get("POLARS_FMT_STR_LEN", "42"))
 
-        for sci in src_col_idx:
-            series = source_frame.get_column(source_frame.columns[sci])
-            is_string = isinstance(dtypes[sci], pl.Utf8)
+        for col_offset in range(chunk.region.cols):
+            series = chunk.series_at(col_offset)
+            is_string = isinstance(series.dtype, pl.Utf8)
             should_create_row = not result
-            for ri, sri in enumerate(src_row_idx):
+            for ri, sri in enumerate(chunk.row_idx_iter()):
                 if is_string:
                     # 'series._s.get_fmt(...)' wraps strings with a leading '"' and a trailing '"'.
                     # If the wrapped string exceeds the configured string length, it gets truncated

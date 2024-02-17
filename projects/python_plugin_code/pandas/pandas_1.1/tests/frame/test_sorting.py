@@ -1,13 +1,10 @@
-import operator
-from functools import reduce
-from itertools import chain
-
 import numpy as np
 import pytest
 from pandas import DataFrame, MultiIndex
 from typing import List
 
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
+from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df = DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -31,22 +28,17 @@ def _assert_frame_sorting(
     # create: expected
     sorted_df = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending)
     expected_ctx = FrameContext(sorted_df)
-    expected_cells = expected_ctx.get_table_frame_generator().generate().cells
+    expected_frame = expected_ctx.get_table_frame_generator().generate()
 
     # create: actual
     actual_ctx = FrameContext(df)
     actual_ctx.set_sort_criteria(sort_by_column_index, sort_ascending)
-    actual_cells = actual_ctx.get_table_frame_generator().generate_by_combining_chunks(
+    actual_frame = actual_ctx.get_table_frame_generator().generate_by_combining_chunks(
         rows_per_chunk=rows_per_chunk,
         cols_per_chunk=cols_per_chunk,
-    ).cells
+    )
 
-    actual = actual_ctx.visible_frame.get_chunk().to_frame()
-    expected = expected_ctx.visible_frame.get_chunk().to_frame()
-    assert list(actual.columns) == list(expected.columns)
-    assert list(actual.index) == list(expected.index)
-    assert len(list(chain(*expected_cells))) == reduce(operator.mul, sorted_df.shape, 1)
-    assert actual_cells == expected_cells
+    assert_table_frames(actual_frame, expected_frame)
 
 
 @pytest.mark.parametrize(

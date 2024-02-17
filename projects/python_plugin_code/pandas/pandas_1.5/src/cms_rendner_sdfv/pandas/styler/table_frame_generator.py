@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from pandas import Series, option_context
+from pandas import option_context
 from pandas.io.formats.style import Styler
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
 from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn, TableFrameLegend
 from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
+from cms_rendner_sdfv.pandas.shared.visible_frame import Chunk
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 
@@ -127,7 +128,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
         return self._convert_to_table_frame(
             html_props,
-            chunk_df.dtypes,
+            chunk,
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
             formatter=ValueFormatter(),
@@ -188,23 +189,23 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
     def _convert_to_table_frame(self,
                                 html_props: dict,
-                                dtypes: Series,
+                                chunk: Chunk,
                                 exclude_row_header: bool,
                                 exclude_col_header: bool,
                                 formatter: ValueFormatter,
                                 ) -> TableFrame:
         # html_props => {uuid, table_styles, caption, head, body, cellstyle, table_attributes}
 
-        column_labels = [] if exclude_col_header else self._extract_column_header_labels(html_props, dtypes, formatter)
+        columns = [] if exclude_col_header else self._extract_columns(html_props, chunk, formatter)
         index_labels = [] if exclude_row_header else self._extract_index_header_labels(html_props, formatter)
-        cell_values = self._extract_cell_values(html_props, formatter)
+        cells = self._extract_cells(html_props, formatter)
         legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(html_props, formatter)
 
         return TableFrame(
             index_labels=index_labels,
-            column_labels=column_labels,
+            columns=columns,
             legend=legend_label,
-            cells=cell_values,
+            cells=cells,
         )
 
     @staticmethod
@@ -248,8 +249,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
         return TableFrameLegend(index=index_legend, column=column_legend) if index_legend or column_legend else None
 
-    @staticmethod
-    def _extract_column_header_labels(html_props: dict, dtypes: Series, formatter: ValueFormatter) -> List[TableFrameColumn]:
+    def _extract_columns(self, html_props: dict, chunk: Chunk, formatter: ValueFormatter) -> List[TableFrameColumn]:
         result: List[TableFrameColumn] = []
 
         # leveled column names span multiple rows (one level per row)
@@ -269,7 +269,12 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                             display_value = formatter.format_column(display_value)
                         if is_first_row:
                             result.append(
-                                TableFrameColumn(dtype=str(dtypes.iloc[col_heading_index]), labels=[display_value])
+                                TableFrameColumn(
+                                    dtype=str(chunk.dtype_at(col_heading_index)),
+                                    labels=[display_value],
+                                    describe=None if self._exclude_column_describe else chunk.describe_at(
+                                        col_heading_index),
+                                )
                             )
                         else:
                             result[col_heading_index].labels.append(display_value)
@@ -303,7 +308,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
         return result
 
-    def _extract_cell_values(self, html_props: dict, formatter: ValueFormatter) -> List[List[TableFrameCell]]:
+    def _extract_cells(self, html_props: dict, formatter: ValueFormatter) -> List[List[TableFrameCell]]:
         result: List[List[TableFrameCell]] = []
 
         css_dict = self.__create_css_dict(html_props)

@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -64,29 +64,34 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         chunk = self._visible_frame.get_chunk(region)
         formatter = _ValueFormatter()
 
-        column_labels = [] if exclude_col_header else self._extract_column_header_labels(chunk, formatter)
+        columns = [] if exclude_col_header else self._extract_columns(chunk, formatter)
         index_labels = [] if exclude_row_header else self._extract_index_header_labels(chunk, formatter)
-        cell_values = self._extract_cell_values(chunk, formatter)
+        cells = self._extract_cells(chunk, formatter)
         legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(chunk, formatter)
 
         return TableFrame(
             index_labels=index_labels,
-            column_labels=column_labels,
+            columns=columns,
             legend=legend_label,
-            cells=cell_values,
+            cells=cells,
         )
 
-    @staticmethod
-    def _extract_column_header_labels(chunk: Chunk, formatter: ValueFormatter) -> list[TableFrameColumn]:
+    def _extract_columns(self, chunk: Chunk, formatter: ValueFormatter) -> list[TableFrameColumn]:
         result: list[TableFrameColumn] = []
 
-        for c in range(chunk.region.cols):
-            col_name = chunk.column_at(c)
-            if isinstance(col_name, tuple):
-                labels = [formatter.format_column(h) for h in col_name]
+        for col_offset in range(chunk.region.cols):
+            name = chunk.column_at(col_offset)
+            if isinstance(name, tuple):
+                labels = [formatter.format_column(h) for h in name]
             else:
-                labels = [formatter.format_column(col_name)]
-            result.append(TableFrameColumn(dtype=str(chunk.dtype_at(c)), labels=labels))
+                labels = [formatter.format_column(name)]
+            result.append(
+                TableFrameColumn(
+                    dtype=str(chunk.dtype_at(col_offset)),
+                    labels=labels,
+                    describe=None if self._exclude_column_describe else chunk.describe_at(col_offset),
+                )
+            )
 
         return result
 
@@ -94,22 +99,25 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
     def _extract_index_header_labels(chunk: Chunk, formatter: ValueFormatter) -> list[list[str]]:
         result: list[list[str]] = []
 
-        for r in range(chunk.region.rows):
-            index_name = chunk.index_at(r)
-            if isinstance(index_name, tuple):
-                result.append([formatter.format_index(h) for h in index_name])
+        for row_offset in range(chunk.region.rows):
+            name = chunk.index_at(row_offset)
+            if isinstance(name, tuple):
+                result.append([formatter.format_index(h) for h in name])
             else:
-                result.append([formatter.format_index(index_name)])
+                result.append([formatter.format_index(name)])
 
         return result
 
     @staticmethod
-    def _extract_cell_values(chunk: Chunk, formatter: ValueFormatter) -> list[list[TableFrameCell]]:
+    def _extract_cells(chunk: Chunk, formatter: ValueFormatter) -> list[list[TableFrameCell]]:
         result: list[list[TableFrameCell]] = []
 
         col_range = range(chunk.region.cols)
-        for r in range(chunk.region.rows):
-            result.append([TableFrameCell(value=formatter.format_cell(chunk.cell_value_at(r, c))) for c in col_range])
+        for row_offset in range(chunk.region.rows):
+            result.append(
+                [TableFrameCell(
+                    value=formatter.format_cell(chunk.cell_value_at(row_offset, col_offset))
+                ) for col_offset in col_range])
 
         return result
 

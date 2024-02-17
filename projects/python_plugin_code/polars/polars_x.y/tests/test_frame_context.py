@@ -14,13 +14,13 @@ df = pl.from_dict({
 def test_previous_sort_criteria_does_not_affect_later_sort_criteria():
     ctx = FrameContext(df)
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[True])
-    index_after_first_sort = ctx.visible_frame.get_row_idx_in_source(ctx.visible_frame.region)
+    index_after_first_sort = list(ctx.visible_frame.row_idx_iter())
 
     ctx.set_sort_criteria(sort_by_column_index=[0, 1], sort_ascending=[False, False])
     # assert to ensure test setup is correct
-    index_in_between = ctx.visible_frame.get_row_idx_in_source(ctx.visible_frame.region)
+    index_in_between = list(ctx.visible_frame.row_idx_iter())
     assert index_after_first_sort != index_in_between
 
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[True])
-    index_after_last_sort = ctx.visible_frame.get_row_idx_in_source(ctx.visible_frame.region)
+    index_after_last_sort = list(ctx.visible_frame.row_idx_iter())
     assert index_after_first_sort == index_after_last_sort

@@ -1,14 +1,14 @@
 import json
-from itertools import chain
 from typing import Any, Union
 
 import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, TableFrameColumn, \
-    TableSourceKind
+    TableSourceKind, TableFrameCell
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.table_source_factory import TableSourceFactory
+from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df = pd.DataFrame.from_dict({
     "col_0": [1, 2, 3],
@@ -85,13 +85,20 @@ def test_create_with_filter():
     assert table_source.get_kind() == TableSourceKind.PATCHED_STYLER
 
     table_frame = _get_table_frame(table_source)
-    assert table_frame.column_labels == [
-        TableFrameColumn(dtype='int64', labels=['col_0']),
-        TableFrameColumn(dtype='int64', labels=['col_1']),
-    ]
-    assert table_frame.index_labels == [['1'], ['2']]
-    assert table_frame.legend is None
-    assert list(map(lambda c: c.value, chain(*table_frame.cells))) == ['2', '5', '3', '6']
+    assert_table_frames(
+        table_frame,
+        TableFrame(
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['col_0']),
+                TableFrameColumn(dtype='int64', labels=['col_1']),
+            ],
+            index_labels=[['1'], ['2']],
+            cells=[
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+                [TableFrameCell(value='3'), TableFrameCell(value='6')]
+            ],
+        )
+    )
 
 
 def test_filter_expr_can_resolve_local_variable():

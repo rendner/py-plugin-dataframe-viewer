@@ -1,14 +1,14 @@
 import json
-from itertools import chain
 from typing import Any, Union
 
 import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableFrameColumn, TableSourceKind
+    TableFrameColumn, TableSourceKind, TableFrameCell
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
 from cms_rendner_sdfv.pandas.frame.table_source_factory import TableSourceFactory
+from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df_dict = {
     "col_0": [1, 2, 3],
@@ -45,13 +45,21 @@ def test_create_for_dict_orient_columns():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert table_frame.column_labels == [
-        TableFrameColumn(dtype='int64', labels=['col_0']),
-        TableFrameColumn(dtype='int64', labels=['col_1']),
-    ]
-    assert table_frame.index_labels == [['0'], ['1'], ['2']]
-    assert table_frame.legend is None
-    assert list(map(lambda c: c.value, chain(*table_frame.cells))) == ['1', '4', '2', '5', '3', '6']
+    assert_table_frames(
+        table_frame,
+        TableFrame(
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['col_0']),
+                TableFrameColumn(dtype='int64', labels=['col_1']),
+            ],
+            index_labels=[['0'], ['1'], ['2']],
+            cells=[
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+                [TableFrameCell(value='3'), TableFrameCell(value='6')]
+            ],
+        )
+    )
 
 
 def test_create_for_dict_orient_index():
@@ -63,14 +71,21 @@ def test_create_for_dict_orient_index():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert table_frame.column_labels == [
-        TableFrameColumn(dtype='int64', labels=['0']),
-        TableFrameColumn(dtype='int64', labels=['1']),
-        TableFrameColumn(dtype='int64', labels=['2']),
-    ]
-    assert table_frame.index_labels == [['col_0'], ['col_1']]
-    assert table_frame.legend is None
-    assert list(map(lambda c: c.value, chain(*table_frame.cells))) == ['1', '2', '3', '4', '5', '6']
+    assert_table_frames(
+        table_frame,
+        TableFrame(
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['0']),
+                TableFrameColumn(dtype='int64', labels=['1']),
+                TableFrameColumn(dtype='int64', labels=['2']),
+            ],
+            index_labels=[['col_0'], ['col_1']],
+            cells=[
+                [TableFrameCell(value='1'), TableFrameCell(value='2'), TableFrameCell(value='3')],
+                [TableFrameCell(value='4'), TableFrameCell(value='5'), TableFrameCell(value='6')],
+            ],
+        )
+    )
 
 
 # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.from_dict.html
@@ -134,13 +149,20 @@ def test_create_with_filter():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert table_frame.column_labels == [
-        TableFrameColumn(dtype='int64', labels=['col_0']),
-        TableFrameColumn(dtype='int64', labels=['col_1']),
-    ]
-    assert table_frame.index_labels == [['1'], ['2']]
-    assert table_frame.legend is None
-    assert list(map(lambda c: c.value, chain(*table_frame.cells))) == ['2', '5', '3', '6']
+    assert_table_frames(
+        table_frame,
+        TableFrame(
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['col_0']),
+                TableFrameColumn(dtype='int64', labels=['col_1']),
+            ],
+            index_labels=[['1'], ['2']],
+            cells=[
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+                [TableFrameCell(value='3'), TableFrameCell(value='6')],
+            ],
+        )
+    )
 
 
 def test_filter_expr_can_resolve_local_variable():

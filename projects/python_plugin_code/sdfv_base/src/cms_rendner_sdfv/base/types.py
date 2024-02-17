@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -25,28 +25,29 @@ class TableStructure:
     fingerprint: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class TableFrameCell:
     value: str
     css: Dict[str, str] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class TableFrameColumn:
     dtype: str
     labels: List[str]
+    describe: Dict[str, str] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class TableFrameLegend:
     index: List[str]
     column: List[str]
 
 
-@dataclass
+@dataclass(frozen=True)
 class TableFrame:
     index_labels: Union[None, List[List[str]]]
-    column_labels: Union[None, List[TableFrameColumn]]
+    columns: Union[None, List[TableFrameColumn]]
     cells: List[List[TableFrameCell]]
     legend: Union[None, TableFrameLegend] = None
 

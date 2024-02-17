@@ -1,14 +1,14 @@
 import json
-from itertools import chain
 from typing import Any, Union
 
 import polars as pl
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, TableFrameColumn, \
-    TableSourceKind
+    TableSourceKind, TableFrameCell
 from cms_rendner_sdfv.polars.table_source import TableSource
 from cms_rendner_sdfv.polars.table_source_factory import TableSourceFactory
+from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df_dict = {
     "0": [0, 1, 2],
@@ -45,13 +45,21 @@ def test_create_for_dict():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert table_frame.column_labels == [
-        TableFrameColumn(dtype='Int64', labels=['0']),
-        TableFrameColumn(dtype='Int64', labels=['1']),
-    ]
-    assert table_frame.index_labels is None
-    assert table_frame.legend is None
-    assert list(map(lambda c: c.value, chain(*table_frame.cells))) == ['0', '3', '1', '4', '2', '5']
+    assert_table_frames(
+        table_frame,
+        TableFrame(
+            columns=[
+                TableFrameColumn(dtype='Int64', labels=['0']),
+                TableFrameColumn(dtype='Int64', labels=['1']),
+            ],
+            index_labels=None,
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='3')],
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5')]
+            ],
+        )
+    )
 
 
 def test_create_fails_on_unsupported_data_source():

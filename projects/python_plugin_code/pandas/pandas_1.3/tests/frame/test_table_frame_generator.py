@@ -3,6 +3,7 @@ from pandas import option_context
 
 from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, TableFrameColumn, TableFrameLegend
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
+from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 
 def test_index_int():
@@ -12,17 +13,20 @@ def test_index_int():
     })
     ctx = FrameContext(df)
     actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert actual == TableFrame(
-        index_labels=[['0'], ['1'], ['2']],
-        column_labels=[
-            TableFrameColumn(dtype='int64', labels=['0']),
-            TableFrameColumn(dtype='int64', labels=['1']),
-        ],
-        cells=[
-            [TableFrameCell(value='0'), TableFrameCell(value='3')],
-            [TableFrameCell(value='1'), TableFrameCell(value='4')],
-            [TableFrameCell(value='2'), TableFrameCell(value='5')],
-        ],
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['0'], ['1'], ['2']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['0']),
+                TableFrameColumn(dtype='int64', labels=['1']),
+            ],
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='3')],
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+            ],
+        )
     )
 
 
@@ -33,17 +37,20 @@ def test_index_string():
     })
     ctx = FrameContext(df)
     actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert actual == TableFrame(
-        index_labels=[['0'], ['1'], ['2']],
-        column_labels=[
-            TableFrameColumn(dtype='int64', labels=['col_0']),
-            TableFrameColumn(dtype='int64', labels=['col_1']),
-        ],
-        cells=[
-            [TableFrameCell(value='0'), TableFrameCell(value='3')],
-            [TableFrameCell(value='1'), TableFrameCell(value='4')],
-            [TableFrameCell(value='2'), TableFrameCell(value='5')],
-        ],
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['0'], ['1'], ['2']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['col_0']),
+                TableFrameColumn(dtype='int64', labels=['col_1']),
+            ],
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='3')],
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+            ],
+        )
     )
 
 
@@ -55,18 +62,21 @@ def test_leveled_columns():
     })
     ctx = FrameContext(df)
     actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert actual == TableFrame(
-        index_labels=[['0'], ['1'], ['2']],
-        column_labels=[
-            TableFrameColumn(dtype='int64', labels=['A', 'col_0']),
-            TableFrameColumn(dtype='int64', labels=['A', 'col_1']),
-            TableFrameColumn(dtype='int64', labels=['B', 'col_2']),
-        ],
-        cells=[
-            [TableFrameCell(value='0'), TableFrameCell(value='3'), TableFrameCell(value='6')],
-            [TableFrameCell(value='1'), TableFrameCell(value='4'), TableFrameCell(value='7')],
-            [TableFrameCell(value='2'), TableFrameCell(value='5'), TableFrameCell(value='8')],
-        ],
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['0'], ['1'], ['2']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['A', 'col_0']),
+                TableFrameColumn(dtype='int64', labels=['A', 'col_1']),
+                TableFrameColumn(dtype='int64', labels=['B', 'col_2']),
+            ],
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='3'), TableFrameCell(value='6')],
+                [TableFrameCell(value='1'), TableFrameCell(value='4'), TableFrameCell(value='7')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5'), TableFrameCell(value='8')],
+            ],
+        )
     )
 
 
@@ -81,19 +91,22 @@ def test_multi_index_index_with_named_index_levels():
 
     ctx = FrameContext(df)
     actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert actual == TableFrame(
-        index_labels=[['X', 'green'], ['X', 'purple'], ['Y', 'green'], ['Y', 'purple']],
-        column_labels=[
-            TableFrameColumn(dtype='int64', labels=['col_0']),
-            TableFrameColumn(dtype='int64', labels=['col_1']),
-        ],
-        legend=TableFrameLegend(index=['char', 'color'], column=[]),
-        cells=[
-            [TableFrameCell(value='0'), TableFrameCell(value='4')],
-            [TableFrameCell(value='1'), TableFrameCell(value='5')],
-            [TableFrameCell(value='2'), TableFrameCell(value='6')],
-            [TableFrameCell(value='3'), TableFrameCell(value='7')],
-        ],
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['X', 'green'], ['X', 'purple'], ['Y', 'green'], ['Y', 'purple']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['col_0']),
+                TableFrameColumn(dtype='int64', labels=['col_1']),
+            ],
+            legend=TableFrameLegend(index=['char', 'color'], column=[]),
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='4')],
+                [TableFrameCell(value='1'), TableFrameCell(value='5')],
+                [TableFrameCell(value='2'), TableFrameCell(value='6')],
+                [TableFrameCell(value='3'), TableFrameCell(value='7')],
+            ],
+        )
     )
 
 
@@ -108,19 +121,22 @@ def test_multi_index_with_named_index_levels_and_leveled_columns():
 
     ctx = FrameContext(df)
     actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert actual == TableFrame(
-        index_labels=[['X', 'green'], ['X', 'purple'], ['Y', 'green'], ['Y', 'purple']],
-        column_labels=[
-            TableFrameColumn(dtype='int64', labels=['A', 'col_0']),
-            TableFrameColumn(dtype='float32', labels=['B', 'col_1']),
-        ],
-        legend=TableFrameLegend(index=['char', 'color'], column=[]),
-        cells=[
-            [TableFrameCell(value='0'), TableFrameCell(value='4.000000')],
-            [TableFrameCell(value='1'), TableFrameCell(value='5.000000')],
-            [TableFrameCell(value='2'), TableFrameCell(value='6.000000')],
-            [TableFrameCell(value='3'), TableFrameCell(value='7.000000')],
-        ],
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['X', 'green'], ['X', 'purple'], ['Y', 'green'], ['Y', 'purple']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['A', 'col_0']),
+                TableFrameColumn(dtype='float32', labels=['B', 'col_1']),
+            ],
+            legend=TableFrameLegend(index=['char', 'color'], column=[]),
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='4.000000')],
+                [TableFrameCell(value='1'), TableFrameCell(value='5.000000')],
+                [TableFrameCell(value='2'), TableFrameCell(value='6.000000')],
+                [TableFrameCell(value='3'), TableFrameCell(value='7.000000')],
+            ],
+        )
     )
 
 
@@ -133,18 +149,21 @@ def test_multi_index_multi_columns_with_named_index_levels_and_named_column_leve
 
     ctx = FrameContext(df)
     actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert actual == TableFrame(
-        index_labels=[['2013', '1'], ['2013', '2'], ['2014', '1'], ['2014', '2']],
-        column_labels=[
-            TableFrameColumn(dtype='int64', labels=['Bob', 'HR']),
-            TableFrameColumn(dtype='int64', labels=['Bob', 'AI']),
-            TableFrameColumn(dtype='int64', labels=['Guido', 'HR']),
-            TableFrameColumn(dtype='int64', labels=['Guido', 'AI']),
-            TableFrameColumn(dtype='int64', labels=['Sue', 'HR']),
-            TableFrameColumn(dtype='int64', labels=['Sue', 'AI']),
-        ],
-        legend=TableFrameLegend(index=['year', 'visit'], column=['subject', 'type']),
-        cells=[[TableFrameCell(value=f'{i}')] * 6 for i in range(0, 4)],
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['2013', '1'], ['2013', '2'], ['2014', '1'], ['2014', '2']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['Bob', 'HR']),
+                TableFrameColumn(dtype='int64', labels=['Bob', 'AI']),
+                TableFrameColumn(dtype='int64', labels=['Guido', 'HR']),
+                TableFrameColumn(dtype='int64', labels=['Guido', 'AI']),
+                TableFrameColumn(dtype='int64', labels=['Sue', 'HR']),
+                TableFrameColumn(dtype='int64', labels=['Sue', 'AI']),
+            ],
+            legend=TableFrameLegend(index=['year', 'visit'], column=['subject', 'type']),
+            cells=[[TableFrameCell(value=f'{i}')] * 6 for i in range(0, 4)],
+        )
     )
 
 
@@ -156,35 +175,22 @@ def test_index_multi_columns_with_named_column_levels():
 
     ctx = FrameContext(df)
     actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert actual == TableFrame(
-        index_labels=[['0'], ['1'], ['2'], ['3']],
-        column_labels=[
-            TableFrameColumn(dtype='int64', labels=['Bob', 'HR']),
-            TableFrameColumn(dtype='int64', labels=['Bob', 'AI']),
-            TableFrameColumn(dtype='int64', labels=['Guido', 'HR']),
-            TableFrameColumn(dtype='int64', labels=['Guido', 'AI']),
-            TableFrameColumn(dtype='int64', labels=['Sue', 'HR']),
-            TableFrameColumn(dtype='int64', labels=['Sue', 'AI']),
-        ],
-        legend=TableFrameLegend(index=[], column=['subject', 'type']),
-        cells=[[TableFrameCell(value=f'{i}')] * 6 for i in range(0, 4)],
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['0'], ['1'], ['2'], ['3']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['Bob', 'HR']),
+                TableFrameColumn(dtype='int64', labels=['Bob', 'AI']),
+                TableFrameColumn(dtype='int64', labels=['Guido', 'HR']),
+                TableFrameColumn(dtype='int64', labels=['Guido', 'AI']),
+                TableFrameColumn(dtype='int64', labels=['Sue', 'HR']),
+                TableFrameColumn(dtype='int64', labels=['Sue', 'AI']),
+            ],
+            legend=TableFrameLegend(index=[], column=['subject', 'type']),
+            cells=[[TableFrameCell(value=f'{i}')] * 6 for i in range(0, 4)],
+        )
     )
-
-
-def test_generate_by_combining_chunks():
-    df = pd.DataFrame.from_dict({
-        ('A', 'col_0'): [0, 1, 2, 3],
-        ('B', 'col_1'): [4, 5, 6, 7],
-        ('B', 'col_2'): [4, 5, 6, 7],
-    })
-    chars = ['X', 'Y']
-    colors = ['green', 'purple']
-    df.index = pd.MultiIndex.from_product([chars, colors], names=['char', 'color'])
-
-    ctx = FrameContext(df)
-    table_generator = ctx.get_table_frame_generator()
-    actual = table_generator.generate_by_combining_chunks(rows_per_chunk=1, cols_per_chunk=1)
-    assert actual == table_generator.generate_by_combining_chunks(2, 2)
 
 
 def test_generate_ignores_max_elements_option():
@@ -195,12 +201,64 @@ def test_generate_ignores_max_elements_option():
 
         ctx = FrameContext(df)
         actual = ctx.get_table_frame_generator().generate()
-        assert actual == TableFrame(
-            index_labels=[['0'], ['1'], ['2']],
-            column_labels=[TableFrameColumn(dtype='int64', labels=['0'])],
-            cells=[
-                [TableFrameCell(value='0')],
-                [TableFrameCell(value='1')],
-                [TableFrameCell(value='2')],
-            ],
+        assert_table_frames(
+            actual,
+            TableFrame(
+                index_labels=[['0'], ['1'], ['2']],
+                columns=[TableFrameColumn(dtype='int64', labels=['0'])],
+                cells=[
+                    [TableFrameCell(value='0')],
+                    [TableFrameCell(value='1')],
+                    [TableFrameCell(value='2')],
+                ],
+            )
         )
+
+
+def test_column_describe():
+    data_dict = {
+        'categorical': pd.Categorical(['d', 'e', 'f']),
+        'numeric': [1, 2, 3],
+    }
+
+    df = pd.DataFrame.from_dict(data_dict)
+    ctx = FrameContext(df)
+    actual = ctx.get_table_frame_generator().generate()
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['0'], ['1'], ['2']],
+            columns=[
+                TableFrameColumn(
+                    dtype='category',
+                    labels=['categorical'],
+                    describe={
+                        'count': '3',
+                        'unique': '3',
+                        'top': 'd',
+                        'freq': '1',
+                    },
+                ),
+                TableFrameColumn(
+                    dtype='int64',
+                    labels=['numeric'],
+                    describe={
+                        'count': '3.0',
+                        'mean': '2.0',
+                        'std': '1.0',
+                        'min': '1.0',
+                        '25%': '1.5',
+                        '50%': '2.0',
+                        '75%': '2.5',
+                        'max': '3.0',
+                    },
+                ),
+            ],
+            cells=[
+                [TableFrameCell(value='d'), TableFrameCell(value='1')],
+                [TableFrameCell(value='e'), TableFrameCell(value='2')],
+                [TableFrameCell(value='f'), TableFrameCell(value='3')]
+            ],
+        ),
+        include_column_describe=True,
+    )

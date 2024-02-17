@@ -3,7 +3,6 @@ from pandas import DataFrame, Index, IndexSlice
 
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
 from tests.helpers.asserts.assert_patched_styler_filtering import assert_patched_styler_filtering
 
 df = DataFrame.from_dict({
@@ -36,7 +35,7 @@ def test_combined_chunks_do_not_include_a_highlighted_min_after_filtering_min_va
     ctx = PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame))
 
     # expect: no styled min value
-    table = TableFrameGenerator(ctx).generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
+    table = ctx.get_table_frame_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
     for row in table.cells:
         for entry in row:
             assert entry.css is None
@@ -51,7 +50,7 @@ def test_combined_chunks_do_include_highlighted_min_values_after_filtering():
     filter_frame = df.filter(items=[1, 2], axis='index')
     ctx = PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame))
 
-    table = TableFrameGenerator(ctx).generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
+    table = ctx.get_table_frame_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
 
     highlighted_values_found = 0
     for row in table.cells:

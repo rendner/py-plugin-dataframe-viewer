@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ VF = typing.TypeVar('VF', bound=AbstractVisibleFrame)
 class AbstractTableFrameGenerator(ABC):
     def __init__(self, visible_frame: VF):
         self._visible_frame: VF = visible_frame
+        self._exclude_column_describe: bool = False
 
     @abstractmethod
     def generate(self,
@@ -47,6 +48,9 @@ class AbstractTableFrameGenerator(ABC):
                  exclude_col_header: bool = False,
                  ) -> TableFrame:
         pass
+
+    def exclude_column_describe(self, exclude: bool):
+        self._exclude_column_describe = exclude
 
     def generate_by_combining_chunks(self,
                                      rows_per_chunk: int,
@@ -79,7 +83,7 @@ class AbstractTableFrameGenerator(ABC):
                 result = chunk_table
             else:
                 if chunk_contains_elements_of_first_row:
-                    result.column_labels.extend(chunk_table.column_labels)
+                    result.columns.extend(chunk_table.columns)
                 if chunk_contains_row_start_element:
                     if result.index_labels is not None:
                         assert chunk_table.index_labels is not None
@@ -89,7 +93,7 @@ class AbstractTableFrameGenerator(ABC):
                     for i, row in enumerate(chunk_table.cells):
                         result.cells[i + chunk_region.first_row].extend(row)
 
-        return result if result is not None else TableFrame(index_labels=[], column_labels=[], legend=None, cells=[])
+        return result if result is not None else TableFrame(index_labels=[], columns=[], legend=None, cells=[])
 
 
 class TableFrameValidator:
@@ -134,7 +138,9 @@ class AbstractTableSourceContext(ABC):
         pass
 
     def get_table_frame_validator(self) -> TableFrameValidator:
-        return TableFrameValidator(self.visible_frame.region, self.get_table_frame_generator())
+        generator = self.get_table_frame_generator()
+        generator.exclude_column_describe(True)
+        return TableFrameValidator(self.visible_frame.region, generator)
 
 
 T = typing.TypeVar('T', bound=AbstractTableSourceContext)

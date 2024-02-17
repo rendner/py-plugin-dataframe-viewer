@@ -1,11 +1,10 @@
-import math
-from itertools import chain
 from typing import List
 
 import polars as pl
 import pytest
 
 from cms_rendner_sdfv.polars.frame_context import FrameContext
+from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df = pl.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -26,18 +25,17 @@ def _assert_frame_sorting(
     # create: expected
     sorted_df = df.sort(by=[df.columns[i] for i in sort_by_column_index], descending=sort_descending)
     expected_ctx = FrameContext(sorted_df)
-    expected_cells = expected_ctx.get_table_frame_generator().generate().cells
+    expected_frame = expected_ctx.get_table_frame_generator().generate()
 
     # create: actual
     actual_ctx = FrameContext(df)
     actual_ctx.set_sort_criteria(sort_by_column_index, sort_ascending=[not desc for desc in sort_descending])
-    actual_cells = actual_ctx.get_table_frame_generator().generate_by_combining_chunks(
+    actual_frame = actual_ctx.get_table_frame_generator().generate_by_combining_chunks(
         rows_per_chunk=rows_per_chunk,
         cols_per_chunk=cols_per_chunk,
-    ).cells
+    )
 
-    assert len(list(chain(*expected_cells))) == math.prod(sorted_df.shape)
-    assert actual_cells == expected_cells
+    assert_table_frames(actual_frame, expected_frame)
 
 
 @pytest.mark.parametrize(
