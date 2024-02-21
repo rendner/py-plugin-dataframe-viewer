@@ -1,11 +1,26 @@
 from pandas import option_context
 
+from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN, DESCRIBE_COL_MAX_STR_LEN
 from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, TableFrameColumn, TableFrameLegend
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 
 import pandas as pd
 
 from tests.helpers.asserts.assert_table_frames import assert_table_frames
+
+
+def test_truncate_cells():
+    df = pd.DataFrame.from_dict({'A': ['ab' * CELL_MAX_STR_LEN]})
+    ctx = PatchedStylerContext(df.style)
+    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
+    assert len(actual.cells[0][0].value) == CELL_MAX_STR_LEN
+
+
+def test_truncate_column_describe():
+    df = pd.DataFrame.from_dict({'A': ['ab' * DESCRIBE_COL_MAX_STR_LEN]})
+    ctx = PatchedStylerContext(df.style)
+    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
+    assert len(actual.columns[0].describe.get('top')) == DESCRIBE_COL_MAX_STR_LEN
 
 
 def test_index_int():

@@ -16,6 +16,7 @@ from typing import List
 
 import polars as pl
 
+from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
 from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame, Chunk
@@ -64,7 +65,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         if chunk.region.is_empty():
             return result
 
-        str_lengths = int(os.environ.get("POLARS_FMT_STR_LEN", "42"))
+        str_lengths = int(os.environ.get("POLARS_FMT_STR_LEN", str(CELL_MAX_STR_LEN)))
 
         for col_offset in range(chunk.region.cols):
             series = chunk.series_at(col_offset)

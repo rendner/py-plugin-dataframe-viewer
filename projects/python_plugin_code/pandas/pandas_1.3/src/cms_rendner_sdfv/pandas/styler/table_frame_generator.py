@@ -235,9 +235,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
                         if is_index_name:
                             display_value = element.get("display_value", "")
-                            if not isinstance(display_value, str):
-                                display_value = formatter.format_index(display_value)
-                            column_legend.append(display_value)
+                            column_legend.append(formatter.format_index(display_value))
                             # there should be only one header per row which belongs to the column-legend
                             break
 
@@ -258,9 +256,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                     is_column_header = "col_heading" in element_classes
 
                     if is_column_header:
-                        display_value = element.get("display_value", "")
-                        if not isinstance(display_value, str):
-                            display_value = formatter.format_column(display_value)
+                        display_value = formatter.format_column(element.get("display_value", ""))
                         if is_first_row:
                             result.append(
                                 TableFrameColumn(
@@ -293,9 +289,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
                     if is_index_header:
                         display_value = element.get("display_value", "")
-                        if not isinstance(display_value, str):
-                            display_value = formatter.format_index(display_value)
-                        index_label.append(display_value)
+                        index_label.append(formatter.format_index(display_value))
 
             if index_label:
                 result.append(index_label)
@@ -317,12 +311,9 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                     element_classes = set(element.get("class", "").split(" "))
 
                     if "data" in element_classes:
-                        display_value = element.get("display_value", "")
-                        if not isinstance(display_value, str):
-                            display_value = formatter.format_cell(display_value)
                         cells_in_row.append(
                             TableFrameCell(
-                                value=display_value,
+                                value=formatter.format_cell(element.get("display_value", "")),
                                 css=self._get_css_dict(element.get("id", None), element_classes, css_dict),
                             ),
                         )

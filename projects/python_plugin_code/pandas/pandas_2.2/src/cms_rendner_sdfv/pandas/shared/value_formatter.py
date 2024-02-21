@@ -16,22 +16,28 @@ from typing import Any
 from pandas.errors import OptionError
 from pandas.io.formats.printing import pprint_thing, get_option
 
+from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
+from cms_rendner_sdfv.base.helpers import truncate_str
+
 
 class ValueFormatter:
 
     @staticmethod
     def format_column(value: Any) -> str:
-        return pprint_thing(value)
+        return value if isinstance(value, str) else pprint_thing(value)
 
     @staticmethod
     def format_index(value: Any) -> str:
-        return pprint_thing(value)
+        return value if isinstance(value, str) else pprint_thing(value)
 
     @staticmethod
     def format_cell(value: Any) -> str:
-        max_seq_items = None
-        try:
-            max_seq_items = get_option("display.max_seq_items", True)
-        except OptionError:
-            pass
-        return pprint_thing(value, max_seq_items=max_seq_items or 42)
+        v = value
+        if not isinstance(v, str):
+            max_seq_items = None
+            try:
+                max_seq_items = get_option("display.max_seq_items", True)
+            except OptionError:
+                pass
+            v = pprint_thing(v, max_seq_items=max_seq_items or 42)
+        return truncate_str(v, CELL_MAX_STR_LEN)

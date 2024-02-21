@@ -16,6 +16,8 @@ from typing import Any, Callable, List, Tuple, Dict
 import numpy as np
 from pandas import DataFrame, Series
 
+from cms_rendner_sdfv.base.constants import DESCRIBE_COL_MAX_STR_LEN
+from cms_rendner_sdfv.base.helpers import truncate_str
 from cms_rendner_sdfv.base.table_source import AbstractVisibleFrame
 from cms_rendner_sdfv.base.types import Region
 
@@ -46,14 +48,8 @@ class Chunk:
 
     def describe_at(self, col: int) -> Dict[str, str]:
         s: Series = self._frame.source_frame.iloc[:, self._frame.i_cols[self.region.first_col + col]]
-
-        def truncate(v) -> str:
-            vs = str(v)
-            # truncate too long values like lists
-            return vs if len(vs) <= 120 else vs[:120] + '…'
-
         try:
-            return {k: truncate(v) for k, v in s.describe().to_dict().items()}
+            return {k: truncate_str(str(v), DESCRIBE_COL_MAX_STR_LEN) for k, v in s.describe().to_dict().items()}
         except TypeError as e:
             return {'error': str(e)}
 
