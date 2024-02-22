@@ -88,17 +88,13 @@ def test_create_for_dict_orient_index():
     )
 
 
-# https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.from_dict.html
-# the passed dict has to be of the form {field : array-like} or {field : dict},
-# otherwise an error is raised
-# https://github.com/pandas-dev/pandas/issues/12387
+def test_create_for_dict_with_scalars_should_not_raise():
+    d = {"a": 1}
+    table_source = _create_table_source(d)
+    assert isinstance(table_source, TableSource)
 
-def test_create_for_dict_with_scalars_raises_error_as_expected():
-    failure = _create_table_source({"a": 1})
-
-    assert isinstance(failure, CreateTableSourceFailure)
-    assert failure.error_kind == "EVAL_EXCEPTION"
-    assert failure.info == "ValueError('If using all scalar values, you must pass an index')"
+    table_source = _create_table_source(d, CreateTableSourceConfig(data_source_transform_hint="DictKeysAsRows"))
+    assert isinstance(table_source, TableSource)
 
 
 def test_create_fails_on_unsupported_data_source():

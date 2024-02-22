@@ -37,7 +37,13 @@ class TableSourceFactory(AbstractTableSourceFactory):
             elif all(name in data_source for name in ["index", "columns", "data", "index_names", "column_names"]):
                 ds_frame = DataFrame.from_dict(data_source, orient='tight')
             else:
-                ds_frame = DataFrame.from_dict(data_source, orient='columns')
+                try:
+                    ds_frame = DataFrame.from_dict(data_source, orient='columns')
+                except ValueError as e:
+                    # fix if dict is not of the form {field : array-like} or {field : dict}
+                    # https://github.com/pandas-dev/pandas/issues/12387
+                    if str(e) == "If using all scalar values, you must pass an index":
+                        ds_frame = DataFrame(data_source, index=[0])
         elif isinstance(data_source, DataFrame):
             ds_frame = data_source
         else:

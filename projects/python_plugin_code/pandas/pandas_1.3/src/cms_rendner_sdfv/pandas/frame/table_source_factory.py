@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -35,7 +35,13 @@ class TableSourceFactory(AbstractTableSourceFactory):
             if config.data_source_transform_hint == "DictKeysAsRows":
                 ds_frame = DataFrame.from_dict(data_source, orient='index')
             else:
-                ds_frame = DataFrame.from_dict(data_source, orient='columns')
+                try:
+                    ds_frame = DataFrame.from_dict(data_source, orient='columns')
+                except ValueError as e:
+                    # fix if dict is not of the form {field : array-like} or {field : dict}
+                    # https://github.com/pandas-dev/pandas/issues/12387
+                    if str(e) == "If using all scalar values, you must pass an index":
+                        ds_frame = DataFrame(data_source, index=[0])
         elif isinstance(data_source, DataFrame):
             ds_frame = data_source
         else:
