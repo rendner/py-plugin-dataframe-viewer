@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,8 +49,8 @@ data class DataFrameLibrary(val moduleName: String) {
 interface IEvalAvailableDataFrameLibraries {
     fun getEvalExpression(): String {
         val libsToCheck = DataFrameLibrary.supportedLibraries.map { stringifyString(it.moduleName) }
-        // the check is not guarded with a try/catch therefore one exception aborts the whole check
-        return "(lambda i, s: {p: p in s.modules or i.util.find_spec(p) is not None for p in $libsToCheck})(__import__('importlib'), __import__('sys'))"
+        // the check is not guarded with a try/catch therefore an exception aborts the whole check
+        return "(lambda i, s: {p: p in s.modules or i.util.find_spec(p) is not None for p in $libsToCheck})(__import__('importlib.util'), __import__('sys'))"
     }
 
     fun convertResult(result: String): List<DataFrameLibrary> {
