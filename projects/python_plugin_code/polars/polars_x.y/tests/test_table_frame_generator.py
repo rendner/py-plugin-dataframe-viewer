@@ -69,12 +69,6 @@ def test_config_float_precision():
     assert actual.cells[0][0].value == '1.235'
 
 
-def test_failed_describe_does_not_raise():
-    df = pl.DataFrame({"a": [[1]]})
-    frame = FrameContext(df).get_table_frame_generator().generate()
-    assert frame.columns[0].describe.get('error') == 'cannot describe Series of data type List(Int64)'
-
-
 def test_describe():
     df = pl.DataFrame({
         'numeric': [1, 2, 3],
@@ -109,7 +103,8 @@ def test_describe():
                     describe={
                         'count': '3',
                         'null_count': '0',
-                        'unique': '3',
+                        'min': 'a',
+                        'max': 'c',
                     }
                 ),
             ],
