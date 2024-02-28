@@ -77,3 +77,21 @@ interface IPluginPyValueEvaluator {
         return false
     }
 }
+
+
+interface IPluginEdtAwareDebugSessionListener {
+    fun sessionPaused() {
+    }
+
+    fun sessionResumed() {
+    }
+
+    fun sessionStopped() {
+    }
+
+    fun stackFrameChanged() {
+    }
+
+    fun beforeSessionResume() {
+    }
+}
