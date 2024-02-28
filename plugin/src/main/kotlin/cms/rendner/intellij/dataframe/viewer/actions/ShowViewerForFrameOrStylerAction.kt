@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.actions
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
+import cms.rendner.intellij.dataframe.viewer.python.pycharm.debugProcessIsTerminated
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.jetbrains.python.debugger.PyDebugValue
 
@@ -25,7 +26,8 @@ import com.jetbrains.python.debugger.PyDebugValue
 class ShowViewerForFrameOrStylerAction : BaseShowViewerAction() {
     override fun update(event: AnActionEvent) {
         event.presentation.isEnabledAndVisible = getSelectedDebugValue(event)?.let {
-            getApplicableCodeProviders(event, it).isNotEmpty()
+            if (it.frameAccessor.debugProcessIsTerminated()) false
+            else getApplicableCodeProviders(event, it).isNotEmpty()
         } ?: false
     }
 
