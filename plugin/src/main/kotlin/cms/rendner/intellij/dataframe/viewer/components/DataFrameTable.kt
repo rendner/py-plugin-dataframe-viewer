@@ -988,6 +988,7 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
             if (e?.id == MouseEvent.MOUSE_RELEASED) setRowSorterShiftKeyFlag(e.isShiftDown)
             super.processMouseEvent(e)
             if (e?.id == MouseEvent.MOUSE_CLICKED) setRowSorterShiftKeyFlag(false)
+            if (e?.id == MouseEvent.MOUSE_PRESSED) resetTooltip()
         }
 
         override fun setResizingColumn(column: TableColumn?) {
