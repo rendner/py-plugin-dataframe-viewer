@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,12 @@ package cms.rendner.intellij.dataframe.viewer.python.pycharm
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import com.jetbrains.python.console.PydevConsoleCommunication
 import com.jetbrains.python.debugger.PyDebugValue
 import com.jetbrains.python.debugger.PyDebuggerException
 import com.jetbrains.python.debugger.PyFrameAccessor
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Converts the PyCharm [PyDebugValue] into a plugin internal value.
@@ -105,6 +108,8 @@ data class PyDebugValueEvalExpr(
 
 
 private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFrameAccessor) : IPluginPyValueEvaluator {
+    private val isConsole = frameAccessor is PydevConsoleCommunication
+
     @Throws(EvaluateException::class)
     override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
         try {
@@ -121,8 +126,11 @@ private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFram
 
     @Throws(EvaluateException::class)
     override fun execute(statements: String) {
+        // it seems exec isn't implemented for the console based frameAccessor (in PyCharm)
+        val s = if (isConsole) "exec(${Json.encodeToString(statements)})" else statements
+
         try {
-            val result: PyDebugValue = frameAccessor.evaluate(statements, true, false)
+            val result: PyDebugValue = frameAccessor.evaluate(s, true, false)
                 ?: throw EvaluateException("Execution aborted, timeout threshold reached.")
             if (result.isErrorOnEval) {
                 throw EvaluateException(result.value ?: EvaluateException.EXEC_FALLBACK_ERROR_MSG)
@@ -131,4 +139,6 @@ private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFram
             throw EvaluateException(EvaluateException.EXEC_FALLBACK_ERROR_MSG, ex.toPluginType())
         }
     }
+
+    override fun isConsole() = isConsole
 }
