@@ -21,6 +21,7 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHi
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.debugProcessIsTerminated
+import cms.rendner.intellij.dataframe.viewer.python.pycharm.isConsole
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService
@@ -121,7 +122,7 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
                 DataFrameViewerDialog(
                     project,
                     evaluator,
-                    dataSourceInfo,
+                    dataSourceInfo.copy(filterable = dataSourceInfo.filterable && !dataSource.frameAccessor.isConsole()),
                     getDataSourceTransformHint()
                 ).apply {
                     Disposer.register(parentDisposable, disposable)

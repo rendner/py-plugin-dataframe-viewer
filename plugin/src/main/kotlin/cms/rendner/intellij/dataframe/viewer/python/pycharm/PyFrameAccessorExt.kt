@@ -28,3 +28,7 @@ fun PyFrameAccessor.debugProcessIsTerminated(): Boolean {
     }
     return false
 }
+
+fun PyFrameAccessor.isConsole(): Boolean {
+    return this is PydevConsoleCommunication
+}
