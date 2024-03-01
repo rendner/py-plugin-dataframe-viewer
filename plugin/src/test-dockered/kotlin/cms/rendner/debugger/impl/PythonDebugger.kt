@@ -23,23 +23,28 @@ import java.util.concurrent.CompletableFuture
 
 private const val RESULT_MARKER = "@_@RESULT@_@"
 private const val EXC_MARKER = "@_@EXC@_@"
+private const val DEBUGGER_PROMPT = "(Pdb) "
 
 /**
  * Allows to evaluate and execute code inside a Python interpreter.
  * Only the functionalities required by the plugin are implemented.
  *
  * Requirement:
- * The "python_helpers" have to be linked via "PYTHONPATH" for the running python interpreter
- * to allow import of the "debugger_helpers". For the dockered Python interpreters the file
- * is mapped into the container via a volume. Therefore, the Python interpreter will always
- * use the latest version (no need to rebuild the docker images after change).
+ * The "transfer/in/python_helpers" folder has to be linked via "PYTHONPATH" for the running
+ * python interpreter to allow import of the "debugger_helpers.py". For the dockered Python
+ * interpreters, used in the integration tests, the file is mapped into the container via a volume.
+ * Therefore, the dockered Python interpreter will always use the latest version of the "python_helpers.py"
+ * without having to rebuild the docker images.
  */
 abstract class PythonDebugger {
 
-    private abstract class Task<R> {
-        val result = CompletableFuture<R>()
-        open fun completeWithResult(result: MarkedResult?) {
-            this.result.complete(null)
+    private sealed class Task<T> {
+        val result = CompletableFuture<T>()
+
+        protected open fun transformResult(result: MarkedResult?): T? = null
+
+        fun completeWithResult(result: MarkedResult?) {
+            this.result.complete(transformResult(result))
         }
 
         fun completeWithError(throwable: Throwable) {
@@ -108,10 +113,6 @@ abstract class PythonDebugger {
     )
 
     private val openTasks = ArrayBlockingQueue<Task<*>>(1)
-
-    private object LinePrefixes {
-        const val DEBUGGER_PROMPT = "(Pdb) "
-    }
 
     /**
      * Evaluates an expression or executes statements.
@@ -184,57 +185,46 @@ abstract class PythonDebugger {
     private fun processOpenTasks(pythonProcess: PythonProcess) {
 
         var activeTask: Task<*>? = null
-        var lines: List<String> = emptyList()
+        val lines: MutableList<String> = mutableListOf()
         var stoppedAtInputPrompt = false
-        var checkForInputPrompt = true
 
         try {
             while (!Thread.currentThread().isInterrupted) {
 
                 checkProcessIsAlive(pythonProcess)
 
-                if (checkForInputPrompt && pythonProcess.canRead()) {
-                    lines = pythonProcess.readLinesNonBlocking()
-                    stoppedAtInputPrompt = lastLineIsPrompt(lines)
+                if (!stoppedAtInputPrompt && pythonProcess.canRead()) {
+                    lines += pythonProcess.readLinesNonBlocking()
+                    stoppedAtInputPrompt = lines.lastOrNull() == DEBUGGER_PROMPT
                 }
 
                 if (stoppedAtInputPrompt) {
-                    checkForInputPrompt = false
 
-                    var nextDebugCommand: String? = null
-
-                    if (activeTask != null) {
-                        activeTask.completeWithResult(getMarkedResult(lines))
-                        activeTask = null
+                    activeTask?.let {
+                        it.completeWithResult(getMarkedResult(lines))
+                        lines.clear()
                     }
 
-                    if (openTasks.isNotEmpty()) {
-                        activeTask = openTasks.take().also { task ->
-                            nextDebugCommand = when (task) {
-                                is EvaluateTask -> {
-                                    Json.encodeToString(task.request.expression).let {
-                                        if (task.request.execute) {
-                                            "!__import__('debugger_helpers').DebuggerInternals.exec($it)"
-                                        } else {
-                                            "!__import__('debugger_helpers').DebuggerInternals.eval($it)"
-                                        }
+                    activeTask = openTasks.poll()?.also { task ->
+                        val nextDebugCommand = when (task) {
+                            is EvaluateTask -> {
+                                Json.encodeToString(task.request.expression).let {
+                                    if (task.request.execute) {
+                                        "!__import__('debugger_helpers').DebuggerInternals.exec($it)"
+                                    } else {
+                                        "!__import__('debugger_helpers').DebuggerInternals.eval($it)"
                                     }
-
                                 }
-                                is DumpTracesOnExitTask -> {
-                                    "!__import__('debugger_helpers').DebuggerInternals.dump_traces_on_exit(${task.filePath})"
-                                }
-                                is QuitTask -> "quit"
-                                is ContinueTask -> "continue"
-                                else -> null
                             }
+                            is DumpTracesOnExitTask -> {
+                                "!__import__('debugger_helpers').DebuggerInternals.dump_traces_on_exit(${task.filePath})"
+                            }
+                            is QuitTask -> "quit"
+                            is ContinueTask -> "continue"
                         }
-                    }
 
-                    if (nextDebugCommand != null) {
-                        pythonProcess.writeLine("$nextDebugCommand")
+                        pythonProcess.writeLine(nextDebugCommand)
                         stoppedAtInputPrompt = false
-                        checkForInputPrompt = true
                     }
                 }
             }
@@ -259,11 +249,6 @@ abstract class PythonDebugger {
             // is thrown in case the debugger is disconnected.
             throw PluginPyDebuggerException("Disconnected")
         }
-    }
-
-    private fun lastLineIsPrompt(lines: List<String>): Boolean {
-        // The last line, if prompt, only contains "(Pdb) ".
-        return lines.lastOrNull() == LinePrefixes.DEBUGGER_PROMPT
     }
 
     private fun getMarkedResult(lines: List<String>): MarkedResult? {
@@ -304,11 +289,7 @@ abstract class PythonDebugger {
     private class DumpTracesOnExitTask(val filePath: String): Task<Unit>()
 
     private class EvaluateTask(val request: EvalOrExecRequest) : Task<EvalOrExecResponse>() {
-        override fun completeWithResult(result: MarkedResult?) {
-            this.result.complete(createResponse(result))
-        }
-
-        private fun createResponse(result: MarkedResult?): EvalOrExecResponse {
+        override fun transformResult(result: MarkedResult?): EvalOrExecResponse {
             return if (result?.marker == EXC_MARKER) {
                 MarkedResult.parseToError(result).let {
                     EvalOrExecResponse(
