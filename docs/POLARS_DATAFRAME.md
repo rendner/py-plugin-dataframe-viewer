@@ -4,7 +4,7 @@
 The plugin allows you to view Python `dicts` and polars `DataFrames`.
 
 **Supported polars Versions:**
-* tested with 0.19.15
+* tested with 0.19.15 - 0.20.14
 
 **Features:**
 - [sortable](./SORTING.md)

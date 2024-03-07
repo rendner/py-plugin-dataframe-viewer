@@ -1,4 +1,26 @@
 # Changelog
+## v0.15.0
+- `Released`: 2024-03-07
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Min Required IntelliJ Version`: 2022.3
+
+### Added
+#### Column Statistics In Tooltip
+The column tooltip now includes summary statistics about the column data.
+The output will vary depending on the used version of `pandas`/`polars`.
+
+![x](./docs/images/changelog/0.15.x/quick_statistics_tooltip.png)
+
+#### Experimental Support For Python Console
+You can view and sort polars and pandas `DataFrames`.
+It is also possible to view Python dictionaries as a `DataFrame`.
+
+### Fixed
+- [pandas] respect `display.max_seq_items` if it is less then 42
+- [pandas] truncate `DataFrame` values in case they are longer than 200 chars
+- [pandas] allow to view a `dict` of scalars as `DataFrame`
+- broken detection of installed `DataFrame` packages (used to view `dict` as `DataFrame`)
+
 ## v0.14.0
 - `Released`: 2024-01-20
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
