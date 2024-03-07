@@ -30,7 +30,10 @@ import com.jetbrains.python.debugger.PyDebugValue
 import com.jetbrains.python.debugger.PyFrameAccessor
 
 open class ShowViewerForDictAction : BaseShowViewerAction() {
-    override fun getActionUpdateThread() = ActionUpdateThread.BGT
+    // Has to be EDT. Otherwise, triggering this action via the mapped key binding,
+    // for the console based Python evaluator, inside the "update" method
+    // freezes the whole IDE. (bug is reported to Jetbrains)
+    override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
     override fun update(event: AnActionEvent) {
         event.presentation.isEnabledAndVisible = couldCreateFrameFromSelectedValue(event)
@@ -74,7 +77,12 @@ open class ShowViewerForDictAction : BaseShowViewerAction() {
                         frameAccessor,
                         if (result is PyDebugValue) convertResult(result.value!!) else emptyList()
                     )
-                } catch (ignore: Throwable) {}
+                } catch (ignore: Throwable) {
+                    project.service<AvailableDataFrameLibrariesProvider>().setLibraries(
+                        frameAccessor,
+                        emptyList()
+                    )
+                }
             }
         }
     }
