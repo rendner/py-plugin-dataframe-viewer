@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,4 +69,29 @@ interface IPluginPyValueEvaluator {
      */
     @Throws(EvaluateException::class)
     fun execute(statements: String)
+
+    /**
+     * Returns true if it is a console based evaluator.
+     */
+    fun isConsole(): Boolean {
+        return false
+    }
+}
+
+
+interface IPluginEdtAwareDebugSessionListener {
+    fun sessionPaused() {
+    }
+
+    fun sessionResumed() {
+    }
+
+    fun sessionStopped() {
+    }
+
+    fun stackFrameChanged() {
+    }
+
+    fun beforeSessionResume() {
+    }
 }

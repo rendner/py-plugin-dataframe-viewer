@@ -21,6 +21,7 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
+import com.intellij.openapi.Disposable
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -74,7 +75,7 @@ data class DataSourceInfo(
 /**
  * Interface to evaluate values of the Python class "TableSource".
  */
-interface IPyTableSourceRef {
+interface IPyTableSourceRef: Disposable {
     /**
      * Calls the "get_table_structure" method of the Python class.
      * The returned result contains information about the visible rows and columns of a DataFrame.
@@ -306,6 +307,7 @@ enum class CreateTableSourceErrorKind {
 
 @Serializable
 data class CreateTableSourceConfig(
+    @SerialName("temp_var_slot_id") val tempVarSlotId: String? = null,
     @SerialName("data_source_transform_hint") val dataSourceTransformHint: DataSourceTransformHint? = null,
     @SerialName("previous_fingerprint") val previousFingerprint: String? = null,
     @SerialName("filter_eval_expr") val filterEvalExpr: String? = null,

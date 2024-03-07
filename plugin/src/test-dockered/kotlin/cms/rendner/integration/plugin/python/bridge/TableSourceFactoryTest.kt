@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceConfig
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyTableSourceRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.TableSourceFactory
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions
@@ -78,6 +79,31 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
                 "df",
                 CreateTableSourceConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
             )).isNotNull
+        }
+    }
+
+    @Test
+    fun shouldStoreTableSourceAsTempVar() {
+        runWithDefaultSnippet { debuggerApi ->
+
+            val tableSource = createPandasTableSource<IPyTableSourceRef>(
+                debuggerApi.evaluator,
+                "df",
+                CreateTableSourceConfig(tempVarSlotId = "abc"),
+            )
+
+            assertThat(tableSource).isNotNull
+            // methods should be callable
+            assertThat(tableSource.evaluateTableStructure()).isNotNull
+
+            val tempVarsDict = TableSourceFactory.getTempVarsDictRef()
+            assertThat(debuggerApi.evaluator.evaluate("len($tempVarsDict)").forcedValue).isEqualTo("1")
+            assertThat(debuggerApi.evaluator.evaluate("$tempVarsDict['abc']").qualifiedType)
+                .isEqualTo("cms_rendner_sdfv.pandas.frame.table_source.TableSource")
+
+            tableSource.dispose()
+            // after dispose the dict should not contain the tableSource anymore
+            assertThat(debuggerApi.evaluator.evaluate("len($tempVarsDict)").forcedValue).isEqualTo("0")
         }
     }
 

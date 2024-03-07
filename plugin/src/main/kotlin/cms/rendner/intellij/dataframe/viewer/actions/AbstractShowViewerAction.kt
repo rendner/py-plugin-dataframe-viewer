@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,12 @@ import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
+import cms.rendner.intellij.dataframe.viewer.python.pycharm.debugProcessIsTerminated
+import cms.rendner.intellij.dataframe.viewer.python.pycharm.isConsole
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -31,12 +34,11 @@ import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.components.service
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
-import com.intellij.xdebugger.XDebuggerManager
+import com.intellij.xdebugger.XDebugSessionListener
 import com.intellij.xdebugger.XDebuggerUtil
-import com.jetbrains.python.debugger.PyDebugValue
+import com.jetbrains.python.debugger.*
 
 private class MySelectCodeProviderAction(
     val provider: ITableSourceCodeProvider,
@@ -100,7 +102,6 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
         val project = event.project ?: return
         if (project.isDisposed) return
         val dataSource = getSelectedDebugValue(event) ?: return
-        val debugSession = XDebuggerManager.getInstance(project).currentSession ?: return
 
         val parentDisposable = project.service<ParentDisposableService>()
         val evaluator = dataSource.toPluginType().evaluator
@@ -117,20 +118,17 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
             }
 
             runInEdt {
-                if (debugSession.isStopped || parentDisposable.isDisposed || project.isDisposed) return@runInEdt
+                if (dataSource.frameAccessor.debugProcessIsTerminated() || parentDisposable.isDisposed || project.isDisposed) return@runInEdt
                 DataFrameViewerDialog(
-                    debugSession,
+                    project,
                     evaluator,
-                    dataSourceInfo,
+                    dataSourceInfo.copy(filterable = dataSourceInfo.filterable && !dataSource.frameAccessor.isConsole()),
                     getDataSourceTransformHint()
                 ).apply {
-                    if (!debugSession.isStopped) {
-                        Disposer.register(parentDisposable, disposable)
-                        startListeningAndFetchInitialData()
-                        show()
-                    } else {
-                        close(DialogWrapper.CANCEL_EXIT_CODE)
-                    }
+                    Disposer.register(parentDisposable, disposable)
+                    Disposer.register(disposable, MyEdtAwareDebugSessionListener(dataSource.frameAccessor, this))
+                    fetchInitialData()
+                    show()
                 }
             }
         }
@@ -142,5 +140,85 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
         return XDebuggerUtil.getInstance().getValueContainer(event.dataContext)?.let {
             if (it is PyDebugValue) it else null
         }
+    }
+}
+
+/**
+ * The "PyFrameListener" had a breaking change in 2023.2.
+ * "sessionStopped()" -> "sessionStopped(communication: PyFrameAccessor?)"
+ *
+ * This interface is used to make the plugin code compatible with
+ * versions < 2023.2. and >= 2023.2.
+ */
+// todo: remove interface when setting min version for plugin >= 2023.2
+interface PyFrameListenerBreakingChanges {
+    fun sessionStopped()
+    fun sessionStopped(communication: PyFrameAccessor?)
+}
+
+private class MyEdtAwareDebugSessionListener(
+    frameAccessor: PyFrameAccessor,
+    delegate: DataFrameViewerDialog,
+    ): XDebugSessionListener, PyFrameListener, PyFrameListenerBreakingChanges, Disposable {
+
+        // Props are nullable to release references.
+        // Is required because "PyFrameAccessor" has no "removeFrameListener".
+        private var frameAccessor: PyFrameAccessor? = frameAccessor
+        private var delegate: DataFrameViewerDialog? = delegate
+
+    init {
+        if (frameAccessor is IPyDebugProcess) {
+            delegate.setFilterSourcePosition(frameAccessor.session.currentPosition)
+            frameAccessor.session.addSessionListener(this)
+        } else {
+            frameAccessor.addFrameListener(this)
+        }
+    }
+
+    override fun frameChanged() = runInEdt {
+        stackFrameChanged()
+    }
+
+    override fun sessionPaused() = runInEdt {
+        delegate?.sessionPaused()
+    }
+
+    override fun sessionResumed() = runInEdt {
+        delegate?.sessionResumed()
+    }
+
+    override fun sessionStopped() = runInEdt {
+        delegate?.sessionStopped()
+    }
+
+    override fun sessionStopped(communication: PyFrameAccessor?) = runInEdt {
+        if (communication == null || communication == frameAccessor) {
+            delegate?.sessionStopped()
+        }
+    }
+
+    override fun stackFrameChanged() = runInEdt {
+        frameAccessor?.let {
+            if (it is IPyDebugProcess) {
+                delegate?.setFilterSourcePosition(it.session.currentPosition)
+            }
+        }
+
+        delegate?.stackFrameChanged()
+    }
+
+    override fun beforeSessionResume() = runInEdt {
+        delegate?.beforeSessionResume()
+    }
+
+    override fun dispose() {
+        frameAccessor?.let {
+            if (it is IPyDebugProcess) {
+                it.session.removeSessionListener(this)
+            }
+        }
+
+        frameAccessor = null
+        delegate = null
     }
 }

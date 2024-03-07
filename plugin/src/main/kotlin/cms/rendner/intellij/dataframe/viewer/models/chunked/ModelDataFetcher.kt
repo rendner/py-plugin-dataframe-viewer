@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.Evaluate
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
 
+private var tempVarIdCounter: Int = 0
+
 /**
  * Fetches the required model data from Python.
  *
@@ -36,7 +38,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
      * @param dataSourceCurrentStackFrameRefExpr if [Request.reEvaluateDataSource] was true the new expression to refer to
      * the variable in Python.
      * @param tableSourceRef the table source instance to interop with the instance created in Python by the plugin
-     * @param tableStructure the table structure of the dataSource (pandas DataFrame)
+     * @param tableStructure the table structure of the dataSource (DataFrame)
      * @param columnIndexTranslator to translate the index of visible columns back to the there original index.
      *
      */
@@ -50,11 +52,11 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
     /**
      * A request.
      *
-     * @param dataSourceInfo info to access the data source variable in Python (a pandas DataFrame or Styler or a dict)
+     * @param dataSourceInfo info to access the data source variable in Python (a DataFrame or pandas Styler or a dict)
      * @param filterInputState to filter the dataSource
      * @param reEvaluateDataSource true if the dataSource has to be re-evaluated (e.g. after a stack frame change)
      * @param oldDataSourceFingerprint if not null, value is compared against actual fingerprint
-     * @param dataSourceTransformHint hint to create a pandas DataFrame from the data source in case it is not a pandas DataFrame or Styler
+     * @param dataSourceTransformHint hint to create a DataFrame from the data source in case it is not a DataFrame or pandas Styler
      */
     data class Request(
         val dataSourceInfo: DataSourceInfo,
@@ -133,6 +135,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
                     previousFingerprint = request.oldDataSourceFingerprint,
                     filterEvalExpr = request.filterInputState?.text,
                     filterEvalExprProvideFrame = request.filterInputState?.containsSyntheticFrameIdentifier == true,
+                    tempVarSlotId = if (evaluator.isConsole()) "_temp_slot_id_${tempVarIdCounter++}" else null,
                 ),
             )
         } catch (ex: CreateTableSourceException) {

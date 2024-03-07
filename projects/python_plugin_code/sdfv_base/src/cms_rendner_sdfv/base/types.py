@@ -134,6 +134,7 @@ class SortCriteria:
 
 @dataclass(frozen=True)
 class CreateTableSourceConfig:
+    temp_var_slot_id: Optional[str] = None
     data_source_transform_hint: Optional[str] = None
     previous_fingerprint: Optional[str] = None
     filter_eval_expr: Optional[str] = None

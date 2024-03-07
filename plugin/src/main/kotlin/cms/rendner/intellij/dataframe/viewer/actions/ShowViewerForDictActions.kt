@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,19 +21,19 @@ import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
+import cms.rendner.intellij.dataframe.viewer.python.pycharm.debugProcessIsTerminated
 import cms.rendner.intellij.dataframe.viewer.services.AvailableDataFrameLibrariesProvider
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
-import com.intellij.xdebugger.XDebugSession
-import com.intellij.xdebugger.XDebuggerManager
-import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
-import com.intellij.xdebugger.frame.XValue
 import com.jetbrains.python.debugger.PyDebugValue
-import java.util.concurrent.CountDownLatch
+import com.jetbrains.python.debugger.PyFrameAccessor
 
 open class ShowViewerForDictAction : BaseShowViewerAction() {
-    override fun getActionUpdateThread() = ActionUpdateThread.BGT
+    // Has to be EDT. Otherwise, triggering this action via the mapped key binding,
+    // for the console based Python evaluator, inside the "update" method
+    // freezes the whole IDE. (bug is reported to Jetbrains)
+    override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
     override fun update(event: AnActionEvent) {
         event.presentation.isEnabledAndVisible = couldCreateFrameFromSelectedValue(event)
@@ -45,8 +45,7 @@ open class ShowViewerForDictAction : BaseShowViewerAction() {
                 val codeProviders = TableSourceCodeProviderRegistry.getApplicableProviders(qType)
                 if (codeProviders.isNotEmpty()) {
                     val project = event.project ?: return emptyList()
-                    val session = XDebuggerManager.getInstance(project).currentSession ?: return emptyList()
-                    project.service<AvailableDataFrameLibrariesProvider>().getLibraries(session)?.let { libs ->
+                    project.service<AvailableDataFrameLibrariesProvider>().getLibraries(dataSource.frameAccessor)?.let { libs ->
                         return codeProviders.filter { libs.contains(it.getDataFrameLibrary()) }
                     }
                 }
@@ -57,12 +56,12 @@ open class ShowViewerForDictAction : BaseShowViewerAction() {
 
     private fun couldCreateFrameFromSelectedValue(event: AnActionEvent): Boolean {
         val debugValue = getSelectedDebugValue(event) ?: return false
+        if (debugValue.frameAccessor.debugProcessIsTerminated()) return false
         return debugValue.qualifiedType.let { qType ->
             if (qType == PythonQualifiedTypes.DICT) {
                 val project = event.project ?: return false
-                val session = XDebuggerManager.getInstance(project).currentSession ?: return false
-                if (!project.service<AvailableDataFrameLibrariesProvider>().hasResult(session)) {
-                    MyDataFrameLibrariesEvaluator().evaluate(session)
+                if (!project.service<AvailableDataFrameLibrariesProvider>().hasResult(debugValue.frameAccessor)) {
+                    MyDataFrameLibrariesEvaluator().evaluate(debugValue.frameAccessor)
                 }
                 getApplicableCodeProviders(event, debugValue).isNotEmpty()
             } else false
@@ -70,43 +69,21 @@ open class ShowViewerForDictAction : BaseShowViewerAction() {
     }
 
     private class MyDataFrameLibrariesEvaluator : IEvalAvailableDataFrameLibraries {
-        fun evaluate(session: XDebugSession) {
-            if (!session.isPaused) return
-            val evaluator = session.debugProcess.evaluator ?: return
-
-            val evalLatch = CountDownLatch(1)
-
-            evaluator.evaluate(
-                getEvalExpression(),
-                object : XDebuggerEvaluator.XEvaluationCallback {
-                    override fun errorOccurred(errorMessage: String) {
-                        try {
-                            // Only a paused session can evaluate expressions.
-                            // If not paused, ignore error.
-                            if (session.isPaused) {
-                                session.project.service<AvailableDataFrameLibrariesProvider>()
-                                    .setLibraries(session, emptyList())
-                            }
-                        } finally {
-                            evalLatch.countDown()
-                        }
-                    }
-
-                    override fun evaluated(result: XValue) {
-                        try {
-                            session.project.service<AvailableDataFrameLibrariesProvider>().setLibraries(
-                                session,
-                                if (result is PyDebugValue) convertResult(result.value!!) else emptyList()
-                            )
-                        } finally {
-                            evalLatch.countDown()
-                        }
-                    }
-                },
-                null,
-            )
-
-            evalLatch.await()
+        fun evaluate(frameAccessor: PyFrameAccessor) {
+            frameAccessor.project?.let { project ->
+                try {
+                    val result = frameAccessor.evaluate(getEvalExpression(), false, false)
+                    project.service<AvailableDataFrameLibrariesProvider>().setLibraries(
+                        frameAccessor,
+                        if (result is PyDebugValue) convertResult(result.value!!) else emptyList()
+                    )
+                } catch (ignore: Throwable) {
+                    project.service<AvailableDataFrameLibrariesProvider>().setLibraries(
+                        frameAccessor,
+                        emptyList()
+                    )
+                }
+            }
         }
     }
 }

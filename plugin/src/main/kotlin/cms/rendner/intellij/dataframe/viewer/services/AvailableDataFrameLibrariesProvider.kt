@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,30 @@ package cms.rendner.intellij.dataframe.viewer.services
 
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import com.intellij.openapi.components.Service
-import com.intellij.xdebugger.XDebugSession
+import com.jetbrains.python.debugger.PyFrameAccessor
 import java.util.concurrent.ConcurrentHashMap
 
 @Service(Service.Level.PROJECT)
 class AvailableDataFrameLibrariesProvider {
     private val cache: MutableMap<String, List<DataFrameLibrary>?> = ConcurrentHashMap()
 
-    fun setLibraries(session: XDebugSession, libraries: List<DataFrameLibrary>) {
-        cache[createSessionFingerprint(session)] = libraries
+    fun setLibraries(frameAccessor: PyFrameAccessor, libraries: List<DataFrameLibrary>) {
+        cache[createFingerprint(frameAccessor)] = libraries
     }
 
-    fun getLibraries(session: XDebugSession): List<DataFrameLibrary>? {
-        return cache[createSessionFingerprint(session)]
+    fun getLibraries(frameAccessor: PyFrameAccessor): List<DataFrameLibrary>? {
+        return cache[createFingerprint(frameAccessor)]
     }
 
-    fun hasResult(session: XDebugSession): Boolean {
-        return cache[createSessionFingerprint(session)] != null
+    fun hasResult(frameAccessor: PyFrameAccessor): Boolean {
+        return cache[createFingerprint(frameAccessor)] != null
     }
 
     /**
-     * Creates a fingerprint to identify a session without having to store a reference (to prevent memory leaks).
-     * (expects the name and hash code of a session not to change)
+     * Creates a fingerprint to identify a [frameAccessor] without having to store a reference (to prevent memory leaks).
+     * (expects "toString()" returns a stable result like "com.jetbrains.python.debugger.PyDebugProcess@18237333")
      */
-    private fun createSessionFingerprint(session: XDebugSession): String {
-        return "${session.sessionName}_${session.hashCode()}"
+    private fun createFingerprint(frameAccessor: PyFrameAccessor): String {
+        return frameAccessor.toString()
     }
 }

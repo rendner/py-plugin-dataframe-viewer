@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
 import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginEdtAwareDebugSessionListener
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService
@@ -36,6 +37,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.text.StringUtil
@@ -44,23 +46,22 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.UIUtil.FontColor
-import com.intellij.xdebugger.XDebugSession
-import com.intellij.xdebugger.XDebugSessionListener
+import com.intellij.xdebugger.XSourcePosition
 import java.awt.Dimension
 import java.text.NumberFormat
 import javax.swing.Action
 import javax.swing.JComponent
 
 class DataFrameViewerDialog(
-    private val myDebugSession: XDebugSession,
+    private val project: Project,
     private val myEvaluator: IPluginPyValueEvaluator,
     dataSourceInfo: DataSourceInfo,
     private val dataSourceTransformHint: DataSourceTransformHint?,
     ) :
-        DialogWrapper(myDebugSession.project, false),
+        DialogWrapper(project, false),
         IChunkValidationProblemHandler,
         IChunkDataLoaderErrorHandler,
-        XDebugSessionListener {
+        IPluginEdtAwareDebugSessionListener {
 
     private var myDataSourceInfo: DataSourceInfo
     private var myLastFilterInputState: FilterInputState? = null
@@ -75,7 +76,7 @@ class DataFrameViewerDialog(
         myDataSourceInfo = dataSourceInfo
 
         myFilterInput = if (myDataSourceInfo.filterable) {
-            FilterInputFactory.createComponent(myDebugSession.project, myDebugSession.currentPosition).also {
+            FilterInputFactory.createComponent(project, null).also {
                 it.setChangedListener(object : IEditorChangedListener {
                     override fun editorInputChanged() {
                         updateApplyFilterButtonState()
@@ -99,13 +100,11 @@ class DataFrameViewerDialog(
         init()
     }
 
-    fun startListeningAndFetchInitialData() {
-        myDebugSession.addSessionListener(this)
+    fun fetchInitialData() {
         fetchModelData(false)
     }
 
     override fun dispose() {
-        myDebugSession.removeSessionListener(this)
         cancelLastStartedDataFetcherAndDisposeModel()
         super.dispose()
     }
@@ -121,11 +120,11 @@ class DataFrameViewerDialog(
         }
     }
 
-    override fun sessionStopped() = runInEdt {
+    override fun sessionStopped() {
         close(CANCEL_EXIT_CODE)
     }
 
-    override fun beforeSessionResume() = runInEdt {
+    override fun beforeSessionResume() {
         disableApplyFilterButton()
         cancelLastStartedDataFetcherAndDisposeModel()
         myFilterInput?.setSourcePosition(null)
@@ -141,14 +140,17 @@ class DataFrameViewerDialog(
         }
     }
 
-    override fun stackFrameChanged() = runInEdt {
+    override fun stackFrameChanged() {
         if (!myDataSourceInfo.source.canBeReEvaluated()) {
             setErrorText("Can't re-evaluate '${myDataSourceInfo.source.reEvalExpr}'")
         } else {
-            if (myDataSourceInfo.filterable) {
-                myDebugSession.currentPosition.let { myFilterInput!!.setSourcePosition(it) }
-            }
             fetchModelData(myDataSourceInfo.source.reEvalExpr != myDataSourceInfo.source.currentStackFrameRefExpr)
+        }
+    }
+
+    fun setFilterSourcePosition(sourcePosition: XSourcePosition?) {
+        if (myDataSourceInfo.filterable) {
+            myFilterInput?.setSourcePosition(sourcePosition)
         }
     }
 
@@ -264,7 +266,7 @@ class DataFrameViewerDialog(
                 region,
                 validationStrategy,
                 problems,
-            ).notify(myDebugSession.project)
+            ).notify(project)
         }
     }
 
@@ -274,7 +276,7 @@ class DataFrameViewerDialog(
             "Error during fetching/processing chunk",
             "${exception.message ?: "Unknown error occurred"}\nfor $region",
             exception
-        ).notify(myDebugSession.project)
+        ).notify(project)
     }
 
     private fun shouldHandleFetcherAction(fetcher: ModelDataFetcher): Boolean {
@@ -327,6 +329,7 @@ class DataFrameViewerDialog(
                     myLastDataModelDisposable = Disposer.newDisposable(disposable, "modelDisposable").also {
                         Disposer.register(it, model)
                         Disposer.register(it, chunkLoader)
+                        Disposer.register(it, result.tableSourceRef)
                     }
                     myTable.setDataFrameModel(model)
                 }
@@ -348,7 +351,7 @@ class DataFrameViewerDialog(
 
                 // assign focus to the DataFrame table
                 // -> allows immediately to use key bindings of the table like sort/scroll/etc.
-                IdeFocusManager.getInstance(myDebugSession.project).requestFocus(preferredFocusedComponent, true)
+                IdeFocusManager.getInstance(project).requestFocus(preferredFocusedComponent, true)
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private val json: Json by lazy { Json { ignoreUnknownKeys = true } }
+private val tempVarsDictRef = stringifyImportWithObjectRef("cms_rendner_sdfv.base.table_source", "TEMP_VARS")
 
 /**
  * Creates [IPyTableSourceRef] instances to enable "communication" with pandas objects.
@@ -37,13 +38,17 @@ private val json: Json by lazy { Json { ignoreUnknownKeys = true } }
 class TableSourceFactory {
 
     companion object {
+        fun getTempVarsDictRef() = tempVarsDictRef
+
         fun create(
             evaluator: IPluginPyValueEvaluator,
             tableSourceFactoryImport: TableSourceFactoryImport,
             dataSourceRefExpr: String,
             config: CreateTableSourceConfig? = null,
         ): IPyTableSourceRef {
-            val constructorRef = stringifyImportWithObjectRef(tableSourceFactoryImport.packageName, tableSourceFactoryImport.className)
+            val constructorRef =
+                stringifyImportWithObjectRef(tableSourceFactoryImport.packageName, tableSourceFactoryImport.className)
+
             val tableSource = evaluator.evaluate(
                 stringifyMethodCall("$constructorRef()", "create") {
                     refParam(dataSourceRefExpr)
@@ -58,7 +63,7 @@ class TableSourceFactory {
             }
 
             val sourceKind: TableSourceKind = tableSourceFactoryImport.tableSourceKind ?: run {
-                when(val kind = evaluator.evaluate("${tableSource.refExpr}.get_kind().name").forcedValue) {
+                when (val kind = evaluator.evaluate("${tableSource.refExpr}.get_kind().name").forcedValue) {
                     "TABLE_SOURCE" -> TableSourceKind.TABLE_SOURCE
                     "PATCHED_STYLER" -> TableSourceKind.PATCHED_STYLER
                     else -> throw CreateTableSourceException(
@@ -71,23 +76,33 @@ class TableSourceFactory {
             }
 
             return when (sourceKind) {
-                TableSourceKind.TABLE_SOURCE -> PyTableSourceRef(tableSource)
-                TableSourceKind.PATCHED_STYLER -> PyPatchedStylerRef(tableSource)
+                TableSourceKind.TABLE_SOURCE -> PyTableSourceRef(tableSource, config?.tempVarSlotId)
+                TableSourceKind.PATCHED_STYLER -> PyPatchedStylerRef(tableSource, config?.tempVarSlotId)
             }
         }
     }
 
-    private open class PyTableSourceRef(val pythonValue: PluginPyValue): IPyTableSourceRef {
+    private open class PyTableSourceRef(pythonValue: PluginPyValue, val tempVarSlotId: String?) : IPyTableSourceRef {
+        protected val refExpr: String = if (tempVarSlotId != null) "$tempVarsDictRef['${tempVarSlotId}']" else pythonValue.refExpr
+        protected val evaluator: IPluginPyValueEvaluator = pythonValue.evaluator
+
+        override fun dispose() {
+            if (tempVarSlotId == null) return
+            try {
+                evaluator.evaluate("$tempVarsDictRef.pop('${tempVarSlotId}', None)")
+            } catch (ignore: Throwable) {}
+        }
+
         @Throws(EvaluateException::class)
         override fun evaluateTableStructure(): TableStructure {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(pythonValue.refExpr, "get_table_structure")
+                stringifyMethodCall(refExpr, "get_table_structure")
             )
         }
 
         override fun evaluateSetSortCriteria(sortCriteria: SortCriteria?) {
-            pythonValue.evaluator.evaluate(
-                stringifyMethodCall(pythonValue.refExpr, "set_sort_criteria") {
+            evaluator.evaluate(
+                stringifyMethodCall(refExpr, "set_sort_criteria") {
                     sortCriteria?.byIndex.let {
                         if (it.isNullOrEmpty()) noneParam() else refParam(it.toString())
                     }
@@ -104,7 +119,7 @@ class TableSourceFactory {
             excludeColumnHeader: Boolean
         ): TableFrame {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(pythonValue.refExpr, "compute_chunk_table_frame") {
+                stringifyMethodCall(refExpr, "compute_chunk_table_frame") {
                     numberParam(chunk.firstRow)
                     numberParam(chunk.firstColumn)
                     numberParam(chunk.numberOfRows)
@@ -117,7 +132,7 @@ class TableSourceFactory {
 
         override fun evaluateGetOrgIndicesOfVisibleColumns(partStart: Int, maxColumns: Int): List<Int> {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(pythonValue.refExpr, "get_org_indices_of_visible_columns") {
+                stringifyMethodCall(refExpr, "get_org_indices_of_visible_columns") {
                     numberParam(partStart)
                     numberParam(maxColumns)
                 }
@@ -125,7 +140,7 @@ class TableSourceFactory {
         }
 
         protected inline fun <reified T> fetchResultAsJsonAndDecode(methodCallExpr: String): T {
-            return pythonValue.evaluator.evaluate("${pythonValue.refExpr}.jsonify($methodCallExpr)").forcedValue.let {
+            return evaluator.evaluate("${refExpr}.jsonify($methodCallExpr)").forcedValue.let {
                 json.decodeFromString(it.removeSurrounding("\""))
             }
         }
@@ -137,13 +152,18 @@ class TableSourceFactory {
      * the Python class "PatchedStyler" have to match with the ones used by this class.
      *
      * @param pythonValue the wrapped "PatchedStyler" Python instance.
+     * @param tempVarSlotId the id of the slot where the [pythonValue] is stored in Python,
+     * in case it is a temporary variable maintained by the plugin.
      */
-    private class PyPatchedStylerRef(pythonValue: PluginPyValue) : PyTableSourceRef(pythonValue), IPyPatchedStylerRef {
+    private class PyPatchedStylerRef(
+        pythonValue: PluginPyValue,
+        tempVarSlotId: String?
+    ) : PyTableSourceRef(pythonValue, tempVarSlotId), IPyPatchedStylerRef {
 
         @Throws(EvaluateException::class)
         override fun evaluateStyleFunctionInfo(): List<StyleFunctionInfo> {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(pythonValue.refExpr, "get_style_function_info")
+                stringifyMethodCall(refExpr, "get_style_function_info")
             )
         }
 
@@ -153,7 +173,7 @@ class TableSourceFactory {
         ): List<StyleFunctionValidationProblem> {
             if (validationStrategy == ValidationStrategyType.DISABLED) return emptyList()
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(pythonValue.refExpr, "validate_style_functions") {
+                stringifyMethodCall(refExpr, "validate_style_functions") {
                     numberParam(chunk.firstRow)
                     numberParam(chunk.firstColumn)
                     numberParam(chunk.numberOfRows)

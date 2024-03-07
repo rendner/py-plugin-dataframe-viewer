@@ -186,6 +186,9 @@ class AbstractTableSource(ABC):
         )
 
 
+TEMP_VARS = {}
+
+
 class AbstractTableSourceFactory(ABC):
     def create(self,
                data_source: Any,
@@ -215,6 +218,9 @@ class AbstractTableSourceFactory(ABC):
                 raise ValueError(
                     f"Created table_source is of type: {actual_type}, expected: ${expected_type}."
                 )
+
+            if config.temp_var_slot_id is not None:
+                TEMP_VARS[config.temp_var_slot_id] = table_source
 
             return table_source
         except Exception as e:
