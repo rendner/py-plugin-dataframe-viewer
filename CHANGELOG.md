@@ -1,4 +1,12 @@
 # Changelog
+## v0.15.1
+- `Released`: 2024-03-17
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Min Required IntelliJ Version`: 2022.3
+
+### Fixed
+- column statistics not updated after filtering ([issue 10](https://github.com/rendner/py-plugin-dataframe-viewer/issues/10))
+
 ## v0.15.0
 - `Released`: 2024-03-07
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
