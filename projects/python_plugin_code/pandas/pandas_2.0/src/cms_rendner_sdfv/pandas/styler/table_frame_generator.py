@@ -110,7 +110,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         # instead of the value.
         # To use these additional configurations, an index mapping is used to translate a chunk row/col index into a
         # row/col index of the original DataFrame.
-        translate_key = chunk.create_cell_iloc_into_org_frame_translator()
+        translate_key = chunk.get_translate_into_source_frame_cell_coordinates()
 
         chunk_styler.ctx = _TranslateKeysDict(computed_styler.ctx, translate_key)
         chunk_styler.cell_context = _TranslateKeysDict(computed_styler.cell_context, translate_key)

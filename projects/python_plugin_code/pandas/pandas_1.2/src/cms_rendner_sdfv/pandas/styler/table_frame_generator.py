@@ -81,9 +81,6 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         self.__styler_context: PatchedStylerContext = styler_context
         self.__todos_filter: Optional[Callable[[StylerTodo], bool]] = todos_filter
 
-    def _region_or_region_of_frame(self, region: Region = None) -> Region:
-        return region if region is not None else self.__styler_context.get_region_of_frame()
-
     def generate(self,
                  region: Region = None,
                  exclude_row_header: bool = False,
@@ -121,9 +118,9 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         # instead of the value.
         # To use these additional configurations, an index mapping is used to translate a chunk row/col index into a
         # row/col index of the original DataFrame.
-        translate_key = chunk.create_cell_iloc_into_org_frame_translator()
-        rit = chunk.create_row_into_org_frame_translator()
-        cit = chunk.create_col_into_org_frame_translator()
+        translate_key = chunk.get_translate_into_source_frame_cell_coordinates()
+        rit = lambda r: translate_key((r, 0))[0]
+        cit = lambda c: translate_key((0, c))[1]
 
         chunk_styler.ctx = _TranslateKeysDict(computed_styler.ctx, translate_key)
         self.__copy_over_cell_context(source=computed_styler, target=chunk_styler, ri_translator=rit, ci_translator=cit)
