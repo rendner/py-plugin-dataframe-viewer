@@ -1,5 +1,6 @@
 from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN, DESCRIBE_COL_MAX_STR_LEN
 from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, TableFrameColumn, TableFrameLegend
+from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 
 import pandas as pd
@@ -285,12 +286,10 @@ def test_highlight_max():
 
 
 def test_column_describe():
-    data_dict = {
+    df = pd.DataFrame.from_dict({
         'categorical': pd.Categorical(['d', 'e', 'f']),
         'numeric': [1, 2, 3],
-    }
-
-    df = pd.DataFrame.from_dict(data_dict)
+    })
     ctx = PatchedStylerContext(df.style)
     actual = ctx.get_table_frame_generator().generate()
     assert_table_frames(
@@ -327,6 +326,38 @@ def test_column_describe():
                 [TableFrameCell(value='d'), TableFrameCell(value='1')],
                 [TableFrameCell(value='e'), TableFrameCell(value='2')],
                 [TableFrameCell(value='f'), TableFrameCell(value='3')]
+            ],
+        ),
+        include_column_describe=True,
+    )
+
+
+def test_column_describe_with_filter():
+    df = pd.DataFrame.from_dict({'a': [1, 2, 3, "a", "b", "c"]})
+    filter_frame = df[[isinstance(x, int) for x in df['a']]]
+    ctx = PatchedStylerContext(df.style, FilterCriteria.from_frame(filter_frame))
+
+    actual = ctx.get_table_frame_generator().generate()
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['0'], ['1'], ['2']],
+            columns=[
+                TableFrameColumn(
+                    dtype='object',
+                    labels=['a'],
+                    describe={
+                        'count': '3',
+                        'unique': '3',
+                        'top': '3',  # in later pandas versions top is '1' (maybe a bug in pandas 1.1)
+                        'freq': '1',
+                    },
+                ),
+            ],
+            cells=[
+                [TableFrameCell(value='1')],
+                [TableFrameCell(value='2')],
+                [TableFrameCell(value='3')],
             ],
         ),
         include_column_describe=True,

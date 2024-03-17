@@ -23,81 +23,62 @@ from cms_rendner_sdfv.base.types import Region
 
 
 class Chunk:
-    def __init__(self, frame: 'VisibleFrame', region: Region):
-        self._frame = frame
+    def __init__(self,
+                 visible_frame: DataFrame,
+                 region: Region,
+                 translate_into_source_frame_cell_coordinates: Callable[[Tuple[int, int]], Tuple[int, int]]):
+        self._visible_frame = visible_frame
         self._region = region
+        self._translate_into_source_frame_cell_coordinates = translate_into_source_frame_cell_coordinates
 
     @property
     def region(self) -> Region:
         return self._region
 
     def cell_value_at(self, row_offset: int, col_offset: int) -> Any:
-        return self._frame.source_frame.iloc[
-            self._frame.i_rows[self.region.first_row + row_offset],
-            self._frame.i_cols[self.region.first_col + col_offset],
+        return self._visible_frame.iloc[
+            self.region.first_row + row_offset,
+            self.region.first_col + col_offset,
         ]
 
     def column_at(self, offset: int) -> Any:
-        return self._frame.source_frame.columns[self._frame.i_cols[self.region.first_col + offset]]
+        return self._visible_frame.columns[self.region.first_col + offset]
 
     def index_at(self, offset: int) -> Any:
-        return self._frame.source_frame.index[self._frame.i_rows[self.region.first_row + offset]]
+        return self._visible_frame.index[self.region.first_row + offset]
 
     def dtype_at(self, col: int) -> Any:
-        return self._frame.source_frame.dtypes.iloc[self._frame.i_cols[self.region.first_col + col]]
+        return self._visible_frame.dtypes.iloc[self.region.first_col + col]
 
     def describe_at(self, col: int) -> Dict[str, str]:
-        s: Series = self._frame.source_frame.iloc[:, self._frame.i_cols[self.region.first_col + col]]
+        s: Series = self._visible_frame.iloc[:, self.region.first_col + col]
         try:
             return {k: truncate_str(str(v), DESCRIBE_COL_MAX_STR_LEN) for k, v in s.describe().to_dict().items()}
         except TypeError as e:
             return {'error': str(e)}
 
     def index_names(self) -> list:
-        return self._frame.source_frame.index.names
+        return self._visible_frame.index.names
 
     def column_names(self) -> list:
-        return self._frame.source_frame.columns.names
+        return self._visible_frame.columns.names
 
     def to_frame(self) -> DataFrame:
         r = self.region
-        i_rows = self._frame.i_rows[r.first_row:r.first_row + r.rows]
-        i_cols = self._frame.i_cols[r.first_col:r.first_col + r.cols]
-        return self._frame.source_frame.iloc[i_rows, i_cols]
+        return self._visible_frame.iloc[
+               r.first_row:r.first_row + r.rows,
+               r.first_col:r.first_col + r.cols,
+               ]
 
-    def create_cell_iloc_into_org_frame_translator(self) -> Callable[[Tuple[int, int]], Tuple[int, int]]:
-        ri_translator = self.create_row_into_org_frame_translator()
-        ci_translator = self.create_col_into_org_frame_translator()
-
-        def translate(k: Tuple[int, int]) -> Tuple[int, int]:
-            return ri_translator(k[0]), ci_translator(k[1])
-
-        return translate
-
-    def create_col_into_org_frame_translator(self) -> Callable[[int], int]:
-        r = self.region
-        f = self._frame
-
-        def translate(k: int):
-            return f.i_cols[r.first_col + k]
-
-        return translate
-
-    def create_row_into_org_frame_translator(self) -> Callable[[int], int]:
-        r = self.region
-        f = self._frame
-
-        def translate(k: int):
-            return f.i_rows[r.first_row + k]
-
-        return translate
+    def get_translate_into_source_frame_cell_coordinates(self) -> Callable[[Tuple[int, int]], Tuple[int, int]]:
+        return self._translate_into_source_frame_cell_coordinates
 
 
 class VisibleFrame(AbstractVisibleFrame):
     def __init__(self, source_frame: DataFrame, visible_rows: np.ndarray, visible_cols: np.ndarray):
-        self.source_frame = source_frame
-        self.i_rows = visible_rows
-        self.i_cols = visible_cols
+        self._source_frame = source_frame
+        self._i_rows = visible_rows
+        self._i_cols = visible_cols
         self._region = Region(0, 0, len(visible_rows), len(visible_cols))
 
     @property
@@ -105,7 +86,13 @@ class VisibleFrame(AbstractVisibleFrame):
         return self._region
 
     def get_chunk(self, region: Region = None) -> Chunk:
-        return Chunk(self, self._region if region is None else self.region.get_bounded_region(region))
+        chunk_region = self._region if region is None else self.region.get_bounded_region(region)
+        visible_frame = self._source_frame.iloc[self._i_rows, self._i_cols]
+
+        def translate_into_source_frame_cell_coordinates(k: Tuple[int, int]) -> Tuple[int, int]:
+            return self._i_rows[chunk_region.first_row + k[0]], self._i_cols[chunk_region.first_col + k[1]]
+
+        return Chunk(visible_frame, chunk_region, translate_into_source_frame_cell_coordinates)
 
     def get_column_indices(self, part_start: int, max_columns: int) -> List[int]:
-        return list(self.i_cols[part_start:part_start + max_columns])
+        return list(self._i_cols[part_start:part_start + max_columns])
