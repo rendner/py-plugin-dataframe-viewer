@@ -83,8 +83,9 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         # -- Compute styling
         # The plugin only renders the visible (non-hidden cols/rows) of the styler DataFrame
         # therefore the chunk is created from the visible data.
-        chunk = self.__styler_context.visible_frame.get_chunk(region)
-        chunk_df = chunk.to_frame()
+        visible_frame = self.__styler_context.visible_frame
+        chunk = visible_frame.get_chunk(region)
+        chunk_df = visible_frame.to_frame(chunk)
 
         # The apply/map params are patched to not operate outside the chunk bounds.
         chunk_aware_todos = self.__styler_context.create_patched_todos(chunk_df, self.__todos_filter)
@@ -113,7 +114,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         # instead of the value.
         # To use these additional configurations, an index mapping is used to translate a chunk row/col index into a
         # row/col index of the original DataFrame.
-        translate_key = chunk.get_translate_into_source_frame_cell_coordinates()
+        translate_key = visible_frame.create_to_source_frame_cell_coordinates_translator(chunk)
 
         chunk_styler.ctx = _TranslateKeysDict(computed_styler.ctx, translate_key)
         chunk_styler.cell_context = _TranslateKeysDict(computed_styler.cell_context, translate_key)
@@ -248,6 +249,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
     def _extract_columns(self, html_props: dict, chunk: Chunk, formatter: ValueFormatter) -> List[TableFrameColumn]:
         result: List[TableFrameColumn] = []
+        visible_frame = self.__styler_context.visible_frame
 
         # leveled column names span multiple rows (one level per row)
         for row in html_props.get("head", []):
@@ -263,12 +265,12 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                     if is_column_header:
                         display_value = formatter.format_column(element.get("display_value", ""))
                         if is_first_row:
+                            column_info = visible_frame.get_column_info(chunk.region.first_col + col_heading_index)
                             result.append(
                                 TableFrameColumn(
-                                    dtype=str(chunk.dtype_at(col_heading_index)),
+                                    dtype=str(column_info.dtype),
                                     labels=[display_value],
-                                    describe=None if self._exclude_column_describe else chunk.describe_at(
-                                        col_heading_index),
+                                    describe=None if self._exclude_column_describe else column_info.describe(),
                                 )
                             )
                         else:

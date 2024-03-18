@@ -14,15 +14,15 @@ df = DataFrame.from_dict({
 def test_previous_sort_criteria_does_not_affect_later_sort_criteria():
     ctx = PatchedStylerContext(df.style)
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[True])
-    index_after_first_sort = ctx.visible_frame.get_chunk().to_frame().index
+    index_after_first_sort = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk()).index
 
     ctx.set_sort_criteria(sort_by_column_index=[0, 1], sort_ascending=[False, False])
     # assert to ensure test setup is correct
-    index_in_between = ctx.visible_frame.get_chunk().to_frame().index
+    index_in_between = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk()).index
     assert list(index_after_first_sort) != list(index_in_between)
 
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[True])
-    index_after_last_sort = ctx.visible_frame.get_chunk().to_frame().index
+    index_after_last_sort = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk()).index
     assert list(index_after_first_sort) == list(index_after_last_sort)
 
 

@@ -85,11 +85,13 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                 labels = [formatter.format_column(h) for h in name]
             else:
                 labels = [formatter.format_column(name)]
+
+            column_info = self._visible_frame.get_column_info(chunk.region.first_col + col_offset)
             result.append(
                 TableFrameColumn(
-                    dtype=str(chunk.dtype_at(col_offset)),
+                    dtype=str(column_info.dtype),
                     labels=labels,
-                    describe=None if self._exclude_column_describe else chunk.describe_at(col_offset),
+                    describe=None if self._exclude_column_describe else column_info.describe(),
                 )
             )
 
@@ -122,8 +124,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
         return result
 
-    @staticmethod
-    def _extract_legend_label(chunk: Chunk, formatter: ValueFormatter) -> TableFrameLegend:
-        index_legend = [formatter.format_index(n) for n in chunk.index_names() if n is not None]
-        column_legend = [formatter.format_index(n) for n in chunk.column_names() if n is not None]
+    def _extract_legend_label(self, chunk: Chunk, formatter: ValueFormatter) -> TableFrameLegend:
+        index_legend = [formatter.format_index(n) for n in self._visible_frame.index_names if n is not None]
+        column_legend = [formatter.format_index(n) for n in self._visible_frame.column_names if n is not None]
         return TableFrameLegend(index=index_legend, column=column_legend) if index_legend or column_legend else None

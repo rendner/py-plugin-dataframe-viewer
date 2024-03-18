@@ -65,7 +65,7 @@ def test_filter_by_columns():
     ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
 
     expected_columns = filter_frame.columns
-    actual_columns = ctx.visible_frame.get_chunk().to_frame().columns
+    actual_columns = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk()).columns
     assert list(actual_columns) == list(expected_columns)
 
     expected_org_indices = [0, 4]
@@ -78,7 +78,7 @@ def test_filter_by_rows():
     ctx = FrameContext(df, FilterCriteria(filter_frame.index, None))
 
     expected = filter_frame.index
-    actual = ctx.visible_frame.get_chunk().to_frame().index
+    actual = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk()).index
     assert list(actual) == list(expected)
 
 
@@ -86,7 +86,7 @@ def test_filter_by_rows_and_columns():
     filter_frame = df.loc[df['col_0'] < 3, ['col_0', 'col_4']]
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
-    actual = ctx.visible_frame.get_chunk().to_frame()
+    actual = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk())
     assert list(actual.index) == list(filter_frame.index)
     assert list(actual.columns) == list(filter_frame.columns)
 
@@ -99,7 +99,7 @@ def test_filter_with_empty_rows():
     filter_frame = DataFrame()
     ctx = FrameContext(df, FilterCriteria(filter_frame.index, None))
 
-    actual = ctx.visible_frame.get_chunk().to_frame().index
+    actual = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk()).index
     assert list(actual) == []
 
 
@@ -107,7 +107,7 @@ def test_filter_with_empty_columns():
     filter_frame = DataFrame()
     ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
 
-    actual_columns = ctx.visible_frame.get_chunk().to_frame().columns
+    actual_columns = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk()).columns
     assert list(actual_columns) == []
 
     actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
@@ -118,7 +118,7 @@ def test_filter_with_empty_rows_and_columns():
     filter_frame = DataFrame()
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
-    actual = ctx.visible_frame.get_chunk().to_frame()
+    actual = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk())
     assert list(actual.index) == []
     assert list(actual.columns) == []
 
@@ -127,7 +127,7 @@ def test_filter_with_non_existing_rows_and_columns():
     filter_frame = DataFrame(index=[7, 8, 9], columns=["col_7", "col_8", "col_9"])
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
-    actual = ctx.visible_frame.get_chunk().to_frame()
+    actual = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk())
     assert list(actual.index) == []
     assert list(actual.columns) == []
 
@@ -141,7 +141,7 @@ def test_filtered_frame_keeps_index_and_column_order():
     filter_frame = df.copy().iloc[::-1, ::-1]
     ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
 
-    actual = ctx.visible_frame.get_chunk().to_frame()
+    actual = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk())
     assert list(actual.index) == list(df.index)
     assert list(actual.columns) == list(df.columns)
 
@@ -151,5 +151,5 @@ def test_filter_with_df_filter():
     ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
 
     expected = filter_frame.columns
-    actual = ctx.visible_frame.get_chunk().to_frame().columns
+    actual = ctx.visible_frame.to_frame(ctx.visible_frame.get_chunk()).columns
     assert list(actual) == list(expected)
