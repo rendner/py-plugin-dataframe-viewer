@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -42,8 +42,8 @@ class _PrecisionValidationStrategy(_AbstractValidationStrategy):
         super().__init__(ValidationStrategyType.PRECISION)
 
     def get_chunk_size(self, rows_in_region: int, columns_in_region: int) -> Tuple[int, int]:
-        cols_per_chunk = max(1, self._ceiling_division(rows_in_region, 2))
-        rows_per_chunk = max(1, self._ceiling_division(columns_in_region, 2))
+        rows_per_chunk = max(1, self._ceiling_division(rows_in_region, 2))
+        cols_per_chunk = max(1, self._ceiling_division(columns_in_region, 2))
         return rows_per_chunk, cols_per_chunk
 
 
