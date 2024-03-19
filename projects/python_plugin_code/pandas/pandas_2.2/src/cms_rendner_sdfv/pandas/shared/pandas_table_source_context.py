@@ -19,7 +19,7 @@ from pandas import DataFrame
 from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext
 from cms_rendner_sdfv.base.types import SortCriteria, TableStructure
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
-from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame
+from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame, MappedVisibleFrame
 
 
 class PandasTableSourceContext(AbstractTableSourceContext, ABC):
@@ -73,7 +73,10 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
             )
             index = frame.index
 
-        return VisibleFrame(
+        if index is self._source_frame.index and columns is self._source_frame.columns:
+            return VisibleFrame(self._source_frame)
+
+        return MappedVisibleFrame(
             self._source_frame,
             self._source_frame.index.get_indexer_for(index),
             self._source_frame.columns.get_indexer_for(columns),

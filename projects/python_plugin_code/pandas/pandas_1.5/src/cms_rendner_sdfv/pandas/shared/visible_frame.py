@@ -60,11 +60,9 @@ class VisibleColumnInfo:
 
 
 class VisibleFrame(AbstractVisibleFrame):
-    def __init__(self, source_frame: DataFrame, visible_rows: np.ndarray, visible_cols: np.ndarray):
+    def __init__(self, source_frame: DataFrame):
         self._source_frame = source_frame
-        self._i_rows = visible_rows
-        self._i_cols = visible_cols
-        self._region = Region(0, 0, len(visible_rows), len(visible_cols))
+        self._region = Region(0, 0, len(source_frame.index), len(source_frame.columns))
 
     @property
     def region(self) -> Region:
@@ -79,7 +77,49 @@ class VisibleFrame(AbstractVisibleFrame):
         return self._source_frame.columns.names
 
     def cell_value_at(self, row: int, col: int):
-        return self._source_frame.iloc[self._i_rows[row], self._i_cols[col]]
+        return self._source_frame.iat[row, col]
+
+    def column_at(self, col: int):
+        return self._source_frame.columns[col]
+
+    def index_at(self, row: int):
+        return self._source_frame.index[row]
+
+    def get_column_info(self, col: int) -> VisibleColumnInfo:
+        return VisibleColumnInfo(self._source_frame.iloc[:, col])
+
+    def get_chunk(self, region: Region = None) -> Chunk:
+        return Chunk(self, self._region if region is None else self.region.get_bounded_region(region))
+
+    def to_frame(self, chunk: Chunk) -> DataFrame:
+        r = chunk.region
+        return self._source_frame.iloc[
+               r.first_row:r.first_row + r.rows,
+               r.first_col:r.first_col + r.cols,
+               ]
+
+    def create_to_source_frame_cell_coordinates_translator(self, chunk: Chunk) -> Callable[[Tuple[int, int]], Tuple[int, int]]:
+        r = chunk.region
+
+        def translate(k: Tuple[int, int]) -> Tuple[int, int]:
+            return r.first_row + k[0], r.first_col + k[1]
+
+        return translate
+
+    def get_column_indices(self, part_start: int, max_columns: int) -> List[int]:
+        r = self._region.get_bounded_region(Region(part_start, 0, max_columns, 0))
+        return list(range(r.first_row, r.first_row + r.rows))
+
+
+class MappedVisibleFrame(VisibleFrame):
+    def __init__(self, source_frame: DataFrame, visible_rows: np.ndarray, visible_cols: np.ndarray):
+        super().__init__(source_frame)
+        self._i_rows = visible_rows
+        self._i_cols = visible_cols
+        self._region = Region(0, 0, len(visible_rows), len(visible_cols))
+
+    def cell_value_at(self, row: int, col: int):
+        return self._source_frame.iat[self._i_rows[row], self._i_cols[col]]
 
     def column_at(self, col: int):
         return self._source_frame.columns[self._i_cols[col]]
@@ -89,9 +129,6 @@ class VisibleFrame(AbstractVisibleFrame):
 
     def get_column_info(self, col: int) -> VisibleColumnInfo:
         return VisibleColumnInfo(self._source_frame.iloc[self._i_rows, self._i_cols[col]])
-
-    def get_chunk(self, region: Region = None) -> Chunk:
-        return Chunk(self, self._region if region is None else self.region.get_bounded_region(region))
 
     def to_frame(self, chunk: Chunk) -> DataFrame:
         r = chunk.region
