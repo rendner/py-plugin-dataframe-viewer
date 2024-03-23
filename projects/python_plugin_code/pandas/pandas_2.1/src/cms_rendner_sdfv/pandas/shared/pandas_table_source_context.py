@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -24,23 +24,23 @@ from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame, MappedVis
 
 class PandasTableSourceContext(AbstractTableSourceContext, ABC):
     def __init__(self, source_frame: DataFrame, filter_criteria: Optional[FilterCriteria] = None):
-        self._source_frame = source_frame
-        self._sort_criteria: SortCriteria = SortCriteria()
-        self._filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
-        self._visible_frame: VisibleFrame = self._recompute_visible_frame()
+        self.__source_frame = source_frame
+        self.__sort_criteria: SortCriteria = SortCriteria()
+        self.__filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
+        self.__visible_frame: VisibleFrame = self.__recompute_visible_frame()
 
     @property
     def visible_frame(self) -> VisibleFrame:
-        return self._visible_frame
+        return self.__visible_frame
 
     def get_table_structure(self, fingerprint: str) -> TableStructure:
-        rows_count = self._visible_frame.region.rows
-        columns_count = self._visible_frame.region.cols
+        rows_count = self.__visible_frame.region.rows
+        columns_count = self.__visible_frame.region.cols
         if rows_count == 0 or columns_count == 0:
             rows_count = columns_count = 0
         return TableStructure(
-            org_rows_count=len(self._source_frame.index),
-            org_columns_count=len(self._source_frame.columns),
+            org_rows_count=len(self.__source_frame.index),
+            org_columns_count=len(self.__source_frame.columns),
             rows_count=rows_count,
             columns_count=columns_count,
             fingerprint=fingerprint,
@@ -48,36 +48,36 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
 
     def set_sort_criteria(self, sort_by_column_index: Optional[list[int]], sort_ascending: Optional[list[bool]]):
         new_sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
-        if new_sort_criteria != self._sort_criteria:
-            self._sort_criteria = new_sort_criteria
-            self._visible_frame = self._recompute_visible_frame()
+        if new_sort_criteria != self.__sort_criteria:
+            self.__sort_criteria = new_sort_criteria
+            self.__visible_frame = self.__recompute_visible_frame()
 
     def _get_initial_visible_frame_indexes(self):
-        return self._source_frame.index, self._source_frame.columns
+        return self.__source_frame.index, self.__source_frame.columns
 
-    def _recompute_visible_frame(self) -> VisibleFrame:
+    def __recompute_visible_frame(self) -> VisibleFrame:
         index, columns = self._get_initial_visible_frame_indexes()
 
-        if self._filter_criteria.index is not None:
-            index = index.intersection(self._filter_criteria.index)
+        if self.__filter_criteria.index is not None:
+            index = index.intersection(self.__filter_criteria.index)
 
-        if self._filter_criteria.columns is not None:
-            columns = columns.intersection(self._filter_criteria.columns)
+        if self.__filter_criteria.columns is not None:
+            columns = columns.intersection(self.__filter_criteria.columns)
 
-        if not self._sort_criteria.is_empty():
-            sc = self._sort_criteria
-            frame = self._source_frame.loc[index, columns]
+        if not self.__sort_criteria.is_empty():
+            sc = self.__sort_criteria
+            frame = self.__source_frame.loc[index, columns]
             frame = frame.sort_values(
                 by=[frame.columns[i] for i in sc.by_column],
                 ascending=True if sc.ascending is None or len(sc.ascending) == 0 else sc.ascending,
             )
             index = frame.index
 
-        if index is self._source_frame.index and columns is self._source_frame.columns:
-            return VisibleFrame(self._source_frame)
+        if index is self.__source_frame.index and columns is self.__source_frame.columns:
+            return VisibleFrame(self.__source_frame)
 
         return MappedVisibleFrame(
-            self._source_frame,
-            self._source_frame.index.get_indexer_for(index),
-            self._source_frame.columns.get_indexer_for(columns),
+            self.__source_frame,
+            self.__source_frame.index.get_indexer_for(index),
+            self.__source_frame.columns.get_indexer_for(columns),
         )

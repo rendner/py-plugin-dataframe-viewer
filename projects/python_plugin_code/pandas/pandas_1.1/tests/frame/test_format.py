@@ -3,6 +3,7 @@ import pytest
 from pandas import DataFrame, option_context
 
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
+from tests.helpers.table_frame_validator import TableFrameValidator
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -14,7 +15,7 @@ df = pd.DataFrame.from_dict({
 
 
 def _assert_frame_formatting(df: DataFrame, rows_per_chunk: int, cols_per_chunk: int):
-    result = FrameContext(df).get_table_frame_validator().validate(rows_per_chunk, cols_per_chunk)
+    result = TableFrameValidator.with_context(FrameContext(df)).validate(rows_per_chunk, cols_per_chunk)
     assert result.actual == result.expected
 
 

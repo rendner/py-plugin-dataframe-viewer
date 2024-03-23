@@ -22,20 +22,20 @@ from pandas.core.dtypes.common import (
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
 from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn, TableFrameLegend
+from cms_rendner_sdfv.pandas.frame.frame_context import Chunk, FrameContext
 from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
-from cms_rendner_sdfv.pandas.shared.visible_frame import Chunk, VisibleFrame
 
 
 class _ValueFormatter(ValueFormatter):
     def __init__(self):
-        self._precision = get_option("display.precision")
-        self._float_format: Optional[Callable] = get_option("display.float_format")
+        self.__precision = get_option("display.precision")
+        self.__float_format: Optional[Callable] = get_option("display.float_format")
 
     def _default_format(self, x: Any, fallback_formatter) -> Any:
         if is_float(x) or is_complex(x):
-            if callable(self._float_format):
-                return self._float_format(x)
-            return f"{x:.{self._precision}f}"
+            if callable(self.__float_format):
+                return self.__float_format(x)
+            return f"{x:.{self.__precision}f}"
         elif is_integer(x):
             return str(x)
 
@@ -52,44 +52,31 @@ class _ValueFormatter(ValueFormatter):
 
 
 class TableFrameGenerator(AbstractTableFrameGenerator):
-    def __init__(self, visible_frame: VisibleFrame):
-        super().__init__(visible_frame)
+    def __init__(self, context: FrameContext):
+        super().__init__(context.visible_frame)
+        self.__context: FrameContext = context
 
     def generate(self,
                  region: Region = None,
                  exclude_row_header: bool = False,
                  exclude_col_header: bool = False,
                  ) -> TableFrame:
-        if self._exclude_headers:
-            exclude_row_header = True
-            exclude_col_header = True
-
-        chunk = self._visible_frame.get_chunk(region)
+        chunk = self.__context.get_chunk(region)
         formatter = _ValueFormatter()
 
-        columns = [] if exclude_col_header else self._extract_columns(chunk, formatter)
-        index_labels = [] if exclude_row_header else self._extract_index_header_labels(chunk, formatter)
-        cells = self._extract_cells(chunk, formatter)
-        legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(formatter)
-
         return TableFrame(
-            index_labels=index_labels,
-            columns=columns,
-            legend=legend_label,
-            cells=cells,
+            index_labels=[] if exclude_row_header else self._extract_index_header_labels(chunk, formatter),
+            columns=[] if exclude_col_header else self._extract_columns(chunk, formatter),
+            legend=None if exclude_col_header and exclude_row_header else self._extract_legend_label(formatter),
+            cells=self._extract_cells(chunk, formatter),
         )
 
     def _extract_columns(self, chunk: Chunk, formatter: ValueFormatter) -> List[TableFrameColumn]:
         result: List[TableFrameColumn] = []
 
-        for col_offset in range(chunk.region.cols):
-            name = chunk.column_at(col_offset)
-            if isinstance(name, tuple):
-                labels = [formatter.format_column(h) for h in name]
-            else:
-                labels = [formatter.format_column(name)]
-
-            info = self._visible_frame.get_column_info(chunk.region.first_col + col_offset)
+        for c in range(chunk.region.cols):
+            labels = [formatter.format_column(lbl) for lbl in chunk.col_labels_at(c)]
+            info = self._visible_frame.get_column_info(chunk.region.first_col + c)
             result.append(TableFrameColumn(dtype=str(info.dtype), labels=labels, describe=info.describe()))
 
         return result
@@ -98,12 +85,8 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
     def _extract_index_header_labels(chunk: Chunk, formatter: ValueFormatter) -> List[List[str]]:
         result: List[List[str]] = []
 
-        for row_offset in range(chunk.region.rows):
-            name = chunk.index_at(row_offset)
-            if isinstance(name, tuple):
-                result.append([formatter.format_index(h) for h in name])
-            else:
-                result.append([formatter.format_index(name)])
+        for r in range(chunk.region.rows):
+            result.append([formatter.format_index(lbl) for lbl in chunk.row_labels_at(r)])
 
         return result
 
@@ -112,11 +95,9 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         result: List[List[TableFrameCell]] = []
 
         col_range = range(chunk.region.cols)
-        for row_offset in range(chunk.region.rows):
-            result.append(
-                [TableFrameCell(
-                    value=formatter.format_cell(chunk.cell_value_at(row_offset, col_offset))
-                ) for col_offset in col_range])
+        for r in range(chunk.region.rows):
+            result.append([TableFrameCell(value=formatter.format_cell(chunk.cell_value_at(r, c))) for c in col_range])
+
         return result
 
     def _extract_legend_label(self, formatter: ValueFormatter) -> TableFrameLegend:

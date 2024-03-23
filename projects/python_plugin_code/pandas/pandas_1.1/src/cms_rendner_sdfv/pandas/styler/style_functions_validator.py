@@ -11,11 +11,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import dataclasses
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple
+from typing import Optional, Union, List, Tuple
 
 from cms_rendner_sdfv.base.types import Region
-from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
+from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, StyledChunk
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.types import StyleFunctionValidationProblem, ValidationStrategyType
 
@@ -75,22 +76,51 @@ class StyleFunctionsValidator:
         if self.__apply_todos_count == 0:
             return []
 
-        if region is None:
-            region = self.__ctx.visible_frame.region
+        region = self.__ctx.visible_frame.region.get_bounded_region(region)
+
+        if region.is_empty():
+            return []
 
         rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(region.rows, region.cols)
 
-        if self.__apply_todos_count == 1:
-            return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
+        if self.__apply_todos_count > 1:
+            apply_todos = list(filter(lambda x: not x.is_applymap(), self.__ctx.get_styler_todos()))
+            validation_problem = self.__validate_region(
+                region=region,
+                rows_per_chunk=rows_per_chunk,
+                cols_per_chunk=cols_per_chunk,
+                apply_todos=apply_todos,
+            )
 
-        try:
-            validator = self.__ctx.get_table_frame_validator()
-            if validator.validate(rows_per_chunk, cols_per_chunk, region).is_equal:
+            if validation_problem is None:
                 return []
-        except Exception:
-            pass
 
         return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
+
+    def __validate_region(self,
+                          region: Region,
+                          rows_per_chunk: int,
+                          cols_per_chunk: int,
+                          apply_todos: List[StylerTodo],
+                          ) -> Union[None, StyleFunctionValidationProblem]:
+        try:
+            styled_region = self.__ctx.compute_styled_chunk(region, apply_todos)
+
+            for local_chunk in region.iterate_local_chunkwise(rows_per_chunk, cols_per_chunk):
+
+                styled_chunk = self.__ctx.compute_styled_chunk(
+                    local_chunk.translate(region.first_row, region.first_col),
+                    apply_todos,
+                )
+
+                if not self.__has_same_cell_styling(styled_region, styled_chunk, local_chunk):
+                    return StyleFunctionValidationProblem(-1, "NOT_EQUAL")
+        except Exception as e:
+            # repr(e) gives the exception and the message string
+            # str(e) only the message string
+            return StyleFunctionValidationProblem(-1, "EXCEPTION", str(e))
+
+        return None
 
     def __validate_todos_separately(self,
                                     region: Region,
@@ -100,19 +130,30 @@ class StyleFunctionsValidator:
         validation_result = []
 
         for i, todo in enumerate(self.__ctx.get_styler_todos()):
-            try:
-                if todo.is_applymap():
-                    continue
-                validator = self.__ctx.get_todo_validator(todo)
-                result = validator.validate(rows_per_chunk, cols_per_chunk, region)
-                if not result.is_equal:
-                    validation_result.append(StyleFunctionValidationProblem(i, "NOT_EQUAL"))
-            except Exception as e:
-                # repr(e) gives the exception and the message string
-                # str(e) only the message string
-                validation_result.append(StyleFunctionValidationProblem(i, "EXCEPTION", str(e)))
+            if todo.is_applymap():
+                continue
+
+            validation_problem = self.__validate_region(
+                region=region,
+                rows_per_chunk=rows_per_chunk,
+                cols_per_chunk=cols_per_chunk,
+                apply_todos=[todo],
+            )
+
+            if validation_problem is not None:
+                validation_result.append(dataclasses.replace(validation_problem, index=i))
 
         return validation_result
+
+    @staticmethod
+    def __has_same_cell_styling(styled_region: StyledChunk, styled_chunk: StyledChunk, local_chunk: Region) -> bool:
+        for r in range(local_chunk.rows):
+            for c in range(local_chunk.cols):
+                expected = styled_region.cell_css_at(local_chunk.first_row + r, local_chunk.first_col + c)
+                actual = styled_chunk.cell_css_at(r, c)
+                if expected != actual:
+                    return False
+        return True
 
     @staticmethod
     def __count_apply_todos(todos: List[StylerTodo]) -> int:

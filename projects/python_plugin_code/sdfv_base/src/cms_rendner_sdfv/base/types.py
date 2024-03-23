@@ -54,13 +54,6 @@ class TableFrame:
 
 
 @dataclass(frozen=True)
-class TableFrameValidationResult:
-    actual: str
-    expected: str
-    is_equal: bool
-
-
-@dataclass(frozen=True)
 class Region:
     first_row: int = 0
     first_col: int = 0
@@ -107,19 +100,21 @@ class Region:
                 cols_in_row_processed += cols
             rows_processed += rows
 
-    def get_bounded_region(self, region_to_bound: 'Region') -> 'Region':
+    def get_bounded_region(self, unbound_region: Optional['Region']) -> 'Region':
+        if unbound_region is None:
+            return self
         if not self.is_valid():
             raise ValueError("No valid bounds.")
-        if not region_to_bound.is_valid():
+        if not unbound_region.is_valid():
             raise ValueError("Can't compute a bounded region against an invalid Region.")
-        first_row = max(region_to_bound.first_row, self.first_row)
-        first_col = max(region_to_bound.first_col, self.first_col)
-        last_row = min(region_to_bound.first_row + region_to_bound.rows, self.first_row + self.rows)
-        last_col = min(region_to_bound.first_col + region_to_bound.cols, self.first_col + self.cols)
+        first_row = max(unbound_region.first_row, self.first_row)
+        first_col = max(unbound_region.first_col, self.first_col)
+        last_row = min(unbound_region.first_row + unbound_region.rows, self.first_row + self.rows)
+        last_col = min(unbound_region.first_col + unbound_region.cols, self.first_col + self.cols)
         result = Region(first_row, first_col, last_row - first_row, last_col - first_col)
         return result if result.is_valid() else Region(
-            first_row=region_to_bound.first_row,
-            first_col=region_to_bound.first_col
+            first_row=unbound_region.first_row,
+            first_col=unbound_region.first_col
         )
 
 

@@ -12,34 +12,30 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import inspect
-import typing
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, TypeVar
 
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, TableFrame, \
-    TableFrameValidationResult, TableSourceKind, TableStructure
+    TableSourceKind, TableStructure
 
 
 class AbstractVisibleFrame(ABC):
-    @property
-    @abstractmethod
-    def region(self) -> Region:
-        pass
+    def __init__(self, region: Region):
+        self.region = region
 
-    def get_column_indices(self, part_start: int, max_columns: int) -> typing.List[int]:
+    def get_column_indices(self, part_start: int, max_columns: int) -> List[int]:
         # default implementation (has to be overwritten in case columns are excluded or reordered)
         end = min(part_start + max_columns, self.region.cols)
         return [] if end <= part_start or part_start < 0 else list(range(part_start, end))
 
 
-VF = typing.TypeVar('VF', bound=AbstractVisibleFrame)
+VF = TypeVar('VF', bound=AbstractVisibleFrame)
 
 
 class AbstractTableFrameGenerator(ABC):
     def __init__(self, visible_frame: VF):
         self._visible_frame: VF = visible_frame
-        self._exclude_headers: bool = False
 
     @abstractmethod
     def generate(self,
@@ -48,9 +44,6 @@ class AbstractTableFrameGenerator(ABC):
                  exclude_col_header: bool = False,
                  ) -> TableFrame:
         pass
-
-    def exclude_headers(self):
-        self._exclude_headers = True
 
     def generate_by_combining_chunks(self,
                                      rows_per_chunk: int,
@@ -91,30 +84,6 @@ class AbstractTableFrameGenerator(ABC):
         return result if result is not None else TableFrame(index_labels=[], columns=[], legend=None, cells=[])
 
 
-class TableFrameValidator:
-    def __init__(self, frame_region: Region, generator: AbstractTableFrameGenerator):
-        self.__frame_region = frame_region
-        self.__generator = generator
-
-    def validate(self,
-                 rows_per_chunk: int,
-                 cols_per_chunk: int,
-                 region: Region = None,
-                 ) -> TableFrameValidationResult:
-        if region is None:
-            region = self.__frame_region
-        else:
-            region = self.__frame_region.get_bounded_region(region)
-
-        if region.is_empty():
-            return TableFrameValidationResult('', '', True)
-        combined_table = self.__generator.generate_by_combining_chunks(rows_per_chunk, cols_per_chunk, region)
-        expected_table = self.__generator.generate(region)
-        combined_json = to_json(combined_table, indent=2)
-        expected_json = to_json(expected_table, indent=2)
-        return TableFrameValidationResult(combined_json, expected_json, combined_json == expected_json)
-
-
 class AbstractTableSourceContext(ABC):
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
         pass
@@ -132,23 +101,18 @@ class AbstractTableSourceContext(ABC):
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
         pass
 
-    def get_table_frame_validator(self) -> TableFrameValidator:
-        generator = self.get_table_frame_generator()
-        generator.exclude_headers()
-        return TableFrameValidator(self.visible_frame.region, generator)
 
-
-T = typing.TypeVar('T', bound=AbstractTableSourceContext)
+T = TypeVar('T', bound=AbstractTableSourceContext)
 
 
 class AbstractTableSource(ABC):
     def __init__(self, kind: TableSourceKind, context: T, fingerprint: str):
-        self._kind = kind
+        self.__kind = kind
         self._context = context
-        self._fingerprint = fingerprint
+        self.__fingerprint = fingerprint
 
     def get_kind(self) -> TableSourceKind:
-        return self._kind
+        return self.__kind
 
     @staticmethod
     def jsonify(data: Any) -> str:
@@ -158,7 +122,7 @@ class AbstractTableSource(ABC):
         return self._context.visible_frame.get_column_indices(part_start, max_columns)
 
     def get_table_structure(self) -> TableStructure:
-        return self._context.get_table_structure(self._fingerprint)
+        return self._context.get_table_structure(self.__fingerprint)
 
     def set_sort_criteria(self,
                           by_column_index: Optional[List[int]] = None,

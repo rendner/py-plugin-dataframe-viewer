@@ -46,13 +46,13 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
     def _extract_columns(self, chunk: Chunk) -> List[TableFrameColumn]:
         result: List[TableFrameColumn] = []
 
-        for col_offset in range(chunk.region.cols):
-            series = chunk.series_at(col_offset)
+        for c in range(chunk.region.cols):
+            series = chunk.series_at(c)
             result.append(
                 TableFrameColumn(
                     dtype=str(series.dtype),
                     labels=[series.name],
-                    describe=None if self._exclude_column_describe else chunk.describe(series)
+                    describe=chunk.describe(series),
                 )
             )
 
@@ -67,11 +67,11 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
         str_lengths = int(os.environ.get("POLARS_FMT_STR_LEN", str(CELL_MAX_STR_LEN)))
 
-        for col_offset in range(chunk.region.cols):
-            series = chunk.series_at(col_offset)
+        for c in range(chunk.region.cols):
+            series = chunk.series_at(c)
             is_string = isinstance(series.dtype, pl.Utf8)
             should_create_row = not result
-            for ri, sri in enumerate(chunk.row_idx_iter()):
+            for r, row_in_series in enumerate(chunk.row_idx_iter()):
                 if is_string:
                     # 'series._s.get_fmt(...)' wraps strings with a leading '"' and a trailing '"'.
                     # If the wrapped string exceeds the configured string length, it gets truncated
@@ -84,17 +84,17 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                     #
                     # A printed DataFrame doesn't wrap strings with additional '"'.
                     # To get identical values for strings, the length is increased by two and altered afterwards.
-                    v = series._s.get_fmt(sri, str_lengths + 2)
+                    v = series._s.get_fmt(row_in_series, str_lengths + 2)
                     if v[-1] == '"':
                         v = v[1:-1]
                     else:
                         v = v[1:-2] + v[-1]
                 else:
-                    v = series._s.get_fmt(sri, str_lengths)
+                    v = series._s.get_fmt(row_in_series, str_lengths)
 
                 if should_create_row:
                     result.append([TableFrameCell(v)])
                 else:
-                    result[ri].append(TableFrameCell(v))
+                    result[r].append(TableFrameCell(v))
 
         return result

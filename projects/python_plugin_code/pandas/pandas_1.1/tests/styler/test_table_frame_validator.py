@@ -5,8 +5,8 @@ import pytest
 from pandas import DataFrame, MultiIndex, Series
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.table_source import TableFrameValidator
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
+from tests.helpers.table_frame_validator import TableFrameValidator
 
 np.random.seed(123456)
 
@@ -24,7 +24,7 @@ df = DataFrame.from_dict({
 
 
 def create_validator(style: Styler) -> TableFrameValidator:
-    return PatchedStylerContext(style).get_table_frame_validator()
+    return TableFrameValidator.with_context(PatchedStylerContext(style))
 
 
 @pytest.mark.parametrize(
