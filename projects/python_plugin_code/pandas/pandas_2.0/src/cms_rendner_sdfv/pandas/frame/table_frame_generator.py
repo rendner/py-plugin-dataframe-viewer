@@ -60,6 +60,9 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                  exclude_row_header: bool = False,
                  exclude_col_header: bool = False,
                  ) -> TableFrame:
+        if self._exclude_headers:
+            exclude_row_header = True
+            exclude_col_header = True
 
         chunk = self._visible_frame.get_chunk(region)
         formatter = _ValueFormatter()
@@ -67,8 +70,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         columns = [] if exclude_col_header else self._extract_columns(chunk, formatter)
         index_labels = [] if exclude_row_header else self._extract_index_header_labels(chunk, formatter)
         cells = self._extract_cells(chunk, formatter)
-        legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(chunk,
-                                                                                                         formatter)
+        legend_label = None if exclude_col_header and exclude_row_header else self._extract_legend_label(formatter)
 
         return TableFrame(
             index_labels=index_labels,
@@ -87,14 +89,8 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
             else:
                 labels = [formatter.format_column(name)]
 
-            column_info = self._visible_frame.get_column_info(chunk.region.first_col + col_offset)
-            result.append(
-                TableFrameColumn(
-                    dtype=str(column_info.dtype),
-                    labels=labels,
-                    describe=None if self._exclude_column_describe else column_info.describe(),
-                )
-            )
+            info = self._visible_frame.get_column_info(chunk.region.first_col + col_offset)
+            result.append(TableFrameColumn(dtype=str(info.dtype), labels=labels, describe=info.describe()))
 
         return result
 
@@ -124,7 +120,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
 
         return result
 
-    def _extract_legend_label(self, chunk: Chunk, formatter: ValueFormatter) -> TableFrameLegend:
+    def _extract_legend_label(self, formatter: ValueFormatter) -> TableFrameLegend:
         index_legend = [formatter.format_index(n) for n in self._visible_frame.index_names if n is not None]
         column_legend = [formatter.format_index(n) for n in self._visible_frame.column_names if n is not None]
         return TableFrameLegend(index=index_legend, column=column_legend) if index_legend or column_legend else None

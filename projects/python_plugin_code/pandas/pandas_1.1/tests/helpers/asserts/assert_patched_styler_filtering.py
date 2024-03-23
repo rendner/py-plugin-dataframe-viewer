@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,7 +17,8 @@ from typing import Callable, Dict, List, Optional, Union, Any
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrame, TableFrameCell, TableFrameGenerator
+from cms_rendner_sdfv.base.types import TableFrameCell, TableFrame
+from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, FilterCriteria
 
 """

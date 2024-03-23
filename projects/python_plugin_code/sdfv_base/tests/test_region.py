@@ -25,28 +25,28 @@ def test_is_valid():
 
 
 def test_iterate_chunkwise():
-    chunks = [chunk for chunk in Region().iterate_chunkwise(2, 2)]
+    chunks = list(Region().iterate_local_chunkwise(2, 2))
     assert chunks == []
 
-    chunks = [chunk for chunk in Region(rows=1).iterate_chunkwise(2, 2)]
+    chunks = list(Region(rows=1).iterate_local_chunkwise(2, 2))
     assert chunks == []
 
-    chunks = [chunk for chunk in Region(cols=1).iterate_chunkwise(2, 2)]
+    chunks = list(Region(cols=1).iterate_local_chunkwise(2, 2))
     assert chunks == []
 
-    chunks = [chunk for chunk in Region(rows=1, cols=1).iterate_chunkwise(2, 2)]
+    chunks = list(Region(rows=1, cols=1).iterate_local_chunkwise(2, 2))
     assert chunks == [Region(rows=1, cols=1)]
 
-    chunks = [chunk for chunk in Region(first_row=1, first_col=1, rows=3, cols=1).iterate_chunkwise(2, 2)]
+    chunks = list(Region(first_row=1, first_col=1, rows=3, cols=1).iterate_local_chunkwise(2, 2))
     assert chunks == [Region(rows=2, cols=1), Region(first_row=2, rows=1, cols=1)]
 
     with pytest.raises(ValueError):
         # noinspection PyStatementEffect
-        [chunk for chunk in Region(rows=-1).iterate_chunkwise(2, 2)]
+        list(Region(rows=-1).iterate_local_chunkwise(2, 2))
 
     with pytest.raises(ValueError):
         # noinspection PyStatementEffect
-        [chunk for chunk in Region(rows=2, cols=2).iterate_chunkwise(-2, 2)]
+        list(Region(rows=2, cols=2).iterate_local_chunkwise(-2, 2))
 
 
 def test_get_bounded_region():

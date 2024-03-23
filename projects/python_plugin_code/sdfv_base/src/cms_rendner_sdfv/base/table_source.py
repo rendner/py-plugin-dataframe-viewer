@@ -39,7 +39,7 @@ VF = typing.TypeVar('VF', bound=AbstractVisibleFrame)
 class AbstractTableFrameGenerator(ABC):
     def __init__(self, visible_frame: VF):
         self._visible_frame: VF = visible_frame
-        self._exclude_column_describe: bool = False
+        self._exclude_headers: bool = False
 
     @abstractmethod
     def generate(self,
@@ -49,8 +49,8 @@ class AbstractTableFrameGenerator(ABC):
                  ) -> TableFrame:
         pass
 
-    def exclude_column_describe(self, exclude: bool):
-        self._exclude_column_describe = exclude
+    def exclude_headers(self):
+        self._exclude_headers = True
 
     def generate_by_combining_chunks(self,
                                      rows_per_chunk: int,
@@ -62,18 +62,13 @@ class AbstractTableFrameGenerator(ABC):
         if region is None:
             region = self._visible_frame.region
 
-        for chunk_region in region.iterate_chunkwise(rows_per_chunk, cols_per_chunk):
+        for local_chunk in region.iterate_local_chunkwise(rows_per_chunk, cols_per_chunk):
 
-            chunk_contains_elements_of_first_row = chunk_region.first_row == 0
-            chunk_contains_row_start_element = chunk_region.first_col == 0
+            chunk_contains_elements_of_first_row = local_chunk.first_row == 0
+            chunk_contains_row_start_element = local_chunk.first_col == 0
 
             chunk_table = self.generate(
-                region=Region(
-                    region.first_row + chunk_region.first_row,
-                    region.first_col + chunk_region.first_col,
-                    chunk_region.rows,
-                    chunk_region.cols,
-                ),
+                region=local_chunk.translate(region.first_row, region.first_col),
                 # request headers only once
                 exclude_row_header=not chunk_contains_row_start_element,
                 exclude_col_header=not chunk_contains_elements_of_first_row,
@@ -91,7 +86,7 @@ class AbstractTableFrameGenerator(ABC):
                     result.cells.extend(chunk_table.cells)
                 else:
                     for i, row in enumerate(chunk_table.cells):
-                        result.cells[i + chunk_region.first_row].extend(row)
+                        result.cells[i + local_chunk.first_row].extend(row)
 
         return result if result is not None else TableFrame(index_labels=[], columns=[], legend=None, cells=[])
 
@@ -139,7 +134,7 @@ class AbstractTableSourceContext(ABC):
 
     def get_table_frame_validator(self) -> TableFrameValidator:
         generator = self.get_table_frame_generator()
-        generator.exclude_column_describe(True)
+        generator.exclude_headers()
         return TableFrameValidator(self.visible_frame.region, generator)
 
 

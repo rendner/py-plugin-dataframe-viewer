@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -70,6 +71,9 @@ class Region:
     def with_frame_shape(cls, shape: Tuple[int, int]):
         return cls(rows=shape[0], cols=shape[1])
 
+    def translate(self, row_offset: int, col_offset: int):
+        return dataclasses.replace(self, first_row=self.first_row + row_offset, first_col=self.first_col + col_offset)
+
     def is_empty(self) -> bool:
         return self.rows == 0 or self.cols == 0
 
@@ -80,7 +84,12 @@ class Region:
     def frame_shape(self) -> Tuple[int, int]:
         return self.rows, self.cols
 
-    def iterate_chunkwise(self, rows_per_chunk: int, cols_per_chunk: int):
+    # The returned Regions have local coordinates relative to the iterated Region.
+    # Example:
+    #   list(Region(first_row=5, first_col=5, rows=5, cols=5).iterate_chunkwise(5, 5))
+    # returns:
+    #   [Region(first_row=0, first_col=0, rows=5, cols=5)]
+    def iterate_local_chunkwise(self, rows_per_chunk: int, cols_per_chunk: int):
         if not self.is_valid():
             raise ValueError("Invalid Regions can't be iterated chunkwise.")
         if rows_per_chunk <= 0 or cols_per_chunk <= 0:

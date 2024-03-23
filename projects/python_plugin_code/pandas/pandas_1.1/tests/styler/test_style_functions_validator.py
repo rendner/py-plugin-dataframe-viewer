@@ -6,8 +6,9 @@ from pandas.io.formats.style import Styler
 from cms_rendner_sdfv.base.types import Region
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionsValidator
-from cms_rendner_sdfv.pandas.styler.types import StyleFunctionValidationProblem, ValidationStrategyType
+from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionValidationProblem, \
+    StyleFunctionsValidator
+from cms_rendner_sdfv.pandas.styler.types import ValidationStrategyType
 
 np.random.seed(123456)
 

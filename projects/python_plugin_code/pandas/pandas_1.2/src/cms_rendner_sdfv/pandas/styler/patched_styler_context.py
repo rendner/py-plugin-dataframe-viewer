@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -47,7 +47,9 @@ class PatchedStylerContext(PandasTableSourceContext):
 
     def get_todo_validator(self, todo: StylerTodo) -> TableFrameValidator:
         from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
-        return TableFrameValidator(self.visible_frame.region, TableFrameGenerator(self, lambda x: x is todo))
+        frame_generator = TableFrameGenerator(self, lambda x: x is todo)
+        frame_generator.exclude_headers()
+        return TableFrameValidator(self.visible_frame.region, frame_generator)
 
     def create_patched_todos(self,
                              chunk: DataFrame,

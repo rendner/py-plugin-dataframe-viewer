@@ -48,7 +48,9 @@ class PatchedStylerContext(PandasTableSourceContext):
 
     def get_todo_validator(self, todo: StylerTodo) -> TableFrameValidator:
         from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
-        return TableFrameValidator(self.visible_frame.region, TableFrameGenerator(self, lambda x: x is todo))
+        frame_generator = TableFrameGenerator(self, lambda x: x is todo)
+        frame_generator.exclude_headers()
+        return TableFrameValidator(self.visible_frame.region, frame_generator)
 
     def create_patched_todos(self,
                              chunk: DataFrame,

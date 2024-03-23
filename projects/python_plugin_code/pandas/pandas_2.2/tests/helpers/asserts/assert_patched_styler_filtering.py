@@ -17,7 +17,8 @@ from typing import Callable, Optional, Union, Any
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrame, TableFrameCell, TableFrameGenerator
+from cms_rendner_sdfv.base.types import TableFrameCell, TableFrame
+from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, FilterCriteria
 
 """
