@@ -17,28 +17,22 @@ This is a lot of work, especially for a large `DataFrame`.
 And this might have to be done not only for one `DataFrame`, but for many ones to be sure that it works (depends on the complexity of the styling function).
 
 ## Support From The Plugin
-The plugin provides an automatic validation by using a similar algorithm as described above.
+The plugin provides an automatic validation for pandas `DataFrames` by using a similar algorithm as described above.
 
-Whenever a chunk is fetched from a `DataFrame`, the plugin can validate the data of the fetched chunk afterward in the background.
-> Note: The validation **can't** ensure that the combined output of all chunks of a `DataFrame` is the same as the output of the `DataFrame`.
-> This would require to generate the styled output for the whole `DataFrame` at once which isn't doable in realtime.
-> It can only guarantee that the combined output of smaller 2d parts, taken from the fetched chunk, match with the output of the fetched chunk.
-> 
-> I expect that the current implementation can already provide good guidance.
-
+Whenever a chunk is fetched from a `DataFrame`, the plugin can validate that the used style functions return a stable styling for different sizes of chunks.
 A short video to demo the feature, taken from an earlier PoC, can be found here: [Validation Demo](https://twitter.com/rendner/status/1530298351698296833?s=20&t=6wXXchcZvLfHJK5ZndpNFA)
 
 
 ### Things To Keep In Mind:
 
-- Evaluation and validation of a chunk takes place on the Python side and is performed sequentially.
+- Evaluation and validation of a chunk takes place on the Python side.
 
 - The number of styling functions used (less is better) to style a `DataFrame` can greatly affect the duration of validation.
-  In case of an error, the plugin tries to identify the styling functions which caused the non-matching values.
-  To do this, it has to do all the validation steps for each styling function.
+  To find faulty styling functions, the plugin applies the described algorithm to each styling function.
 
-- By the plugin reported errors indicate that a styling function produce different output for different sizes of chunks.
-  However, this does not mean that you can always see such an error in the current displayed values. Because, the internal validation uses smaller chunks to speed up the validation.
+- Problems reported by the plugin indicate that a styling function generates different outputs for different sizes of chunks.
+  However, this does not mean that you can always see such a problem in the current displayed values.
+  Because, the internal validation uses smaller chunks to speed up the validation.
 
 ## Configure Validation
 Validation is **disabled** by default.
@@ -56,10 +50,9 @@ The notification provides a `Show Report` and a `Copy To Clipboard` action.
 ### Action: Show Report
 Opens a small info dialog in which the warnings/errors found are listed.
 
-All styling functions which raised an exception during the validation process are reported as warnings since it could not be determined if they really give different results for different sizes of chunks.
-Nevertheless, this indicates a problem when a styling function raises an exception only for some chunks.
+All styling functions which raised an exception during the validation process are reported as *errors*.
 
-All styling functions that produce different output for different sizes of chunks are reported as errors.
+All styling functions that produce different output for different sizes of chunks are reported as *incompatible*.
 
 The following information is provided to identify the function that may be faulty:
 

@@ -21,11 +21,12 @@ import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInpu
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.IEditorChangedListener
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.IChunkValidationProblemHandler
+import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ValidatedChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AsyncChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoaderErrorHandler
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
 import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
@@ -239,35 +240,15 @@ class DataFrameViewerDialog(
         settings: ApplicationSettingsService.MyState,
     ): IChunkDataLoader {
         return AsyncChunkDataLoader(
-            ChunkEvaluator(tableSourceRef),
-            if (tableSourceRef is IPyPatchedStylerRef)
-                createChunkValidator(tableSourceRef, settings.validationStrategyType)
-            else null,
+            if (tableSourceRef is IPyPatchedStylerRef && settings.pandasStyledFuncValidationEnabled)
+                ValidatedChunkEvaluator(tableSourceRef, this)
+            else ChunkEvaluator(tableSourceRef),
             this,
         )
     }
 
-    private fun createChunkValidator(
-        patchedStyler: IPyPatchedStylerRef,
-        validationStrategyType: ValidationStrategyType
-    ): ChunkValidator? {
-        return if (validationStrategyType != ValidationStrategyType.DISABLED) {
-            ChunkValidator(patchedStyler, validationStrategyType, this)
-        } else null
-    }
-
-    override fun handleValidationProblems(
-        region: ChunkRegion,
-        validationStrategy: ValidationStrategyType,
-        problems: List<ValidationProblem>,
-    ) {
-        if (problems.isNotEmpty()) {
-            ChunkValidationProblemNotification(
-                region,
-                validationStrategy,
-                problems,
-            ).notify(project)
-        }
+    override fun handleValidationProblems(problems: List<StyleFunctionValidationProblem>) {
+        ChunkValidationProblemNotification(problems).notify(project)
     }
 
     override fun handleChunkDataError(region: ChunkRegion, exception: ChunkDataLoaderException) {

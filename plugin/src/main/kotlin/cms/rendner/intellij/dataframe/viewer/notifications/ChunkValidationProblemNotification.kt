@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,8 @@
 package cms.rendner.intellij.dataframe.viewer.notifications
 
 import cms.rendner.intellij.dataframe.viewer.DataFrameViewerIcons
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.ProblemReason
-import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
+import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionValidationProblem
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -32,50 +30,42 @@ import java.lang.Integer.min
 import javax.swing.JOptionPane
 
 /**
- * Notification about a chunk-validation-result.
+ * Notification about chunk-validation problems.
  *
- * @param region the validated region in the pandas DataFrame
- * @param validationStrategy the used validation strategy
  * @param problems the detected problems
  */
 class ChunkValidationProblemNotification(
-    region: ChunkRegion,
-    validationStrategy: ValidationStrategyType,
-    problems: List<ValidationProblem>,
+    problems: List<StyleFunctionValidationProblem>,
 ) : AbstractBalloonNotification(
-    "Possible incompatible styling function found",
-    "Found ${problems.size} problem(s)\nin $region",
+    "Validation found ${problems.size} problem${if (problems.size > 1) "s" else ""}",
+    "reason: incompatible styling functions",
     NotificationType.WARNING,
 ) {
 
     init {
         icon = DataFrameViewerIcons.LOGO_16
-        addAction(ShowValidationReportAction(region, validationStrategy, problems))
-        addAction(CopyToClipboardAction(region, validationStrategy, problems))
+        addAction(ShowValidationReportAction(problems))
+        addAction(CopyToClipboardAction(problems))
     }
 
     private class CopyToClipboardAction(
-        private val region: ChunkRegion,
-        private val validationStrategy: ValidationStrategyType,
-        private val problems: List<ValidationProblem>,
+        private val problems: List<StyleFunctionValidationProblem>,
     ) : AnAction("Copy To Clipboard"), DumbAware {
         override fun actionPerformed(p0: AnActionEvent) {
-            val message = ClipboardReportGenerator().createReport(region, validationStrategy, problems)
+            val message = ClipboardReportGenerator().createReport(problems)
             val selection = StringSelection(message)
             Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
         }
     }
 
     private class ShowValidationReportAction(
-        private val region: ChunkRegion,
-        private val validationStrategy: ValidationStrategyType,
-        private val problems: List<ValidationProblem>,
+        private val problems: List<StyleFunctionValidationProblem>,
     ) : AnAction("Show Report"), DumbAware {
 
         override fun actionPerformed(event: AnActionEvent) {
             showHtmlMessageDialog(
                 event.project,
-                HTMLReportGenerator().createReport(region, validationStrategy, problems),
+                HTMLReportGenerator().createReport(problems),
                 "Chunk Validation Report",
                 JOptionPane.INFORMATION_MESSAGE,
             ) { messageScrollPane ->
@@ -88,22 +78,14 @@ class ChunkValidationProblemNotification(
     }
 
     private abstract class AbstractReportGenerator {
-        fun createReport(
-            region: ChunkRegion,
-            validationStrategy: ValidationStrategyType,
-            problems: List<ValidationProblem>,
-        ): String {
-            return stringify(region, validationStrategy, groupByReason(problems))
+        fun createReport(problems: List<StyleFunctionValidationProblem>): String {
+            return stringify(groupByReason(problems))
         }
 
-        protected abstract fun stringify(
-            region: ChunkRegion,
-            validationStrategy: ValidationStrategyType,
-            sections: List<Section>,
-        ): String
+        protected abstract fun stringify(sections: List<Section>): String
 
         protected fun extractReportableValues(
-            problem: ValidationProblem,
+            problem: StyleFunctionValidationProblem,
             valueTransformer: ((key: ReportableValue, value: Any) -> String) = { _, value -> value.toString() },
         ): Map<ReportableValue, String> {
             return mutableMapOf<ReportableValue, String>().apply {
@@ -131,23 +113,23 @@ class ChunkValidationProblemNotification(
             }
         }
 
-        private fun groupByReason(problems: List<ValidationProblem>): List<Section> {
-            val warnings = Section("Warnings", "Exception during validation")
-            val errors = Section("Errors", "Styling function is not chunk aware (compared results didn't match)")
+        private fun groupByReason(problems: List<StyleFunctionValidationProblem>): List<Section> {
+            val errors = Section("Errors", "Exception during validation")
+            val incompatible = Section("Incompatible", "Styling function is not chunk aware (compared results didn't match)")
 
             problems.forEach {
                 when (it.reason) {
-                    ProblemReason.NOT_EQUAL -> errors.entries.add(it)
-                    ProblemReason.EXCEPTION -> warnings.entries.add(it)
+                    ProblemReason.NOT_EQUAL -> incompatible.entries.add(it)
+                    ProblemReason.EXCEPTION -> errors.entries.add(it)
                 }
             }
 
             return mutableListOf<Section>().apply {
+                if (incompatible.entries.isNotEmpty()) {
+                    add(incompatible)
+                }
                 if (errors.entries.isNotEmpty()) {
                     add(errors)
-                }
-                if (warnings.entries.isNotEmpty()) {
-                    add(warnings)
                 }
             }
         }
@@ -166,35 +148,15 @@ class ChunkValidationProblemNotification(
         data class Section(
             val title: String,
             val reason: String,
-            val entries: MutableList<ValidationProblem> = mutableListOf()
+            val entries: MutableList<StyleFunctionValidationProblem> = mutableListOf()
         )
     }
 
     private class ClipboardReportGenerator : AbstractReportGenerator() {
-        override fun stringify(
-            region: ChunkRegion,
-            validationStrategy: ValidationStrategyType,
-            sections: List<Section>,
-        ): String {
+        override fun stringify(sections: List<Section>): String {
             return StringBuilder().apply {
-                appendHeaderInfo(this, region, validationStrategy)
                 sections.forEach { appendSection(this, it) }
             }.toString()
-        }
-
-        private fun appendHeaderInfo(
-            sb: StringBuilder,
-            region: ChunkRegion,
-            validationStrategy: ValidationStrategyType
-        ) {
-            with(sb) {
-                append("Possible incompatible styling function(s) found.")
-                appendLine()
-                appendLine()
-                appendRow("region", region)
-                appendRow("validationStrategy", validationStrategy)
-                appendLine()
-            }
         }
 
         private fun appendSection(sb: StringBuilder, section: Section) {
@@ -207,7 +169,7 @@ class ChunkValidationProblemNotification(
 
         private fun appendSectionEntry(
             sb: StringBuilder,
-            entry: ValidationProblem,
+            entry: StyleFunctionValidationProblem,
             reason: String,
         ) {
             with(sb) {
@@ -223,33 +185,12 @@ class ChunkValidationProblemNotification(
     }
 
     private class HTMLReportGenerator : AbstractReportGenerator() {
-        override fun stringify(
-            region: ChunkRegion,
-            validationStrategy: ValidationStrategyType,
-            sections: List<Section>,
-        ): String {
+        override fun stringify(sections: List<Section>): String {
             return StringBuilder().apply {
                 append("<html>")
-                appendHeaderInfo(this, region, validationStrategy)
                 sections.forEach { appendSection(this, it) }
                 append("</html>")
             }.toString()
-        }
-
-        private fun appendHeaderInfo(
-            sb: StringBuilder,
-            region: ChunkRegion,
-            validationStrategy: ValidationStrategyType
-        ) {
-            with(sb) {
-                append("Possible incompatible styling function(s) found.")
-                append("<br/><br/>")
-                append("<table>")
-                appendTableRow("region", region)
-                appendTableRow("validationStrategy", validationStrategy)
-                append("</table>")
-                append("<br/>")
-            }
         }
 
         private fun appendSection(sb: StringBuilder, section: Section) {
@@ -267,7 +208,7 @@ class ChunkValidationProblemNotification(
 
         private fun appendSectionEntry(
             sb: StringBuilder,
-            entry: ValidationProblem,
+            entry: StyleFunctionValidationProblem,
             reason: String
         ) {
             val labeledValues = extractReportableValues(entry) { key, value ->

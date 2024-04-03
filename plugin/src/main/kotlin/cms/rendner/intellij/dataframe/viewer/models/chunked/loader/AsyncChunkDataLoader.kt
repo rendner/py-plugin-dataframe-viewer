@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ChunkValidator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.shutdownExecutorSilently
 import com.intellij.openapi.application.runInEdt
@@ -28,7 +27,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
- * Loader for loading chunks of a pandas DataFrame asynchronously.
+ * Loader for loading chunks of a Python DataFrame asynchronously.
  *
  * The implementation is not thread safe and should only be called from a single thread.
  * This behavior is on purpose because this class is used by a swing component.
@@ -36,18 +35,13 @@ import java.util.concurrent.TimeUnit
  * It is guaranteed that all the methods provided by the [IChunkDataResultHandler] are called
  * from the event dispatch thread (EDT).
  *
- * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
- * @param chunkValidator the validator to validate the generated HTML data for a chunk
+ * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the Python DataFrame
  * @param errorHandler the error handler. All errors during the data fetching are forwarded to this handler.
  */
 class AsyncChunkDataLoader(
     chunkEvaluator: IChunkEvaluator,
-    chunkValidator: ChunkValidator?,
     private val errorHandler: IChunkDataLoaderErrorHandler,
-) : AbstractChunkDataLoader(
-    chunkEvaluator,
-    chunkValidator,
-) {
+) : AbstractChunkDataLoader(chunkEvaluator) {
 
     companion object {
         private val logger = Logger.getInstance(AsyncChunkDataLoader::class.java)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,10 @@
  */
 package cms.rendner.intellij.dataframe.viewer.settings
 
-import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
-import com.intellij.util.xmlb.Converter
-import com.intellij.util.xmlb.annotations.OptionTag
 
 
 /**
@@ -42,8 +39,7 @@ class ApplicationSettingsService : PersistentStateComponent<ApplicationSettingsS
     private var myState = MyState()
 
     data class MyState (
-        @OptionTag(converter = MyValidationStrategyTypeConverter::class)
-        var validationStrategyType: ValidationStrategyType = ValidationStrategyType.DISABLED,
+        var pandasStyledFuncValidationEnabled: Boolean = false,
         var fsUseFilterInputFromInternalApi: Boolean = true,
     )
 
@@ -53,13 +49,5 @@ class ApplicationSettingsService : PersistentStateComponent<ApplicationSettingsS
 
     override fun loadState(state: MyState) {
         myState = state
-    }
-
-    /**
-     * Use a converter to not fail in case the name of the enum values is changed after persistence.
-     */
-    class MyValidationStrategyTypeConverter: Converter<ValidationStrategyType>() {
-        override fun toString(value: ValidationStrategyType) = value.name
-        override fun fromString(value: String) = ValidationStrategyType.valueOfOrDisabled(value)
     }
 }

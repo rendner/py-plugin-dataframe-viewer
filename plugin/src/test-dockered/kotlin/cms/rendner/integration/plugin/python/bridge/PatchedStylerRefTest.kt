@@ -19,9 +19,6 @@ import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
-import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionInfo
-import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionValidationProblem
-import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
 import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
@@ -49,36 +46,21 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun evaluateStyleFunctionInfo_shouldBeCallable() {
-        runWithPatchedStyler {
-            assertThat(it.evaluateStyleFunctionInfo()).isEqualTo(
-                listOf(
-                    StyleFunctionInfo(
-                        0,
-                        "<lambda>",
-                        "<lambda>",
-                        "",
-                        isPandasBuiltin = false,
-                        isSupported = true,
-                        isApply = false,
-                        isChunkParentRequested = false
-                    )
-                )
-            )
-        }
-    }
-
-    @Test
-    fun evaluateValidateStyleFunctions_shouldBeCallable() {
+    fun evaluateValidateAndComputeChunkTableFrame_shouldBeCallable() {
         runWithPatchedStyler {
             assertThat(
-                it.evaluateValidateStyleFunctions(
+                it.evaluateValidateAndComputeChunkTableFrame(
                     ChunkRegion(0, 0, 2, 2),
-                    ValidationStrategyType.DISABLED,
+                    excludeRowHeader = false,
+                    excludeColumnHeader = false,
                 )
-            ).isEqualTo(
-                emptyList<StyleFunctionValidationProblem>()
-            )
+            ).matches { validatedTable ->
+                validatedTable.frame.let { table ->
+                    table.indexLabels!!.isNotEmpty()
+                            && table.columns.isNotEmpty()
+                            && table.cells.isNotEmpty()
+                } && validatedTable.problems.isEmpty()
+            }
         }
     }
 

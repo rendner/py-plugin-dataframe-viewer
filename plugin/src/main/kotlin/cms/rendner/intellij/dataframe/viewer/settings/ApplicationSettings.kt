@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ class ApplicationSettings : Configurable {
     override fun reset() {
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
-            it.validationStrategyType = settings.validationStrategyType
+            it.pandasStyledFuncValidationEnabled = settings.pandasStyledFuncValidationEnabled
             it.fsUseFilterInputFromInternalApi = settings.fsUseFilterInputFromInternalApi
         }
     }
@@ -54,7 +54,7 @@ class ApplicationSettings : Configurable {
     override fun isModified(): Boolean {
         return mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
-            it.validationStrategyType !== settings.validationStrategyType ||
+            it.pandasStyledFuncValidationEnabled != settings.pandasStyledFuncValidationEnabled ||
             it.fsUseFilterInputFromInternalApi != settings.fsUseFilterInputFromInternalApi
         } ?: false
     }
@@ -62,7 +62,7 @@ class ApplicationSettings : Configurable {
     override fun apply() {
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
-            settings.validationStrategyType = it.validationStrategyType
+            settings.pandasStyledFuncValidationEnabled = it.pandasStyledFuncValidationEnabled
             settings.fsUseFilterInputFromInternalApi = it.fsUseFilterInputFromInternalApi
         }
     }

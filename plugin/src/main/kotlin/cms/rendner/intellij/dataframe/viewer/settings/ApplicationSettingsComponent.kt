@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package cms.rendner.intellij.dataframe.viewer.settings
 
-import cms.rendner.intellij.dataframe.viewer.python.bridge.ValidationStrategyType
-import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.border.IdeaTitledBorder
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -32,16 +30,17 @@ import javax.swing.JPanel
  */
 class SettingsComponent {
 
-    private val myValidationStrategyComboBox = ComboBox(ValidationStrategyType.values())
+    private val myPandasStyledFuncValidationEnabledCheckBox =
+        JBCheckBox("Validate pandas style functions")
     private val myFSUseFilterInputFromInternalApiCheckBox =
         JBCheckBox("Filter input: use editor from internal IntelliJ API")
 
     private val myPanel: JPanel
 
-    var validationStrategyType: ValidationStrategyType
-        get() = myValidationStrategyComboBox.item
+    var pandasStyledFuncValidationEnabled: Boolean
+        get() = myPandasStyledFuncValidationEnabledCheckBox.isSelected
         set(value) {
-            myValidationStrategyComboBox.item = value
+            myPandasStyledFuncValidationEnabledCheckBox.isSelected = value
         }
 
     var fsUseFilterInputFromInternalApi: Boolean
@@ -53,9 +52,8 @@ class SettingsComponent {
 
     init {
         val dataFetchingSettingsPanel = FormBuilder.createFormBuilder()
-            .addLabeledComponent("Validation strategy: ", myValidationStrategyComboBox)
-            .addTooltip("Automatic validation of used styling functions.")
-            .addTooltip("(For styled pandas DataFrames)")
+            .addComponent(myPandasStyledFuncValidationEnabledCheckBox)
+            .addTooltip("Validates that styling functions return stable results for chunks of different sizes.")
             .panel
         dataFetchingSettingsPanel.border = createTitleBorder("Data fetching")
 
@@ -90,6 +88,6 @@ class SettingsComponent {
     }
 
     fun getPreferredFocusedComponent(): JComponent {
-        return myValidationStrategyComboBox
+        return myPanel
     }
 }

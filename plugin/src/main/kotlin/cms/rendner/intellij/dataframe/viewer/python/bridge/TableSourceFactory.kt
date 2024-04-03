@@ -160,25 +160,19 @@ class TableSourceFactory {
         tempVarSlotId: String?
     ) : PyTableSourceRef(pythonValue, tempVarSlotId), IPyPatchedStylerRef {
 
-        @Throws(EvaluateException::class)
-        override fun evaluateStyleFunctionInfo(): List<StyleFunctionInfo> {
-            return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(refExpr, "get_style_function_info")
-            )
-        }
-
-        override fun evaluateValidateStyleFunctions(
+        override fun evaluateValidateAndComputeChunkTableFrame(
             chunk: ChunkRegion,
-            validationStrategy: ValidationStrategyType,
-        ): List<StyleFunctionValidationProblem> {
-            if (validationStrategy == ValidationStrategyType.DISABLED) return emptyList()
+            excludeRowHeader: Boolean,
+            excludeColumnHeader: Boolean,
+        ): ValidatedTableFrame {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(refExpr, "validate_style_functions") {
+                stringifyMethodCall(refExpr, "validate_and_compute_chunk_table_frame") {
                     numberParam(chunk.firstRow)
                     numberParam(chunk.firstColumn)
                     numberParam(chunk.numberOfRows)
                     numberParam(chunk.numberOfColumns)
-                    stringParam(validationStrategy.name)
+                    boolParam(excludeRowHeader)
+                    boolParam(excludeColumnHeader)
                 }
             )
         }

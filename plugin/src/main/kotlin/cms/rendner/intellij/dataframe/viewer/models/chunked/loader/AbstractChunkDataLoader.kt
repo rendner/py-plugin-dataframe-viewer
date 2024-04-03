@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,12 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.IChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.models.chunked.converter.TableFrameConverter
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
-import cms.rendner.intellij.dataframe.viewer.models.chunked.validator.ChunkValidator
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 
 /**
- * Abstract class for loading chunks of a pandas DataFrame.
- * The data is fetched by using an [IChunkEvaluator] and validated by an optional [ChunkValidator].
+ * Abstract class for loading chunks of a Python DataFrame.
+ * The data is fetched by using an [IChunkEvaluator].
  *
  * Chunks of a specific area of a DataFrame can be requested by calling [loadChunk] and specifying the exact
  * location inside the DataFrame. Chunks are always loaded one after the other to not block the Python side.
@@ -37,12 +36,10 @@ import java.util.concurrent.Executor
  * - ensure that only one task, returned by [submitFetchChunkTask], is executed at a time
  *      - starting more than one doesn't speed up the process because they run all in the same Python thread
  *
- * @param chunkEvaluator the evaluator to fetch the HTML data for a chunk of the pandas DataFrame
- * @param chunkValidator the validator to validate the generated HTML data for a chunk
+ * @param chunkEvaluator the evaluator to fetch the content for a chunk of a Python DataFrame
  */
 abstract class AbstractChunkDataLoader(
-    private var chunkEvaluator: IChunkEvaluator,
-    private var chunkValidator: ChunkValidator? = null,
+    private val chunkEvaluator: IChunkEvaluator,
 ) : IChunkDataLoader {
 
     protected var myResultHandler: IChunkDataResultHandler? = null
@@ -93,10 +90,6 @@ abstract class AbstractChunkDataLoader(
                     ctx.request.excludeColumnHeaders,
                 )
                 handleChunkData(ctx, chunkData)
-
-                if (Thread.currentThread().isInterrupted) return@Runnable
-                errMessage = "Validating styling functions failed"
-                chunkValidator?.validate(ctx.request.chunkRegion)
             } catch (throwable: Throwable) {
                 if (throwable is InterruptedException) Thread.currentThread().interrupt()
                 throw ChunkDataLoaderException(errMessage, throwable)

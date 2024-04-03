@@ -5,11 +5,12 @@ A common operation in data analysis is to filter values based on a condition or 
 Pandas provides a variety of ways to filter a `DataFrame`.
 
 The filter feature in the plugin doesn't use pandas [DataFrame.filter](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.filter.html).
-Because this method doesn't allow to filter a `DataFrame` on its content. Instead, you can provide a Python expression which returns a
-`DataFrame`. The intersection of the index and columns of the returned `DataFrame` and the viewed `DataFrame` are displayed.
+Because this method doesn't allow to filter a `DataFrame` on its content, the filter is applied to the labels of the index.
+Instead, you can provide a Python expression which returns a `DataFrame`.
+The intersection of the index and columns of the returned `DataFrame` and the viewed `DataFrame` are displayed.
 The returned `DataFrame` defines which values should be displayed, others are filtered out.
 
-> Note: The filtering of the styled `DataFrame` is done after applying the styling but by using the unformatted values of the `DataFrame`.
+> Note: The filtering of the styled `DataFrame` is done after applying the styling but by using the original and unformatted values of the `DataFrame`.
 > Technically it is implemented in another way, but it behaves like this.
 > 
 > In case you use [Styler.highlight_max](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.highlight_max.html) and filter out

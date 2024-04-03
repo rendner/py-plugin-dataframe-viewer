@@ -130,47 +130,6 @@ interface IPyTableSourceRef: Disposable {
 }
 
 /**
- * Enumeration of validation strategies.
- *
- * The names of the enum values match with the "ValidationStrategyType" Python class.
- */
-enum class ValidationStrategyType {
-    /**
-     * Fast validation, but not deterministic and not very accurate.
-     *
-     * Halves the region to be inspected alternately horizontally or vertically and compares the two parts.
-     * Since the region is alternately bisected horizontally and vertically, the result is not deterministic.
-     *
-     * For a deterministic validation use [PRECISION] or call the validation twice for
-     * the same region when using [FAST].
-     */
-    FAST,
-
-    /**
-     * Slow but deterministic and more accurate validation then [FAST].
-     *
-     * Halves the region to validate vertically and horizontally and compares the four parts.
-     */
-    PRECISION,
-
-    /**
-     * No validation.
-     * This is a marker value and doesn't exist in the "ValidationStrategyType" Python class.
-     */
-    DISABLED;
-
-    companion object {
-        fun valueOfOrDisabled(value: String): ValidationStrategyType {
-            return try {
-                ValidationStrategyType.valueOf(value.uppercase())
-            } catch (ignore:IllegalArgumentException) {
-                DISABLED
-            }
-        }
-    }
-}
-
-/**
  * Describes a styling function which was registered via pandas "Styler::apply" or "Styler::applymap".
  *
  * @property index the index of the styling function in the pandas "Styler._todo"
@@ -213,15 +172,15 @@ enum class ProblemReason {
 /**
  * Description of the problem.
  *
- * @property index the index of the styling function in the pandas "Styler._todo"
  * @property reason the reason
  * @property message a message, only set if [reason] is [ProblemReason.EXCEPTION]
+ * @property funcInfo a description about the reported styling function
  */
 @Serializable
 data class StyleFunctionValidationProblem(
-    @SerialName("index") val index: Int,
     @SerialName("reason") val reason: ProblemReason,
-    @SerialName("message") val message: String = "",
+    @SerialName("message") val message: String,
+    @SerialName("func_info") val funcInfo: StyleFunctionInfo,
 )
 
 /**
@@ -229,32 +188,20 @@ data class StyleFunctionValidationProblem(
  */
 interface IPyPatchedStylerRef: IPyTableSourceRef {
     /**
-     * Calls the "get_style_function_details" method of the Python class.
+     * Calls the "validate_and_compute_chunk_table_frame" method of the Python class.
      *
-     * The result contains details about each styling function registered via "Styler::apply" and "Styler::applymap".
-     *
-     * @return list of details about registered styling functions.
+     * @param chunk the region of the data to evaluate and validate
+     * @param excludeRowHeader if true, row headers are excluded from the result.
+     * @param excludeColumnHeader if true, column headers are excluded from the result.
+     * @return returns a table representation of the chunk and the validation problems found.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
-    fun evaluateStyleFunctionInfo(): List<StyleFunctionInfo>
-
-    /**
-     * Calls the "validate_style_functions" method of the Python class.
-     *
-     * The result contains the found validation problems.
-     *
-     * @param chunk the region of the data to validate
-     * @param validationStrategy the validation strategy to use, in case of [ValidationStrategyType.DISABLED]
-     *  the method immediately returns an empty list without evaluation the specified region.
-     * @return the found problems or an empty list of no problems could be found by the used validation strategy.
-     * @throws EvaluateException in case the evaluation fails.
-     */
-    @Throws(EvaluateException::class)
-    fun evaluateValidateStyleFunctions(
+    fun evaluateValidateAndComputeChunkTableFrame(
         chunk: ChunkRegion,
-        validationStrategy: ValidationStrategyType,
-    ): List<StyleFunctionValidationProblem>
+        excludeRowHeader: Boolean,
+        excludeColumnHeader: Boolean,
+    ): ValidatedTableFrame
 }
 
 @Serializable
@@ -273,6 +220,12 @@ data class TableFrame(
     val cells: List<List<TableFrameCell>>,
     val legend: TableFrameLegend?,
     )
+
+@Serializable
+data class ValidatedTableFrame(
+    val frame: TableFrame,
+    val problems: List<StyleFunctionValidationProblem>,
+)
 
 enum class DataSourceTransformHint {
     DictKeysAsRows,
