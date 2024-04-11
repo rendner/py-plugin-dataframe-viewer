@@ -12,138 +12,113 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import dataclasses
-from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Optional
 
 from cms_rendner_sdfv.base.types import Region
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, StyledChunk
-from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
-from cms_rendner_sdfv.pandas.styler.types import StyleFunctionValidationProblem, ValidationStrategyType
-
-
-class _AbstractValidationStrategy(ABC):
-    def __init__(self, strategy_type: ValidationStrategyType):
-        self._strategy_type: ValidationStrategyType = strategy_type
-
-    @property
-    def strategy_type(self):
-        return self._strategy_type
-
-    @abstractmethod
-    def get_chunk_size(self, rows_in_region: int, columns_in_region: int) -> tuple[int, int]:
-        pass
-
-    @staticmethod
-    def _ceiling_division(n, d):
-        return -(n // -d)
-
-
-class _PrecisionValidationStrategy(_AbstractValidationStrategy):
-    def __init__(self):
-        super().__init__(ValidationStrategyType.PRECISION)
-
-    def get_chunk_size(self, rows_in_region: int, columns_in_region: int) -> tuple[int, int]:
-        rows_per_chunk = max(1, self._ceiling_division(rows_in_region, 2))
-        cols_per_chunk = max(1, self._ceiling_division(columns_in_region, 2))
-        return rows_per_chunk, cols_per_chunk
-
-
-class _FastValidationStrategy(_AbstractValidationStrategy):
-    def __init__(self):
-        super().__init__(ValidationStrategyType.FAST)
-        self.__split_vertical = True
-
-    def get_chunk_size(self, rows_in_region: int, columns_in_region: int) -> tuple[int, int]:
-        rows_per_chunk = rows_in_region
-        cols_per_chunk = columns_in_region
-
-        if self.__split_vertical:
-            cols_per_chunk = max(1, self._ceiling_division(cols_per_chunk, 2))
-        else:
-            rows_per_chunk = max(1, self._ceiling_division(rows_per_chunk, 2))
-
-        self.__split_vertical = not self.__split_vertical
-        return rows_per_chunk, cols_per_chunk
+from cms_rendner_sdfv.pandas.styler.style_function_name_resolver import StyleFunctionNameResolver
+from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
+from cms_rendner_sdfv.pandas.styler.types import StyleFunctionValidationProblem, StyleFunctionInfo
 
 
 class StyleFunctionsValidator:
-    def __init__(self, ctx: PatchedStylerContext, strategy_type: Optional[ValidationStrategyType] = None):
+    def __init__(self, ctx: PatchedStylerContext, ignore_list: list[TodoPatcher] = None):
         self.__ctx: PatchedStylerContext = ctx
-        self.__apply_todos_count: int = self.__count_apply_todos(ctx.get_styler_todos())
-        self.__validation_strategy: _AbstractValidationStrategy = self.__create_validation_strategy(strategy_type)
+        self.__ignore_list = ignore_list or []
+        self.failed_patchers: list[TodoPatcher] = []
 
-    def validate(self, region: Region = None) -> list[StyleFunctionValidationProblem]:
-        if self.__apply_todos_count == 0:
-            return []
-
+    def validate(self, region: Optional[Region] = None) -> list[StyleFunctionValidationProblem]:
         region = self.__ctx.visible_frame.region.get_bounded_region(region)
 
         if region.is_empty():
             return []
 
-        rows_per_chunk, cols_per_chunk = self.__validation_strategy.get_chunk_size(region.rows, region.cols)
+        patchers = [
+            p for p in self.__ctx.get_todo_patcher_list()
+            if not p.todo.is_map() and p not in self.__ignore_list
+        ]
 
-        if self.__apply_todos_count > 1:
-            apply_todos = list(filter(lambda x: not x.is_map(), self.__ctx.get_styler_todos()))
-            validation_problem = self.__validate_region(
-                region=region,
-                rows_per_chunk=rows_per_chunk,
-                cols_per_chunk=cols_per_chunk,
-                apply_todos=apply_todos,
-            )
+        validation_result = []
+        for patcher in patchers:
+            is_equal = False
 
-            if validation_problem is None:
-                return []
+            try:
+                if patcher.todo.apply_args.axis_is_index():
+                    # styling is applied to each column
+                    is_equal = self.__validate_horizontal_splitted(region, patcher)
+                elif patcher.todo.apply_args.axis_is_columns():
+                    # styling is applied to each row
+                    is_equal = self.__validate_vertical_splitted(region, patcher)
+                else:
+                    # styling is applied to whole dataframe
+                    is_equal = self.__validate_horizontal_splitted(region, patcher)
+                    if is_equal:
+                        is_equal = self.__validate_vertical_splitted(region, patcher)
 
-        return self.__validate_todos_separately(region, rows_per_chunk, cols_per_chunk)
+                if not is_equal:
+                    self.failed_patchers.append(patcher)
+                    validation_result.append(
+                        StyleFunctionValidationProblem(
+                            reason="NOT_EQUAL",
+                            message="",
+                            func_info=self.__create_style_func_info(patcher),
+                        )
+                    )
 
-    def __validate_region(self,
-                          region: Region,
-                          rows_per_chunk: int,
-                          cols_per_chunk: int,
-                          apply_todos: list[StylerTodo],
-                          ) -> Union[None, StyleFunctionValidationProblem]:
-        try:
-            styled_region = self.__ctx.compute_styled_chunk(region, apply_todos)
-
-            for local_chunk in region.iterate_local_chunkwise(rows_per_chunk, cols_per_chunk):
-
-                styled_chunk = self.__ctx.compute_styled_chunk(
-                    local_chunk.translate(region.first_row, region.first_col),
-                    apply_todos,
+            except Exception as e:
+                self.failed_patchers.append(patcher)
+                # repr(e) gives the exception and the message string
+                # str(e) only the message string
+                validation_result.append(
+                    StyleFunctionValidationProblem(
+                        reason="EXCEPTION",
+                        message=str(e),
+                        func_info=self.__create_style_func_info(patcher),
+                    )
                 )
 
-                if not self.__has_same_cell_styling(styled_region, styled_chunk, local_chunk):
-                    return StyleFunctionValidationProblem(-1, "NOT_EQUAL")
-        except Exception as e:
-            # repr(e) gives the exception and the message string
-            # str(e) only the message string
-            return StyleFunctionValidationProblem(-1, "EXCEPTION", str(e))
+        return validation_result
 
-        return None
-
-    def __validate_todos_separately(self,
-                                    region: Region,
-                                    rows_per_chunk: int,
-                                    cols_per_chunk: int,
-                                    ) -> list[StyleFunctionValidationProblem]:
-        validation_result = []
-
-        for i, todo in enumerate(self.__ctx.get_styler_todos()):
-            if todo.is_map():
-                continue
-
-            validation_problem = self.__validate_region(
-                region=region,
-                rows_per_chunk=rows_per_chunk,
-                cols_per_chunk=cols_per_chunk,
-                apply_todos=[todo],
+    def __validate_horizontal_splitted(self, region: Region, patcher: TodoPatcher) -> bool:
+        region_to_validate = region.get_bounded_region(dataclasses.replace(region, rows=2))
+        styled_region = self.__ctx.compute_styled_chunk(region_to_validate, [patcher])
+        for local_chunk in region_to_validate.iterate_local_chunkwise(1, region_to_validate.cols):
+            styled_chunk = self.__ctx.compute_styled_chunk(
+                local_chunk.translate(region_to_validate.first_row, region_to_validate.first_col),
+                [patcher],
             )
 
-            if validation_problem is not None:
-                validation_result.append(dataclasses.replace(validation_problem, index=i))
+            if not self.__has_same_cell_styling(styled_region, styled_chunk, local_chunk):
+                return False
+        return True
 
-        return validation_result
+    def __validate_vertical_splitted(self, region: Region, patcher: TodoPatcher) -> bool:
+        region_to_validate = region.get_bounded_region(dataclasses.replace(region, cols=2))
+        styled_region = self.__ctx.compute_styled_chunk(region_to_validate, [patcher])
+        for local_chunk in region_to_validate.iterate_local_chunkwise(region_to_validate.rows, 1):
+            styled_chunk = self.__ctx.compute_styled_chunk(
+                local_chunk.translate(region_to_validate.first_row, region_to_validate.first_col),
+                [patcher],
+            )
+
+            if not self.__has_same_cell_styling(styled_region, styled_chunk, local_chunk):
+                return False
+        return True
+
+    @staticmethod
+    def __create_style_func_info(patcher: TodoPatcher) -> StyleFunctionInfo:
+        todo = patcher.todo
+        return StyleFunctionInfo(
+            index=todo.index_in_org_styler,
+            qname=StyleFunctionNameResolver.get_style_func_qname(todo),
+            resolved_name=StyleFunctionNameResolver.resolve_style_func_name(todo),
+            axis='' if todo.is_map() else str(todo.apply_args.axis),
+            is_pandas_builtin=todo.is_pandas_style_func(),
+            # True - if we have a patcher for a pandas style func
+            is_supported=patcher.todo.is_pandas_style_func(),
+            is_apply=not todo.is_map(),
+            is_chunk_parent_requested=todo.should_provide_chunk_parent(),
+        )
 
     @staticmethod
     def __has_same_cell_styling(styled_region: StyledChunk, styled_chunk: StyledChunk, local_chunk: Region) -> bool:
@@ -154,14 +129,3 @@ class StyleFunctionsValidator:
                 if expected != actual:
                     return False
         return True
-
-    @staticmethod
-    def __count_apply_todos(todos: list[StylerTodo]) -> int:
-        return 0 if not todos else len([not t.is_map() for t in todos])
-
-    @staticmethod
-    def __create_validation_strategy(strategy_type: Optional[ValidationStrategyType] = None):
-        if strategy_type is ValidationStrategyType.PRECISION:
-            return _PrecisionValidationStrategy()
-        else:
-            return _FastValidationStrategy()

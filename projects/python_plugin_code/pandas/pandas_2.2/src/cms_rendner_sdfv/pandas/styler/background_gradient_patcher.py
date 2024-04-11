@@ -29,10 +29,10 @@ class BackgroundGradientPatcher(TodoPatcher):
         super().__init__(todo)
 
     def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
-        return self._todo.builder() \
+        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
+        return self._todo_builder() \
             .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
-            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame))\
+            .with_style_func(ChunkParentProvider(self._styling_func, self.todo.apply_args.axis, subset_frame))\
             .build()
 
     def _styling_func(self,
@@ -69,7 +69,7 @@ class BackgroundGradientPatcher(TodoPatcher):
         # adjust shape of gmap to match shape of chunk
         gmap = self._adjust_gmap_shape_to_chunk_shape(gmap, chunk_or_series_from_chunk, chunk_parent)
 
-        return self._todo.apply_args.style_func(
+        return self.todo.apply_args.style_func(
             chunk_or_series_from_chunk,
             **dict(kwargs, vmin=vmin, vmax=vmax, gmap=gmap),
         )
@@ -87,7 +87,7 @@ class BackgroundGradientPatcher(TodoPatcher):
         # This is all done automatically by using "get_indexer_for".
         if isinstance(chunk_or_series_from_chunk, Series):
             return gmap[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
-        elif isinstance(chunk_or_series_from_chunk, DataFrame) and self._todo.apply_args.axis is None:
+        elif isinstance(chunk_or_series_from_chunk, DataFrame) and self.todo.apply_args.axis is None:
             ri = chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)
             ci = chunk_parent.columns.get_indexer_for(chunk_or_series_from_chunk.columns)
             if isinstance(gmap, DataFrame):

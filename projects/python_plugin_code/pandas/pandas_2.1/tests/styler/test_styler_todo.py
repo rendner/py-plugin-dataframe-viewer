@@ -1,6 +1,8 @@
 from typing import Any
 from pandas import DataFrame, Series
+
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
+from tests.helpers.extract_first_todo import extract_first_todo
 
 
 def test_is_map_tuple_with_map():
@@ -24,7 +26,7 @@ def test_apply_parsing():
         return series
 
     styler = DataFrame().style.apply(style_func, axis='index', subset=['a', 'b'])
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
 
     assert actual.is_map() is False
     assert actual.apply_args.style_func == style_func
@@ -37,7 +39,7 @@ def test_apply_kwargs():
         return series
 
     styler = DataFrame().style.apply(style_func, name='abc')
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
 
     assert actual.style_func_kwargs == {'name': 'abc'}
 
@@ -47,7 +49,7 @@ def test_map_parsing():
         return scalar
 
     styler = DataFrame().style.map(style_func, subset=['a', 'b'])
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
 
     assert actual.is_map()
     assert actual.apply_args.style_func == style_func
@@ -59,7 +61,7 @@ def test_map_kwargs():
         return scalar
 
     styler = DataFrame().style.map(style_func, name='abc')
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
 
     assert actual.style_func_kwargs == {'name': 'abc'}
 
@@ -69,7 +71,7 @@ def test_chunk_parent_for_function():
         return series
 
     styler = DataFrame().style.apply(style_func)
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
 
     assert actual.should_provide_chunk_parent()
 
@@ -79,21 +81,21 @@ def test_no_chunk_parent_for_function():
         return series
 
     styler = DataFrame().style.apply(style_func)
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
 
     assert actual.should_provide_chunk_parent() is False
 
 
 def test_chunk_parent_for_lambda():
     styler = DataFrame().style.apply(lambda x, chunk_parent: x)
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
 
     assert actual.should_provide_chunk_parent()
 
 
 def test_no_chunk_parent_for_lambda():
     styler = DataFrame().style.apply(lambda x, chunk: x)
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
 
     assert actual.should_provide_chunk_parent() is False
 
@@ -103,68 +105,18 @@ def test_is_pandas_style_func():
         return series
 
     styler = DataFrame().style.apply(my_style_func)
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
     assert actual.is_pandas_style_func() is False
 
     styler = DataFrame().style.highlight_max()
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
     assert actual.is_pandas_style_func()
 
 
-def test_decode_encode_round_trip():
+def test_to_tuple():
     def my_style_func(series: Series):
         return series
 
     styler = DataFrame().style.apply(my_style_func)
-    actual = StylerTodo.from_tuple(styler._todo[0])
+    actual = extract_first_todo(styler)
     assert actual.to_tuple() == styler._todo[0]
-
-
-def test_builder_round_trip():
-    def my_style_func(series: Series):
-        return series
-
-    styler = DataFrame().style.apply(my_style_func, subset=['a'])
-    todo = StylerTodo.from_tuple(styler._todo[0])
-
-    actual = todo.builder().build()
-    assert actual.to_tuple() == styler._todo[0]
-
-
-def test_builder_replace_subset():
-    def my_style_func(series: Series):
-        return series
-
-    styler = DataFrame().style.apply(my_style_func, subset=['a'])
-    todo = StylerTodo.from_tuple(styler._todo[0])
-
-    actual = todo.builder().with_subset(None).build()
-    assert actual.apply_args.subset is None
-
-    actual = todo.builder().with_subset(['b']).build()
-    assert actual.apply_args.subset == ['b']
-
-
-def test_builder_replace_style_function():
-    def my_style_func(series: Series):
-        return series
-
-    def my_other_style_func(series: Series):
-        return series
-
-    styler = DataFrame().style.apply(my_style_func)
-    todo = StylerTodo.from_tuple(styler._todo[0])
-
-    actual = todo.builder().with_style_func(my_other_style_func).build()
-    assert actual.apply_args.style_func == my_other_style_func
-
-
-def test_builder_replace_style_function_kwargs():
-    def my_style_func(series: Series):
-        return series
-
-    styler = DataFrame().style.apply(my_style_func, name="abc")
-    todo = StylerTodo.from_tuple(styler._todo[0])
-
-    actual = todo.builder().with_style_func_kwargs({'age': 12}).build()
-    assert actual.style_func_kwargs == {'age': 12}

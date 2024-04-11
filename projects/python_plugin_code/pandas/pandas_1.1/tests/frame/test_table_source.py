@@ -1,14 +1,31 @@
-import numpy as np
-from pandas import DataFrame, MultiIndex
+from pandas import DataFrame
 
+from cms_rendner_sdfv.base.types import TableFrame, TableFrameColumn, TableFrameCell
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
+from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
-np.random.seed(123456)
+df = DataFrame.from_dict({
+        0: [0, 1, 2],
+        1: [3, 4, 5],
+    })
 
-midx = MultiIndex.from_product([["x", "y"], ["a", "b", "c"]])
-df = DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
-df.index.names = ["lev0", "lev1"]
+
+def test_compute_chunk_table_frame():
+    actual = TableSource(FrameContext(df), "finger-1").compute_chunk_table_frame(0, 0, 2, 2)
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['0'], ['1']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['0']),
+                TableFrameColumn(dtype='int64', labels=['1']),
+            ],
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='3')],
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+            ],
+        ))
 
 
 def test_table_structure():

@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ class ApplyMapPatcher(TodoPatcher):
         super().__init__(todo)
 
     def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
-        return self._todo.builder() \
+        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
+        return self._todo_builder() \
             .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
             .build()

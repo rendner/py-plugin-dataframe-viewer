@@ -17,13 +17,13 @@ from typing import Optional
 from pandas import DataFrame
 from pandas.io.formats.style_render import Subset, non_reducing_slice
 
-from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
+from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo, StylerTodoBuilder
 
 
 class TodoPatcher(ABC):
 
     def __init__(self, todo: StylerTodo):
-        self._todo: StylerTodo = todo
+        self.todo: StylerTodo = todo
 
     @abstractmethod
     def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
@@ -42,3 +42,6 @@ class TodoPatcher(ABC):
         subset = slice(None) if subset is None else subset
         subset = non_reducing_slice(subset)
         return org_frame.loc[subset]
+
+    def _todo_builder(self) -> StylerTodoBuilder:
+        return StylerTodoBuilder(self.todo)

@@ -52,6 +52,27 @@ def test_get_org_indices_of_visible_columns_with_filter():
 
 def test_styled_chunk_uses_formatting_from_org_styler():
     ctx = PatchedStylerContext(df.style.format('{:+.2f}', subset=pd.IndexSlice[0, ["col_2"]]))
-    styled_chunk = ctx.compute_styled_chunk(Region.with_frame_shape(df.shape), ctx.get_styler_todos())
+    styled_chunk = ctx.compute_styled_chunk(Region.with_frame_shape(df.shape))
     assert styled_chunk.cell_value_at(0, 0) == 0
     assert styled_chunk.cell_value_at(0, 2) == '+2.00'
+
+
+def test_detects_supported_pandas_style_funcs():
+    styler = df.style \
+        .background_gradient() \
+        .highlight_min() \
+        .highlight_max() \
+        .highlight_null() \
+        .set_properties()
+
+    ctx = PatchedStylerContext(styler)
+
+    assert len(ctx.get_todo_patcher_list()) == len(styler._todo)
+
+
+def test_detects_not_supported_pandas_style_funcs():
+    styler = df.style.bar()
+
+    ctx = PatchedStylerContext(styler)
+
+    assert len(ctx.get_todo_patcher_list()) == 0

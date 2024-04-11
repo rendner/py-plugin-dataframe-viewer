@@ -53,19 +53,23 @@ class ApplyArgs:
     def to_tuple(self) -> Tuple[Callable, Optional[Axis], Optional[Subset]]:
         return self.style_func, self.axis, self.subset
 
+    def axis_is_index(self) -> bool:
+        return self.axis == 'index' or self.axis == 0
+
+    def axis_is_columns(self) -> bool:
+        return self.axis == 'columns' or self.axis == 1
+
 
 @dataclass(frozen=True)
 class StylerTodo:
+    index_in_org_styler: int
     apply_func: Callable
     apply_args: Union[ApplyArgs, MapArgs]
     style_func_kwargs: dict
 
     @classmethod
-    def from_tuple(cls, todo: Tuple[Callable, tuple, dict]):
-        return cls(todo[0], cls._to_apply_args(todo), todo[2])
-
-    def builder(self):
-        return StylerTodoBuilder(self)
+    def from_tuple(cls, index_in_org_styler: int, todo: Tuple[Callable, tuple, dict]):
+        return cls(index_in_org_styler, todo[0], cls._to_apply_args(todo), todo[2])
 
     @staticmethod
     def _to_apply_args(todo: Tuple[Callable, tuple, dict]):
@@ -123,6 +127,7 @@ class StylerTodoBuilder:
 
     def build(self) -> StylerTodo:
         return StylerTodo(
+            self.source.index_in_org_styler,
             self.source.apply_func,
             self.source.apply_args.copy_with(
                 style_func=self.values.get("style_func", self.source.apply_args.style_func),

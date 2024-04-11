@@ -21,8 +21,14 @@ from cms_rendner_sdfv.base.types import Region
 from cms_rendner_sdfv.pandas.shared.pandas_table_source_context import PandasTableSourceContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame
+from cms_rendner_sdfv.pandas.styler.apply_map_patcher import ApplyMapPatcher
+from cms_rendner_sdfv.pandas.styler.apply_patcher import ApplyPatcher
+from cms_rendner_sdfv.pandas.styler.background_gradient_patcher import BackgroundGradientPatcher
+from cms_rendner_sdfv.pandas.styler.highlight_between_patcher import HighlightBetweenPatcher
+from cms_rendner_sdfv.pandas.styler.highlight_extrema_patcher import HighlightExtremaPatcher
+from cms_rendner_sdfv.pandas.styler.style_function_name_resolver import StyleFunctionNameResolver
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
-from cms_rendner_sdfv.pandas.styler.todos_patcher import TodosPatcher
+from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 
 
 class StyledChunk:
@@ -95,7 +101,10 @@ class PatchedStylerContext(PandasTableSourceContext):
         self.__has_hidden_rows = len(styler.hidden_rows) > 0
         self.__has_hidden_columns = len(styler.hidden_columns) > 0
         self.__styler = styler
-        self.__styler_todos = [StylerTodo.from_tuple(t) for t in styler._todo]
+        self.__todo_patcher_list: List[TodoPatcher] = self.__create_patchers([
+            StylerTodo.from_tuple(idx, t)
+            for idx, t in enumerate(styler._todo)
+        ])
         super().__init__(styler.data, filter_criteria)
 
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
@@ -103,12 +112,12 @@ class PatchedStylerContext(PandasTableSourceContext):
         from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
         return TableFrameGenerator(self)
 
-    def get_styler_todos(self):
-        return self.__styler_todos
+    def get_todo_patcher_list(self) -> List[TodoPatcher]:
+        return self.__todo_patcher_list
 
     def compute_styled_chunk(self,
                              region: Region,
-                             todos: Optional[List[StylerTodo]] = None,
+                             patcher_list: Optional[List[TodoPatcher]] = None,
                              ) -> StyledChunk:
         org_styler = self.__styler
         region = self.visible_frame.region.get_bounded_region(region)
@@ -117,13 +126,13 @@ class PatchedStylerContext(PandasTableSourceContext):
         copy = org_styler.data.style
         # assign patched todos
         # The apply/map params are patched to not operate outside the chunk bounds.
-        copy._todo = TodosPatcher().patch_todos_for_chunk(
-            self.__styler_todos if todos is None else todos,
-            org_styler.data,
+        chunk_df = self.visible_frame.to_frame(region)
+        copy._todo = [
             # The plugin only renders the visible (non-hidden cols/rows) of the styled DataFrame.
             # Therefore, create chunk from the visible data.
-            self.visible_frame.to_frame(region),
-        )
+            p.create_patched_todo(org_styler.data, chunk_df).to_tuple()
+            for p in (patcher_list or self.__todo_patcher_list)
+        ]
         # Compute the styling for the chunk by operating on the original DataFrame.
         # The computed styler contains only entries for the cells of the chunk,
         # this is ensured by the patched todos.
@@ -155,3 +164,36 @@ class PatchedStylerContext(PandasTableSourceContext):
             index = index.delete(Index(self.__styler.hidden_rows))
 
         return index, columns
+
+    def __create_patchers(self, todos: List[StylerTodo]) -> List[TodoPatcher]:
+        result: List[TodoPatcher] = []
+
+        for t in todos:
+            if t.is_pandas_style_func():
+                patcher = self.__get_patcher_for_supported_pandas_style_functions(t)
+            else:
+                patcher = ApplyMapPatcher(t) if t.is_applymap() else ApplyPatcher(t)
+
+            if patcher is not None:
+                result.append(patcher)
+
+        return result
+
+    @staticmethod
+    def __get_patcher_for_supported_pandas_style_functions(todo: StylerTodo) -> Optional[TodoPatcher]:
+        qname = StyleFunctionNameResolver.get_style_func_qname(todo)
+        if StyleFunctionNameResolver.is_pandas_text_gradient(qname, todo):
+            return BackgroundGradientPatcher(todo)
+        elif StyleFunctionNameResolver.is_pandas_background_gradient(qname):
+            return BackgroundGradientPatcher(todo)
+        elif StyleFunctionNameResolver.is_pandas_highlight_max(qname, todo):
+            return HighlightExtremaPatcher(todo, 'max')
+        elif StyleFunctionNameResolver.is_pandas_highlight_min(qname, todo):
+            return HighlightExtremaPatcher(todo, 'min')
+        elif StyleFunctionNameResolver.is_pandas_highlight_null(qname):
+            return ApplyPatcher(todo)
+        elif StyleFunctionNameResolver.is_pandas_highlight_between(qname):
+            return HighlightBetweenPatcher(todo)
+        elif StyleFunctionNameResolver.is_pandas_set_properties(qname):
+            return ApplyMapPatcher(todo)
+        return None

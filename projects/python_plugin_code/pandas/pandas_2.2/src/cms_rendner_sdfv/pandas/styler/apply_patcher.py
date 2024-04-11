@@ -26,11 +26,11 @@ class ApplyPatcher(TodoPatcher):
         super().__init__(todo)
 
     def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
-        builder = self._todo.builder().with_subset(self._calculate_chunk_subset(subset_frame, chunk))
-        if self._todo.should_provide_chunk_parent():
+        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
+        builder = self._todo_builder().with_subset(self._calculate_chunk_subset(subset_frame, chunk))
+        if self.todo.should_provide_chunk_parent():
             builder.with_style_func(
-                ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame),
+                ChunkParentProvider(self._styling_func, self.todo.apply_args.axis, subset_frame),
             )
         else:
             builder.with_style_func(self._styling_func)
@@ -39,4 +39,4 @@ class ApplyPatcher(TodoPatcher):
     def _styling_func(self, chunk_or_series_from_chunk: Union[DataFrame, Series], **kwargs):
         if chunk_or_series_from_chunk.empty:
             return chunk_or_series_from_chunk
-        return self._todo.apply_args.style_func(chunk_or_series_from_chunk, **kwargs)
+        return self.todo.apply_args.style_func(chunk_or_series_from_chunk, **kwargs)

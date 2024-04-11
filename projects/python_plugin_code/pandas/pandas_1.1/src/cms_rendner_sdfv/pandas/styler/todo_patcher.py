@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,20 +11,19 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-# == copy after here ==
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 from pandas import DataFrame
 from pandas.core.indexing import _non_reducing_slice
 
-from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
+from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo, StylerTodoBuilder
 
 
 class TodoPatcher(ABC):
 
     def __init__(self, todo: StylerTodo):
-        self._todo: StylerTodo = todo
+        self.todo: StylerTodo = todo
 
     @abstractmethod
     def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
@@ -43,3 +42,6 @@ class TodoPatcher(ABC):
         subset = slice(None) if subset is None else subset
         subset = _non_reducing_slice(subset)
         return org_frame.loc[subset]
+
+    def _todo_builder(self) -> StylerTodoBuilder:
+        return StylerTodoBuilder(self.todo)

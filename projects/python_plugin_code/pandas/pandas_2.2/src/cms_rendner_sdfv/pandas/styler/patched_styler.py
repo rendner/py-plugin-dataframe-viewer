@@ -11,52 +11,47 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Union
+from typing import Optional
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import Region, TableSourceKind
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from cms_rendner_sdfv.pandas.styler.style_function_name_resolver import StyleFunctionNameResolver
-from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionValidationProblem, \
-    StyleFunctionsValidator, ValidationStrategyType
-from cms_rendner_sdfv.pandas.styler.todos_patcher import TodosPatcher
-from cms_rendner_sdfv.pandas.styler.types import StyleFunctionInfo
+from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionsValidator
+from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
+from cms_rendner_sdfv.pandas.styler.types import ValidatedTableFrame
 
 
 class PatchedStyler(AbstractTableSource):
     def __init__(self, context: PatchedStylerContext, fingerprint: str):
         super().__init__(TableSourceKind.PATCHED_STYLER, context, fingerprint)
+        self.__patchers_to_skip_in_validation: list[TodoPatcher] = []
 
-    def validate_style_functions(self,
-                                 first_row: int,
-                                 first_col: int,
-                                 rows: int,
-                                 cols: int,
-                                 strategy: Union[ValidationStrategyType, str, None] = None,
-                                 ) -> list[StyleFunctionValidationProblem]:
-        validation_strategy = ValidationStrategyType[strategy] if isinstance(strategy, str) else strategy
-        return StyleFunctionsValidator(self._context, validation_strategy)\
-            .validate(Region(first_row, first_col, rows, cols))
+    def validate_and_compute_chunk_table_frame(self,
+                                               first_row: int,
+                                               first_col: int,
+                                               rows: int,
+                                               cols: int,
+                                               exclude_row_header: bool = False,
+                                               exclude_col_header: bool = False,
+                                               ) -> ValidatedTableFrame:
+        region = Region(first_row, first_col, rows, cols)
+        validator = StyleFunctionsValidator(
+            self._context,
+            self.__patchers_to_skip_in_validation,
+        )
+        frame = ValidatedTableFrame(
+            frame=self._context.get_table_frame_generator().generate(
+                region=region,
+                exclude_row_header=exclude_row_header,
+                exclude_col_header=exclude_col_header,
+            ),
+            problems=validator.validate(region),
+        )
+        self.__patchers_to_skip_in_validation.extend(validator.failed_patchers)
+        return frame
 
     def set_sort_criteria(self,
                           by_column_index: Optional[list[int]] = None,
                           ascending: Optional[list[bool]] = None,
                           ):
         self._context.set_sort_criteria(by_column_index, ascending)
-
-    def get_style_function_info(self) -> list[StyleFunctionInfo]:
-        result = []
-
-        for i, todo in enumerate(self._context.get_styler_todos()):
-            result.append(StyleFunctionInfo(
-                index=i,
-                qname=StyleFunctionNameResolver.get_style_func_qname(todo),
-                resolved_name=StyleFunctionNameResolver.resolve_style_func_name(todo),
-                axis='' if todo.is_map() else str(todo.apply_args.axis),
-                is_pandas_builtin=todo.is_pandas_style_func(),
-                is_supported=TodosPatcher.is_style_function_supported(todo),
-                is_apply=not todo.is_map(),
-                is_chunk_parent_requested=todo.should_provide_chunk_parent(),
-            ))
-
-        return result

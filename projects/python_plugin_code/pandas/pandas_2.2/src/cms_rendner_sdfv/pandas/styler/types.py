@@ -12,19 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from dataclasses import dataclass
-from enum import Enum
+from typing import Optional
 
-
-@dataclass(frozen=True)
-class StyleFunctionValidationProblem:
-    index: int
-    reason: str
-    message: str = ""
-
-
-class ValidationStrategyType(Enum):
-    FAST = "fast"
-    PRECISION = "precision"
+from cms_rendner_sdfv.base.types import TableFrame
 
 
 @dataclass(frozen=True)
@@ -37,3 +27,16 @@ class StyleFunctionInfo:
     is_apply: bool
     is_pandas_builtin: bool
     is_supported: bool
+
+
+@dataclass(frozen=True)
+class StyleFunctionValidationProblem:
+    reason: str
+    message: str
+    func_info: StyleFunctionInfo
+
+
+@dataclass(frozen=True)
+class ValidatedTableFrame:
+    frame: Optional[TableFrame] = None
+    problems: Optional[list[StyleFunctionValidationProblem]] = None

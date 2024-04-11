@@ -16,7 +16,7 @@ df = pd.DataFrame.from_dict({
 
 def test_with_subset():
     ctx = PatchedStylerContext(df.style.format('{:+.2f}', subset=pd.IndexSlice[0, ["col_2"]]))
-    styled_chunk = ctx.compute_styled_chunk(Region.with_frame_shape(df.shape), ctx.get_styler_todos())
+    styled_chunk = ctx.compute_styled_chunk(Region.with_frame_shape(df.shape))
     assert styled_chunk.cell_value_at(0, 0) == 0
     assert styled_chunk.cell_value_at(0, 2) == '+10.00'
 

@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -29,10 +29,10 @@ class BackgroundGradientPatcher(TodoPatcher):
         super().__init__(todo)
 
     def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
-        return self._todo.builder() \
+        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
+        return self._todo_builder() \
             .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
-            .with_style_func(ChunkParentProvider(self._styling_func, self._todo.apply_args.axis, subset_frame)) \
+            .with_style_func(ChunkParentProvider(self._styling_func, self.todo.apply_args.axis, subset_frame)) \
             .build()
 
     def _styling_func(self,
@@ -53,7 +53,7 @@ class BackgroundGradientPatcher(TodoPatcher):
             if vmax is None:
                 vmax = np.nanmax(n)
 
-        return self._todo.apply_args.style_func(
+        return self.todo.apply_args.style_func(
             chunk_or_series_from_chunk,
             **dict(kwargs, vmin=vmin, vmax=vmax),
         )

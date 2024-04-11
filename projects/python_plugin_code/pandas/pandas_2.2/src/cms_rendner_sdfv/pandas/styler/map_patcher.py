@@ -27,7 +27,7 @@ class MapPatcher(TodoPatcher):
         super().__init__(todo)
 
     def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self._todo.apply_args.subset)
-        return self._todo.builder() \
+        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
+        return self._todo_builder() \
             .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
             .build()

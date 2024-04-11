@@ -3,11 +3,13 @@ import pandas as pd
 import pytest
 from pandas import DataFrame, MultiIndex
 
+from cms_rendner_sdfv.base.types import TableFrame, TableFrameColumn, TableFrameCell
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from cms_rendner_sdfv.pandas.styler.types import StyleFunctionInfo
+from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionsValidator
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
+from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 np.random.seed(123456)
 
@@ -22,6 +24,45 @@ other_df = pd.DataFrame.from_dict({
     "col_3": [15, 16, 17, 18, 19],
     "col_4": [20, 21, 22, 23, 24],
 })
+
+
+def test_compute_chunk_table_frame():
+    actual = PatchedStyler(PatchedStylerContext(other_df.style), "finger-1") \
+        .compute_chunk_table_frame(0, 0, 2, 2)
+
+    assert_table_frames(
+        actual,
+        TableFrame(
+            index_labels=[['0'], ['1']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['col_0']),
+                TableFrameColumn(dtype='int64', labels=['col_1']),
+            ],
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='5')],
+                [TableFrameCell(value='1'), TableFrameCell(value='6')],
+            ],
+        ))
+
+
+def test_validate_and_compute_chunk_table_frame():
+    actual = PatchedStyler(PatchedStylerContext(other_df.style), "finger-1") \
+        .validate_and_compute_chunk_table_frame(0, 0, 2, 2)
+
+    assert not actual.problems
+    assert_table_frames(
+        actual.frame,
+        TableFrame(
+            index_labels=[['0'], ['1']],
+            columns=[
+                TableFrameColumn(dtype='int64', labels=['col_0']),
+                TableFrameColumn(dtype='int64', labels=['col_1']),
+            ],
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='5')],
+                [TableFrameCell(value='1'), TableFrameCell(value='6')],
+            ],
+        ))
 
 
 def test_table_structure():
@@ -48,8 +89,8 @@ def test_table_structure_rows_count_hide_all_rows():
 
 
 def test_table_structure_diff_matches_hidden_rows_cols():
-    styler = other_df.style\
-        .hide_index(subset=pd.IndexSlice[1:3])\
+    styler = other_df.style \
+        .hide_index(subset=pd.IndexSlice[1:3]) \
         .hide_columns(subset=["col_1", "col_3"])
     ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
 
@@ -60,8 +101,8 @@ def test_table_structure_diff_matches_hidden_rows_cols():
 
 
 def test_table_structure_diff_matches_hidden_rows_cols_and_filtering():
-    styler = other_df.style\
-        .hide_index(subset=pd.IndexSlice[1:3])\
+    styler = other_df.style \
+        .hide_index(subset=pd.IndexSlice[1:3]) \
         .hide_columns(subset=["col_1", "col_3"])
     filter_frame = DataFrame(index=other_df.index[1:], columns=other_df.columns[1:])
     ts = PatchedStyler(
@@ -98,53 +139,11 @@ def test_render_chunk_translates_display_funcs_correct_also_with_hidden_rows_col
     assert_patched_styler(
         other_df,
         lambda styler: styler
-            .hide_index(pd.IndexSlice[1:3])
-            .hide_columns(["col_1", "col_3"])
-            .format(formatter=formatter),
+        .hide_index(pd.IndexSlice[1:3])
+        .hide_columns(["col_1", "col_3"])
+        .format(formatter=formatter),
         rows_per_chunk,
         cols_per_chunk
-    )
-
-
-def test_get_style_function_info_no_styles():
-    styler = df.style
-    info = PatchedStyler(PatchedStylerContext(styler), "").get_style_function_info()
-    assert len(info) == 0
-
-
-def test_get_style_function_info():
-    styler = df.style.bar().highlight_min(axis='columns').applymap(lambda x: "color: red")
-    info = PatchedStyler(PatchedStylerContext(styler), "").get_style_function_info()
-    assert len(info) == 3
-    assert info[0] == StyleFunctionInfo(
-        index=0,
-        qname='Styler._bar',
-        resolved_name='_bar',
-        axis='0',
-        is_chunk_parent_requested=False,
-        is_apply=True,
-        is_pandas_builtin=True,
-        is_supported=False,
-    )
-    assert info[1] == StyleFunctionInfo(
-        index=1,
-        qname='_highlight_value',
-        resolved_name='highlight_min',
-        axis='columns',
-        is_chunk_parent_requested=False,
-        is_apply=True,
-        is_pandas_builtin=True,
-        is_supported=True,
-    )
-    assert info[2] == StyleFunctionInfo(
-        index=2,
-        qname='test_get_style_function_info.<locals>.<lambda>',
-        resolved_name='<lambda>',
-        axis='',
-        is_chunk_parent_requested=False,
-        is_apply=False,
-        is_pandas_builtin=False,
-        is_supported=True,
     )
 
 
@@ -159,3 +158,38 @@ def test_get_org_indices_of_visible_columns():
     num_cols = 3
     actual = ps.get_org_indices_of_visible_columns(0, num_cols)
     assert actual == list(range(0, num_cols))
+
+
+def test_should_not_revalidate_faulty_styling_functions():
+    def is_in_validator():
+        import inspect
+        frame = inspect.currentframe().f_back
+        while frame:
+            instance = frame.f_locals.get('self', None)
+            if instance is not None and instance.__class__.__name__ == StyleFunctionsValidator.__name__:
+                return True
+            frame = frame.f_back
+        return False
+
+    raise_in_validator = False
+
+    def my_style_func(s):
+        nonlocal raise_in_validator
+        if raise_in_validator and is_in_validator():
+            raise Exception("panic")
+        return ['' for _ in s]
+
+    styler = other_df.style.apply(my_style_func, axis='index')
+    ctx = PatchedStylerContext(styler)
+    ps = PatchedStyler(ctx, "")
+
+    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False, False)
+    assert not result.problems
+
+    raise_in_validator = True
+
+    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False, False)
+    assert len(result.problems) == len(ctx.get_todo_patcher_list())
+
+    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False, False)
+    assert not result.problems
