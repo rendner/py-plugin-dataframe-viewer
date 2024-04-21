@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,10 +17,13 @@ from pandas import DataFrame, Series
 from pandas._typing import Axis
 
 
-class ChunkParentProvider:
-    def __init__(self, style_func: Callable, axis: Optional[Axis], subset_frame: DataFrame):
-        self.__style_func = style_func
+class StyleFuncWithChunkParent:
+    def __init__(self, delegate: Callable, axis: Optional[Axis], subset_frame: DataFrame):
+        # the style func to call
+        self.__delegate = delegate
+        # the "axis" of the Styler._todo
         self.__axis = axis
+        # the DataFrame slice to style by the style func
         self.__subset_frame = subset_frame
 
     def __call__(self, chunk_or_series_from_chunk: Union[DataFrame, Series], *args, **kwargs):
@@ -28,7 +31,7 @@ class ChunkParentProvider:
             return chunk_or_series_from_chunk
 
         kwargs['chunk_parent'] = self._get_parent(chunk_or_series_from_chunk)
-        return self.__style_func(chunk_or_series_from_chunk, *args, **kwargs)
+        return self.__delegate(chunk_or_series_from_chunk, *args, **kwargs)
 
     def _get_parent(self, chunk_or_series_from_chunk: Union[DataFrame, Series]):
         if self.__axis == 0 or self.__axis == "index":

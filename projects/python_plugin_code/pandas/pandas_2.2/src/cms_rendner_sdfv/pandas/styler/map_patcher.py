@@ -19,15 +19,12 @@ from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 
 
-# map: https://github.com/pandas-dev/pandas/blob/v2.1.0/pandas/io/formats/style.py#L2035-L2092
-# applymap: https://github.com/pandas-dev/pandas/blob/v2.1.0/pandas/io/formats/style.py#L2095-L2122
+# map: https://github.com/pandas-dev/pandas/blob/v2.2.0/pandas/io/formats/style.py#L2032-L2089
+# applymap: https://github.com/pandas-dev/pandas/blob/v2.2.0/pandas/io/formats/style.py#L2092-L2119
 class MapPatcher(TodoPatcher):
 
-    def __init__(self, todo: StylerTodo):
-        super().__init__(todo)
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
+        super().__init__(org_frame, todo)
 
-    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
-        return self._todo_builder() \
-            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
-            .build()
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo_builder(chunk).build()

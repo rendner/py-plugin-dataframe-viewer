@@ -1,6 +1,8 @@
 import pandas as pd
 import pytest
 
+from cms_rendner_sdfv.base.types import TableFrameCell
+from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patcher_styler import assert_patched_styler
 
@@ -11,6 +13,31 @@ df = pd.DataFrame.from_dict({
     "col_3": [15, 16, 17, 18, 19],
     "col_4": [20, 21, 22, 23, 24],
 })
+
+
+def test_expected_cell_styling():
+    my_df = pd.DataFrame.from_dict({
+        0: [0.0, 0.1, 0.2],
+        1: [0.3, 0.4, 0.5],
+    })
+
+    ctx = PatchedStylerContext(my_df.style.highlight_quantile(q_left=0.2))
+    actual = ctx.get_table_frame_generator().generate()
+
+    assert actual.cells == [
+        [
+            TableFrameCell(value='0.000000'),
+            TableFrameCell(value='0.300000'),
+        ],
+        [
+            TableFrameCell(value='0.100000', css={'background-color': 'yellow'}),
+            TableFrameCell(value='0.400000', css={'background-color': 'yellow'}),
+        ],
+        [
+            TableFrameCell(value='0.200000', css={'background-color': 'yellow'}),
+            TableFrameCell(value='0.500000', css={'background-color': 'yellow'}),
+        ],
+    ]
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])

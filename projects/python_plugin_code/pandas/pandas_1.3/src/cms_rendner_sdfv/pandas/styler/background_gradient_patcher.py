@@ -11,13 +11,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Union
+from collections.abc import Sequence
+from typing import Optional, Union, Dict, Tuple
 
 import numpy as np
 from pandas import DataFrame, Series
 from pandas.io.formats.style import _validate_apply_axis_arg
 
-from cms_rendner_sdfv.pandas.styler.chunk_parent_provider import ChunkParentProvider
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 
@@ -25,14 +25,13 @@ from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 # background_gradient: https://github.com/pandas-dev/pandas/blob/v1.3.0/pandas/io/formats/style.py#L1826-L1978
 class BackgroundGradientPatcher(TodoPatcher):
 
-    def __init__(self, todo: StylerTodo):
-        super().__init__(todo)
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
+        super().__init__(org_frame, todo)
+        self.__computed_params_cache: Dict[str, Tuple[float, float, Sequence]] = {}
 
-    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
-        return self._todo_builder() \
-            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
-            .with_style_func(ChunkParentProvider(self._styling_func, self.todo.apply_args.axis, subset_frame)) \
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo_builder(chunk) \
+            .with_style_func(self._wrap_with_chunk_parent_provider(self._styling_func)) \
             .build()
 
     def _styling_func(self,
@@ -43,6 +42,36 @@ class BackgroundGradientPatcher(TodoPatcher):
         if chunk_or_series_from_chunk.empty:
             return chunk_or_series_from_chunk
 
+        vmin, vmax, gmap = self.__get_or_compute_parameters(chunk_parent, kwargs)
+
+        # Adjust "gmap" for chunk.
+        # "gmap" was calculated from "chunk_parent" and an already cached value can be reused to
+        # compute the gmap for a chunk, even if the DataFrame is sorted or filtered later.
+        chunk_gmap = self.__extract_chunk_gmap_from_chunk_parent_gmap(gmap, chunk_or_series_from_chunk, chunk_parent)
+
+        return self.todo.apply_args.style_func(
+            chunk_or_series_from_chunk,
+            **dict(kwargs, vmin=vmin, vmax=vmax, gmap=chunk_gmap),
+        )
+
+    def __get_or_compute_parameters(self,
+                                    chunk_parent: Union[DataFrame, Series],
+                                    kwargs: Dict,
+                                    ) -> Tuple[float, float, Sequence]:
+        cache_key = "frame"
+        if isinstance(chunk_parent, Series):
+            cache_key = chunk_parent.name
+
+        params = self.__computed_params_cache.get(cache_key, None)
+
+        if params is None:
+            params = self.__compute_params(chunk_parent, kwargs)
+            self.__computed_params_cache[cache_key] = params
+
+        return params
+
+    @staticmethod
+    def __compute_params(chunk_parent: Union[DataFrame, Series], kwargs: Dict) -> Tuple[float, float, Sequence]:
         # "gmap":
         #
         # Gradient map for determining the background colors.
@@ -60,34 +89,25 @@ class BackgroundGradientPatcher(TodoPatcher):
         else:
             gmap = _validate_apply_axis_arg(gmap, "gmap", float, chunk_parent)
 
-        if vmin is None or vmax is None:
-            if vmin is None:
-                vmin = np.nanmin(gmap)
-            if vmax is None:
-                vmax = np.nanmax(gmap)
+        if vmin is None:
+            vmin = np.nanmin(gmap)
+        if vmax is None:
+            vmax = np.nanmax(gmap)
 
-        # adjust shape of gmap to match shape of chunk
-        gmap = self._adjust_gmap_shape_to_chunk_shape(gmap, chunk_or_series_from_chunk, chunk_parent)
+        return vmin, vmax, gmap
 
-        return self.todo.apply_args.style_func(
-            chunk_or_series_from_chunk,
-            **dict(kwargs, vmin=vmin, vmax=vmax, gmap=gmap),
-        )
-
-    def _adjust_gmap_shape_to_chunk_shape(self,
-                                          gmap: np.ndarray,
-                                          chunk_or_series_from_chunk: Union[DataFrame, Series],
-                                          chunk_parent: Union[DataFrame, Series],
-                                          ) -> np.ndarray:
+    @staticmethod
+    def __extract_chunk_gmap_from_chunk_parent_gmap(gmap: Union[Sequence, np.ndarray, DataFrame, Series],
+                                                    chunk_or_series_from_chunk: Union[DataFrame, Series],
+                                                    chunk_parent: Union[DataFrame, Series],
+                                                    ) -> Sequence:
         # Note:
-        # "get_indexer_for" has to be used.
-        # Using "first_row, first_col, rows, and cols" which were used to create the chunk can't be used
-        # to get the matching "gmap" for the chunk, because a user could have specified a subset.
-        # The coordinates of the subset have to be taken into account to adjust the gmap correctly.
-        # This is all done automatically by using "get_indexer_for".
-        if isinstance(chunk_or_series_from_chunk, Series):
+        # "gmap" was taken from the "chunk_parent", which is unsorted and unfiltered.
+        # The "chunk" is a part of the visible DataFrame, which is filtered and sorted.
+        # "get_indexer_for" has to be used to extract the correct part of the "gmap" which belongs to the chunk.
+        if isinstance(chunk_parent, Series):
             return gmap[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
-        elif isinstance(chunk_or_series_from_chunk, DataFrame) and self.todo.apply_args.axis is None:
+        elif isinstance(chunk_parent, DataFrame):
             ri = chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)
             ci = chunk_parent.columns.get_indexer_for(chunk_or_series_from_chunk.columns)
             if isinstance(gmap, DataFrame):

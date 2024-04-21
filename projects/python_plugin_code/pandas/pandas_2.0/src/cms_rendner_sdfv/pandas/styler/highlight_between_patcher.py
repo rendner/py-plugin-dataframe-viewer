@@ -17,22 +17,19 @@ import numpy as np
 from pandas import DataFrame, Series
 from pandas.io.formats.style import _validate_apply_axis_arg
 
-from cms_rendner_sdfv.pandas.styler.chunk_parent_provider import ChunkParentProvider
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 
 
-# highlight_between: https://github.com/pandas-dev/pandas/blob/v2.0.0rc0/pandas/io/formats/style.py#L3179-L3280
+# highlight_between: https://github.com/pandas-dev/pandas/blob/v2.0.0/pandas/io/formats/style.py#L3171-L3272
 class HighlightBetweenPatcher(TodoPatcher):
 
-    def __init__(self, todo: StylerTodo):
-        super().__init__(todo)
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
+        super().__init__(org_frame, todo)
 
-    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
-        return self._todo_builder() \
-            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
-            .with_style_func(ChunkParentProvider(self._styling_func, self.todo.apply_args.axis, subset_frame)) \
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo_builder(chunk) \
+            .with_style_func(self._wrap_with_chunk_parent_provider(self._styling_func)) \
             .build()
 
     def _styling_func(self,
@@ -46,7 +43,7 @@ class HighlightBetweenPatcher(TodoPatcher):
         left = kwargs.get("left", None)
         right = kwargs.get("right", None)
 
-        # https://github.com/pandas-dev/pandas/blob/v2.0.0rc0/pandas/io/formats/style.py#L3692-L3696
+        # https://github.com/pandas-dev/pandas/blob/v2.0.0/pandas/io/formats/style.py#L3684-L3688
         if np.iterable(left) and not isinstance(left, str):
             left = _validate_apply_axis_arg(left, "left", None, chunk_parent)
             # adjust shape of "left" to match shape of chunk

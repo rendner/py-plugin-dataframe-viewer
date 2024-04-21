@@ -3,7 +3,7 @@ from typing import Union
 import pytest
 from pandas import DataFrame, Series
 
-from cms_rendner_sdfv.pandas.styler.chunk_parent_provider import ChunkParentProvider
+from cms_rendner_sdfv.pandas.styler.style_func_with_chunk_parent import StyleFuncWithChunkParent
 
 df = DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -30,7 +30,7 @@ def test_correct_chunk_parent_is_provided(axis, chunk: Union[DataFrame, Series],
         nonlocal chunk_parent
         chunk_parent = kwargs.get('chunk_parent', None)
 
-    ChunkParentProvider(style_func, axis, df)(chunk)
+    StyleFuncWithChunkParent(style_func, axis, df)(chunk)
 
     assert expected_chunk_parent.equals(chunk_parent)
 
@@ -41,5 +41,5 @@ def test_raises_a_key_error_if_parent_cant_be_resolved():
 
     msg = "'col_0'"
     with pytest.raises(KeyError, match=msg):
-        ChunkParentProvider(lambda x: x, "index", other_df)(chunk)
+        StyleFuncWithChunkParent(lambda x: x, "index", other_df)(chunk)
 

@@ -11,12 +11,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Tuple
 
 import numpy as np
 from pandas import DataFrame, Series
 
-from cms_rendner_sdfv.pandas.styler.chunk_parent_provider import ChunkParentProvider
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 
@@ -25,14 +24,13 @@ from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 # "_background_gradient": https://github.com/pandas-dev/pandas/blob/v1.1.5/pandas/io/formats/style.py#L1106-L1169
 class BackgroundGradientPatcher(TodoPatcher):
 
-    def __init__(self, todo: StylerTodo):
-        super().__init__(todo)
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
+        super().__init__(org_frame, todo)
+        self.__computed_params_cache: Dict[str, Tuple[float, float]] = {}
 
-    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
-        return self._todo_builder() \
-            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
-            .with_style_func(ChunkParentProvider(self._styling_func, self.todo.apply_args.axis, subset_frame)) \
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo_builder(chunk) \
+            .with_style_func(self._wrap_with_chunk_parent_provider(self._styling_func)) \
             .build()
 
     def _styling_func(self,
@@ -43,6 +41,31 @@ class BackgroundGradientPatcher(TodoPatcher):
         if chunk_or_series_from_chunk.empty:
             return chunk_or_series_from_chunk
 
+        vmin, vmax = self.__get_or_compute_parameters(chunk_parent, kwargs)
+
+        return self.todo.apply_args.style_func(
+            chunk_or_series_from_chunk,
+            **dict(kwargs, vmin=vmin, vmax=vmax),
+        )
+
+    def __get_or_compute_parameters(self,
+                                    chunk_parent: Union[DataFrame, Series],
+                                    kwargs: Dict,
+                                    ) -> Tuple[float, float]:
+        cache_key = "frame"
+        if isinstance(chunk_parent, Series):
+            cache_key = chunk_parent.name
+
+        params = self.__computed_params_cache.get(cache_key, None)
+
+        if params is None:
+            params = self.__compute_params(chunk_parent, kwargs)
+            self.__computed_params_cache[cache_key] = params
+
+        return params
+
+    @staticmethod
+    def __compute_params(chunk_parent: Union[DataFrame, Series], kwargs: Dict) -> Tuple[float, float]:
         vmin = kwargs.get("vmin", None)
         vmax = kwargs.get("vmax", None)
 
@@ -53,7 +76,4 @@ class BackgroundGradientPatcher(TodoPatcher):
             if vmax is None:
                 vmax = np.nanmax(n)
 
-        return self.todo.apply_args.style_func(
-            chunk_or_series_from_chunk,
-            **dict(kwargs, vmin=vmin, vmax=vmax),
-        )
+        return vmin, vmax

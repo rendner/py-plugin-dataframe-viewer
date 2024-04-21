@@ -11,20 +11,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Optional
+
+from pandas import DataFrame
+
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
-
-from typing import Optional
-from pandas import DataFrame
 
 
 class ApplyMapPatcher(TodoPatcher):
 
-    def __init__(self, todo: StylerTodo):
-        super().__init__(todo)
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
+        super().__init__(org_frame, todo)
 
-    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
-        return self._todo_builder() \
-            .with_subset(self._calculate_chunk_subset(subset_frame, chunk)) \
-            .build()
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        return self._todo_builder(chunk).build()

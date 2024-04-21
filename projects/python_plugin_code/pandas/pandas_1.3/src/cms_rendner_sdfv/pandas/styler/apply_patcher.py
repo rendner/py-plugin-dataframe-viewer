@@ -15,23 +15,19 @@ from typing import Optional, Union
 
 from pandas import DataFrame, Series
 
-from cms_rendner_sdfv.pandas.styler.chunk_parent_provider import ChunkParentProvider
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 
 
 class ApplyPatcher(TodoPatcher):
 
-    def __init__(self, todo: StylerTodo):
-        super().__init__(todo)
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
+        super().__init__(org_frame, todo)
 
-    def create_patched_todo(self, org_frame: DataFrame, chunk: DataFrame) -> Optional[StylerTodo]:
-        subset_frame = self._create_subset_frame(org_frame, self.todo.apply_args.subset)
-        builder = self._todo_builder().with_subset(self._calculate_chunk_subset(subset_frame, chunk))
+    def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
+        builder = self._todo_builder(chunk)
         if self.todo.should_provide_chunk_parent():
-            builder.with_style_func(
-                ChunkParentProvider(self._styling_func, self.todo.apply_args.axis, subset_frame),
-            )
+            builder.with_style_func(self._wrap_with_chunk_parent_provider(self._styling_func))
         else:
             builder.with_style_func(self._styling_func)
         return builder.build()

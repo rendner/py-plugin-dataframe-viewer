@@ -15,7 +15,7 @@ from copy import copy
 from functools import partial
 from typing import List, Optional, Any
 
-from pandas import Index, get_option
+from pandas import Index, get_option, DataFrame
 from pandas.core.dtypes.common import (
     is_complex,
     is_float,
@@ -98,10 +98,7 @@ class PatchedStylerContext(PandasTableSourceContext):
         self.__has_hidden_rows = len(styler.hidden_rows) > 0
         self.__has_hidden_columns = len(styler.hidden_columns) > 0
         self.__styler = styler
-        self.__todo_patcher_list: List[TodoPatcher] = self.__create_patchers([
-            StylerTodo.from_tuple(idx, t)
-            for idx, t in enumerate(styler._todo)
-        ])
+        self.__todo_patcher_list: List[TodoPatcher] = self.__create_patchers(styler)
         super().__init__(styler.data, filter_criteria)
 
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
@@ -127,7 +124,7 @@ class PatchedStylerContext(PandasTableSourceContext):
         chunk_styler._todo = [
             # The plugin only renders the visible (non-hidden cols/rows) of the styled DataFrame.
             # Therefore, create chunk from the visible data.
-            p.create_patched_todo(org_styler.data, chunk_df).to_tuple()
+            p.create_patched_todo(chunk_df).to_tuple()
             for p in (patcher_list or self.__todo_patcher_list)
         ]
         # Compute the styling for the chunk by operating on the original DataFrame.
@@ -168,14 +165,16 @@ class PatchedStylerContext(PandasTableSourceContext):
 
         return index, columns
 
-    def __create_patchers(self, todos: List[StylerTodo]) -> List[TodoPatcher]:
+    def __create_patchers(self, styler: Styler) -> List[TodoPatcher]:
         result: List[TodoPatcher] = []
 
-        for t in todos:
-            if t.is_pandas_style_func():
-                patcher = self.__get_patcher_for_supported_pandas_style_functions(t)
+        org_frame = styler.data
+        for idx, t in enumerate(styler._todo):
+            st = StylerTodo.from_tuple(idx, t)
+            if st.is_pandas_style_func():
+                patcher = self.__get_patcher_for_supported_pandas_style_functions(org_frame, st)
             else:
-                patcher = ApplyMapPatcher(t) if t.is_applymap() else ApplyPatcher(t)
+                patcher = ApplyMapPatcher(org_frame, st) if st.is_applymap() else ApplyPatcher(org_frame, st)
 
             if patcher is not None:
                 result.append(patcher)
@@ -183,20 +182,20 @@ class PatchedStylerContext(PandasTableSourceContext):
         return result
 
     @staticmethod
-    def __get_patcher_for_supported_pandas_style_functions(todo: StylerTodo) -> Optional[TodoPatcher]:
+    def __get_patcher_for_supported_pandas_style_functions(org_frame: DataFrame, todo: StylerTodo) -> Optional[TodoPatcher]:
         qname = StyleFunctionNameResolver.get_style_func_qname(todo)
         if StyleFunctionNameResolver.is_pandas_text_gradient(qname, todo):
-            return BackgroundGradientPatcher(todo)
+            return BackgroundGradientPatcher(org_frame, todo)
         elif StyleFunctionNameResolver.is_pandas_background_gradient(qname):
-            return BackgroundGradientPatcher(todo)
+            return BackgroundGradientPatcher(org_frame, todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_max(qname, todo):
-            return HighlightExtremaPatcher(todo, 'max')
+            return HighlightExtremaPatcher(org_frame, todo, 'max')
         elif StyleFunctionNameResolver.is_pandas_highlight_min(qname, todo):
-            return HighlightExtremaPatcher(todo, 'min')
+            return HighlightExtremaPatcher(org_frame, todo, 'min')
         elif StyleFunctionNameResolver.is_pandas_highlight_null(qname):
-            return ApplyPatcher(todo)
+            return ApplyPatcher(org_frame, todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_between(qname):
-            return HighlightBetweenPatcher(todo)
+            return HighlightBetweenPatcher(org_frame, todo)
         elif StyleFunctionNameResolver.is_pandas_set_properties(qname):
-            return ApplyMapPatcher(todo)
+            return ApplyMapPatcher(org_frame, todo)
         return None
