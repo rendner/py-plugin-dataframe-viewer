@@ -25,11 +25,11 @@ from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 # highlight_min: https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L3439-L3480
 class HighlightExtremaPatcher(TodoPatcher):
 
-    def __init__(self, org_frame: DataFrame, todo: StylerTodo, op: str):
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
         super().__init__(org_frame, todo)
-        self.__op: str = op
         self.__attribute: str = todo.style_func_kwargs.get('props', 'background-color: yellow')
         self.__computed_values_cache = {}
+        self._op: str = "unset"
 
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
         return self._todo_builder(chunk) \
@@ -59,10 +59,22 @@ class HighlightExtremaPatcher(TodoPatcher):
 
         if value is None:
             # https://github.com/pandas-dev/pandas/blob/v1.5.0/pandas/io/formats/style.py#L4031-L4040
-            value = getattr(chunk_parent, self.__op)(skipna=True)
+            value = getattr(chunk_parent, self._op)(skipna=True)
             if isinstance(chunk_parent, DataFrame):  # min/max must be done twice to return scalar
-                value = getattr(value, self.__op)(skipna=True)
+                value = getattr(value, self._op)(skipna=True)
 
             self.__computed_values_cache[cache_key] = value
 
         return value
+
+
+class HighlightMaxPatcher(HighlightExtremaPatcher):
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
+        super().__init__(org_frame, todo)
+        self._op: str = "max"
+
+
+class HighlightMinPatcher(HighlightExtremaPatcher):
+    def __init__(self, org_frame: DataFrame, todo: StylerTodo):
+        super().__init__(org_frame, todo)
+        self._op: str = "min"

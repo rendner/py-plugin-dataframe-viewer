@@ -11,11 +11,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import dataclasses
 from typing import Optional
 
 from cms_rendner_sdfv.base.types import Region
-from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, StyledChunk
+from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, StyledChunk, StyledChunkComputer
 from cms_rendner_sdfv.pandas.styler.style_function_name_resolver import StyleFunctionNameResolver
 from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
 from cms_rendner_sdfv.pandas.styler.types import StyleFunctionValidationProblem, StyleFunctionInfo
@@ -33,27 +32,36 @@ class StyleFunctionsValidator:
         if region.is_empty():
             return []
 
-        patchers = [
+        patchers_to_validate = [
             p for p in self.__ctx.get_todo_patcher_list()
             if not p.todo.is_map() and p not in self.__ignore_list
         ]
 
+        if not patchers_to_validate:
+            return []
+
+        chunk_df = self.__ctx.visible_frame.to_frame(region)
+
         validation_result = []
-        for patcher in patchers:
+        for patcher in patchers_to_validate:
             is_equal = False
 
+            styled_chunk_computer = self.__ctx.create_styled_chunk_computer_for_validation(chunk_df, patcher)
+
             try:
+                chunk = styled_chunk_computer.compute(region)
+
                 if patcher.todo.apply_args.axis_is_index():
                     # styling is applied to each column
-                    is_equal = self.__validate_horizontal_splitted(region, patcher)
+                    is_equal = self.__validate_horizontal_splitted(region, styled_chunk_computer, chunk)
                 elif patcher.todo.apply_args.axis_is_columns():
                     # styling is applied to each row
-                    is_equal = self.__validate_vertical_splitted(region, patcher)
+                    is_equal = self.__validate_vertical_splitted(region, styled_chunk_computer, chunk)
                 else:
                     # styling is applied to whole dataframe
-                    is_equal = self.__validate_horizontal_splitted(region, patcher)
+                    is_equal = self.__validate_horizontal_splitted(region, styled_chunk_computer, chunk)
                     if is_equal:
-                        is_equal = self.__validate_vertical_splitted(region, patcher)
+                        is_equal = self.__validate_vertical_splitted(region, styled_chunk_computer, chunk)
 
                 if not is_equal:
                     self.failed_patchers.append(patcher)
@@ -79,29 +87,17 @@ class StyleFunctionsValidator:
 
         return validation_result
 
-    def __validate_horizontal_splitted(self, region: Region, patcher: TodoPatcher) -> bool:
-        region_to_validate = region.get_bounded_region(dataclasses.replace(region, rows=2))
-        styled_region = self.__ctx.compute_styled_chunk(region_to_validate, [patcher])
-        for local_chunk in region_to_validate.iterate_local_chunkwise(1, region_to_validate.cols):
-            styled_chunk = self.__ctx.compute_styled_chunk(
-                local_chunk.translate(region_to_validate.first_row, region_to_validate.first_col),
-                [patcher],
-            )
-
-            if not self.__has_same_cell_styling(styled_region, styled_chunk, local_chunk):
+    def __validate_horizontal_splitted(self, region: Region, computer: StyledChunkComputer, chunk: StyledChunk) -> bool:
+        for sub_region in region.iterate_local_chunkwise(self.__half_or_one(region.rows), region.cols):
+            sub_chunk = computer.compute(sub_region.translate(region.first_row, region.first_col))
+            if not self.__has_same_cell_styling(chunk, sub_chunk, sub_region):
                 return False
         return True
 
-    def __validate_vertical_splitted(self, region: Region, patcher: TodoPatcher) -> bool:
-        region_to_validate = region.get_bounded_region(dataclasses.replace(region, cols=2))
-        styled_region = self.__ctx.compute_styled_chunk(region_to_validate, [patcher])
-        for local_chunk in region_to_validate.iterate_local_chunkwise(region_to_validate.rows, 1):
-            styled_chunk = self.__ctx.compute_styled_chunk(
-                local_chunk.translate(region_to_validate.first_row, region_to_validate.first_col),
-                [patcher],
-            )
-
-            if not self.__has_same_cell_styling(styled_region, styled_chunk, local_chunk):
+    def __validate_vertical_splitted(self, region: Region, computer: StyledChunkComputer, chunk: StyledChunk) -> bool:
+        for sub_region in region.iterate_local_chunkwise(region.rows, self.__half_or_one(region.cols)):
+            sub_chunk = computer.compute(sub_region.translate(region.first_row, region.first_col))
+            if not self.__has_same_cell_styling(chunk, sub_chunk, sub_region):
                 return False
         return True
 
@@ -121,11 +117,17 @@ class StyleFunctionsValidator:
         )
 
     @staticmethod
-    def __has_same_cell_styling(styled_region: StyledChunk, styled_chunk: StyledChunk, local_chunk: Region) -> bool:
-        for r in range(local_chunk.rows):
-            for c in range(local_chunk.cols):
-                expected = styled_region.cell_css_at(local_chunk.first_row + r, local_chunk.first_col + c)
-                actual = styled_chunk.cell_css_at(r, c)
+    def __has_same_cell_styling(chunk: StyledChunk, sub_chunk: StyledChunk, sub_region: Region) -> bool:
+        for r in range(sub_region.rows):
+            for c in range(sub_region.cols):
+                expected = chunk.cell_css_at(sub_region.first_row + r, sub_region.first_col + c)
+                actual = sub_chunk.cell_css_at(r, c)
                 if expected != actual:
                     return False
         return True
+
+    @staticmethod
+    def __half_or_one(number: int):
+        # expect: number > 0
+        # upside-down floor division (=ceiling_division)
+        return -(number // -2)

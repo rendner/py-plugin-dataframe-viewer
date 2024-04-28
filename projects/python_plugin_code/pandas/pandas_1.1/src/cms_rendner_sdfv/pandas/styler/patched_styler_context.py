@@ -41,7 +41,7 @@ class StyledChunk:
         return self.__styler.hidden_index
 
     def cell_css_at(self, row: int, col: int):
-        return self.__styler.ctx[self.__to_source_frame_cell_coordinates(row, col)]
+        return self.__styler.ctx[(row, col)]
 
     def row_labels_at(self, row: int):
         labels = self.__visible_frame.index_at(self.region.first_row + row)
@@ -69,6 +69,47 @@ class StyledChunk:
         )
 
 
+class StyledChunkComputer:
+    def __init__(self,
+                 visible_frame: VisibleFrame,
+                 org_styler: Styler,
+                 todo_patcher_list: List[TodoPatcher],
+                 ):
+        self.__visible_frame: VisibleFrame = visible_frame
+        self.__org_styler: Styler = org_styler
+        self.__todo_patcher_list: List[TodoPatcher] = todo_patcher_list
+
+    def compute(self, region: Region) -> StyledChunk:
+        # The plugin only renders the visible (non-hidden cols/rows) of the styled DataFrame.
+        # Therefore, create chunk from the visible data.
+        region = self.__visible_frame.region.get_bounded_region(region)
+        chunk_df = self.__visible_frame.to_frame(region)
+
+        # Create a styler from the chunk DataFrame.
+        # The calculated css is stored in "chunk_styler.ctx" by using a tuple of (rowIndex, columnIndex) coordinates.
+        # (see pandas Styler._update_ctx)
+        chunk_styler = chunk_df.style
+
+        # assign patched todos
+        # The apply/map params are patched to not operate outside the chunk bounds.
+        chunk_styler._todo = [
+            p.create_patched_todo(chunk_df).to_tuple()
+            for p in self.__todo_patcher_list
+        ]
+        # Compute the styling for the chunk.
+        chunk_styler._compute()
+
+        # copy over some required state props
+        chunk_styler._display_funcs = self.__org_styler._display_funcs
+        chunk_styler.hidden_index = self.__org_styler.hidden_index
+
+        return StyledChunk(
+            styler=chunk_styler,
+            visible_frame=self.__visible_frame,
+            region=region,
+        )
+
+
 class PatchedStylerContext(PandasTableSourceContext):
     def __init__(self, styler: Styler, filter_criteria: Optional[FilterCriteria] = None):
         # hidden_columns can be a list or ndarray -
@@ -80,6 +121,13 @@ class PatchedStylerContext(PandasTableSourceContext):
         self.__todo_patcher_list: List[TodoPatcher] = self.__create_patchers(styler)
         super().__init__(styler.data, filter_criteria)
 
+    def create_styled_chunk_computer_for_validation(self, chunk: DataFrame, patcher: TodoPatcher) -> 'StyledChunkComputer':
+        return StyledChunkComputer(
+            visible_frame=VisibleFrame(chunk),
+            org_styler=self.__styler,
+            todo_patcher_list=[patcher.patcher_for_style_func_validation(chunk)]
+        )
+
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
         # local import to resolve cyclic import
         from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
@@ -88,39 +136,12 @@ class PatchedStylerContext(PandasTableSourceContext):
     def get_todo_patcher_list(self) -> List[TodoPatcher]:
         return self.__todo_patcher_list
 
-    def compute_styled_chunk(self,
-                             region: Region,
-                             patcher_list: Optional[List[TodoPatcher]] = None,
-                             ) -> StyledChunk:
-        org_styler = self.__styler
-        region = self.visible_frame.region.get_bounded_region(region)
-
-        # Create a new styler which refers to the same DataFrame to not pollute original styler
-        copy = org_styler.data.style
-        # assign patched todos
-        # The apply/map params are patched to not operate outside the chunk bounds.
-        chunk_df = self.visible_frame.to_frame(region)
-        copy._todo = [
-            # The plugin only renders the visible (non-hidden cols/rows) of the styled DataFrame.
-            # Therefore, create chunk from the visible data.
-            p.create_patched_todo(chunk_df).to_tuple()
-            for p in (patcher_list or self.__todo_patcher_list)
-        ]
-        # Compute the styling for the chunk by operating on the original DataFrame.
-        # The computed styler contains only entries for the cells of the chunk,
-        # this is ensured by the patched todos.
-        copy._compute()
-
-        # copy over some required state props
-        copy._display_funcs = org_styler._display_funcs
-
-        copy.hidden_index = org_styler.hidden_index
-
-        return StyledChunk(
-            styler=copy,
+    def compute_styled_chunk(self, region: Region) -> StyledChunk:
+        return StyledChunkComputer(
             visible_frame=self.visible_frame,
-            region=region,
-        )
+            org_styler=self.__styler,
+            todo_patcher_list=self.__todo_patcher_list,
+        ).compute(region)
 
     def _get_initial_visible_frame_indexes(self):
         index, columns = super()._get_initial_visible_frame_indexes()

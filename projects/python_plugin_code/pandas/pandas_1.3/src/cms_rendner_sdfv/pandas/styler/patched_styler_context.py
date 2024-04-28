@@ -32,7 +32,7 @@ from cms_rendner_sdfv.pandas.styler.apply_map_patcher import ApplyMapPatcher
 from cms_rendner_sdfv.pandas.styler.apply_patcher import ApplyPatcher
 from cms_rendner_sdfv.pandas.styler.background_gradient_patcher import BackgroundGradientPatcher
 from cms_rendner_sdfv.pandas.styler.highlight_between_patcher import HighlightBetweenPatcher
-from cms_rendner_sdfv.pandas.styler.highlight_extrema_patcher import HighlightExtremaPatcher
+from cms_rendner_sdfv.pandas.styler.highlight_extrema_patcher import HighlightMaxPatcher, HighlightMinPatcher
 from cms_rendner_sdfv.pandas.styler.style_function_name_resolver import StyleFunctionNameResolver
 from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo
 from cms_rendner_sdfv.pandas.styler.todo_patcher import TodoPatcher
@@ -53,7 +53,7 @@ class StyledChunk:
         return self.__styler.hide_index_
 
     def cell_css_at(self, row: int, col: int):
-        return self.__styler.ctx[self.__to_source_frame_cell_coordinates(row, col)]
+        return self.__styler.ctx[(row, col)]
 
     def row_labels_at(self, row: int):
         labels = self.__visible_frame.index_at(self.region.first_row + row)
@@ -81,6 +81,58 @@ class StyledChunk:
         )
 
 
+class StyledChunkComputer:
+    def __init__(self,
+                 visible_frame: VisibleFrame,
+                 org_styler: Styler,
+                 todo_patcher_list: List[TodoPatcher],
+                 ):
+        self.__visible_frame: VisibleFrame = visible_frame
+        self.__org_styler: Styler = org_styler
+        self.__todo_patcher_list: List[TodoPatcher] = todo_patcher_list
+
+    def compute(self, region: Region) -> StyledChunk:
+        # The plugin only renders the visible (non-hidden cols/rows) of the styled DataFrame.
+        # Therefore, create chunk from the visible data.
+        region = self.__visible_frame.region.get_bounded_region(region)
+        chunk_df = self.__visible_frame.to_frame(region)
+
+        # Create a styler from the chunk DataFrame.
+        # The calculated css is stored in "chunk_styler.ctx" by using a tuple of (rowIndex, columnIndex) coordinates.
+        # (see pandas Styler._update_ctx)
+        chunk_styler = chunk_df.style
+
+        # assign patched todos
+        # The apply/map params are patched to not operate outside the chunk bounds.
+        chunk_styler._todo = [
+            p.create_patched_todo(chunk_df).to_tuple()
+            for p in self.__todo_patcher_list
+        ]
+        # Compute the styling for the chunk.
+        chunk_styler._compute()
+
+        # copy over some required state props
+        #
+        # Fix for "_default_formatter" to detect float32, float64, int32 and float64 values
+        # Fixed in pandas 1.4: https://github.com/pandas-dev/pandas/pull/46119
+        #
+        # Fix is required because "df.iat[row, col]" is used instead of "df.itertuples" in the TableFrameGenerator.
+        # Styler.to_html() uses "df.itertuples" to convert cell values into html and does not run into this problem.
+        # In case of a specific float/int "itertuples" returns a float/int instead of the correct
+        # float32, float64, int32 and float64.
+        chunk_styler._display_funcs = copy(self.__org_styler._display_funcs)
+        def_precision = get_option("display.precision")
+        chunk_styler._display_funcs.default_factory = lambda: partial(_fixed_default_formatter, precision=def_precision)
+        chunk_styler.hide_index_ = self.__org_styler.hide_index_
+        chunk_styler.hide_columns_ = self.__org_styler.hide_columns_
+
+        return StyledChunk(
+            styler=chunk_styler,
+            visible_frame=self.__visible_frame,
+            region=region,
+        )
+
+
 def _fixed_default_formatter(x: Any, precision: int, thousands: bool = False) -> Any:
     if is_float(x) or is_complex(x):
         return f"{x:,.{precision}f}" if thousands else f"{x:.{precision}f}"
@@ -101,6 +153,13 @@ class PatchedStylerContext(PandasTableSourceContext):
         self.__todo_patcher_list: List[TodoPatcher] = self.__create_patchers(styler)
         super().__init__(styler.data, filter_criteria)
 
+    def create_styled_chunk_computer_for_validation(self, chunk: DataFrame, patcher: TodoPatcher) -> 'StyledChunkComputer':
+        return StyledChunkComputer(
+            visible_frame=VisibleFrame(chunk),
+            org_styler=self.__styler,
+            todo_patcher_list=[patcher.patcher_for_style_func_validation(chunk)]
+        )
+
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
         # local import to resolve cyclic import
         from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
@@ -109,51 +168,12 @@ class PatchedStylerContext(PandasTableSourceContext):
     def get_todo_patcher_list(self) -> List[TodoPatcher]:
         return self.__todo_patcher_list
 
-    def compute_styled_chunk(self,
-                             region: Region,
-                             patcher_list: Optional[List[TodoPatcher]] = None,
-                             ) -> StyledChunk:
-        org_styler = self.__styler
-        region = self.visible_frame.region.get_bounded_region(region)
-
-        # Create a new styler which refers to the same DataFrame to not pollute original styler
-        chunk_styler = org_styler.data.style
-        # assign patched todos
-        # The apply/map params are patched to not operate outside the chunk bounds.
-        chunk_df = self.visible_frame.to_frame(region)
-        chunk_styler._todo = [
-            # The plugin only renders the visible (non-hidden cols/rows) of the styled DataFrame.
-            # Therefore, create chunk from the visible data.
-            p.create_patched_todo(chunk_df).to_tuple()
-            for p in (patcher_list or self.__todo_patcher_list)
-        ]
-        # Compute the styling for the chunk by operating on the original DataFrame.
-        # The computed styler contains only entries for the cells of the chunk,
-        # this is ensured by the patched todos.
-        chunk_styler._compute()
-
-        # copy over some required state props
-        #
-        # Fix for "_default_formatter" to detect float32, float64, int32 and float64 values
-        # Fixed in pandas 1.4: https://github.com/pandas-dev/pandas/pull/46119
-        #
-        # Fix is required because "df.iat[row, col]" is used instead of "df.itertuples" in the TableFrameGenerator.
-        # Styler.to_html() uses "df.itertuples" to convert cell values into html and does not run into this problem.
-        # In case of a specific float/int "itertuples" returns a float/int instead of the correct
-        # float32, float64, int32 and float64.
-        chunk_styler._display_funcs = copy(org_styler._display_funcs)
-        def_precision = get_option("display.precision")
-        chunk_styler._display_funcs.default_factory = lambda: partial(_fixed_default_formatter, precision=def_precision)
-
-        chunk_styler.hide_index_ = org_styler.hide_index_
-
-        chunk_styler.hide_columns_ = org_styler.hide_columns_
-
-        return StyledChunk(
-            styler=chunk_styler,
+    def compute_styled_chunk(self, region: Region) -> StyledChunk:
+        return StyledChunkComputer(
             visible_frame=self.visible_frame,
-            region=region,
-        )
+            org_styler=self.__styler,
+            todo_patcher_list=self.__todo_patcher_list,
+        ).compute(region)
 
     def _get_initial_visible_frame_indexes(self):
         index, columns = super()._get_initial_visible_frame_indexes()
@@ -189,9 +209,9 @@ class PatchedStylerContext(PandasTableSourceContext):
         elif StyleFunctionNameResolver.is_pandas_background_gradient(qname):
             return BackgroundGradientPatcher(org_frame, todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_max(qname, todo):
-            return HighlightExtremaPatcher(org_frame, todo, 'max')
+            return HighlightMaxPatcher(org_frame, todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_min(qname, todo):
-            return HighlightExtremaPatcher(org_frame, todo, 'min')
+            return HighlightMinPatcher(org_frame, todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_null(qname):
             return ApplyPatcher(org_frame, todo)
         elif StyleFunctionNameResolver.is_pandas_highlight_between(qname):

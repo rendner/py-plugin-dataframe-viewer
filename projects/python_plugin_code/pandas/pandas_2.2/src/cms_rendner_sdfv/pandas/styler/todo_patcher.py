@@ -24,12 +24,19 @@ from cms_rendner_sdfv.pandas.styler.styler_todo import StylerTodo, StylerTodoBui
 class TodoPatcher(ABC):
 
     def __init__(self, org_frame: DataFrame, todo: StylerTodo):
-        self.todo: StylerTodo = todo
         # The DataFrame slice to style by the style func - unsorted and unfiltered.
         # Style functions are always applied on the DataFrame of the Styler.
         # If a "subset" has been specified for a style function, then it
         # is applied to the DataFrame created by applying the "subset".
         self.__org_subset_frame: DataFrame = self.__compute_org_subset_frame(org_frame, todo.apply_args.subset)
+        # After the "__org_subset_frame" is calculated the subset of the "todo" has to be cleared.
+        # The method "_todo_builder" computes automatically the correct subset for a chunk.
+        self.todo: StylerTodo = StylerTodoBuilder(todo).with_subset(None).build()
+
+    def patcher_for_style_func_validation(self, chunk: DataFrame) -> 'TodoPatcher':
+        subset = self.__calculate_chunk_subset(chunk)
+        # requires that the constructor of all subclasses take the same parameters
+        return self.__class__(self.__org_subset_frame.loc[subset], self.todo)
 
     @abstractmethod
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
