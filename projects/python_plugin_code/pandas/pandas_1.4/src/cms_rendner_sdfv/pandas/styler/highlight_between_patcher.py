@@ -46,30 +46,35 @@ class HighlightBetweenPatcher(TodoPatcher):
         # https://github.com/pandas-dev/pandas/blob/v1.4.0/pandas/io/formats/style.py#L3603-L3648
         if np.iterable(left) and not isinstance(left, str):
             left = _validate_apply_axis_arg(left, "left", None, chunk_parent)
-            # adjust shape of "left" to match shape of chunk
-            left = self._adjust_range_part(left, chunk_or_series_from_chunk, chunk_parent)
+            # adjust "left" for chunk
+            left = self.__extract_chunk_bounds_from_chunk_parent_bounds(left, chunk_or_series_from_chunk, chunk_parent)
 
         if np.iterable(right) and not isinstance(right, str):
             right = _validate_apply_axis_arg(right, "right", None, chunk_parent)
-            # adjust shape of "right" to match shape of chunk
-            right = self._adjust_range_part(right, chunk_or_series_from_chunk, chunk_parent)
+            # adjust "right" for chunk
+            right = self.__extract_chunk_bounds_from_chunk_parent_bounds(right, chunk_or_series_from_chunk, chunk_parent)
 
         return self.todo.apply_args.style_func(
             chunk_or_series_from_chunk,
             **dict(kwargs, left=left, right=right),
         )
 
-    def _adjust_range_part(self,
-                           part: np.ndarray,
-                           chunk_or_series_from_chunk: Union[DataFrame, Series],
-                           chunk_parent: Union[DataFrame, Series],
-                           ) -> np.ndarray:
-        if isinstance(chunk_or_series_from_chunk, Series):
-            return part[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
-        elif isinstance(chunk_or_series_from_chunk, DataFrame) and self.todo.apply_args.axis is None:
+    @staticmethod
+    def __extract_chunk_bounds_from_chunk_parent_bounds(bounds: np.ndarray,
+                                                        chunk_or_series_from_chunk: Union[DataFrame, Series],
+                                                        chunk_parent: Union[DataFrame, Series],
+                                                        ) -> np.ndarray:
+        # Note:
+        # "bounds" was taken from the "chunk_parent", which is unsorted and unfiltered.
+        # The "chunk" is a part of the visible DataFrame, which is filtered and sorted.
+        # "get_indexer_for" has to be used to extract the correct part of the "bounds" which belongs to the chunk.
+        if isinstance(chunk_parent, Series):
+            return bounds[chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)]
+        elif isinstance(chunk_parent, DataFrame):
             ri = chunk_parent.index.get_indexer_for(chunk_or_series_from_chunk.index)
             ci = chunk_parent.columns.get_indexer_for(chunk_or_series_from_chunk.columns)
-            ri_slice = slice(ri[0], ri[-1] + 1)
-            ci_slice = slice(ci[0], ci[-1] + 1)
-            return part[ri_slice, ci_slice]
-        return part
+            if isinstance(bounds, DataFrame):
+                return bounds.iloc[(ri, ci)]
+            elif isinstance(bounds, np.ndarray):
+                return DataFrame(data=bounds, index=chunk_parent.index, columns=chunk_parent.columns).iloc[(ri, ci)]
+        return bounds

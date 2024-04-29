@@ -13,7 +13,7 @@
 #  limitations under the License.
 import inspect
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Union, TypeVar
+from typing import Any, List, Union, TypeVar
 
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, TableFrame, \
@@ -85,7 +85,7 @@ class AbstractTableFrameGenerator(ABC):
 
 
 class AbstractTableSourceContext(ABC):
-    def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
+    def set_sort_criteria(self, sort_by_column_index: Union[None, List[int]], sort_ascending: Union[None, List[bool]]):
         pass
 
     @property
@@ -125,8 +125,8 @@ class AbstractTableSource(ABC):
         return self._context.get_table_structure(self.__fingerprint)
 
     def set_sort_criteria(self,
-                          by_column_index: Optional[List[int]] = None,
-                          ascending: Optional[List[bool]] = None,
+                          by_column_index: Union[None, List[int]] = None,
+                          ascending: Union[None, List[bool]] = None,
                           ):
         self._context.set_sort_criteria(by_column_index, ascending)
 

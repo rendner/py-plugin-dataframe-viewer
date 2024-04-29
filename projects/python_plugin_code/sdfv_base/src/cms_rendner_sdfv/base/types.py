@@ -14,7 +14,7 @@
 import dataclasses
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 
 @dataclass(frozen=True)
@@ -29,14 +29,14 @@ class TableStructure:
 @dataclass(frozen=True)
 class TableFrameCell:
     value: str
-    css: Dict[str, str] = None
+    css: Union[None, Dict[str, str]] = None
 
 
 @dataclass(frozen=True)
 class TableFrameColumn:
     dtype: str
     labels: List[str]
-    describe: Dict[str, str] = None
+    describe: Union[None, Dict[str, str]] = None
 
 
 @dataclass(frozen=True)
@@ -100,7 +100,7 @@ class Region:
                 cols_in_row_processed += cols
             rows_processed += rows
 
-    def get_bounded_region(self, unbound_region: Optional['Region']) -> 'Region':
+    def get_bounded_region(self, unbound_region: Union[None, 'Region']) -> 'Region':
         if unbound_region is None:
             return self
         if not self.is_valid():
@@ -120,15 +120,15 @@ class Region:
 
 @dataclass(frozen=True)
 class SortCriteria:
-    by_column: Optional[List[int]] = None
-    ascending: Optional[List[bool]] = None
+    by_column: Union[None, List[int]] = None
+    ascending: Union[None, List[bool]] = None
 
     def is_empty(self) -> bool:
         return not self.by_column
 
     def __eq__(self, other):
         if isinstance(other, SortCriteria):
-            def _equals(s: Optional[List[Any]], o: Optional[List[Any]]) -> bool:
+            def _equals(s: Union[None, List[Any]], o: Union[None, List[Any]]) -> bool:
                 # None and [] are interpreted as "no sorting"
                 return (not s and not o) or s == o
 
@@ -138,11 +138,11 @@ class SortCriteria:
 
 @dataclass(frozen=True)
 class CreateTableSourceConfig:
-    temp_var_slot_id: Optional[str] = None
-    data_source_transform_hint: Optional[str] = None
-    previous_fingerprint: Optional[str] = None
-    filter_eval_expr: Optional[str] = None
-    filter_eval_expr_provide_frame: Optional[bool] = None
+    temp_var_slot_id: Union[None, str] = None
+    data_source_transform_hint: Union[None, str] = None
+    previous_fingerprint: Union[None, str] = None
+    filter_eval_expr: Union[None, str] = None
+    filter_eval_expr_provide_frame: Union[None, bool] = None
 
 
 @dataclass(frozen=True)

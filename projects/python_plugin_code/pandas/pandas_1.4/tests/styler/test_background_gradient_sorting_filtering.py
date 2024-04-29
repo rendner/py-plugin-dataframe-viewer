@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from pandas import Index
 from pandas.io.formats.style import Styler
 
@@ -24,9 +25,12 @@ df = pd.DataFrame.from_dict({
     })
 
 
-def test_cells__axis_index():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_index(combine: bool):
     ctx = PatchedStylerContext(df.style.background_gradient(axis='index'))
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -47,10 +51,13 @@ def test_cells__axis_index():
     ]
 
 
-def test_cells__axis_index__sorted():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_index__sorted(combine: bool):
     ctx = PatchedStylerContext(df.style.background_gradient(axis='index'))
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[False])
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -71,10 +78,13 @@ def test_cells__axis_index__sorted():
     ]
 
 
-def test_cells__axis_index__column_filtered_out():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_index__column_filtered_out(combine: bool):
     filter_criteria = FilterCriteria(index=df.index, columns=Index(['a', 'c']))
     ctx = PatchedStylerContext(df.style.background_gradient(axis='index'), filter_criteria)
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -92,10 +102,13 @@ def test_cells__axis_index__column_filtered_out():
     ]
 
 
-def test_cells__axis_index__row_filtered_out():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_index__row_filtered_out(combine: bool):
     filter_criteria = FilterCriteria(index=Index([0, 2]), columns=df.columns)
     ctx = PatchedStylerContext(df.style.background_gradient(axis='index'), filter_criteria)
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -111,9 +124,12 @@ def test_cells__axis_index__row_filtered_out():
     ]
 
 
-def test_cells__axis_columns():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_columns(combine: bool):
     ctx = PatchedStylerContext(df.style.background_gradient(axis='columns'))
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -134,10 +150,13 @@ def test_cells__axis_columns():
     ]
 
 
-def test_cells__axis_columns__sorted():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_columns__sorted(combine: bool):
     ctx = PatchedStylerContext(df.style.background_gradient(axis='columns'))
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[False])
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -158,10 +177,13 @@ def test_cells__axis_columns__sorted():
     ]
 
 
-def test_cells__axis_columns__column_filtered_out():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_columns__column_filtered_out(combine: bool):
     filter_criteria = FilterCriteria(index=df.index, columns=Index(['a', 'c']))
     ctx = PatchedStylerContext(df.style.background_gradient(axis='columns'), filter_criteria)
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -179,10 +201,13 @@ def test_cells__axis_columns__column_filtered_out():
     ]
 
 
-def test_cells__axis_columns__row_filtered_out():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_columns__row_filtered_out(combine: bool):
     filter_criteria = FilterCriteria(index=Index([0, 2]), columns=df.columns)
     ctx = PatchedStylerContext(df.style.background_gradient(axis='columns'), filter_criteria)
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -198,9 +223,12 @@ def test_cells__axis_columns__row_filtered_out():
     ]
 
 
-def test_cells__axis_none():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_none(combine: bool):
     ctx = PatchedStylerContext(df.style.background_gradient(axis=None))
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -221,10 +249,13 @@ def test_cells__axis_none():
     ]
 
 
-def test_cells__axis_none__sorted():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_none__sorted(combine: bool):
     ctx = PatchedStylerContext(df.style.background_gradient(axis=None))
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[False])
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -245,10 +276,13 @@ def test_cells__axis_none__sorted():
     ]
 
 
-def test_cells__axis_none__column_filtered_out():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_none__column_filtered_out(combine: bool):
     filter_criteria = FilterCriteria(index=df.index, columns=Index(['a', 'c']))
     ctx = PatchedStylerContext(df.style.background_gradient(axis=None), filter_criteria)
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
@@ -266,10 +300,13 @@ def test_cells__axis_none__column_filtered_out():
     ]
 
 
-def test_cells__axis_none__row_filtered_out():
+@pytest.mark.parametrize("combine", [True, False])
+def test_cells__axis_none__row_filtered_out(combine: bool):
     filter_criteria = FilterCriteria(index=Index([0, 2]), columns=df.columns)
     ctx = PatchedStylerContext(df.style.background_gradient(axis=None), filter_criteria)
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(1, 1)
+
+    generator = ctx.get_table_frame_generator()
+    actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
