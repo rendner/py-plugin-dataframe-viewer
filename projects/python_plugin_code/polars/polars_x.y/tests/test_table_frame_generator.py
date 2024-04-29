@@ -38,6 +38,7 @@ def test_generate_by_combining_chunks():
     (3, '123…'),
     (4, '1234…'),
     (5, '12345'),
+    (6, '12345'),
 ])
 def test_config_string_cell_values_are_correct_truncated(str_length: int, expected_value: str):
     df = pl.DataFrame({"0": ["12345"]})

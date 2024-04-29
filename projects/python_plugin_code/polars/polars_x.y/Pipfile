@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-polars = "==0.20.14"
+polars = "==0.20.23"
 
 [dev-packages]
 pytest = "==7.4.3"

@@ -73,22 +73,18 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
             should_create_row = not result
             for r, row_in_series in enumerate(chunk.row_idx_iter()):
                 if is_string:
-                    # 'series._s.get_fmt(...)' wraps strings with a leading '"' and a trailing '"'.
+                    # 'get_fmt' wraps strings with a leading '"' and a trailing '"'.
                     # If the wrapped string exceeds the configured string length, it gets truncated
                     # and the last char is replaced with a '…'.
                     #
-                    # examples:
-                    # '12345' with a configured max length of 3 becomes '"12…'
-                    # '12345' with a configured max length of 6 becomes '"12345…'
-                    # '12345' with a configured max length of 7 becomes '"12345"'
-                    #
-                    # A printed DataFrame doesn't wrap strings with additional '"'.
-                    # To get identical values for strings, the length is increased by two and altered afterwards.
-                    v = series._s.get_fmt(row_in_series, str_lengths + 2)
-                    if v[-1] == '"':
-                        v = v[1:-1]
-                    else:
-                        v = v[1:-2] + v[-1]
+                    # Use 'get_str' instead to omit the extra "" around a string.
+                    # There was also a bug in 'series._s.get_fmt' (now fixed), which
+                    # lead to a different output for older versions.
+                    # Therefore, it is less error-prone to use 'get_str'.
+                    v = series._s.get_str(row_in_series)
+                    if len(v) > str_lengths:
+                        v = v[:str_lengths]
+                        v = v + '…'
                 else:
                     v = series._s.get_fmt(row_in_series, str_lengths)
 
