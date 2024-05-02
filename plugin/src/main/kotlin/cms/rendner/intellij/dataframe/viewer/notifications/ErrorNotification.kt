@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.notifications
 
 import cms.rendner.intellij.dataframe.viewer.DataFrameViewerIcons
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
@@ -56,6 +57,9 @@ class ErrorNotification(
         private val content: String,
         private val throwable: Throwable,
     ) : AnAction("Copy To Clipboard"), DumbAware {
+
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
         override fun actionPerformed(p0: AnActionEvent) {
             val selection = StringSelection("$content\n\n${throwable.stackTraceToString()}")
             Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
@@ -67,6 +71,9 @@ class ErrorNotification(
         private val content: String,
         private val throwable: Throwable,
     ) : AnAction("Show Error"), DumbAware {
+
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
         override fun actionPerformed(event: AnActionEvent) {
             val message = StringUtil.escapeXmlEntities(throwable.stackTraceToString())
             showHtmlMessageDialog(

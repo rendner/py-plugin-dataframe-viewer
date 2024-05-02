@@ -19,6 +19,7 @@ import cms.rendner.intellij.dataframe.viewer.DataFrameViewerIcons
 import cms.rendner.intellij.dataframe.viewer.python.bridge.ProblemReason
 import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionValidationProblem
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
@@ -51,6 +52,9 @@ class ChunkValidationProblemNotification(
     private class CopyToClipboardAction(
         private val problems: List<StyleFunctionValidationProblem>,
     ) : AnAction("Copy To Clipboard"), DumbAware {
+
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
         override fun actionPerformed(p0: AnActionEvent) {
             val message = ClipboardReportGenerator().createReport(problems)
             val selection = StringSelection(message)
@@ -61,6 +65,8 @@ class ChunkValidationProblemNotification(
     private class ShowValidationReportAction(
         private val problems: List<StyleFunctionValidationProblem>,
     ) : AnAction("Show Report"), DumbAware {
+
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
         override fun actionPerformed(event: AnActionEvent) {
             showHtmlMessageDialog(
