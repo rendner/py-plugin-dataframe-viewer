@@ -1,4 +1,24 @@
 # Changelog
+## v0.16.0
+- `Released`: 2024-05-03
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Min Required IntelliJ Version`: 2022.3
+
+### Changed
+#### Validation of Pandas Styling Functions
+Problems detected by the validation are now reported only once for an unstable styling function.
+Regardless if the styling function raised an exception or produced unstable styling results.
+Already reported unstable styling functions are now excluded from the validation to further improve the validation speed.
+
+The validation strategies `PRECISION`, `FAST`, `DISABLED` are replaced by the options `enabled` or `disabled`.
+This was possible because of several improvements.
+
+>If you had validation strategy `PRECISION` or `FAST` configured you have to manually enable the validation again in the plugin settings.
+
+### Fixed
+- [pandas][validation] invalid styling function from docs was not detected if strategy `FAST` was used
+- [pandas] Styler::highlight_between failed in case `left` or `right` was provided as 2-dimensional array
+
 ## v0.15.1
 - `Released`: 2024-03-17
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
