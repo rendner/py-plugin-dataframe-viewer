@@ -1,11 +1,11 @@
 # Changelog
 ## v0.16.0
-- `Released`: 2024-05-03
+- `Released`: 2024-05-06
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Changed
-#### Validation of Pandas Styling Functions
+#### [pandas] Validation of Pandas Styling Functions
 Problems detected by the validation are now reported only once for an unstable styling function.
 Regardless if the styling function raised an exception or produced unstable styling results.
 Already reported unstable styling functions are now excluded from the validation to further improve the validation speed.
@@ -14,6 +14,15 @@ The validation strategies `PRECISION`, `FAST`, `DISABLED` are replaced by the op
 This was possible because of several improvements.
 
 >If you had validation strategy `PRECISION` or `FAST` configured you have to manually enable the validation again in the plugin settings.
+
+#### [polars] Formatting of Cell Values
+The leading and trailing `"` are now removed from all stringlike values (`pl.String`, `pl.Categorical`, `pl.Enum` and `pl.Utf8`) - excluding nested data types.
+Stringlike values are truncated in case they are longer than 200 chars.
+Lists are truncated if they contain more than 60 entries.
+
+Truncated values can be longer as the documented max chars.
+Their length depends on the data type of the value.
+Lists, for example, always have a closing `]`, even if the shortened value exceeds 60 characters.
 
 ### Fixed
 - [pandas][validation] invalid styling function from docs was not detected if strategy `FAST` was used
