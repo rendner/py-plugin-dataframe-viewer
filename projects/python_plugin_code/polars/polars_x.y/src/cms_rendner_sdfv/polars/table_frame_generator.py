@@ -19,6 +19,7 @@ import polars as pl
 from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
 from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn
+from cms_rendner_sdfv.polars.constants import CELL_MAX_LIST_LEN
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame, Chunk
 
 
@@ -43,7 +44,8 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
             cells=cells,
         )
 
-    def _extract_columns(self, chunk: Chunk) -> List[TableFrameColumn]:
+    @staticmethod
+    def _extract_columns(chunk: Chunk) -> List[TableFrameColumn]:
         result: List[TableFrameColumn] = []
 
         for c in range(chunk.region.cols):
@@ -65,32 +67,26 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         if chunk.region.is_empty():
             return result
 
-        str_lengths = int(os.environ.get("POLARS_FMT_STR_LEN", str(CELL_MAX_STR_LEN)))
+        with pl.Config() as cfg:
+            str_len = int(os.environ.get("POLARS_FMT_STR_LEN", str(CELL_MAX_STR_LEN)))
+            cfg.set_fmt_str_lengths(min(str_len, CELL_MAX_STR_LEN))
 
-        for c in range(chunk.region.cols):
-            series = chunk.series_at(c)
-            is_string = isinstance(series.dtype, pl.Utf8)
-            should_create_row = not result
-            for r, row_in_series in enumerate(chunk.row_idx_iter()):
-                if is_string:
-                    # 'get_fmt' wraps strings with a leading '"' and a trailing '"'.
-                    # If the wrapped string exceeds the configured string length, it gets truncated
-                    # and the last char is replaced with a '…'.
-                    #
-                    # Use 'get_str' instead to omit the extra "" around a string.
-                    # There was also a bug in 'series._s.get_fmt' (now fixed), which
-                    # lead to a different output for older versions.
-                    # Therefore, it is less error-prone to use 'get_str'.
-                    v = series._s.get_str(row_in_series)
-                    if len(v) > str_lengths:
-                        v = v[:str_lengths]
-                        v = v + '…'
-                else:
-                    v = series._s.get_fmt(row_in_series, str_lengths)
+            cell_list_len = int(os.environ.get("POLARS_FMT_TABLE_CELL_LIST_LEN", str(CELL_MAX_LIST_LEN)))
+            cfg.set_fmt_table_cell_list_len(min(cell_list_len, CELL_MAX_LIST_LEN))
 
-                if should_create_row:
-                    result.append([TableFrameCell(v)])
-                else:
-                    result[r].append(TableFrameCell(v))
+            for c in range(chunk.region.cols):
+                series = chunk.series_at(c)
+                should_create_row = not result
+                for r, row_in_series in enumerate(chunk.row_idx_iter()):
+                    v = series._s.get_fmt(row_in_series, str_len)
+                    if v[0] == '"':
+                        v = v[1:]
+                    if v[-1] == '"':
+                        v = v[0:-1]
+
+                    if should_create_row:
+                        result.append([TableFrameCell(v)])
+                    else:
+                        result[r].append(TableFrameCell(v))
 
         return result

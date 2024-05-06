@@ -1,9 +1,52 @@
 import polars as pl
-import pytest
 
+from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
 from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, TableFrameColumn
+from cms_rendner_sdfv.polars.constants import CELL_MAX_LIST_LEN
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 from tests.helpers.asserts.assert_table_frames import assert_table_frames
+
+
+def test_cell_stringlike_values_have_no_double_quotes():
+    data = [
+        pl.Series("col1", ["a"], dtype=pl.String),
+        pl.Series("col2", ["a"], dtype=pl.Enum(["a"])),
+        pl.Series("col3", ["a"], dtype=pl.Categorical),
+        pl.Series("col4", ["a"], dtype=pl.Utf8),
+    ]
+    df = pl.DataFrame(data)
+
+    ctx = FrameContext(df)
+    actual = ctx.get_table_frame_generator().generate()
+    assert actual.cells == [
+        [
+            TableFrameCell(value='a'),
+            TableFrameCell(value='a'),
+            TableFrameCell(value='a'),
+            TableFrameCell(value='a'),
+        ],
+    ]
+
+
+def test_nested_cell_stringlike_values_have_double_quotes():
+    data = [
+        pl.Series("col1", [["a"]], dtype=pl.Array(pl.String, 1)),
+    ]
+    df = pl.DataFrame(data)
+
+    ctx = FrameContext(df)
+    actual = ctx.get_table_frame_generator().generate()
+    assert actual.cells == [[TableFrameCell(value='["a"]')]]
+
+
+def test_columns_with_different_row_value_types_returns_valid_cell_strings():
+    df_with_string_and_numbers = pl.from_dict({"0": [1, "2"], "1": ["1", 2]})
+    ctx = FrameContext(df_with_string_and_numbers)
+    actual = ctx.get_table_frame_generator().generate()
+    assert actual.cells == [
+        [TableFrameCell(value='null'), TableFrameCell(value='1')],
+        [TableFrameCell(value='2'), TableFrameCell(value='null')],
+    ]
 
 
 def test_generate_by_combining_chunks():
@@ -32,24 +75,6 @@ def test_generate_by_combining_chunks():
     )
 
 
-@pytest.mark.parametrize("str_length, expected_value", [
-    (1, '1…'),
-    (2, '12…'),
-    (3, '123…'),
-    (4, '1234…'),
-    (5, '12345'),
-    (6, '12345'),
-])
-def test_config_string_cell_values_are_correct_truncated(str_length: int, expected_value: str):
-    df = pl.DataFrame({"0": ["12345"]})
-
-    with pl.Config() as cfg:
-        cfg.set_fmt_str_lengths(str_length)
-        actual = FrameContext(df).get_table_frame_generator().generate()
-
-    assert actual.cells[0][0].value == expected_value
-
-
 def test_config_thousand_formatting():
     df = pl.DataFrame({"0": [1000]})
 
@@ -68,6 +93,24 @@ def test_config_float_precision():
         actual = FrameContext(df).get_table_frame_generator().generate()
 
     assert actual.cells[0][0].value == '1.235'
+
+
+def test_respects_plugin_max_str_length():
+    df = pl.DataFrame({"0": "a" * 2 * CELL_MAX_STR_LEN})
+
+    actual = FrameContext(df).get_table_frame_generator().generate()
+
+    assert actual.cells[0][0].value.count('a') == CELL_MAX_STR_LEN
+    # +1 for the truncation char
+    assert len(actual.cells[0][0].value) == CELL_MAX_STR_LEN + 1
+
+
+def test_respects_plugin_max_list_length():
+    df = pl.DataFrame({"0": [["a"] * 2 * CELL_MAX_LIST_LEN]})
+
+    actual = FrameContext(df).get_table_frame_generator().generate()
+
+    assert actual.cells[0][0].value.count('a') == CELL_MAX_LIST_LEN
 
 
 def test_describe():
