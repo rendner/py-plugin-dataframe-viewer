@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,13 @@ import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.psi.PsiElement
-import com.jetbrains.python.psi.PyExpressionCodeFragment
 
 /**
- * Highlights synthetic identifier inside a [PyExpressionCodeFragment].
+ * Highlights synthetic identifier inside the editor component.
  */
 class SyntheticIdentifierHighlighter : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
-        if (SyntheticDataFrameIdentifier.isIdentifier(element)) {
+        if (SyntheticDataFrameIdentifier.isAllowedIdentifier(element)) {
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(element)
                 .textAttributes(DefaultLanguageHighlighterColors.LINE_COMMENT).create()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,14 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter.editor
 
+import cms.rendner.intellij.dataframe.viewer.services.SyntheticDataFramePsiRefProvider
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiRecursiveElementVisitor
+import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -36,7 +35,8 @@ import com.intellij.xdebugger.evaluation.EvaluationMode
 import com.jetbrains.python.PythonLanguage
 import com.jetbrains.python.codeInsight.controlflow.ScopeOwner
 import com.jetbrains.python.debugger.PyDebuggerEditorsProvider
-import com.jetbrains.python.psi.PyExpressionCodeFragment
+import com.jetbrains.python.debugger.PyDebuggerEditorsProvider.getContextElement
+import com.jetbrains.python.psi.*
 import com.jetbrains.python.psi.resolve.PyResolveUtil
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
@@ -49,7 +49,7 @@ interface IEditorChangedListener {
 data class FilterInputState(val text: String, val containsSyntheticFrameIdentifier: Boolean = false)
 
 abstract class AbstractEditorComponent : KeyAdapter() {
-    protected val myEditorsProvider = MyDebuggerEditorsProvider(::processDocumentFile)
+    protected val myEditorsProvider = MyDebuggerEditorsProvider(::configureCreatedDocumentFile)
 
     private var changedListener: IEditorChangedListener? = null
     protected val myEditorContainer = Panels.simplePanel()
@@ -114,16 +114,43 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         }
     }
 
-    private fun processDocumentFile(psiFile: PsiFile, withSyntheticIdentifier: Boolean) {
+    private fun configureCreatedDocumentFile(psiFile: PsiFile, sourcePosition: XSourcePosition?) {
         IgnoreAllIntentionsActionFilter.register(psiFile)
 
-        if (withSyntheticIdentifier && psiFile is PyExpressionCodeFragment) {
-            SyntheticDataFrameIdentifier.allowSyntheticIdentifier(psiFile)
+        val project = psiFile.project
+        if (syntheticIdentifierNameExistsInContext(project, sourcePosition)) {
+            myExpressionComponentLabel.toolTipText =
+                "Note: Synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' is not available. Identifier is already used."
+        } else {
+            createSyntheticPsiPointerIfNotExist(project)
+            SyntheticDataFrameIdentifier.allowToResolveSyntheticIdentifier(psiFile)
+            myExpressionComponentLabel.toolTipText =
+                "Hint: You can use the synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' in the expression to refer to the used DataFrame."
         }
+    }
 
-        myExpressionComponentLabel.toolTipText = if (withSyntheticIdentifier) {
-            "Hint: You can use the synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' in the expression to refer to the used DataFrame."
-        } else null
+    private fun createSyntheticPsiPointerIfNotExist(project: Project) {
+        val refProvider = project.service<SyntheticDataFramePsiRefProvider>()
+        if (refProvider.pointer != null) return
+
+        myEditorsProvider.createSyntheticDocument(
+            project,
+            SyntheticDataFrameIdentifier.getSourceCodeToCreateIdentifier()
+        ).also { doc ->
+            val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(doc) as? ScopeOwner ?: return
+            val resolved = PyResolveUtil.resolveLocally(psiFile, SyntheticDataFrameIdentifier.NAME)
+            val identifier = resolved.firstOrNull() as? PyTargetExpression ?: return
+            refProvider.pointer = SmartPointerManager.getInstance(project).createSmartPsiElementPointer(identifier)
+        }
+    }
+
+    private fun syntheticIdentifierNameExistsInContext(project: Project, sourcePosition: XSourcePosition?): Boolean {
+        getContextElement(project, sourcePosition)?.containingFile?.let {
+            if (it is ScopeOwner) {
+                return PyResolveUtil.resolveLocally(it, SyntheticDataFrameIdentifier.NAME).isNotEmpty()
+            }
+        }
+        return false
     }
 
     private fun textContainsSyntheticFrameIdentifier(): Boolean {
@@ -143,7 +170,7 @@ abstract class AbstractEditorComponent : KeyAdapter() {
             if (mySyntheticIdentifierUsed) return
 
             if (element is LeafPsiElement) {
-                mySyntheticIdentifierUsed = SyntheticDataFrameIdentifier.isIdentifier(element)
+                mySyntheticIdentifierUsed = SyntheticDataFrameIdentifier.isAllowedIdentifier(element)
             } else {
                 super.visitElement(element)
             }
@@ -155,7 +182,10 @@ abstract class AbstractEditorComponent : KeyAdapter() {
     }
 
     protected class MyDebuggerEditorsProvider(
-        private val documentFileProcessor: (psiFile: PsiFile, withSyntheticIdentifier: Boolean) -> Unit,
+        private val createdDocumentFileProcessor: (
+            psiFile: PsiFile,
+            sourcePosition: XSourcePosition?,
+        ) -> Unit,
     ) : PyDebuggerEditorsProvider() {
         fun createDocument(project: Project, expression: String, sourcePosition: XSourcePosition?): Document {
             return createDocument(
@@ -173,42 +203,29 @@ abstract class AbstractEditorComponent : KeyAdapter() {
             sourcePosition: XSourcePosition?,
             mode: EvaluationMode
         ): Document {
-            val injectSyntheticIdentifier = !syntheticIdentifierNameExistsInContext(project, sourcePosition)
             return super.createDocument(
                 project,
                 expression,
-                if (injectSyntheticIdentifier) createSyntheticSourcePosition(project, sourcePosition) else sourcePosition,
+                sourcePosition,
                 EvaluationMode.EXPRESSION,
             ).also {
                 PsiDocumentManager.getInstance(project).getPsiFile(it)?.let { psiFile ->
-                    documentFileProcessor(psiFile, injectSyntheticIdentifier)
+                    createdDocumentFileProcessor(psiFile, sourcePosition)
                 }
             }
         }
 
-        private fun syntheticIdentifierNameExistsInContext(project: Project, sourcePosition: XSourcePosition?): Boolean {
-            getContextElement(project, sourcePosition)?.containingFile?.let {
-                if (it is ScopeOwner) {
-                    return PyResolveUtil.resolveLocally(it, SyntheticDataFrameIdentifier.NAME).isNotEmpty()
-                }
-            }
-            return false
-        }
-
-        private fun createSyntheticSourcePosition(project: Project, sourcePosition: XSourcePosition?): XSourcePosition? {
-            val debuggerUtil = XDebuggerUtil.getInstance()
-            val documentManager = PsiDocumentManager.getInstance(project)
-
-            val exprFragment = debuggerUtil.createExpression(
-                SyntheticDataFrameIdentifier.getFragmentCode(),
+        fun createSyntheticDocument(project: Project, code: String): Document {
+            val exprFragment = XDebuggerUtil.getInstance().createExpression(
+                code,
                 PythonLanguage.INSTANCE,
                 null,
                 EvaluationMode.CODE_FRAGMENT
             )
 
-            val document = super.createDocument(project, exprFragment, sourcePosition, EvaluationMode.CODE_FRAGMENT)
-            val psiFile = documentManager.getPsiFile(document)!!
-            return debuggerUtil.createPositionByElement(psiFile.lastChild)
+            return super.createDocument(project, exprFragment, null, EvaluationMode.CODE_FRAGMENT).apply {
+                setReadOnly(true)
+            }
         }
     }
 }
