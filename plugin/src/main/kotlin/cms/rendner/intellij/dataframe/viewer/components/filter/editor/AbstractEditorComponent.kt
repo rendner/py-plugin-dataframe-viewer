@@ -24,6 +24,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
@@ -35,7 +36,6 @@ import com.intellij.xdebugger.evaluation.EvaluationMode
 import com.jetbrains.python.PythonLanguage
 import com.jetbrains.python.codeInsight.controlflow.ScopeOwner
 import com.jetbrains.python.debugger.PyDebuggerEditorsProvider
-import com.jetbrains.python.debugger.PyDebuggerEditorsProvider.getContextElement
 import com.jetbrains.python.psi.*
 import com.jetbrains.python.psi.resolve.PyResolveUtil
 import java.awt.event.KeyAdapter
@@ -114,11 +114,11 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         }
     }
 
-    private fun configureCreatedDocumentFile(psiFile: PsiFile, sourcePosition: XSourcePosition?) {
+    private fun configureCreatedDocumentFile(psiFile: PsiFile) {
         IgnoreAllIntentionsActionFilter.register(psiFile)
 
         val project = psiFile.project
-        if (syntheticIdentifierNameExistsInContext(project, sourcePosition)) {
+        if (syntheticIdentifierNameExistsInContext(psiFile)) {
             myExpressionComponentLabel.toolTipText =
                 "Note: Synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' is not available. Identifier is already used."
         } else {
@@ -144,13 +144,10 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         }
     }
 
-    private fun syntheticIdentifierNameExistsInContext(project: Project, sourcePosition: XSourcePosition?): Boolean {
-        getContextElement(project, sourcePosition)?.containingFile?.let {
-            if (it is ScopeOwner) {
-                return PyResolveUtil.resolveLocally(it, SyntheticDataFrameIdentifier.NAME).isNotEmpty()
-            }
-        }
-        return false
+    private fun syntheticIdentifierNameExistsInContext(psiFile: PsiFile): Boolean {
+        val debuggerContext = psiFile.context ?: return false
+        val scopeOwner = PsiTreeUtil.getParentOfType(debuggerContext, ScopeOwner::class.java) ?: return false
+        return PyResolveUtil.resolveLocally(scopeOwner, SyntheticDataFrameIdentifier.NAME).isNotEmpty()
     }
 
     private fun textContainsSyntheticFrameIdentifier(): Boolean {
@@ -182,10 +179,7 @@ abstract class AbstractEditorComponent : KeyAdapter() {
     }
 
     protected class MyDebuggerEditorsProvider(
-        private val createdDocumentFileProcessor: (
-            psiFile: PsiFile,
-            sourcePosition: XSourcePosition?,
-        ) -> Unit,
+        private val createdDocumentFileProcessor: (psiFile: PsiFile) -> Unit,
     ) : PyDebuggerEditorsProvider() {
         fun createDocument(project: Project, expression: String, sourcePosition: XSourcePosition?): Document {
             return createDocument(
@@ -210,7 +204,7 @@ abstract class AbstractEditorComponent : KeyAdapter() {
                 EvaluationMode.EXPRESSION,
             ).also {
                 PsiDocumentManager.getInstance(project).getPsiFile(it)?.let { psiFile ->
-                    createdDocumentFileProcessor(psiFile, sourcePosition)
+                    createdDocumentFileProcessor(psiFile)
                 }
             }
         }
