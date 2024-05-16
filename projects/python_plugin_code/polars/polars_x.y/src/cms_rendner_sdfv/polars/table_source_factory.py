@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from typing import Any, Union
 import polars as pl
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource, AbstractTableSourceFactory
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, CreateTableSourceErrorKind
 from cms_rendner_sdfv.polars.create_fingerprint import create_fingerprint
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 from cms_rendner_sdfv.polars.table_source import TableSource
@@ -35,11 +35,17 @@ class TableSourceFactory(AbstractTableSourceFactory):
         elif isinstance(data_source, pl.DataFrame):
             ds_frame = data_source
         else:
-            return CreateTableSourceFailure(error_kind="UNSUPPORTED_DATA_SOURCE_TYPE", info=str(type(data_source)))
+            return CreateTableSourceFailure(
+                error_kind=CreateTableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE,
+                info=str(type(data_source)),
+            )
 
         pre_fingerprint = config.previous_fingerprint
         cur_fingerprint = create_fingerprint(ds_frame, data_source)
         if pre_fingerprint is not None and pre_fingerprint != cur_fingerprint:
-            return CreateTableSourceFailure(error_kind="INVALID_FINGERPRINT", info=cur_fingerprint)
+            return CreateTableSourceFailure(
+                error_kind=CreateTableSourceErrorKind.INVALID_FINGERPRINT,
+                info=cur_fingerprint,
+            )
 
         return TableSource(FrameContext(ds_frame), fingerprint=cur_fingerprint)

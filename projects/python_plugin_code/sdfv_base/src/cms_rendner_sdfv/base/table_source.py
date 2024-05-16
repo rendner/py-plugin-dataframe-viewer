@@ -17,7 +17,7 @@ from typing import Any, List, Union, TypeVar
 
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, TableFrame, \
-    TableSourceKind, TableStructure
+    TableSourceKind, TableStructure, CreateTableSourceErrorKind
 
 
 class AbstractVisibleFrame(ABC):
@@ -183,7 +183,12 @@ class AbstractTableSourceFactory(ABC):
 
             return table_source
         except Exception as e:
-            return to_json(CreateTableSourceFailure(error_kind="EVAL_EXCEPTION", info=repr(e)))
+            return to_json(
+                CreateTableSourceFailure(
+                    error_kind=CreateTableSourceErrorKind.EVAL_EXCEPTION,
+                    info=repr(e),
+                ),
+            )
 
     @abstractmethod
     def _create_internal(self,

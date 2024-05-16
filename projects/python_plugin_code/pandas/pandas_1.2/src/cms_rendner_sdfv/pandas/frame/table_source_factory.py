@@ -16,7 +16,7 @@ from typing import Any, Union
 from pandas import DataFrame
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource, AbstractTableSourceFactory
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, CreateTableSourceErrorKind
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.shared.create_fingerprint import create_fingerprint
@@ -45,12 +45,18 @@ class TableSourceFactory(AbstractTableSourceFactory):
         elif isinstance(data_source, DataFrame):
             ds_frame = data_source
         else:
-            return CreateTableSourceFailure(error_kind="UNSUPPORTED_DATA_SOURCE_TYPE", info=str(type(data_source)))
+            return CreateTableSourceFailure(
+                error_kind=CreateTableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE,
+                info=str(type(data_source)),
+            )
 
         pre_fingerprint = config.previous_fingerprint
         cur_fingerprint = create_fingerprint(ds_frame, data_source)
         if pre_fingerprint is not None and pre_fingerprint != cur_fingerprint:
-            return CreateTableSourceFailure(error_kind="INVALID_FINGERPRINT", info=cur_fingerprint)
+            return CreateTableSourceFailure(
+                error_kind=CreateTableSourceErrorKind.INVALID_FINGERPRINT,
+                info=cur_fingerprint,
+            )
 
         filter_frame = None
         filter_eval_expr = config.filter_eval_expr
@@ -62,10 +68,16 @@ class TableSourceFactory(AbstractTableSourceFactory):
                     caller_globals["_df"] = ds_frame
                 filter_frame = eval(filter_eval_expr, caller_globals)
             except Exception as e:
-                return CreateTableSourceFailure(error_kind="FILTER_FRAME_EVAL_FAILED", info=repr(e))
+                return CreateTableSourceFailure(
+                    error_kind=CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED,
+                    info=repr(e),
+                )
 
             if not isinstance(filter_frame, DataFrame):
-                return CreateTableSourceFailure(error_kind="FILTER_FRAME_OF_WRONG_TYPE", info=str(type(filter_frame)))
+                return CreateTableSourceFailure(
+                    error_kind=CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE,
+                    info=str(type(filter_frame)),
+                )
 
         return TableSource(
             FrameContext(ds_frame, FilterCriteria.from_frame(filter_frame)),

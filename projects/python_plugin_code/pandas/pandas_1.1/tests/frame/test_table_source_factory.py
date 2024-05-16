@@ -5,7 +5,7 @@ import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableFrameColumn, TableSourceKind, TableFrameCell
+    TableFrameColumn, TableSourceKind, TableFrameCell, CreateTableSourceErrorKind
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
 from cms_rendner_sdfv.pandas.frame.table_source_factory import TableSourceFactory
 from tests.helpers.asserts.assert_table_frames import assert_table_frames
@@ -24,7 +24,11 @@ def _create_table_source(
 ) -> Union[AbstractTableSource, CreateTableSourceFailure]:
     result = TableSourceFactory().create(data_source, config if config is not None else CreateTableSourceConfig())
     if isinstance(result, str):
-        return CreateTableSourceFailure(**json.loads(result))
+        d = json.loads(result)
+        return CreateTableSourceFailure(
+            error_kind=CreateTableSourceErrorKind[d['error_kind']],
+            info=d['info'],
+        )
     return result
 
 
@@ -101,7 +105,7 @@ def test_create_fails_on_unsupported_data_source():
     failure = _create_table_source([])
 
     assert isinstance(failure, CreateTableSourceFailure)
-    assert failure.error_kind == "UNSUPPORTED_DATA_SOURCE_TYPE"
+    assert failure.error_kind == CreateTableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE
     assert failure.info == str(type([]))
 
 
@@ -112,7 +116,7 @@ def test_create_fails_on_invalid_fingerprint():
     )
 
     assert isinstance(failure, CreateTableSourceFailure)
-    assert failure.error_kind == "INVALID_FINGERPRINT"
+    assert failure.error_kind == CreateTableSourceErrorKind.INVALID_FINGERPRINT
 
 
 def test_create_fails_on_failing_eval_filter():
@@ -122,7 +126,7 @@ def test_create_fails_on_failing_eval_filter():
     )
 
     assert isinstance(failure, CreateTableSourceFailure)
-    assert failure.error_kind == "FILTER_FRAME_EVAL_FAILED"
+    assert failure.error_kind == CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED
 
 
 def test_create_fails_on_wrong_filter_type():
@@ -132,7 +136,7 @@ def test_create_fails_on_wrong_filter_type():
     )
 
     assert isinstance(failure, CreateTableSourceFailure)
-    assert failure.error_kind == "FILTER_FRAME_OF_WRONG_TYPE"
+    assert failure.error_kind == CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE
     assert failure.info == str(type({}))
 
 

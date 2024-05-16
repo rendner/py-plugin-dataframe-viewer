@@ -145,9 +145,18 @@ class CreateTableSourceConfig:
     filter_eval_expr_provide_frame: Union[None, bool] = None
 
 
+class CreateTableSourceErrorKind(Enum):
+    EVAL_EXCEPTION = 0,
+    RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE = 1,
+    UNSUPPORTED_DATA_SOURCE_TYPE = 2,
+    INVALID_FINGERPRINT = 3,
+    FILTER_FRAME_EVAL_FAILED = 4,
+    FILTER_FRAME_OF_WRONG_TYPE = 5
+
+
 @dataclass(frozen=True)
 class CreateTableSourceFailure:
-    error_kind: str
+    error_kind: CreateTableSourceErrorKind
     info: str
 
 

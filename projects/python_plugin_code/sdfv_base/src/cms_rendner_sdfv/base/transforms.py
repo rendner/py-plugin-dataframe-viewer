@@ -13,6 +13,7 @@
 #  limitations under the License.
 import json
 from dataclasses import asdict, is_dataclass
+from enum import Enum
 from typing import Any
 
 
@@ -20,6 +21,8 @@ class _CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj: Any):
         if is_dataclass(obj):
             return asdict(obj)
+        if isinstance(obj, Enum):
+            return obj.name
         return str(obj)
 
 
