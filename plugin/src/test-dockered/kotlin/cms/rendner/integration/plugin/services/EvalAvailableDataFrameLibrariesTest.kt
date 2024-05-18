@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,6 @@ internal class EvalAvailableDataFrameLibrariesTest : AbstractPluginCodeTest() {
 
             val evalLibraries = TestEvalLibrariesImpl()
             val expr = evalLibraries.getEvalExpression()
-            val nonExistingLibrary = DataFrameLibrary("panda_s")
 
             debuggerApi.addInterceptor(object: IDebuggerInterceptor {
                 override fun onRequest(request: EvalOrExecRequest): EvalOrExecRequest {
@@ -66,7 +65,7 @@ internal class EvalAvailableDataFrameLibrariesTest : AbstractPluginCodeTest() {
                         return request.copy(
                             expression = expr.replace(
                                 DataFrameLibrary.PANDAS.moduleName,
-                                nonExistingLibrary.moduleName,
+                                "panda_s",
                             )
                         )
                     }
@@ -77,7 +76,7 @@ internal class EvalAvailableDataFrameLibrariesTest : AbstractPluginCodeTest() {
             val result = debuggerApi.evaluator.evaluate(expr)
             val resultMap = evalLibraries.convertResult(result.value!!)
 
-            assertThat(resultMap.contains(nonExistingLibrary)).isFalse()
+            assertThat(resultMap.contains(DataFrameLibrary.PANDAS)).isFalse()
         }
     }
 

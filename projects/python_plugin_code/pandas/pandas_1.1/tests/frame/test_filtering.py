@@ -139,7 +139,7 @@ def test_filtered_frame_keeps_index_and_column_order():
     # The filter has the same cols and rows as df, but in reversed order.
     # Therefore, the filter doesn't filter out any row or col.
     filter_frame = df.copy().iloc[::-1, ::-1]
-    ctx = FrameContext(df, FilterCriteria(None, filter_frame.columns))
+    ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
     actual = ctx.visible_frame.to_frame(ctx.visible_frame.region)
     assert list(actual.index) == list(df.index)

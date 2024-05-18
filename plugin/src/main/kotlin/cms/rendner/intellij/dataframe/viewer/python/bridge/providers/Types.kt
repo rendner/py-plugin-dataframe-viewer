@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
+import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyTableSourceRef
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 
@@ -38,6 +38,24 @@ data class TableSourceFactoryImport(
     val packageName: String,
     val className: String,
     val tableSourceKind: TableSourceKind? = null,
+)
+
+/**
+ *
+ * @param source the source for a [IPyTableSourceRef]
+ * @param dataFrameLibrary the DataFrame library used for the source
+ * @param tableSourceFactoryImport the factory to create a [IPyTableSourceRef] on Python side
+ * @param hasIndexLabels true if table has index labels
+ * @param sortable true if table source can be sorted
+ * @param filterable true if table source can be filtered
+ */
+data class DataSourceInfo(
+    val source: PyDebugValueEvalExpr,
+    val dataFrameLibrary: DataFrameLibrary,
+    val tableSourceFactoryImport: TableSourceFactoryImport,
+    val hasIndexLabels: Boolean,
+    val sortable: Boolean,
+    val filterable: Boolean,
 )
 
 /**

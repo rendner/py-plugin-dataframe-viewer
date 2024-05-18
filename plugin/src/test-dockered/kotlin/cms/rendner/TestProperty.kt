@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,6 @@ object TestProperty {
         return System.getProperty("cms.rendner.dataframe.viewer.dataframe.libraries", "")
             .removeSurrounding(prefix = "[", suffix = "]")
             .split(",")
-            .map { DataFrameLibrary(it.trim()) }
+            .map { lib -> DataFrameLibrary.values().first { it.moduleName == lib } }
     }
 }

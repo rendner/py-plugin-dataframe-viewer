@@ -26,7 +26,7 @@ import com.intellij.psi.PsiElement
  */
 class SyntheticIdentifierHighlighter : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
-        if (SyntheticDataFrameIdentifier.isAllowedIdentifier(element)) {
+        if (SyntheticDataFrameIdentifier.isIdentifierAndMarkedForResolution(element)) {
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(element)
                 .textAttributes(DefaultLanguageHighlighterColors.LINE_COMMENT).create()

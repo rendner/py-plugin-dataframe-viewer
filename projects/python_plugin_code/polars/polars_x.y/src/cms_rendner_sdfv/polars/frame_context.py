@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from polars import DataFrame
 
@@ -21,8 +21,9 @@ from cms_rendner_sdfv.polars.visible_frame import VisibleFrame
 
 
 class FrameContext(AbstractTableSourceContext):
-    def __init__(self, source_frame: DataFrame):
+    def __init__(self, source_frame: DataFrame, filtered_frame: Union[DataFrame, None] = None):
         self.__source_frame = source_frame
+        self.__filtered_frame = filtered_frame
         self.__sort_criteria: SortCriteria = SortCriteria()
         self.__visible_frame: VisibleFrame = self._recompute_visible_frame()
 
@@ -55,24 +56,43 @@ class FrameContext(AbstractTableSourceContext):
         return TableFrameGenerator(self.__visible_frame)
 
     def _recompute_visible_frame(self) -> VisibleFrame:
+        col_idx = None
+
+        if self.__filtered_frame is None:
+            data_frame = self.__source_frame
+        else:
+            col_idx = []
+            org_col_names = self.__source_frame.columns
+            for c_name in self.__filtered_frame.columns:
+                try:
+                    col_idx.append(org_col_names.index(c_name))
+                except ValueError:
+                    pass
+
+            if not col_idx:
+                # filter frame and org frame have no common columns
+                return VisibleFrame(DataFrame(), None, None)
+
+            data_frame = self.__filtered_frame
+
         row_idx = None
         if not self.__sort_criteria.is_empty():
             # get col names before we insert "with_row_count" col
             # otherwise we would have to translate all col idx by one
-            col_names = self.__source_frame.columns
+            col_names = data_frame.columns
 
             # ensures that we always have our own col which starts with a zero index
             # in case the user has configured something else
             row_idx_col_name: str = "cms_render_sdfv__row_nr"
 
-            if hasattr(self.__source_frame, 'with_row_index'):
-                frame_with_index = self.__source_frame.with_row_index(row_idx_col_name)
+            if hasattr(data_frame, 'with_row_index'):
+                frame_with_index = data_frame.with_row_index(row_idx_col_name)
             else:
-                frame_with_index = self.__source_frame.with_row_count(row_idx_col_name)
+                frame_with_index = data_frame.with_row_count(row_idx_col_name)
 
             by_names = [col_names[i] for i in self.__sort_criteria.by_column]
             row_idx = frame_with_index \
                 .sort(by_names, descending=[not asc for asc in self.__sort_criteria.ascending]) \
                 .get_column(row_idx_col_name)
 
-        return VisibleFrame(self.__source_frame, row_idx)
+        return VisibleFrame(data_frame, row_idx, col_idx)

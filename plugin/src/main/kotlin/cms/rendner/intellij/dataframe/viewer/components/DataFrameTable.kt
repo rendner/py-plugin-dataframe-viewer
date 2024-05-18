@@ -243,8 +243,8 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
 
     private data class ColumnCacheKey(val type: String, val index: Int) {
         companion object {
-            fun orgFrameIndex(orgFrameIndex: Int) = ColumnCacheKey("orgIndex", orgFrameIndex)
-            fun modelIndex(modelIndex: Int) = ColumnCacheKey("modelIndex", modelIndex)
+            fun indexInUnfilteredTableSource(indexToCache: Int) = ColumnCacheKey("indexInUnfilteredTableSource", indexToCache)
+            fun modelIndex(indexToCache: Int) = ColumnCacheKey("modelIndex", indexToCache)
         }
     }
 
@@ -254,10 +254,10 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     ): List<MyValueTableColumn> {
         val result = mutableListOf<MyValueTableColumn>()
         for (modelIndex in 0 until valueModel.columnCount) {
-            val frameColumnIndex = valueModel.convertToFrameColumnIndex(modelIndex)
-            result.add(MyValueTableColumn(modelIndex, frameColumnIndex).apply {
+            val columnIndexInUnfilteredTableSource = valueModel.convertToColumnIndexInUnfilteredTableSource(modelIndex)
+            result.add(MyValueTableColumn(modelIndex, columnIndexInUnfilteredTableSource).apply {
                 this.minWidth = MIN_COLUMN_WIDTH
-                prevTableColumnCache[ColumnCacheKey.orgFrameIndex(frameColumnIndex)]?.let { prevColumn ->
+                prevTableColumnCache[ColumnCacheKey.indexInUnfilteredTableSource(columnIndexInUnfilteredTableSource)]?.let { prevColumn ->
                     this.copyStateFrom(prevColumn)
                 }
             })
@@ -282,7 +282,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         if (myModelHasSameDataSource) {
             for (column in columnModel.columns) {
                 if (column !is MyValueTableColumn) continue
-                prevColumnCache[ColumnCacheKey.orgFrameIndex(column.orgFrameIndex)] = column
+                prevColumnCache[ColumnCacheKey.indexInUnfilteredTableSource(column.indexInUnfilteredTableSource)] = column
                 if (keepSortKeyState) prevColumnCache[ColumnCacheKey.modelIndex(column.modelIndex)] = column
             }
         }
@@ -297,11 +297,11 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
             MyExternalDataRowSorter(model).apply {
                 if (keepSortKeyState) {
                     rowSorter?.sortKeys?.let { oldSortKeys ->
-                        val newColumnCache = newColumns.associateBy { ColumnCacheKey.orgFrameIndex(it.orgFrameIndex) }
+                        val newColumnCache = newColumns.associateBy { ColumnCacheKey.indexInUnfilteredTableSource(it.indexInUnfilteredTableSource) }
                         sortKeys = oldSortKeys.mapNotNull {
-                            val orgFrameIndex = prevColumnCache[ColumnCacheKey.modelIndex(it.column)]?.orgFrameIndex
+                            val indexInUnfilteredTableSource = prevColumnCache[ColumnCacheKey.modelIndex(it.column)]?.indexInUnfilteredTableSource
                                 ?: return@mapNotNull null
-                            val newModelIndex = newColumnCache[ColumnCacheKey.orgFrameIndex(orgFrameIndex)]?.modelIndex
+                            val newModelIndex = newColumnCache[ColumnCacheKey.indexInUnfilteredTableSource(indexInUnfilteredTableSource)]?.modelIndex
                                 ?: return@mapNotNull null
                             if (newModelIndex == -1) null else SortKey(newModelIndex, it.sortOrder)
                         }
@@ -688,17 +688,20 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
 
     private class MyValueTableColumn(
         modelIndex: Int,
-        orgFrameIndex: Int,
+        indexInUnfilteredTableSource: Int,
         var hasFixedWidth: Boolean = false,
     ) : TableColumn(modelIndex) {
 
         var autoFitPreferredWidth: Int = preferredWidth
 
         init {
-            super.identifier = orgFrameIndex
+            super.identifier = indexInUnfilteredTableSource
         }
 
-        val orgFrameIndex: Int
+        /**
+         * The index of the column in the original unfiltered data source.
+         */
+        val indexInUnfilteredTableSource: Int
             get() = getIdentifier() as Int
 
         override fun setIdentifier(identifier: Any?) {

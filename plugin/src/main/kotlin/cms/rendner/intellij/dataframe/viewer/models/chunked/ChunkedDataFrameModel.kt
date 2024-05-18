@@ -390,7 +390,7 @@ class ChunkedDataFrameModel(
         override fun getColumnName(columnIndex: Int) = getColumnHeaderAt(columnIndex).text()
         override fun getLegendHeader() = source.getColumnLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
-        override fun convertToFrameColumnIndex(columnIndex: Int): Int {
+        override fun convertToColumnIndexInUnfilteredTableSource(columnIndex: Int): Int {
             return source.columnIndexTranslator.translateToOriginalIndex(columnIndex)
         }
     }

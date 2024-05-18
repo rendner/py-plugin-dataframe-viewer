@@ -18,7 +18,6 @@ package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.python.PandasTypes
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectException
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
@@ -31,6 +30,7 @@ class PandasCodeProvider : ITableSourceCodeProvider {
     override fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo {
         return DataSourceInfo(
             source,
+            getDataFrameLibrary(),
             if (PandasTypes.isStyler(source.qualifiedType)) getPatchedStylerFactoryImport() else getTableSourceFactoryImport(),
             hasIndexLabels = true,
             sortable = true,

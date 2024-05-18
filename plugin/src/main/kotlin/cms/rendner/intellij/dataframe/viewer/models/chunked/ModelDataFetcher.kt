@@ -18,6 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInputState
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.CreateTableSourceException
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import com.intellij.openapi.progress.ProcessCanceledException

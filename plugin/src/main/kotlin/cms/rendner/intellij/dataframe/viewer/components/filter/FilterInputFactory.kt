@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.components.filter
 
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.AbstractEditorComponent
 import cms.rendner.intellij.dataframe.viewer.components.filter.editor.DefaultEditorComponent
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -27,16 +28,20 @@ class FilterInputFactory {
     companion object {
         private val logger = Logger.getInstance(FilterInputFactory::class.java)
 
-        fun createComponent(project: Project, sourcePosition: XSourcePosition?): AbstractEditorComponent {
+        fun createComponent(
+            project: Project,
+            syntheticIdentifierType: DataFrameLibrary,
+            sourcePosition: XSourcePosition?,
+            ): AbstractEditorComponent {
             return if (!ApplicationSettingsService.instance.state.fsUseFilterInputFromInternalApi) {
-                DefaultEditorComponent(project, sourcePosition)
+                DefaultEditorComponent(project, syntheticIdentifierType, sourcePosition)
             } else try {
                 Class.forName("cms.rendner.intellij.dataframe.viewer.components.filter.editor.InternalApiEditorComponent")
-                    .getConstructor(Project::class.java, XSourcePosition::class.java)
-                    .newInstance(project, sourcePosition) as AbstractEditorComponent
+                    .getConstructor(Project::class.java, DataFrameLibrary::class.java, XSourcePosition::class.java)
+                    .newInstance(project, syntheticIdentifierType, sourcePosition) as AbstractEditorComponent
             } catch (e: Exception) {
                 logger.warn("Creating InternalApiEditorComponent failed, using default component", e)
-                DefaultEditorComponent(project, sourcePosition)
+                DefaultEditorComponent(project, syntheticIdentifierType, sourcePosition)
             }
         }
     }

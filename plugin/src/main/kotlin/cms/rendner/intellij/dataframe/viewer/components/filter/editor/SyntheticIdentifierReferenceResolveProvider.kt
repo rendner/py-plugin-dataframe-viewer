@@ -29,9 +29,12 @@ import com.jetbrains.python.psi.types.TypeEvalContext
 class SyntheticIdentifierReferenceResolveProvider : PyReferenceResolveProvider {
 
     override fun resolveName(element: PyQualifiedExpression, context: TypeEvalContext): List<RatedResolveResult> {
-        if (SyntheticDataFrameIdentifier.isAllowedIdentifier(element)) {
-            element.project.service<SyntheticDataFramePsiRefProvider>().pointer?.let {
-                return listOf(RatedResolveResult(RatedResolveResult.RATE_NORMAL, it.element))
+        if (SyntheticDataFrameIdentifier.isIdentifierAndMarkedForResolution(element)) {
+            val syntheticIdentifierType = SyntheticDataFrameIdentifier.getFrameLibraryType(element.containingFile)
+            if (syntheticIdentifierType != null) {
+                element.project.service<SyntheticDataFramePsiRefProvider>().getPointer(syntheticIdentifierType)?.let {
+                    return listOf(RatedResolveResult(RatedResolveResult.RATE_NORMAL, it.element))
+                }
             }
         }
         return emptyList()

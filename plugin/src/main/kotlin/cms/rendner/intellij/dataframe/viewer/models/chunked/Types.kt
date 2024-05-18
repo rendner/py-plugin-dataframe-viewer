@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * An interface to evaluate data of a pandas DataFrame.
+ * An interface to evaluate data of a table source.
  */
 interface IChunkEvaluator {
     /**
-     * Evaluates a table like representation for a chunk of a pandas DataFrame.
+     * Evaluates a table like representation for a chunk of a table source.
      * Excluding already fetched headers reduces the amount of data which to be fetched and parsed.
      *
      * @param chunkRegion the region of the data to evaluate
@@ -46,7 +46,7 @@ interface IChunkEvaluator {
     ): TableFrame
 
     /**
-     * Applies the sort criteria to the styled pandas DataFrame.
+     * Applies the sort criteria to the table source.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
@@ -79,7 +79,7 @@ data class ChunkValues(val rows: List<ChunkValuesRow>) : IChunkValues {
 /**
  * The headers of a chunk.
  *
- * @property legend the legend headers (contain additional information for multi index DataFrames)
+ * @property legend the legend headers (contain additional information for multi index like in pandas DataFrames)
  * @property columns list of column headers
  * @property rows list of row headers, null if there are no row labels
  */
@@ -90,7 +90,7 @@ data class ChunkHeaderLabels(
 )
 
 /**
- * Describes the location and size of a chunk inside a pandas DataFrame.
+ * Describes the location and size of a chunk inside a table source.
  *
  * @property firstRow index of the first row of the chunk
  * @property firstColumn index of the first column of the chunk
@@ -123,12 +123,10 @@ data class ChunkData(
 data class ChunkSize(val rows: Int, val columns: Int)
 
 /**
- * Translates the index of a visible columns into the original index of the unfiltered dataSource (pandas DataFrame).
+ * Translates the index of a visible columns into the original index of the unfiltered dataSource.
  *
- * In pandas, filter can filter out whole columns. To keep the ui-state of the displayed columns (width, sorting, etc.),
+ * Some table sources allow to filter out columns. To keep the ui-state of the displayed columns (width, sorting, etc.),
  * after a sorting or reaching another breakpoint, the original index is used to identify the columns.
- * Column labels don't have to be unique in a pandas DataFrame, and they are loaded when a columns become visible the first time.
- * Therefore, this information can't be used to identify a column.
  *
  * @param orgIndices the original indices.
  */
@@ -139,13 +137,13 @@ data class ColumnIndexTranslator(private val orgIndices: List<Int>? = null) {
 }
 
 /**
- * Describes the table structure of a pandas DataFrame.
+ * Describes the table structure of a table source.
  *
- * @param orgRowsCount number of rows of the original unfiltered DataFrame
- * @param orgColumnsCount number of visible columns of the original unfiltered DataFrame
- * @param rowsCount number of rows in the DataFrame
- * @param columnsCount number of columns in the DataFrame
- * @param fingerprint fingerprint of the data source
+ * @param orgRowsCount number of rows of the original unfiltered table source
+ * @param orgColumnsCount number of visible columns of the original unfiltered table source
+ * @param rowsCount number of rows in the table source
+ * @param columnsCount number of columns in the table source
+ * @param fingerprint fingerprint of the table source
  */
 @Serializable
 data class TableStructure(
@@ -157,7 +155,7 @@ data class TableStructure(
 )
 
 /**
- * Describes the sort criteria for a pandas DataFrame.
+ * Describes the sort criteria for a table source.
  *
  * @param byIndex list of column indices to be sorted
  * @param ascending the sort order for each specified column, must match the length of [byIndex]

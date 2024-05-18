@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter.editor
 
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.ex.util.EditorUtil
@@ -30,8 +31,9 @@ import javax.swing.event.PopupMenuEvent
 @Suppress("unused")
 class InternalApiEditorComponent(
     project: Project,
+    syntheticIdentifierType: DataFrameLibrary,
     sourcePosition: XSourcePosition?,
-) : AbstractEditorComponent() {
+) : AbstractEditorComponent(syntheticIdentifierType) {
 
     private val myEditor: XDebuggerExpressionComboBox
 

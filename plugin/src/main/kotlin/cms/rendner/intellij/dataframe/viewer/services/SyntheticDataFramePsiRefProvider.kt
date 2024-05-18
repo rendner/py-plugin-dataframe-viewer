@@ -15,17 +15,26 @@
  */
 package cms.rendner.intellij.dataframe.viewer.services
 
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.psi.SmartPsiElementPointer
 import com.jetbrains.python.psi.PyTargetExpression
+import com.jetbrains.rd.util.ConcurrentHashMap
 
 @Service(Service.Level.PROJECT)
 class SyntheticDataFramePsiRefProvider: Disposable {
-    @Volatile
-    var pointer: SmartPsiElementPointer<PyTargetExpression>? = null
+    private val myPointers = ConcurrentHashMap<DataFrameLibrary, SmartPsiElementPointer<PyTargetExpression>?>()
+
+    fun computeIfAbsent(type: DataFrameLibrary, computer: () -> SmartPsiElementPointer<PyTargetExpression>?) {
+        myPointers.computeIfAbsent(type) { computer() }
+    }
+
+    fun getPointer(type: DataFrameLibrary): SmartPsiElementPointer<PyTargetExpression>? {
+        return myPointers[type]
+    }
 
     override fun dispose() {
-        pointer = null
+        myPointers.clear()
     }
 }

@@ -30,6 +30,7 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.Ch
 import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginEdtAwareDebugSessionListener
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
@@ -77,7 +78,7 @@ class DataFrameViewerDialog(
         myDataSourceInfo = dataSourceInfo
 
         myFilterInput = if (myDataSourceInfo.filterable) {
-            FilterInputFactory.createComponent(project, null).also {
+            FilterInputFactory.createComponent(project, myDataSourceInfo.dataFrameLibrary, null).also {
                 it.setChangedListener(object : IEditorChangedListener {
                     override fun editorInputChanged() {
                         updateApplyFilterButtonState()

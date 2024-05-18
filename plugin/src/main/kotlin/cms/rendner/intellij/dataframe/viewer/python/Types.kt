@@ -34,28 +34,22 @@ object PandasTypes {
     fun isStyler(qualifiedType: String?): Boolean = qualifiedType == "pandas.io.formats.style.Styler"
 }
 
-data class DataFrameLibrary(val moduleName: String) {
-    companion object {
-        val PANDAS = DataFrameLibrary("pandas")
-        val POLARS = DataFrameLibrary("polars")
-
-        val supportedLibraries = listOf(
-            PANDAS,
-            POLARS,
-        )
-    }
+enum class DataFrameLibrary(val moduleName: String) {
+    PANDAS("pandas"),
+    POLARS("polars")
 }
 
 interface IEvalAvailableDataFrameLibraries {
     fun getEvalExpression(): String {
-        val libsToCheck = DataFrameLibrary.supportedLibraries.map { stringifyString(it.moduleName) }
+        val libsToCheck = DataFrameLibrary.values().map { stringifyString(it.moduleName) }
         // the check is not guarded with a try/catch therefore an exception aborts the whole check
         return "(lambda i, s: {p: p in s.modules or i.util.find_spec(p) is not None for p in $libsToCheck})(__import__('importlib.util'), __import__('sys'))"
     }
 
     fun convertResult(result: String): List<DataFrameLibrary> {
-        return parsePythonDictionary(result).entries.mapNotNull {
-            if (it.value == "True") DataFrameLibrary(it.key) else null
+        val checkedLibs = DataFrameLibrary.values()
+        return parsePythonDictionary(result).entries.mapNotNull { dictEntry ->
+            if (dictEntry.value == "True") checkedLibs.first { it.moduleName == dictEntry.key } else null
         }
     }
 }

@@ -18,9 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.python.bridge
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
-import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 import com.intellij.openapi.Disposable
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
@@ -55,22 +53,6 @@ data class PandasVersion(val major: Int, val minor: Int, val rest: String = "") 
         }
     }
 }
-
-/**
- *
- * @param source the source for a [IPyTableSourceRef]
- * @param tableSourceFactoryImport the factory to create a [IPyTableSourceRef] on Python side
- * @param hasIndexLabels true if table has index labels
- * @param sortable true if table source can be sorted
- * @param filterable true if table source can be filtered
- */
-data class DataSourceInfo(
-    val source: PyDebugValueEvalExpr,
-    val tableSourceFactoryImport: TableSourceFactoryImport,
-    val hasIndexLabels: Boolean,
-    val sortable: Boolean,
-    val filterable: Boolean,
-)
 
 /**
  * Interface to evaluate values of the Python class "TableSource".

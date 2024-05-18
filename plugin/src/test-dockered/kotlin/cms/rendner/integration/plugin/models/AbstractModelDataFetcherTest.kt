@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import cms.rendner.integration.plugin.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceErrorKind
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceFailure
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceInfo
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.DataSourceInfo
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import org.assertj.core.api.Assertions

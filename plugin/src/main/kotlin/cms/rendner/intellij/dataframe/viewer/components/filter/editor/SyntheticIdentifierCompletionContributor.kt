@@ -32,12 +32,13 @@ import com.intellij.util.PlatformIcons
 class SyntheticIdentifierCompletionContributor : CompletionContributor() {
 
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
-        if (!SyntheticDataFrameIdentifier.isSyntheticIdentifierAllowed(parameters.originalFile)) return
+        if (!SyntheticDataFrameIdentifier.isMarkedForResolution(parameters.originalFile)) return
         // "df." has a prevSibling, "df[" not
         if (parameters.position.prevSibling != null) return
         if (!result.prefixMatcher.prefixMatches(SyntheticDataFrameIdentifier.NAME)) return
+        val syntheticIdentifierType = SyntheticDataFrameIdentifier.getFrameLibraryType(parameters.originalFile) ?: return
 
-        parameters.position.project.service<SyntheticDataFramePsiRefProvider>().pointer?.let {
+        parameters.position.project.service<SyntheticDataFramePsiRefProvider>().getPointer(syntheticIdentifierType)?.let {
             result.addElement(
                 PrioritizedLookupElement.withPriority(
                     LookupElementBuilder

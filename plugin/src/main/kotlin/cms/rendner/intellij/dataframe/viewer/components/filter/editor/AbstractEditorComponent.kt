@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter.editor
 
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.services.SyntheticDataFramePsiRefProvider
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.components.service
@@ -48,7 +49,7 @@ interface IEditorChangedListener {
 
 data class FilterInputState(val text: String, val containsSyntheticFrameIdentifier: Boolean = false)
 
-abstract class AbstractEditorComponent : KeyAdapter() {
+abstract class AbstractEditorComponent(private val syntheticIdentifierType: DataFrameLibrary): KeyAdapter() {
     protected val myEditorsProvider = MyDebuggerEditorsProvider(::configureCreatedDocumentFile)
 
     private var changedListener: IEditorChangedListener? = null
@@ -123,24 +124,26 @@ abstract class AbstractEditorComponent : KeyAdapter() {
                 "Note: Synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' is not available. Identifier is already used."
         } else {
             createSyntheticPsiPointerIfNotExist(project)
-            SyntheticDataFrameIdentifier.allowToResolveSyntheticIdentifier(psiFile)
+            SyntheticDataFrameIdentifier.markForResolution(psiFile, syntheticIdentifierType)
             myExpressionComponentLabel.toolTipText =
                 "Hint: You can use the synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' in the expression to refer to the used DataFrame."
         }
     }
 
     private fun createSyntheticPsiPointerIfNotExist(project: Project) {
-        val refProvider = project.service<SyntheticDataFramePsiRefProvider>()
-        if (refProvider.pointer != null) return
+        project.service<SyntheticDataFramePsiRefProvider>()
+            .computeIfAbsent(syntheticIdentifierType) { computeSyntheticIdentifierPointer(project) }
+    }
 
-        myEditorsProvider.createSyntheticDocument(
+    private fun computeSyntheticIdentifierPointer(project: Project): SmartPsiElementPointer<PyTargetExpression>? {
+        return myEditorsProvider.createSyntheticDocument(
             project,
-            SyntheticDataFrameIdentifier.getSourceCodeToCreateIdentifier()
-        ).also { doc ->
-            val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(doc) as? ScopeOwner ?: return
+            getSourceCodeToCreateIdentifier()
+        ).let { doc ->
+            val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(doc) as? ScopeOwner ?: return null
             val resolved = PyResolveUtil.resolveLocally(psiFile, SyntheticDataFrameIdentifier.NAME)
-            val identifier = resolved.firstOrNull() as? PyTargetExpression ?: return
-            refProvider.pointer = SmartPointerManager.getInstance(project).createSmartPsiElementPointer(identifier)
+            val identifier = resolved.firstOrNull() as? PyTargetExpression ?: return null
+            SmartPointerManager.getInstance(project).createSmartPsiElementPointer(identifier)
         }
     }
 
@@ -154,10 +157,32 @@ abstract class AbstractEditorComponent : KeyAdapter() {
         val editor = getEditor() ?: return false
         val project = editor.project ?: return false
         val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return false
-        if (SyntheticDataFrameIdentifier.isSyntheticIdentifierAllowed(psiFile)) {
+        if (SyntheticDataFrameIdentifier.isMarkedForResolution(psiFile)) {
             return MyCheckForSyntheticIdentifierVisitor().also { psiFile.accept(it) }.containsSyntheticFrameIdentifier()
         }
         return false
+    }
+
+    private fun getSourceCodeToCreateIdentifier(): String {
+        val code = when (syntheticIdentifierType) {
+            DataFrameLibrary.PANDAS -> """
+                |import pandas as pd
+                |${SyntheticDataFrameIdentifier.NAME} = pd.DataFrame()
+            """
+            DataFrameLibrary.POLARS -> """
+                |import polars as pl
+                |${SyntheticDataFrameIdentifier.NAME} = pl.DataFrame()
+            """
+        }
+        /*
+        The comment, included in the snippet, is a description for the user in case the user navigates
+        to the definition of the synthetic identifier.
+        */
+        return """
+                |# plugin: "Styled DataFrame Viewer"
+                |# helper for providing the synthetic identifier "${SyntheticDataFrameIdentifier.NAME}"
+                $code
+            """.trimMargin()
     }
 
     private class MyCheckForSyntheticIdentifierVisitor: PsiRecursiveElementVisitor() {
@@ -167,7 +192,7 @@ abstract class AbstractEditorComponent : KeyAdapter() {
             if (mySyntheticIdentifierUsed) return
 
             if (element is LeafPsiElement) {
-                mySyntheticIdentifierUsed = SyntheticDataFrameIdentifier.isAllowedIdentifier(element)
+                mySyntheticIdentifierUsed = SyntheticDataFrameIdentifier.isIdentifierAndMarkedForResolution(element)
             } else {
                 super.visitElement(element)
             }

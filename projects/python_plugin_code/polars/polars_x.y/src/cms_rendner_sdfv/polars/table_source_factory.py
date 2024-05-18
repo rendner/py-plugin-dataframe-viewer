@@ -48,4 +48,25 @@ class TableSourceFactory(AbstractTableSourceFactory):
                 info=cur_fingerprint,
             )
 
-        return TableSource(FrameContext(ds_frame), fingerprint=cur_fingerprint)
+        filtered_frame = None
+        filter_eval_expr = config.filter_eval_expr
+        if filter_eval_expr is not None and filter_eval_expr != "":
+            try:
+                if config.filter_eval_expr_provide_frame:
+                    # add required data-frame to make it accessible for eval
+                    # "_df" is the synthetic identifier which should resolve to the data-frame
+                    caller_globals["_df"] = ds_frame
+                filtered_frame = eval(filter_eval_expr, caller_globals)
+            except Exception as e:
+                return CreateTableSourceFailure(
+                    error_kind=CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED,
+                    info=repr(e),
+                )
+
+            if not isinstance(filtered_frame, pl.DataFrame):
+                return CreateTableSourceFailure(
+                    error_kind=CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE,
+                    info=str(type(filtered_frame)),
+                )
+
+        return TableSource(FrameContext(ds_frame, filtered_frame), fingerprint=cur_fingerprint)

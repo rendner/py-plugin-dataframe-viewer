@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Union, Dict, Iterator
+from typing import Dict, Iterator, List, Union
 
 import polars as pl
 
@@ -33,6 +33,7 @@ class Chunk:
             vs = str(v)
             # truncate too long values
             return vs if len(vs) <= 120 else vs[:120] + '…'
+
         try:
             df = s.describe()
             keys = df.get_column(df.columns[0]).to_list()
@@ -46,11 +47,16 @@ class Chunk:
 
 
 class VisibleFrame(AbstractVisibleFrame):
-    def __init__(self, source_frame: pl.DataFrame, row_idx: Union[None, pl.Series]):
+    def __init__(self,
+                 source_frame: pl.DataFrame,
+                 row_idx: Union[None, pl.Series],
+                 col_idx: Union[None, List[int]],
+                 ):
         super().__init__(Region.with_frame_shape(source_frame.shape))
-        self.__source_frame = source_frame
-        self.__column_names = source_frame.columns
-        self.__row_idx = row_idx
+        self.__source_frame: pl.DataFrame = source_frame
+        self.__column_names: List[str] = source_frame.columns
+        self.__row_idx: Union[None, pl.Series] = row_idx
+        self.__col_idx: Union[None, List[int]] = col_idx
 
     def row_idx_iter(self, region: Region = None) -> Iterator[int]:
         region = self.region.get_bounded_region(region)
@@ -68,3 +74,8 @@ class VisibleFrame(AbstractVisibleFrame):
 
     def get_chunk(self, region: Region = None) -> Chunk:
         return Chunk(self, self.region.get_bounded_region(region))
+
+    def get_column_indices(self, part_start: int, max_columns: int) -> List[int]:
+        if self.__col_idx is None:
+            return super().get_column_indices(part_start, max_columns)
+        return list(self.__col_idx[part_start:part_start + max_columns])

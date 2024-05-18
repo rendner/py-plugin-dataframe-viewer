@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter.editor
 
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -25,36 +26,24 @@ import com.jetbrains.python.psi.PyReferenceExpression
 class SyntheticDataFrameIdentifier {
     companion object {
         const val NAME = "_df"
-        private val RESOLVE_SYNTHETIC_IDENTIFIER: Key<Boolean> = Key.create("cms.rendner.RESOLVE_SYNTHETIC_IDENTIFIER")
+        private val SYNTHETIC_IDENTIFIER_TYPE: Key<DataFrameLibrary> = Key.create("cms.rendner.SYNTHETIC_IDENTIFIER_TYPE")
 
-        fun getSourceCodeToCreateIdentifier(): String {
-            /*
-            The code is used to create a synthetic identifier of type DataFrame.
-            IntelliJ provides automatically full code completion for the identifier.
-
-            The comment, included in the snippet, is a description for the user in case the user navigates
-            to the definition of the injected identifier.
-            */
-            return """
-                |# plugin: "Styled DataFrame Viewer"
-                |# helper for providing the synthetic identifier "$NAME"
-                |import pandas as pd
-                |$NAME = pd.DataFrame()
-            """.trimMargin()
+        fun markForResolution(psiFile: PsiFile, frameLibraryType: DataFrameLibrary) {
+            SYNTHETIC_IDENTIFIER_TYPE.set(psiFile, frameLibraryType)
         }
 
-        fun allowToResolveSyntheticIdentifier(psiFile: PsiFile) {
-            RESOLVE_SYNTHETIC_IDENTIFIER.set(psiFile, true)
+        fun getFrameLibraryType(psiFile: PsiFile): DataFrameLibrary? {
+            return SYNTHETIC_IDENTIFIER_TYPE.get(psiFile.containingFile, null)
         }
 
-        fun isSyntheticIdentifierAllowed(psiFile: PsiFile): Boolean {
-            return RESOLVE_SYNTHETIC_IDENTIFIER.get(psiFile, false)
+        fun isMarkedForResolution(psiFile: PsiFile): Boolean {
+            return getFrameLibraryType(psiFile) != null
         }
 
-        fun isAllowedIdentifier(element: PsiElement?): Boolean {
+        fun isIdentifierAndMarkedForResolution(element: PsiElement?): Boolean {
             if (element == null) return false
             if (element.elementType != PyTokenTypes.IDENTIFIER && element !is PyReferenceExpression) return false
-            return isSyntheticIdentifierAllowed(element.containingFile) && element.text == NAME
+            return isMarkedForResolution(element.containingFile) && element.text == NAME
         }
     }
 }
