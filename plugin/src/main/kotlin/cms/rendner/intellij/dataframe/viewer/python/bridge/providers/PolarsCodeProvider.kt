@@ -26,7 +26,6 @@ class PolarsCodeProvider: ITableSourceCodeProvider {
     override fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo {
         return DataSourceInfo(
             source,
-            getDataFrameLibrary(),
             TableSourceFactoryImport(
                 "cms_rendner_sdfv.polars.table_source_factory",
                 "TableSourceFactory",

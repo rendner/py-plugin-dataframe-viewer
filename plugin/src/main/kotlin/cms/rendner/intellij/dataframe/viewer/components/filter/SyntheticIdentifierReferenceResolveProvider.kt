@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.components.filter.editor
+package cms.rendner.intellij.dataframe.viewer.components.filter
 
 import cms.rendner.intellij.dataframe.viewer.services.SyntheticDataFramePsiRefProvider
 import com.intellij.openapi.components.service
@@ -29,11 +29,14 @@ import com.jetbrains.python.psi.types.TypeEvalContext
 class SyntheticIdentifierReferenceResolveProvider : PyReferenceResolveProvider {
 
     override fun resolveName(element: PyQualifiedExpression, context: TypeEvalContext): List<RatedResolveResult> {
-        if (SyntheticDataFrameIdentifier.isIdentifierAndMarkedForResolution(element)) {
-            val syntheticIdentifierType = SyntheticDataFrameIdentifier.getFrameLibraryType(element.containingFile)
-            if (syntheticIdentifierType != null) {
-                element.project.service<SyntheticDataFramePsiRefProvider>().getPointer(syntheticIdentifierType)?.let {
-                    return listOf(RatedResolveResult(RatedResolveResult.RATE_NORMAL, it.element))
+        val psiFile = element.containingFile
+        if (IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.get(psiFile) == true) {
+            if (SyntheticDataFrameIdentifier.isIdentifier(element)) {
+                val contributor = IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR.get(psiFile)
+                if (contributor != null) {
+                    element.project.service<SyntheticDataFramePsiRefProvider>().getPointer(contributor.getSyntheticIdentifierType())?.let {
+                        return listOf(RatedResolveResult(RatedResolveResult.RATE_NORMAL, it.element))
+                    }
                 }
             }
         }

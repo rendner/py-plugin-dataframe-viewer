@@ -15,9 +15,6 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
-import cms.rendner.intellij.dataframe.viewer.components.filter.editor.AbstractEditorComponent
-import cms.rendner.intellij.dataframe.viewer.components.filter.editor.DefaultEditorComponent
-import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -30,18 +27,26 @@ class FilterInputFactory {
 
         fun createComponent(
             project: Project,
-            syntheticIdentifierType: DataFrameLibrary,
+            completionContributor: IFilterInputCompletionContributor,
             sourcePosition: XSourcePosition?,
-            ): AbstractEditorComponent {
+            ): AbstractFilterInput {
             return if (!ApplicationSettingsService.instance.state.fsUseFilterInputFromInternalApi) {
-                DefaultEditorComponent(project, syntheticIdentifierType, sourcePosition)
+                DefaultFilterInput(project, completionContributor, sourcePosition)
             } else try {
-                Class.forName("cms.rendner.intellij.dataframe.viewer.components.filter.editor.InternalApiEditorComponent")
-                    .getConstructor(Project::class.java, DataFrameLibrary::class.java, XSourcePosition::class.java)
-                    .newInstance(project, syntheticIdentifierType, sourcePosition) as AbstractEditorComponent
+                Class.forName("cms.rendner.intellij.dataframe.viewer.components.filter.InternalApiFilterInput")
+                    .getConstructor(
+                        Project::class.java,
+                        IFilterInputCompletionContributor::class.java,
+                        XSourcePosition::class.java,
+                    )
+                    .newInstance(
+                        project,
+                        completionContributor,
+                        sourcePosition,
+                    ) as AbstractFilterInput
             } catch (e: Exception) {
-                logger.warn("Creating InternalApiEditorComponent failed, using default component", e)
-                DefaultEditorComponent(project, syntheticIdentifierType, sourcePosition)
+                logger.warn("Creating InternalApiFilterInput failed, using default component", e)
+                DefaultFilterInput(project, completionContributor, sourcePosition)
             }
         }
     }

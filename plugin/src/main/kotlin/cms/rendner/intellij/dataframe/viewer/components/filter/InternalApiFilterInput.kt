@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.components.filter.editor
+package cms.rendner.intellij.dataframe.viewer.components.filter
 
-import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.ex.util.EditorUtil
@@ -29,11 +28,11 @@ import com.intellij.xdebugger.impl.ui.XDebuggerExpressionComboBox
 import javax.swing.event.PopupMenuEvent
 
 @Suppress("unused")
-class InternalApiEditorComponent(
+class InternalApiFilterInput(
     project: Project,
-    syntheticIdentifierType: DataFrameLibrary,
+    completionContributor: IFilterInputCompletionContributor,
     sourcePosition: XSourcePosition?,
-) : AbstractEditorComponent(syntheticIdentifierType) {
+) : AbstractFilterInput(completionContributor) {
 
     private val myEditor: XDebuggerExpressionComboBox
 

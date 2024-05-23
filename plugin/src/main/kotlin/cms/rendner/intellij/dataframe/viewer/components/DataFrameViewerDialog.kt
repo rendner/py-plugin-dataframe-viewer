@@ -16,9 +16,10 @@
 package cms.rendner.intellij.dataframe.viewer.components
 
 import cms.rendner.intellij.dataframe.viewer.components.filter.FilterInputFactory
-import cms.rendner.intellij.dataframe.viewer.components.filter.editor.AbstractEditorComponent
-import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInputState
-import cms.rendner.intellij.dataframe.viewer.components.filter.editor.IEditorChangedListener
+import cms.rendner.intellij.dataframe.viewer.components.filter.AbstractFilterInput
+import cms.rendner.intellij.dataframe.viewer.components.filter.FilterInputState
+import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterInputChangedListener
+import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterInputCompletionContributor
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.IChunkValidationProblemHandler
@@ -58,6 +59,7 @@ class DataFrameViewerDialog(
     private val project: Project,
     private val myEvaluator: IPluginPyValueEvaluator,
     dataSourceInfo: DataSourceInfo,
+    filterCompletionContributor: IFilterInputCompletionContributor,
     private val dataSourceTransformHint: DataSourceTransformHint?,
     ) :
         DialogWrapper(project, false),
@@ -67,7 +69,7 @@ class DataFrameViewerDialog(
 
     private var myDataSourceInfo: DataSourceInfo
     private var myLastFilterInputState: FilterInputState? = null
-    private val myFilterInput: AbstractEditorComponent?
+    private val myFilterInput: AbstractFilterInput?
     private val myTable: DataFrameTable
     private val myTableFooterLabel = JBLabel("", UIUtil.ComponentStyle.SMALL, FontColor.BRIGHTER)
 
@@ -78,9 +80,9 @@ class DataFrameViewerDialog(
         myDataSourceInfo = dataSourceInfo
 
         myFilterInput = if (myDataSourceInfo.filterable) {
-            FilterInputFactory.createComponent(project, myDataSourceInfo.dataFrameLibrary, null).also {
-                it.setChangedListener(object : IEditorChangedListener {
-                    override fun editorInputChanged() {
+            FilterInputFactory.createComponent(project, filterCompletionContributor, null).also {
+                it.setChangedListener(object : IFilterInputChangedListener {
+                    override fun filterInputChanged() {
                         updateApplyFilterButtonState()
                     }
                 })

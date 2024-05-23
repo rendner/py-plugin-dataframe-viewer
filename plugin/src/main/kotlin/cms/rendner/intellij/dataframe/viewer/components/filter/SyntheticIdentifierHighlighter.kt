@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.components.filter.editor
+package cms.rendner.intellij.dataframe.viewer.components.filter
 
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
@@ -26,7 +26,8 @@ import com.intellij.psi.PsiElement
  */
 class SyntheticIdentifierHighlighter : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
-        if (SyntheticDataFrameIdentifier.isIdentifierAndMarkedForResolution(element)) {
+        if (IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.get(element.containingFile) != true) return
+        if (SyntheticDataFrameIdentifier.isIdentifier(element)) {
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(element)
                 .textAttributes(DefaultLanguageHighlighterColors.LINE_COMMENT).create()

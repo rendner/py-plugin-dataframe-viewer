@@ -13,12 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.components.filter.editor
+package cms.rendner.intellij.dataframe.viewer.components.filter
 
-import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
-import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import com.intellij.psi.util.elementType
 import com.jetbrains.python.PyTokenTypes
 import com.jetbrains.python.psi.PyReferenceExpression
@@ -26,24 +23,11 @@ import com.jetbrains.python.psi.PyReferenceExpression
 class SyntheticDataFrameIdentifier {
     companion object {
         const val NAME = "_df"
-        private val SYNTHETIC_IDENTIFIER_TYPE: Key<DataFrameLibrary> = Key.create("cms.rendner.SYNTHETIC_IDENTIFIER_TYPE")
 
-        fun markForResolution(psiFile: PsiFile, frameLibraryType: DataFrameLibrary) {
-            SYNTHETIC_IDENTIFIER_TYPE.set(psiFile, frameLibraryType)
-        }
-
-        fun getFrameLibraryType(psiFile: PsiFile): DataFrameLibrary? {
-            return SYNTHETIC_IDENTIFIER_TYPE.get(psiFile.containingFile, null)
-        }
-
-        fun isMarkedForResolution(psiFile: PsiFile): Boolean {
-            return getFrameLibraryType(psiFile) != null
-        }
-
-        fun isIdentifierAndMarkedForResolution(element: PsiElement?): Boolean {
+        fun isIdentifier(element: PsiElement?): Boolean {
             if (element == null) return false
             if (element.elementType != PyTokenTypes.IDENTIFIER && element !is PyReferenceExpression) return false
-            return isMarkedForResolution(element.containingFile) && element.text == NAME
+            return element.text == NAME
         }
     }
 }

@@ -43,7 +43,6 @@ data class TableSourceFactoryImport(
 /**
  *
  * @param source the source for a [IPyTableSourceRef]
- * @param dataFrameLibrary the DataFrame library used for the source
  * @param tableSourceFactoryImport the factory to create a [IPyTableSourceRef] on Python side
  * @param hasIndexLabels true if table has index labels
  * @param sortable true if table source can be sorted
@@ -51,7 +50,6 @@ data class TableSourceFactoryImport(
  */
 data class DataSourceInfo(
     val source: PyDebugValueEvalExpr,
-    val dataFrameLibrary: DataFrameLibrary,
     val tableSourceFactoryImport: TableSourceFactoryImport,
     val hasIndexLabels: Boolean,
     val sortable: Boolean,

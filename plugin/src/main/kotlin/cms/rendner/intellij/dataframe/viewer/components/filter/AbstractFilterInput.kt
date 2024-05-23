@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.components.filter.editor
+package cms.rendner.intellij.dataframe.viewer.components.filter
 
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.services.SyntheticDataFramePsiRefProvider
@@ -37,22 +37,21 @@ import com.intellij.xdebugger.evaluation.EvaluationMode
 import com.jetbrains.python.PythonLanguage
 import com.jetbrains.python.codeInsight.controlflow.ScopeOwner
 import com.jetbrains.python.debugger.PyDebuggerEditorsProvider
-import com.jetbrains.python.psi.*
+import com.jetbrains.python.psi.PyTargetExpression
 import com.jetbrains.python.psi.resolve.PyResolveUtil
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import javax.swing.JPanel
 
-interface IEditorChangedListener {
-    fun editorInputChanged()
-}
 
-data class FilterInputState(val text: String, val containsSyntheticFrameIdentifier: Boolean = false)
 
-abstract class AbstractEditorComponent(private val syntheticIdentifierType: DataFrameLibrary): KeyAdapter() {
+abstract class AbstractFilterInput(
+    private val completionContributor: IFilterInputCompletionContributor
+    ): KeyAdapter() {
+
     protected val myEditorsProvider = MyDebuggerEditorsProvider(::configureCreatedDocumentFile)
 
-    private var changedListener: IEditorChangedListener? = null
+    private var changedListener: IFilterInputChangedListener? = null
     protected val myEditorContainer = Panels.simplePanel()
     private val myMainPanel: JPanel
     private val myErrorLabel: JBLabel = JBLabel()
@@ -74,7 +73,7 @@ abstract class AbstractEditorComponent(private val syntheticIdentifierType: Data
 
     abstract fun setEnabled(enabled: Boolean)
 
-    fun setChangedListener(listener: IEditorChangedListener?) {
+    fun setChangedListener(listener: IFilterInputChangedListener?) {
         changedListener = listener
     }
 
@@ -83,7 +82,7 @@ abstract class AbstractEditorComponent(private val syntheticIdentifierType: Data
     }
 
     protected fun notifyInputChanged() {
-        changedListener?.editorInputChanged()
+        changedListener?.filterInputChanged()
     }
 
     abstract fun getText(): String
@@ -117,6 +116,7 @@ abstract class AbstractEditorComponent(private val syntheticIdentifierType: Data
 
     private fun configureCreatedDocumentFile(psiFile: PsiFile) {
         IgnoreAllIntentionsActionFilter.register(psiFile)
+        IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR.set(psiFile, completionContributor)
 
         val project = psiFile.project
         if (syntheticIdentifierNameExistsInContext(psiFile)) {
@@ -124,7 +124,7 @@ abstract class AbstractEditorComponent(private val syntheticIdentifierType: Data
                 "Note: Synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' is not available. Identifier is already used."
         } else {
             createSyntheticPsiPointerIfNotExist(project)
-            SyntheticDataFrameIdentifier.markForResolution(psiFile, syntheticIdentifierType)
+            IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.set(psiFile, true)
             myExpressionComponentLabel.toolTipText =
                 "Hint: You can use the synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' in the expression to refer to the used DataFrame."
         }
@@ -132,7 +132,7 @@ abstract class AbstractEditorComponent(private val syntheticIdentifierType: Data
 
     private fun createSyntheticPsiPointerIfNotExist(project: Project) {
         project.service<SyntheticDataFramePsiRefProvider>()
-            .computeIfAbsent(syntheticIdentifierType) { computeSyntheticIdentifierPointer(project) }
+            .computeIfAbsent(completionContributor.getSyntheticIdentifierType()) { computeSyntheticIdentifierPointer(project) }
     }
 
     private fun computeSyntheticIdentifierPointer(project: Project): SmartPsiElementPointer<PyTargetExpression>? {
@@ -157,14 +157,14 @@ abstract class AbstractEditorComponent(private val syntheticIdentifierType: Data
         val editor = getEditor() ?: return false
         val project = editor.project ?: return false
         val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return false
-        if (SyntheticDataFrameIdentifier.isMarkedForResolution(psiFile)) {
+        if (IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.get(psiFile) == true) {
             return MyCheckForSyntheticIdentifierVisitor().also { psiFile.accept(it) }.containsSyntheticFrameIdentifier()
         }
         return false
     }
 
     private fun getSourceCodeToCreateIdentifier(): String {
-        val code = when (syntheticIdentifierType) {
+        val code = when (completionContributor.getSyntheticIdentifierType()) {
             DataFrameLibrary.PANDAS -> """
                 |import pandas as pd
                 |${SyntheticDataFrameIdentifier.NAME} = pd.DataFrame()
@@ -177,11 +177,13 @@ abstract class AbstractEditorComponent(private val syntheticIdentifierType: Data
         /*
         The comment, included in the snippet, is a description for the user in case the user navigates
         to the definition of the synthetic identifier.
+        The bottom line is a docstring to document the identifier (https://peps.python.org/pep-0257/#what-is-a-docstring)
         */
         return """
                 |# plugin: "Styled DataFrame Viewer"
                 |# helper for providing the synthetic identifier "${SyntheticDataFrameIdentifier.NAME}"
-                $code
+                ${code.trim()}
+                |""${'"'}synthetic identifier to refer to the displayed DataFrame""${'"'}
             """.trimMargin()
     }
 
@@ -192,7 +194,7 @@ abstract class AbstractEditorComponent(private val syntheticIdentifierType: Data
             if (mySyntheticIdentifierUsed) return
 
             if (element is LeafPsiElement) {
-                mySyntheticIdentifierUsed = SyntheticDataFrameIdentifier.isIdentifierAndMarkedForResolution(element)
+                mySyntheticIdentifierUsed = SyntheticDataFrameIdentifier.isIdentifier(element)
             } else {
                 super.visitElement(element)
             }

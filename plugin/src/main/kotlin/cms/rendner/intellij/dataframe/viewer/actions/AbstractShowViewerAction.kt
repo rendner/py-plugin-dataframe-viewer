@@ -16,15 +16,24 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.components.DataFrameViewerDialog
+import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterInputCompletionContributor
+import cms.rendner.intellij.dataframe.viewer.components.filter.SyntheticDataFrameIdentifier
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.debugProcessIsTerminated
-import cms.rendner.intellij.dataframe.viewer.python.pycharm.isConsole
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService
+import cms.rendner.intellij.dataframe.viewer.services.SyntheticDataFramePsiRefProvider
+import com.intellij.codeInsight.completion.CompletionParameters
+import com.intellij.codeInsight.completion.CompletionResultSet
+import com.intellij.codeInsight.completion.CompletionUtilCore
+import com.intellij.codeInsight.completion.PrioritizedLookupElement
+import com.intellij.codeInsight.completion.util.ParenthesesInsertHandler
+import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -36,9 +45,19 @@ import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
+import com.intellij.ui.JBColor
+import com.intellij.util.PlatformIcons
 import com.intellij.xdebugger.XDebugSessionListener
 import com.intellij.xdebugger.XDebuggerUtil
-import com.jetbrains.python.debugger.*
+import com.jetbrains.python.console.completion.PydevConsoleElement
+import com.jetbrains.python.console.pydev.ConsoleCommunication
+import com.jetbrains.python.console.pydev.IToken
+import com.jetbrains.python.console.pydev.PyCodeCompletionImages
+import com.jetbrains.python.debugger.IPyDebugProcess
+import com.jetbrains.python.debugger.PyDebugValue
+import com.jetbrains.python.debugger.PyFrameAccessor
+import com.jetbrains.python.debugger.PyFrameListener
+import com.jetbrains.python.psi.PyReferenceExpression
 
 private class MySelectCodeProviderAction(
     val provider: ITableSourceCodeProvider,
@@ -122,7 +141,8 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
                 DataFrameViewerDialog(
                     project,
                     evaluator,
-                    dataSourceInfo.copy(filterable = dataSourceInfo.filterable && !dataSource.frameAccessor.isConsole()),
+                    dataSourceInfo,
+                    MyFilterInputCompletionContributor(dataSource.frameAccessor, codeProvider.getDataFrameLibrary()),
                     getDataSourceTransformHint()
                 ).apply {
                     Disposer.register(parentDisposable, disposable)
@@ -159,12 +179,13 @@ interface PyFrameListenerBreakingChanges {
 private class MyEdtAwareDebugSessionListener(
     frameAccessor: PyFrameAccessor,
     delegate: DataFrameViewerDialog,
-    ): XDebugSessionListener, PyFrameListener, PyFrameListenerBreakingChanges, Disposable {
+): XDebugSessionListener, PyFrameListener, PyFrameListenerBreakingChanges, Disposable {
 
-        // Props are nullable to release references.
-        // Is required because "PyFrameAccessor" has no "removeFrameListener".
-        private var frameAccessor: PyFrameAccessor? = frameAccessor
-        private var delegate: DataFrameViewerDialog? = delegate
+    // Props are nullable to free circular references on dispose
+    // ("PyFrameAccessor" has no "removeFrameListener")
+    // Use topic if plugin is compatible with 2023.3(?)
+    private var frameAccessor: PyFrameAccessor? = frameAccessor
+    private var delegate: DataFrameViewerDialog? = delegate
 
     init {
         if (frameAccessor is IPyDebugProcess) {
@@ -220,5 +241,65 @@ private class MyEdtAwareDebugSessionListener(
 
         frameAccessor = null
         delegate = null
+    }
+}
+
+private class MyFilterInputCompletionContributor(
+    private val frameAccessor: PyFrameAccessor,
+    private val syntheticIdentifierType: DataFrameLibrary,
+): IFilterInputCompletionContributor {
+
+    override fun getSyntheticIdentifierType() = syntheticIdentifierType
+
+    override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
+        addSyntheticIdentifier(parameters, result)
+        addCompletionVariantsForConsole(parameters, result)
+    }
+
+    private fun addSyntheticIdentifier(parameters: CompletionParameters, result: CompletionResultSet) {
+        if (IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.get(parameters.originalFile) != true) return
+        val refExpr = parameters.position.parent as? PyReferenceExpression ?:return
+        if (refExpr.isQualified) return
+        if (!result.prefixMatcher.prefixMatches(SyntheticDataFrameIdentifier.NAME)) return
+
+        parameters.position.project.service<SyntheticDataFramePsiRefProvider>().getPointer(syntheticIdentifierType)?.let {
+            result.addElement(
+                PrioritizedLookupElement.withPriority(
+                    LookupElementBuilder
+                        .create(it, SyntheticDataFrameIdentifier.NAME)
+                        .withItemTextForeground(JBColor.GRAY)
+                        .withTypeText("<synthetic>", true)
+                        .withIcon(PlatformIcons.VARIABLE_ICON),
+                    1001.0,
+                )
+            )
+        }
+    }
+
+    private fun addCompletionVariantsForConsole(parameters: CompletionParameters, result: CompletionResultSet) {
+        // The console based "frameAccessor" doesn't provide a sourcePosition which could be used for code completion.
+        // Instead, the data is fetched from the underlying Python process.
+        if (frameAccessor !is ConsoleCommunication) return
+
+        val parent = parameters.position.parent
+        if (parent !is PyReferenceExpression) return
+        val qName = parent.asQualifiedName() ?: return
+        val actToken = qName.toString().replace(CompletionUtilCore.DUMMY_IDENTIFIER_TRIMMED, "")
+
+        val psiManager = parameters.position.manager
+        frameAccessor.getCompletions(actToken, actToken).forEach {
+            var builder = LookupElementBuilder
+                .create(PydevConsoleElement(psiManager, it.name, it.description))
+                .withIcon(PyCodeCompletionImages.getImageForType(it.type))
+
+            if (it.args.isNotBlank()) {
+                builder = builder.withTailText(it.args)
+            }
+            if (it.type == IToken.TYPE_FUNCTION || it.args.endsWith(")")) {
+                builder = builder.withInsertHandler(ParenthesesInsertHandler.WITH_PARAMETERS)
+            }
+
+            result.addElement(PrioritizedLookupElement.withPriority(builder, 1000.0))
+        }
     }
 }

@@ -15,7 +15,7 @@
  */
 package cms.rendner.integration.plugin.models
 
-import cms.rendner.intellij.dataframe.viewer.components.filter.editor.FilterInputState
+import cms.rendner.intellij.dataframe.viewer.components.filter.FilterInputState
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceErrorKind
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PandasCodeProvider

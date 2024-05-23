@@ -30,7 +30,6 @@ class PandasCodeProvider : ITableSourceCodeProvider {
     override fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo {
         return DataSourceInfo(
             source,
-            getDataFrameLibrary(),
             if (PandasTypes.isStyler(source.qualifiedType)) getPatchedStylerFactoryImport() else getTableSourceFactoryImport(),
             hasIndexLabels = true,
             sortable = true,
