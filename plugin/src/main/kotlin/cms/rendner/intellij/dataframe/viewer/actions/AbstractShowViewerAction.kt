@@ -20,6 +20,7 @@ import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterInputCompl
 import cms.rendner.intellij.dataframe.viewer.components.filter.SyntheticDataFrameIdentifier
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
+import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
@@ -138,15 +139,19 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
 
             runInEdt {
                 if (dataSource.frameAccessor.debugProcessIsTerminated() || parentDisposable.isDisposed || project.isDisposed) return@runInEdt
+                val completionContributor = MyFilterInputCompletionContributor(dataSource.frameAccessor, codeProvider.getDataFrameLibrary())
                 DataFrameViewerDialog(
                     project,
                     evaluator,
                     dataSourceInfo,
-                    MyFilterInputCompletionContributor(dataSource.frameAccessor, codeProvider.getDataFrameLibrary()),
+                    completionContributor,
                     getDataSourceTransformHint()
                 ).apply {
                     Disposer.register(parentDisposable, disposable)
-                    Disposer.register(disposable, MyEdtAwareDebugSessionListener(dataSource.frameAccessor, this))
+                    Disposer.register(
+                        disposable,
+                        MyDebugSessionListener(dataSource.frameAccessor, this, completionContributor),
+                    )
                     fetchInitialData()
                     show()
                 }
@@ -176,9 +181,10 @@ interface PyFrameListenerBreakingChanges {
     fun sessionStopped(communication: PyFrameAccessor?)
 }
 
-private class MyEdtAwareDebugSessionListener(
+private class MyDebugSessionListener(
     frameAccessor: PyFrameAccessor,
     delegate: DataFrameViewerDialog,
+    private val filterInputCompletionContributor: MyFilterInputCompletionContributor,
 ): XDebugSessionListener, PyFrameListener, PyFrameListenerBreakingChanges, Disposable {
 
     // Props are nullable to free circular references on dispose
@@ -194,6 +200,7 @@ private class MyEdtAwareDebugSessionListener(
         } else {
             frameAccessor.addFrameListener(this)
         }
+        updateProvideSyntheticIdentifierFlag()
     }
 
     override fun frameChanged() = runInEdt {
@@ -218,14 +225,17 @@ private class MyEdtAwareDebugSessionListener(
         }
     }
 
-    override fun stackFrameChanged() = runInEdt {
-        frameAccessor?.let {
-            if (it is IPyDebugProcess) {
-                delegate?.setFilterSourcePosition(it.session.currentPosition)
+    override fun stackFrameChanged() {
+        updateProvideSyntheticIdentifierFlag()
+        runInEdt {
+            frameAccessor?.let {
+                if (it is IPyDebugProcess) {
+                    delegate?.setFilterSourcePosition(it.session.currentPosition)
+                }
             }
-        }
 
-        delegate?.stackFrameChanged()
+            delegate?.stackFrameChanged()
+        }
     }
 
     override fun beforeSessionResume() = runInEdt {
@@ -242,6 +252,18 @@ private class MyEdtAwareDebugSessionListener(
         frameAccessor = null
         delegate = null
     }
+
+    private fun updateProvideSyntheticIdentifierFlag() {
+        delegate?.disposable?.let { disposable ->
+            BackgroundTaskUtil.executeOnPooledThread(disposable) {
+                frameAccessor?.let {
+                    val result = it.evaluate(SyntheticDataFrameIdentifier.NAME, false, false)
+                    val nameIsNotDefined = result.isErrorOnEval && result.qualifiedType == PythonQualifiedTypes.NameError
+                    filterInputCompletionContributor.provideSyntheticIdentifier = nameIsNotDefined
+                }
+            }
+        }
+    }
 }
 
 private class MyFilterInputCompletionContributor(
@@ -249,7 +271,11 @@ private class MyFilterInputCompletionContributor(
     private val syntheticIdentifierType: DataFrameLibrary,
 ): IFilterInputCompletionContributor {
 
+    @Volatile
+    var provideSyntheticIdentifier: Boolean = false
+
     override fun getSyntheticIdentifierType() = syntheticIdentifierType
+    override fun isSyntheticIdentifierEnabled(): Boolean = provideSyntheticIdentifier
 
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
         addSyntheticIdentifier(parameters, result)
@@ -257,8 +283,8 @@ private class MyFilterInputCompletionContributor(
     }
 
     private fun addSyntheticIdentifier(parameters: CompletionParameters, result: CompletionResultSet) {
-        if (IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.get(parameters.originalFile) != true) return
-        val refExpr = parameters.position.parent as? PyReferenceExpression ?:return
+        if (!provideSyntheticIdentifier) return
+        val refExpr = parameters.position.parent as? PyReferenceExpression ?: return
         if (refExpr.isQualified) return
         if (!result.prefixMatcher.prefixMatches(SyntheticDataFrameIdentifier.NAME)) return
 

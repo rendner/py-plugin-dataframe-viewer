@@ -27,7 +27,6 @@ interface IFilterInputChangedListener {
 interface IFilterInputCompletionContributor {
     companion object {
         val COMPLETION_CONTRIBUTOR: Key<IFilterInputCompletionContributor?> = Key.create("cms.rendner.COMPLETION_CONTRIBUTOR")
-        val CONTRIBUTE_SYNTHETIC_IDENTIFIER: Key<Boolean?> = Key.create("cms.rendner.CONTRIBUTE_SYNTHETIC_IDENTIFIER")
     }
 
     /**
@@ -39,6 +38,11 @@ interface IFilterInputCompletionContributor {
      * Returns the type for the synthetic identifier.
      */
     fun getSyntheticIdentifierType(): DataFrameLibrary
+
+    /**
+     * Returns true if the synthetic DataFrame identifier is provided by this contributor.
+     */
+    fun isSyntheticIdentifierEnabled(): Boolean
 }
 
 data class FilterInputState(val text: String, val containsSyntheticFrameIdentifier: Boolean = false)

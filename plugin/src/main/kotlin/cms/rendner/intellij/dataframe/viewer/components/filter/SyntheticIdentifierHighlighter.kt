@@ -26,7 +26,7 @@ import com.intellij.psi.PsiElement
  */
 class SyntheticIdentifierHighlighter : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
-        if (IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.get(element.containingFile) != true) return
+        if (IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR.get(element.containingFile)?.isSyntheticIdentifierEnabled() != true) return
         if (SyntheticDataFrameIdentifier.isIdentifier(element)) {
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(element)

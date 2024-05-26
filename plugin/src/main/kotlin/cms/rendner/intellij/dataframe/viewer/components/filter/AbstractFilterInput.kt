@@ -25,7 +25,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
@@ -49,7 +48,10 @@ abstract class AbstractFilterInput(
     private val completionContributor: IFilterInputCompletionContributor
     ): KeyAdapter() {
 
-    protected val myEditorsProvider = MyDebuggerEditorsProvider(::configureCreatedDocumentFile)
+    protected val myEditorsProvider = MyDebuggerEditorsProvider(
+        completionContributor.getSyntheticIdentifierType(),
+        ::configureCreatedDocumentFile,
+    )
 
     private var changedListener: IFilterInputChangedListener? = null
     protected val myEditorContainer = Panels.simplePanel()
@@ -117,74 +119,14 @@ abstract class AbstractFilterInput(
     private fun configureCreatedDocumentFile(psiFile: PsiFile) {
         IgnoreAllIntentionsActionFilter.register(psiFile)
         IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR.set(psiFile, completionContributor)
-
-        val project = psiFile.project
-        if (syntheticIdentifierNameExistsInContext(psiFile)) {
-            myExpressionComponentLabel.toolTipText =
-                "Note: Synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' is not available. Identifier is already used."
-        } else {
-            createSyntheticPsiPointerIfNotExist(project)
-            IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.set(psiFile, true)
-            myExpressionComponentLabel.toolTipText =
-                "Hint: You can use the synthetic identifier '${SyntheticDataFrameIdentifier.NAME}' in the expression to refer to the used DataFrame."
-        }
-    }
-
-    private fun createSyntheticPsiPointerIfNotExist(project: Project) {
-        project.service<SyntheticDataFramePsiRefProvider>()
-            .computeIfAbsent(completionContributor.getSyntheticIdentifierType()) { computeSyntheticIdentifierPointer(project) }
-    }
-
-    private fun computeSyntheticIdentifierPointer(project: Project): SmartPsiElementPointer<PyTargetExpression>? {
-        return myEditorsProvider.createSyntheticDocument(
-            project,
-            getSourceCodeToCreateIdentifier()
-        ).let { doc ->
-            val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(doc) as? ScopeOwner ?: return null
-            val resolved = PyResolveUtil.resolveLocally(psiFile, SyntheticDataFrameIdentifier.NAME)
-            val identifier = resolved.firstOrNull() as? PyTargetExpression ?: return null
-            SmartPointerManager.getInstance(project).createSmartPsiElementPointer(identifier)
-        }
-    }
-
-    private fun syntheticIdentifierNameExistsInContext(psiFile: PsiFile): Boolean {
-        val debuggerContext = psiFile.context ?: return false
-        val scopeOwner = PsiTreeUtil.getParentOfType(debuggerContext, ScopeOwner::class.java) ?: return false
-        return PyResolveUtil.resolveLocally(scopeOwner, SyntheticDataFrameIdentifier.NAME).isNotEmpty()
     }
 
     private fun textContainsSyntheticFrameIdentifier(): Boolean {
+        if (!completionContributor.isSyntheticIdentifierEnabled()) return false
         val editor = getEditor() ?: return false
         val project = editor.project ?: return false
         val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return false
-        if (IFilterInputCompletionContributor.CONTRIBUTE_SYNTHETIC_IDENTIFIER.get(psiFile) == true) {
-            return MyCheckForSyntheticIdentifierVisitor().also { psiFile.accept(it) }.containsSyntheticFrameIdentifier()
-        }
-        return false
-    }
-
-    private fun getSourceCodeToCreateIdentifier(): String {
-        val code = when (completionContributor.getSyntheticIdentifierType()) {
-            DataFrameLibrary.PANDAS -> """
-                |import pandas as pd
-                |${SyntheticDataFrameIdentifier.NAME} = pd.DataFrame()
-            """
-            DataFrameLibrary.POLARS -> """
-                |import polars as pl
-                |${SyntheticDataFrameIdentifier.NAME} = pl.DataFrame()
-            """
-        }
-        /*
-        The comment, included in the snippet, is a description for the user in case the user navigates
-        to the definition of the synthetic identifier.
-        The bottom line is a docstring to document the identifier (https://peps.python.org/pep-0257/#what-is-a-docstring)
-        */
-        return """
-                |# plugin: "Styled DataFrame Viewer"
-                |# helper for providing the synthetic identifier "${SyntheticDataFrameIdentifier.NAME}"
-                ${code.trim()}
-                |""${'"'}synthetic identifier to refer to the displayed DataFrame""${'"'}
-            """.trimMargin()
+        return MyCheckForSyntheticIdentifierVisitor().also { psiFile.accept(it) }.containsSyntheticFrameIdentifier()
     }
 
     private class MyCheckForSyntheticIdentifierVisitor: PsiRecursiveElementVisitor() {
@@ -206,6 +148,7 @@ abstract class AbstractFilterInput(
     }
 
     protected class MyDebuggerEditorsProvider(
+        private val syntheticIdentifierType: DataFrameLibrary,
         private val createdDocumentFileProcessor: (psiFile: PsiFile) -> Unit,
     ) : PyDebuggerEditorsProvider() {
         fun createDocument(project: Project, expression: String, sourcePosition: XSourcePosition?): Document {
@@ -230,23 +173,47 @@ abstract class AbstractFilterInput(
                 sourcePosition,
                 EvaluationMode.EXPRESSION,
             ).also {
+                project.service<SyntheticDataFramePsiRefProvider>()
+                    .computeIfAbsent(syntheticIdentifierType) { computeSyntheticIdentifierPointer(project) }
                 PsiDocumentManager.getInstance(project).getPsiFile(it)?.let { psiFile ->
                     createdDocumentFileProcessor(psiFile)
                 }
             }
         }
 
-        fun createSyntheticDocument(project: Project, code: String): Document {
+        private fun computeSyntheticIdentifierPointer(project: Project): SmartPsiElementPointer<PyTargetExpression>? {
             val exprFragment = XDebuggerUtil.getInstance().createExpression(
-                code,
+                getSourceCodeToCreateIdentifier(),
                 PythonLanguage.INSTANCE,
                 null,
                 EvaluationMode.CODE_FRAGMENT
             )
-
-            return super.createDocument(project, exprFragment, null, EvaluationMode.CODE_FRAGMENT).apply {
+            super.createDocument(project, exprFragment, null, EvaluationMode.CODE_FRAGMENT).apply {
                 setReadOnly(true)
+                val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(this) as? ScopeOwner ?: return null
+                val resolved = PyResolveUtil.resolveLocally(psiFile, SyntheticDataFrameIdentifier.NAME)
+                val identifier = resolved.firstOrNull() as? PyTargetExpression ?: return null
+                return SmartPointerManager.getInstance(project).createSmartPsiElementPointer(identifier)
             }
+        }
+
+        private fun getSourceCodeToCreateIdentifier(): String {
+            val code = when (syntheticIdentifierType) {
+                DataFrameLibrary.PANDAS -> """
+                |import pandas as pd
+                |${SyntheticDataFrameIdentifier.NAME} = pd.DataFrame()
+            """
+                DataFrameLibrary.POLARS -> """
+                |import polars as pl
+                |${SyntheticDataFrameIdentifier.NAME} = pl.DataFrame()
+            """
+            }
+            return """
+                ${code.trim()}
+                |""${'"'}
+                |Synthetic identifier, provided by the 'Styled DataFrame Viewer'-plugin, to reference the displayed DataFrame.
+                |""${'"'}
+            """.trimMargin()
         }
     }
 }
