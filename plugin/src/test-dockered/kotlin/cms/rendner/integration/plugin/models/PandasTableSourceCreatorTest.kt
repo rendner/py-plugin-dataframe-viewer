@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package cms.rendner.integration.plugin.models
 
 import cms.rendner.intellij.dataframe.viewer.components.filter.FilterInputState
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
+import cms.rendner.intellij.dataframe.viewer.models.chunked.TableSourceCreator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceErrorKind
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PandasCodeProvider
 import cms.rendner.junit.RequiresPandas
@@ -24,24 +24,22 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 @RequiresPandas
-internal class PandasModelDataFetcherTest : AbstractModelDataFetcherTest(PandasCodeProvider()) {
+internal class PandasTableSourceCreatorTest : AbstractTableSourceCreatorTest(PandasCodeProvider()) {
 
     @Test
     fun shouldFetchRequiredDataForStyler() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df.style")
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(dataSourceInfo, null, false)
-            )
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(TableSourceCreator.Request(dataSourceInfo, false))
 
-            assertThat(fetcher.result).isNotNull
-            fetcher.result!!.let {
+            assertThat(creator.result).isNotNull
+            creator.result!!.let {
                 assertThat(it.tableSourceRef).isNotNull
                 assertThat(it.tableStructure).isNotNull
                 assertThat(it.columnIndexTranslator).isNotNull
-                assertThat(it.dataSourceCurrentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
+                assertThat(it.currentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
             }
         }
     }
@@ -51,17 +49,18 @@ internal class PandasModelDataFetcherTest : AbstractModelDataFetcherTest(PandasC
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(
+                TableSourceCreator.Request(
                     dataSourceInfo,
-                    FilterInputState("_df.filter(items=[1], axis='index')", true),
                     false,
+                    null,
+                    FilterInputState("_df.filter(items=[1], axis='index')", true),
                 )
             )
 
-            assertThat(fetcher.result).isNotNull
-            fetcher.result!!.let {
+            assertThat(creator.result).isNotNull
+            creator.result!!.let {
                 assertThat(it.tableStructure.rowsCount).isLessThan(it.tableStructure.orgRowsCount)
             }
         }
@@ -73,17 +72,18 @@ internal class PandasModelDataFetcherTest : AbstractModelDataFetcherTest(PandasC
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
 
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(
+                TableSourceCreator.Request(
                     dataSourceInfo,
-                    FilterInputState("xyz"),
                     false,
+                    null,
+                    FilterInputState("xyz"),
                 )
             )
 
-            assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED)
+            assertThat(creator.result).isNull()
+            assertThat(creator.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED)
         }
     }
 
@@ -93,17 +93,18 @@ internal class PandasModelDataFetcherTest : AbstractModelDataFetcherTest(PandasC
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
 
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(
+                TableSourceCreator.Request(
                     dataSourceInfo,
-                    FilterInputState("123"),
                     false,
+                    null,
+                    FilterInputState("123"),
                 )
             )
 
-            assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE)
+            assertThat(creator.result).isNull()
+            assertThat(creator.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE)
         }
     }
 
@@ -112,31 +113,19 @@ internal class PandasModelDataFetcherTest : AbstractModelDataFetcherTest(PandasC
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
             val dataSourceInfo1 = createDataSourceInfo(debuggerApi, "df")
-            val fetcher1 = MyTestFetcher(debuggerApi.evaluator)
-            fetcher1.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSourceInfo1,
-                    null,
-                    false,
-                )
-            )
-            assertThat(fetcher1.result).isNotNull
+            val creator1 = MyTestCreator(debuggerApi.evaluator)
+            creator1.create(TableSourceCreator.Request(dataSourceInfo1, false))
+            assertThat(creator1.result).isNotNull
 
             val dataSourceInfo2 = createDataSourceInfo(debuggerApi, "df.style.data")
-            val fetcher2 = MyTestFetcher(debuggerApi.evaluator)
-            fetcher2.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSourceInfo2,
-                    null,
-                    false,
-                )
-            )
-            assertThat(fetcher2.result).isNotNull
+            val creator2 = MyTestCreator(debuggerApi.evaluator)
+            creator2.create(TableSourceCreator.Request(dataSourceInfo2, false))
+            assertThat(creator2.result).isNotNull
 
             assertThat(
-                fetcher1.result!!.tableStructure.fingerprint
+                creator1.result!!.tableStructure.fingerprint
             ).isEqualTo(
-                fetcher2.result!!.tableStructure.fingerprint
+                creator2.result!!.tableStructure.fingerprint
             )
         }
     }
@@ -146,31 +135,19 @@ internal class PandasModelDataFetcherTest : AbstractModelDataFetcherTest(PandasC
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
             val dataSourceInfo1 = createDataSourceInfo(debuggerApi, "df")
-            val fetcher1 = MyTestFetcher(debuggerApi.evaluator)
-            fetcher1.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSourceInfo1,
-                    null,
-                    false,
-                )
-            )
-            assertThat(fetcher1.result).isNotNull
+            val creator1 = MyTestCreator(debuggerApi.evaluator)
+            creator1.create(TableSourceCreator.Request(dataSourceInfo1, false))
+            assertThat(creator1.result).isNotNull
 
             val dataSourceInfo2 = createDataSourceInfo(debuggerApi, "df.copy()")
-            val fetcher2 = MyTestFetcher(debuggerApi.evaluator)
-            fetcher2.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSourceInfo2,
-                    null,
-                    false,
-                )
-            )
-            assertThat(fetcher2.result).isNotNull
+            val creator2 = MyTestCreator(debuggerApi.evaluator)
+            creator2.create(TableSourceCreator.Request(dataSourceInfo2, false))
+            assertThat(creator2.result).isNotNull
 
             assertThat(
-                fetcher1.result!!.tableStructure.fingerprint
+                creator1.result!!.tableStructure.fingerprint
             ).isNotEqualTo(
-                fetcher2.result!!.tableStructure.fingerprint
+                creator2.result!!.tableStructure.fingerprint
             )
         }
     }

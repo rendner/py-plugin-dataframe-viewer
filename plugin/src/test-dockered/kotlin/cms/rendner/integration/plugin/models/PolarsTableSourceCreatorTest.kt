@@ -16,7 +16,7 @@
 package cms.rendner.integration.plugin.models
 
 import cms.rendner.intellij.dataframe.viewer.components.filter.FilterInputState
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
+import cms.rendner.intellij.dataframe.viewer.models.chunked.TableSourceCreator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceErrorKind
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PolarsCodeProvider
 import cms.rendner.junit.RequiresPolars
@@ -24,24 +24,25 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 @RequiresPolars
-internal class PolarsModelDataFetcherTest : AbstractModelDataFetcherTest(PolarsCodeProvider()) {
+internal class PolarsTableSourceCreatorTest : AbstractTableSourceCreatorTest(PolarsCodeProvider()) {
 
     @Test
     fun shouldFilterDataForSyntheticIdentifier() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(
+                TableSourceCreator.Request(
                     dataSourceInfo,
-                    FilterInputState("_df.filter(pl.col('col_0').is_between(1, 3))", true),
                     false,
+                    null,
+                    FilterInputState("_df.filter(pl.col('col_0').is_between(1, 3))", true),
                 )
             )
 
-            assertThat(fetcher.result).isNotNull
-            fetcher.result!!.let {
+            assertThat(creator.result).isNotNull
+            creator.result!!.let {
                 assertThat(it.tableStructure.rowsCount).isLessThan(it.tableStructure.orgRowsCount)
             }
         }
@@ -53,17 +54,18 @@ internal class PolarsModelDataFetcherTest : AbstractModelDataFetcherTest(PolarsC
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
 
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(
+                TableSourceCreator.Request(
                     dataSourceInfo,
-                    FilterInputState("xyz"),
                     false,
+                    null,
+                    FilterInputState("xyz"),
                 )
             )
 
-            assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED)
+            assertThat(creator.result).isNull()
+            assertThat(creator.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_EVAL_FAILED)
         }
     }
 
@@ -73,17 +75,18 @@ internal class PolarsModelDataFetcherTest : AbstractModelDataFetcherTest(PolarsC
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
 
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(
+                TableSourceCreator.Request(
                     dataSourceInfo,
-                    FilterInputState("123"),
                     false,
+                    null,
+                    FilterInputState("123"),
                 )
             )
 
-            assertThat(fetcher.result).isNull()
-            assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE)
+            assertThat(creator.result).isNull()
+            assertThat(creator.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.FILTER_FRAME_OF_WRONG_TYPE)
         }
     }
 

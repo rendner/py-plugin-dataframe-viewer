@@ -74,7 +74,7 @@ class DataFrameViewerDialog(
     private val myTableFooterLabel = JBLabel("", UIUtil.ComponentStyle.SMALL, FontColor.BRIGHTER)
 
     private var myLastDataModelDisposable: Disposable? = null
-    private var myLastStartedDataFetcher: ActiveDataFetcher? = null
+    private var myRunningCreatorProcess: RunningCreatorProcess? = null
 
     init {
         myDataSourceInfo = dataSourceInfo
@@ -104,20 +104,17 @@ class DataFrameViewerDialog(
         init()
     }
 
-    fun fetchInitialData() {
-        fetchModelData(false)
+    fun createTableModel() {
+        createTableSource(false)
     }
 
     override fun dispose() {
-        cancelLastStartedDataFetcherAndDisposeModel()
+        cancelRunningCreatorAndDisposeModel()
         super.dispose()
     }
 
-    private fun cancelLastStartedDataFetcherAndDisposeModel() {
-        myLastStartedDataFetcher?.let {
-            myLastStartedDataFetcher = null
-            it.progressIndicator.cancel()
-        }
+    private fun cancelRunningCreatorAndDisposeModel() {
+        cleanupRunningCreatorProcess()
         myLastDataModelDisposable?.let {
             myLastDataModelDisposable = null
             Disposer.dispose(it)
@@ -130,7 +127,7 @@ class DataFrameViewerDialog(
 
     override fun beforeSessionResume() {
         disableApplyFilterButton()
-        cancelLastStartedDataFetcherAndDisposeModel()
+        cancelRunningCreatorAndDisposeModel()
         myFilterInput?.setSourcePosition(null)
     }
 
@@ -148,7 +145,7 @@ class DataFrameViewerDialog(
         if (!myDataSourceInfo.source.canBeReEvaluated()) {
             setErrorText("Can't re-evaluate '${myDataSourceInfo.source.reEvalExpr}'")
         } else {
-            fetchModelData(myDataSourceInfo.source.reEvalExpr != myDataSourceInfo.source.currentStackFrameRefExpr)
+            createTableSource(myDataSourceInfo.source.reEvalExpr != myDataSourceInfo.source.currentStackFrameRefExpr)
         }
     }
 
@@ -160,7 +157,7 @@ class DataFrameViewerDialog(
 
     override fun doOKAction() {
         myLastFilterInputState = myFilterInput?.getInputState()
-        fetchModelData(false)
+        createTableSource(false)
     }
 
     override fun setErrorText(text: String?, component: JComponent?) {
@@ -182,22 +179,22 @@ class DataFrameViewerDialog(
         return throwable is EvaluateException && throwable.isCausedByProcessIsRunningException()
     }
 
-    private fun fetchModelData(reEvaluateDataSource:Boolean) {
+    private fun createTableSource(reEvaluateDataSource:Boolean) {
         disableApplyFilterButton()
         myFilterInput?.hideErrorMessage()
-        cancelLastStartedDataFetcherAndDisposeModel()
+        cancelRunningCreatorAndDisposeModel()
 
-        val request = ModelDataFetcher.Request(
+        val request = TableSourceCreator.Request(
             myDataSourceInfo,
-            myLastFilterInputState,
             reEvaluateDataSource,
-            myTable.getDataFrameModel().getDataSourceFingerprint(),
+            myTable.getDataFrameModel().getFingerprint(),
+            myLastFilterInputState,
             dataSourceTransformHint,
         )
-        val fetcher = MyModelDataFetcher(myEvaluator)
-        myLastStartedDataFetcher = ActiveDataFetcher(
-            fetcher,
-            BackgroundTaskUtil.executeOnPooledThread(disposable) { fetcher.fetchModelData(request) }
+        val creator = MyTableSourceCreator(myEvaluator)
+        myRunningCreatorProcess = RunningCreatorProcess(
+            creator,
+            BackgroundTaskUtil.executeOnPooledThread(disposable) { creator.create(request) }
         )
     }
 
@@ -263,16 +260,24 @@ class DataFrameViewerDialog(
         ).notify(project)
     }
 
-    private fun shouldHandleFetcherAction(fetcher: ModelDataFetcher): Boolean {
-        return fetcher == myLastStartedDataFetcher?.fetcher && !isDisposed
+    private fun shouldHandleCreatorResult(creator: TableSourceCreator): Boolean {
+        return creator == myRunningCreatorProcess?.creator && !isDisposed
     }
 
-    private class ActiveDataFetcher(var fetcher: ModelDataFetcher, var progressIndicator: ProgressIndicator)
+    private fun cleanupRunningCreatorProcess() {
+        myRunningCreatorProcess?.let {
+            myRunningCreatorProcess = null
+            it.progressIndicator.cancel()
+        }
+    }
 
-    private inner class MyModelDataFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator) {
+    private class RunningCreatorProcess(var creator: TableSourceCreator, var progressIndicator: ProgressIndicator)
 
-        override fun handleFetchFailure(request: Request, failure: CreateTableSourceFailure) = runInEdt {
-            if (shouldHandleFetcherAction(this)) {
+    private inner class MyTableSourceCreator(evaluator: IPluginPyValueEvaluator) : TableSourceCreator(evaluator) {
+
+        override fun handleFailure(request: Request, failure: CreateTableSourceFailure) = runInEdt {
+            if (shouldHandleCreatorResult(this)) {
+                cleanupRunningCreatorProcess()
                 updateApplyFilterButtonState()
                 when (failure.errorKind) {
                     CreateTableSourceErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
@@ -290,8 +295,9 @@ class DataFrameViewerDialog(
             }
         }
 
-        override fun handleFetchSuccess(request: Request, result: Result) = runInEdt {
-            if (shouldHandleFetcherAction(this)) {
+        override fun handleSuccess(request: Request, result: Result) = runInEdt {
+            if (shouldHandleCreatorResult(this)) {
+                cleanupRunningCreatorProcess()
                 updateApplyFilterButtonState()
 
                 myLastDataModelDisposable?.let {
@@ -307,8 +313,8 @@ class DataFrameViewerDialog(
                     result.columnIndexTranslator,
                     chunkLoader,
                     ChunkSize(30, 20),
-                    request.dataSourceInfo.sortable,
-                    request.dataSourceInfo.hasIndexLabels,
+                    request.info.sortable,
+                    request.info.hasIndexLabels,
                 ).let { model ->
                     myLastDataModelDisposable = Disposer.newDisposable(disposable, "modelDisposable").also {
                         Disposer.register(it, model)
@@ -318,9 +324,9 @@ class DataFrameViewerDialog(
                     myTable.setDataFrameModel(model)
                 }
 
-                if (request.reEvaluateDataSource) {
+                if (request.reEvaluate) {
                     val updatedSource = myDataSourceInfo.source.copy(
-                        currentStackFrameRefExpr = result.dataSourceCurrentStackFrameRefExpr,
+                        currentStackFrameRefExpr = result.currentStackFrameRefExpr,
                     )
                     myDataSourceInfo = myDataSourceInfo.copy(source = updatedSource)
                 }

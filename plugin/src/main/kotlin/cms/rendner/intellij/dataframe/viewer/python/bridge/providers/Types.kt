@@ -42,7 +42,7 @@ data class TableSourceFactoryImport(
 
 /**
  *
- * @param source the source for a [IPyTableSourceRef]
+ * @param source the potential data source for a [IPyTableSourceRef]
  * @param tableSourceFactoryImport the factory to create a [IPyTableSourceRef] on Python side
  * @param hasIndexLabels true if table has index labels
  * @param sortable true if table source can be sorted

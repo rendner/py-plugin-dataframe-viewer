@@ -151,11 +151,9 @@ interface IDataFrameModel : Disposable {
     fun getIndexDataModel(): ITableIndexDataModel?
 
     /**
-     * Fingerprint of the underlying data source from where the data was/is retrieved from.
-     * The fingerprint will be used to decide if some table state will be kept when
-     * exchanging the model.
-     *
-     * Should return null if no table state should be kept.
+     * Fingerprint of the model.
+     * The fingerprint is used to check if two models represent the same DataFrame when exchanging the model.
+     * If null is returned, no check is performed.
      */
-    fun getDataSourceFingerprint(): String?
+    fun getFingerprint(): String?
 }

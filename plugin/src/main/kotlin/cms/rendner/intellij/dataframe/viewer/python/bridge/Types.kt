@@ -219,15 +219,15 @@ enum class CreateTableSourceErrorKind {
      */
     EVAL_EXCEPTION,
     /**
-     * Re-evaluated data-source has another type.
+     * Re-evaluated data source has another type.
      */
     RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
     /**
-     * The data-source is not supported by the plugin.
+     * The data source is not supported by the plugin.
      */
     UNSUPPORTED_DATA_SOURCE_TYPE,
     /**
-     * The data-source has another fingerprint as expected.
+     * The data source has another fingerprint as expected.
      */
     INVALID_FINGERPRINT,
     /**

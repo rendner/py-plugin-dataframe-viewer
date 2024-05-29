@@ -21,7 +21,7 @@ import cms.rendner.debugger.impl.IDebuggerInterceptor
 import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.integration.plugin.toValueEvalExpr
-import cms.rendner.intellij.dataframe.viewer.models.chunked.ModelDataFetcher
+import cms.rendner.intellij.dataframe.viewer.models.chunked.TableSourceCreator
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceErrorKind
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceFailure
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.DataSourceInfo
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
 @Order(4)
-internal abstract class AbstractModelDataFetcherTest(
+internal abstract class AbstractTableSourceCreatorTest(
     private val codeProvider: ITableSourceCodeProvider,
 ) : AbstractPluginCodeTest() {
 
@@ -41,17 +41,17 @@ internal abstract class AbstractModelDataFetcherTest(
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(dataSourceInfo, null, false)
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(
+                TableSourceCreator.Request(dataSourceInfo, false)
             )
 
-            Assertions.assertThat(fetcher.result).isNotNull
-            fetcher.result!!.let {
+            Assertions.assertThat(creator.result).isNotNull
+            creator.result!!.let {
                 Assertions.assertThat(it.tableSourceRef).isNotNull
                 Assertions.assertThat(it.tableStructure).isNotNull
                 Assertions.assertThat(it.columnIndexTranslator).isNotNull
-                Assertions.assertThat(it.dataSourceCurrentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
+                Assertions.assertThat(it.currentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
             }
         }
     }
@@ -84,11 +84,11 @@ internal abstract class AbstractModelDataFetcherTest(
             createDataSourceInfo(debuggerApi, "df").let {
                 debuggerApi.addInterceptor(interceptor)
                 try {
-                    val fetcher = MyTestFetcher(debuggerApi.evaluator)
-                    fetcher.fetchModelData(ModelDataFetcher.Request(it, null, false))
+                    val creator = MyTestCreator(debuggerApi.evaluator)
+                    creator.create(TableSourceCreator.Request(it, false))
 
-                    Assertions.assertThat(fetcher.result).isNotNull
-                    Assertions.assertThat(fetcher.result!!.dataSourceCurrentStackFrameRefExpr).isEqualTo("df")
+                    Assertions.assertThat(creator.result).isNotNull
+                    Assertions.assertThat(creator.result!!.currentStackFrameRefExpr).isEqualTo("df")
                 } finally {
                     debuggerApi.removeInterceptor(interceptor)
                 }
@@ -98,11 +98,11 @@ internal abstract class AbstractModelDataFetcherTest(
             createDataSourceInfo(debuggerApi, "df").let {
                 debuggerApi.addInterceptor(interceptor)
                 try {
-                    val fetcher = MyTestFetcher(debuggerApi.evaluator)
-                    fetcher.fetchModelData(ModelDataFetcher.Request(it, null, true))
+                    val creator = MyTestCreator(debuggerApi.evaluator)
+                    creator.create(TableSourceCreator.Request(it, true))
 
-                    Assertions.assertThat(fetcher.result).isNotNull
-                    Assertions.assertThat(fetcher.result!!.dataSourceCurrentStackFrameRefExpr).isEqualTo("df_evaluated")
+                    Assertions.assertThat(creator.result).isNotNull
+                    Assertions.assertThat(creator.result!!.currentStackFrameRefExpr).isEqualTo("df_evaluated")
                 } finally {
                     debuggerApi.removeInterceptor(interceptor)
                 }
@@ -117,17 +117,11 @@ internal abstract class AbstractModelDataFetcherTest(
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
             debuggerApi.evaluator.execute("del df")
 
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSourceInfo,
-                    null,
-                    true,
-                )
-            )
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(TableSourceCreator.Request(dataSourceInfo, true))
 
-            Assertions.assertThat(fetcher.result).isNull()
-            Assertions.assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.EVAL_EXCEPTION)
+            Assertions.assertThat(creator.result).isNull()
+            Assertions.assertThat(creator.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.EVAL_EXCEPTION)
         }
     }
 
@@ -138,17 +132,11 @@ internal abstract class AbstractModelDataFetcherTest(
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
             debuggerApi.evaluator.execute("df = {}")
 
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSourceInfo,
-                    null,
-                    true,
-                )
-            )
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(TableSourceCreator.Request(dataSourceInfo, true))
 
-            Assertions.assertThat(fetcher.result).isNull()
-            Assertions.assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE)
+            Assertions.assertThat(creator.result).isNull()
+            Assertions.assertThat(creator.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE)
         }
     }
 
@@ -158,18 +146,11 @@ internal abstract class AbstractModelDataFetcherTest(
 
             val dataSourceInfo = createDataSourceInfo(debuggerApi, "df")
 
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSourceInfo,
-                    null,
-                    false,
-                    "fingerprint"
-                )
-            )
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(TableSourceCreator.Request(dataSourceInfo, false, "fingerprint"))
 
-            Assertions.assertThat(fetcher.result).isNull()
-            Assertions.assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.INVALID_FINGERPRINT)
+            Assertions.assertThat(creator.result).isNull()
+            Assertions.assertThat(creator.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.INVALID_FINGERPRINT)
         }
     }
 
@@ -189,17 +170,11 @@ internal abstract class AbstractModelDataFetcherTest(
             }
             debuggerApi.addInterceptor(interceptor)
 
-            val fetcher = MyTestFetcher(debuggerApi.evaluator)
-            fetcher.fetchModelData(
-                ModelDataFetcher.Request(
-                    dataSourceInfo,
-                    null,
-                    true,
-                )
-            )
+            val creator = MyTestCreator(debuggerApi.evaluator)
+            creator.create(TableSourceCreator.Request(dataSourceInfo, true))
 
-            Assertions.assertThat(fetcher.result).isNull()
-            Assertions.assertThat(fetcher.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.EVAL_EXCEPTION)
+            Assertions.assertThat(creator.result).isNull()
+            Assertions.assertThat(creator.failure?.errorKind).isEqualTo(CreateTableSourceErrorKind.EVAL_EXCEPTION)
         }
     }
 
@@ -211,15 +186,15 @@ internal abstract class AbstractModelDataFetcherTest(
 
     abstract fun createDataFrameSnippet(): String
 
-    protected class MyTestFetcher(evaluator: IPluginPyValueEvaluator) : ModelDataFetcher(evaluator) {
+    protected class MyTestCreator(evaluator: IPluginPyValueEvaluator) : TableSourceCreator(evaluator) {
         var result: Result? = null
         var failure: CreateTableSourceFailure? = null
 
-        override fun handleFetchFailure(request: Request, failure: CreateTableSourceFailure) {
+        override fun handleFailure(request: Request, failure: CreateTableSourceFailure) {
             this.failure = failure
         }
 
-        override fun handleFetchSuccess(request: Request, result: Result) {
+        override fun handleSuccess(request: Request, result: Result) {
             this.result = result
         }
     }

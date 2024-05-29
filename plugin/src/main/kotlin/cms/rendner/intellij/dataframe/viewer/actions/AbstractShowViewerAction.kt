@@ -152,7 +152,7 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
                         disposable,
                         MyDebugSessionListener(dataSource.frameAccessor, this, completionContributor),
                     )
-                    fetchInitialData()
+                    createTableModel()
                     show()
                 }
             }

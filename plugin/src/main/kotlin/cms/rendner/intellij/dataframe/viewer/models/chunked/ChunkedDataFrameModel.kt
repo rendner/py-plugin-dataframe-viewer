@@ -165,7 +165,7 @@ class ChunkedDataFrameModel(
         return if (hasIndexLabels) myIndexModel else null
     }
 
-    override fun getDataSourceFingerprint() = tableStructure.fingerprint
+    override fun getFingerprint() = tableStructure.fingerprint
 
     private fun enableDataFetching(enabled: Boolean) {
         myDataFetchingEnabled = enabled

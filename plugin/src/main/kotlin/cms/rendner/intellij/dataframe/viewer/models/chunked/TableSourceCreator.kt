@@ -27,24 +27,25 @@ import com.intellij.openapi.progress.ProgressManager
 private var tempVarIdCounter: Int = 0
 
 /**
- * Fetches the required model data from Python.
+ * Creates a table source on Python side, which is used to fetch data from an underlying data source.
+ * A data source can be a Python dictionary or DataFrame instance.
+ * The supported data sources depend on the used table source.
  *
- * @param evaluator the evaluator to fetch the data.
+ * @param evaluator the evaluator to create the table source.
  */
-abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
+abstract class TableSourceCreator(val evaluator: IPluginPyValueEvaluator) {
 
     /**
      * The result.
      *
-     * @param dataSourceCurrentStackFrameRefExpr if [Request.reEvaluateDataSource] was true the new expression to refer to
-     * the variable in Python.
-     * @param tableSourceRef the table source instance to interop with the instance created in Python by the plugin
-     * @param tableStructure the table structure of the dataSource (DataFrame)
+     * @param currentStackFrameRefExpr if [Request.reEvaluate] was true the new expression to refer to
+     * the created table source in Python.
+     * @param tableSourceRef the table source instance to interop with the instance created in Python.
+     * @param tableStructure the table structure of the table source.
      * @param columnIndexTranslator to translate the index of visible columns back to the there original index.
-     *
      */
     data class Result(
-        val dataSourceCurrentStackFrameRefExpr: String,
+        val currentStackFrameRefExpr: String,
         val tableSourceRef: IPyTableSourceRef,
         val tableStructure: TableStructure,
         val columnIndexTranslator: ColumnIndexTranslator,
@@ -53,75 +54,78 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
     /**
      * A request.
      *
-     * @param dataSourceInfo info to access the data source variable in Python (a DataFrame or pandas Styler or a dict)
-     * @param filterInputState to filter the dataSource
-     * @param reEvaluateDataSource true if the dataSource has to be re-evaluated (e.g. after a stack frame change)
-     * @param oldDataSourceFingerprint if not null, value is compared against actual fingerprint
-     * @param dataSourceTransformHint hint to create a DataFrame from the data source in case it is not a DataFrame or pandas Styler
+     * @param info to access the data source variable in Python (a DataFrame or pandas Styler or a dict).
+     * @param reEvaluate true if the data source, described by [info] has to be re-evaluated (e.g. after a stack frame change).
+     * @param fingerprint if not null, value is compared against the fingerprint of the used data source.
+     * The fingerprint is used to identify if the underlying data source is the same one or has changed between
+     * re-evaluations.
+     * @param filterInputState to filter the table source.
+     * In case they don't match a [CreateTableSourceErrorKind.INVALID_FINGERPRINT] is reported.
+     * @param transformHint in case the date source for the table source is a Python dict and has to be converted.
      */
     data class Request(
-        val dataSourceInfo: DataSourceInfo,
-        val filterInputState: FilterInputState?,
-        val reEvaluateDataSource: Boolean,
-        val oldDataSourceFingerprint: String? = null,
-        val dataSourceTransformHint: DataSourceTransformHint? = null,
+        val info: DataSourceInfo,
+        val reEvaluate: Boolean,
+        val fingerprint: String? = null,
+        val filterInputState: FilterInputState? = null,
+        val transformHint: DataSourceTransformHint? = null,
     )
 
     /**
-     * Called in case of an unexpected evaluation result.
+     * Called in case of an unexpected result.
      *
      * @param request the initial request.
      * @param failure a short description of the failure.
      */
-    protected abstract fun handleFetchFailure(request: Request, failure: CreateTableSourceFailure)
+    protected abstract fun handleFailure(request: Request, failure: CreateTableSourceFailure)
 
     /**
-     * Called after all required data is successfully fetched from the data-source.
+     * Called in case the table source was successfully created on Python side.
      *
      * @param request the initial request.
-     * @param result the result to create a data model.
+     * @param result the result to interact with the created table source.
      */
-    protected abstract fun handleFetchSuccess(request: Request, result: Result)
+    protected abstract fun handleSuccess(request: Request, result: Result)
 
-    private fun handleFetchFailure(request: Request, ex: EvaluateException, info: String) {
+    private fun handleFailure(request: Request, ex: EvaluateException, info: String) {
         if (ex.isCausedByProcessIsRunningException() || ex.isCausedByDisconnectException()) return
-        handleFetchFailure(request, CreateTableSourceErrorKind.EVAL_EXCEPTION, info)
+        handleFailure(request, CreateTableSourceErrorKind.EVAL_EXCEPTION, info)
     }
 
-    private fun handleFetchFailure(request: Request, errorKind: CreateTableSourceErrorKind, info: String) {
-        handleFetchFailure(request, CreateTableSourceFailure(errorKind, info))
+    private fun handleFailure(request: Request, errorKind: CreateTableSourceErrorKind, info: String) {
+        handleFailure(request, CreateTableSourceFailure(errorKind, info))
     }
 
     /**
-     * Starts the data fetching.
+     * Starts the process to create the requested table source on Python side.
      *
-     * @param request describes where to fetch the data from.
-     * @throws [ProcessCanceledException] in case the evaluation process was canceled.
+     * @param request describes which table source to create.
+     * @throws [ProcessCanceledException] in case the process was canceled.
      */
     @Throws(ProcessCanceledException::class)
-    fun fetchModelData(request: Request) {
+    fun create(request: Request) {
         ProgressManager.checkCanceled()
 
-        var dataSourceCurrentStackFrameRefExpr = request.dataSourceInfo.source.currentStackFrameRefExpr
-        if (request.reEvaluateDataSource) {
+        var dataSourceRefExpr = request.info.source.currentStackFrameRefExpr
+        if (request.reEvaluate) {
 
             val reEvaluatedDataSource = try {
-                evaluator.evaluate(request.dataSourceInfo.source.reEvalExpr)
+                evaluator.evaluate(request.info.source.reEvalExpr)
             } catch (ex: EvaluateException) {
-                handleFetchFailure(request, ex, "${ex.localizedMessage} => caused by: '${request.dataSourceInfo.source.reEvalExpr}'")
+                handleFailure(request, ex, "${ex.localizedMessage} => caused by: '${request.info.source.reEvalExpr}'")
                 return
             }
 
-            if (request.dataSourceInfo.source.qualifiedType != reEvaluatedDataSource.qualifiedType) {
-                handleFetchFailure(
+            if (request.info.source.qualifiedType != reEvaluatedDataSource.qualifiedType) {
+                handleFailure(
                     request,
                     CreateTableSourceErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
-                    "Re-evaluated data source is of another type: ${reEvaluatedDataSource.qualifiedType} (was: ${request.dataSourceInfo.source.reEvalExpr})"
+                    "Re-evaluated data source is of another type: ${reEvaluatedDataSource.qualifiedType} (was: ${request.info.source.reEvalExpr})"
                 )
                 return
             }
 
-            dataSourceCurrentStackFrameRefExpr = reEvaluatedDataSource.refExpr
+            dataSourceRefExpr = reEvaluatedDataSource.refExpr
         }
 
         ProgressManager.checkCanceled()
@@ -129,21 +133,21 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
         val tableSourceRef = try {
             TableSourceFactory.create(
                 evaluator,
-                request.dataSourceInfo.tableSourceFactoryImport,
-                dataSourceCurrentStackFrameRefExpr,
+                request.info.tableSourceFactoryImport,
+                dataSourceRefExpr,
                 CreateTableSourceConfig(
-                    dataSourceTransformHint = request.dataSourceTransformHint,
-                    previousFingerprint = request.oldDataSourceFingerprint,
+                    dataSourceTransformHint = request.transformHint,
+                    previousFingerprint = request.fingerprint,
                     filterEvalExpr = request.filterInputState?.text,
                     filterEvalExprProvideFrame = request.filterInputState?.containsSyntheticFrameIdentifier == true,
                     tempVarSlotId = if (evaluator.isConsole()) "_temp_slot_id_${tempVarIdCounter++}" else null,
                 ),
             )
         } catch (ex: CreateTableSourceException) {
-            handleFetchFailure(request, ex.failure)
+            handleFailure(request, ex.failure)
             return
         } catch (ex: EvaluateException) {
-            handleFetchFailure(request, ex, "${ex.localizedMessage} => caused by: 'createPatchedStyler(${dataSourceCurrentStackFrameRefExpr})'")
+            handleFailure(request, ex, "${ex.localizedMessage} => caused by: 'TableSourceFactory.create(...)' using '$dataSourceRefExpr'")
             return
         }
 
@@ -151,7 +155,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
 
         val tableStructure = tableSourceRef.evaluateTableStructure()
         val columnIndexTranslator =
-            if (request.dataSourceInfo.filterable &&
+            if (request.info.filterable &&
                 tableStructure.columnsCount > 0 &&
                 tableStructure.columnsCount != tableStructure.orgColumnsCount) {
             var entryOffset = 0
@@ -165,7 +169,7 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
                         frameColumnIndexList.addAll(it)
                     }
                 } catch (ex: EvaluateException) {
-                    handleFetchFailure(request, ex, "${ex.localizedMessage} => caused by: 'evaluateGetOrgIndicesOfVisibleColumns($entryOffset)'")
+                    handleFailure(request, ex, "${ex.localizedMessage} => caused by: 'evaluateGetOrgIndicesOfVisibleColumns($entryOffset)'")
                     return
                 }
                 entryOffset += maxEntries
@@ -174,10 +178,10 @@ abstract class ModelDataFetcher(val evaluator: IPluginPyValueEvaluator) {
             ColumnIndexTranslator(frameColumnIndexList)
         } else ColumnIndexTranslator()
 
-        handleFetchSuccess(
+        handleSuccess(
             request,
             Result(
-                dataSourceCurrentStackFrameRefExpr,
+                dataSourceRefExpr,
                 tableSourceRef,
                 tableStructure,
                 columnIndexTranslator,

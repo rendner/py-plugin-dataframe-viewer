@@ -26,7 +26,7 @@ class EmptyDataFrameModel : IDataFrameModel {
 
     override fun getIndexDataModel() = myEmptyIndexModel
 
-    override fun getDataSourceFingerprint() = null
+    override fun getFingerprint() = null
 
     override fun dispose() {}
 }

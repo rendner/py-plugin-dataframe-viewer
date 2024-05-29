@@ -77,8 +77,8 @@ class DataFrameTable : JScrollPane() {
     fun setDataFrameModel(model: IDataFrameModel) {
         if (model == myDataFrameModel) return
 
-        val oldFingerprint = myDataFrameModel.getDataSourceFingerprint()
-        val newFingerprint = model.getDataSourceFingerprint()
+        val oldFingerprint = myDataFrameModel.getFingerprint()
+        val newFingerprint = model.getFingerprint()
         val isSameDataSource = newFingerprint != null && oldFingerprint == newFingerprint
 
         myDataFrameModel = model
