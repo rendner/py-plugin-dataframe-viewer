@@ -12,14 +12,26 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from abc import ABC
-from typing import Optional
+from typing import Optional, List, Any
 
 from pandas import DataFrame
 
-from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext
+from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext, AbstractColumnNameCompleter
 from cms_rendner_sdfv.base.types import SortCriteria, TableStructure
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame, MappedVisibleFrame
+
+
+class PandasColumnNameCompleter(AbstractColumnNameCompleter, ABC):
+    def __init__(self, source_frame: DataFrame):
+        self.__source_frame = source_frame
+
+    def _resolve_column_names(self, source: Any, is_synthetic_df: bool) -> list[Any]:
+        if source is None and is_synthetic_df:
+            # To use columns that have already been filtered out, the original unfiltered data source is used.
+            source = self.__source_frame
+
+        return list(source) if isinstance(source, DataFrame) else []
 
 
 class PandasTableSourceContext(AbstractTableSourceContext, ABC):
@@ -45,6 +57,9 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
             columns_count=columns_count,
             fingerprint=fingerprint,
         )
+
+    def get_column_name_completer(self) -> Optional[AbstractColumnNameCompleter]:
+        return PandasColumnNameCompleter(self.__source_frame)
 
     def set_sort_criteria(self, sort_by_column_index: Optional[list[int]], sort_ascending: Optional[list[bool]]):
         new_sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)

@@ -13,7 +13,7 @@
 #  limitations under the License.
 import inspect
 from abc import ABC, abstractmethod
-from typing import Any, List, Union, TypeVar
+from typing import Any, List, Union, TypeVar, Type
 
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, TableFrame, \
@@ -84,9 +84,50 @@ class AbstractTableFrameGenerator(ABC):
         return result if result is not None else TableFrame(index_labels=[], columns=[], legend=None, cells=[])
 
 
+class AbstractColumnNameCompleter(ABC):
+    def get_variants(self,
+                     source: Any,
+                     is_synthetic_df: bool,
+                     name_to_complete: Union[None, str, int],
+                     max_matches: int = 200,
+                     ) -> List[str]:
+        matches: List[str] = []
+        column_names = self._resolve_column_names(source, is_synthetic_df)
+
+        def add_variant_formatted(v: Union[str, int]) -> int:
+            matches.append(f'"{v}"' if isinstance(v, str) else str(v))
+            return len(matches)
+
+        if name_to_complete is None:
+            for cn in column_names:
+                if not isinstance(cn, (int, str)):
+                    continue
+                if add_variant_formatted(cn) >= max_matches:
+                    break
+        else:
+            prefix = str(name_to_complete).lower()
+            variant_type = type(name_to_complete)
+
+            for cn in column_names:
+                if not isinstance(cn, variant_type):
+                    continue
+                if not prefix or str(cn).lower().startswith(prefix):
+                    if add_variant_formatted(cn) >= max_matches:
+                        break
+
+        return matches
+
+    @abstractmethod
+    def _resolve_column_names(self, source: Any, is_synthetic_df: bool) -> List[Any]:
+        pass
+
+
 class AbstractTableSourceContext(ABC):
     def set_sort_criteria(self, sort_by_column_index: Union[None, List[int]], sort_ascending: Union[None, List[bool]]):
         pass
+
+    def get_column_name_completer(self) -> Union[None, AbstractColumnNameCompleter]:
+        return None
 
     @property
     @abstractmethod
@@ -113,6 +154,18 @@ class AbstractTableSource(ABC):
 
     def get_kind(self) -> TableSourceKind:
         return self.__kind
+
+    def get_column_name_variants(self,
+                                 source: Any,
+                                 is_synthetic_df: bool,
+                                 name_to_complete: Union[str, int],
+                                 ) -> List[str]:
+        completer = self._context.get_column_name_completer()
+        return [] if completer is None else completer.get_variants(
+            source=source,
+            is_synthetic_df=is_synthetic_df,
+            name_to_complete=name_to_complete,
+        )
 
     @staticmethod
     def jsonify(data: Any) -> str:
