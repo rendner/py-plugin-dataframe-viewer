@@ -1,5 +1,10 @@
 # Python: Styled DataFrame Viewer
 
+> [!WARNING]  
+> The plugin does not work with PyCharm 2024.2.1, because of a bug (?) in PyCharm. I am currently not aware of any workaround.
+> If you have an YouTrack account, you can vote on the issue to increase its importance: https://youtrack.jetbrains.com/issue/PY-75581
+
+
 ## Installation
 
 - Using the IDE built-in plugin system:
