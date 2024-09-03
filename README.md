@@ -1,11 +1,9 @@
 # Python: Styled DataFrame Viewer
 
 > [!WARNING]  
-> The plugin does not work with PyCharm 2024.2.1, because of a bug (?) in PyCharm. I am currently not aware of any workaround.
+> The plugin is broken in PyCharm 2024.2.1, because of a bug in PyCharm.
 > 
-> Please note the plugin uses a non-public API to fetch the data in PyCharm. This non-public part now returns the result truncated and breaks the plugin.
-> If you have an YouTrack account, you can vote (a comment isn't necessarry) on the issue to increase its importance: https://youtrack.jetbrains.com/issue/PY-75581
-
+> You can use the following workaround until the bug is fixed: [plugin fix](./docs/FIX_PLUGIN_PY_CHARM_2024.2.1.md)
 
 ## Installation
 
