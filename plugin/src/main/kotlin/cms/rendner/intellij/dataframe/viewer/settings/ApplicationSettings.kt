@@ -47,7 +47,9 @@ class ApplicationSettings : Configurable {
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
             it.pandasStyledFuncValidationEnabled = settings.pandasStyledFuncValidationEnabled
-            it.fsUseFilterInputFromInternalApi = settings.fsUseFilterInputFromInternalApi
+            it.filterInputFromInternalApi = settings.filterInputFromInternalApi
+            it.filterInputWithAdditionCodeCompletion = settings.filterInputWithAdditionCodeCompletion
+            it.filterInputWithRuntimeCodeCompletionInPythonConsole = settings.filterInputWithRuntimeCodeCompletionInPythonConsole
         }
     }
 
@@ -55,7 +57,9 @@ class ApplicationSettings : Configurable {
         return mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
             it.pandasStyledFuncValidationEnabled != settings.pandasStyledFuncValidationEnabled ||
-            it.fsUseFilterInputFromInternalApi != settings.fsUseFilterInputFromInternalApi
+            it.filterInputFromInternalApi != settings.filterInputFromInternalApi ||
+            it.filterInputWithAdditionCodeCompletion != settings.filterInputWithAdditionCodeCompletion ||
+            it.filterInputWithRuntimeCodeCompletionInPythonConsole != settings.filterInputWithRuntimeCodeCompletionInPythonConsole
         } ?: false
     }
 
@@ -63,7 +67,9 @@ class ApplicationSettings : Configurable {
         mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
             settings.pandasStyledFuncValidationEnabled = it.pandasStyledFuncValidationEnabled
-            settings.fsUseFilterInputFromInternalApi = it.fsUseFilterInputFromInternalApi
+            settings.filterInputFromInternalApi = it.filterInputFromInternalApi
+            settings.filterInputWithAdditionCodeCompletion = it.filterInputWithAdditionCodeCompletion
+            settings.filterInputWithRuntimeCodeCompletionInPythonConsole = it.filterInputWithRuntimeCodeCompletionInPythonConsole
         }
     }
 

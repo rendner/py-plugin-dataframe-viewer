@@ -30,7 +30,7 @@ class FilterInputFactory {
             completionContributor: IFilterInputCompletionContributor,
             sourcePosition: XSourcePosition?,
             ): AbstractFilterInput {
-            return if (!ApplicationSettingsService.instance.state.fsUseFilterInputFromInternalApi) {
+            return if (!ApplicationSettingsService.instance.state.filterInputFromInternalApi) {
                 DefaultFilterInput(project, completionContributor, sourcePosition)
             } else try {
                 Class.forName("cms.rendner.intellij.dataframe.viewer.components.filter.InternalApiFilterInput")

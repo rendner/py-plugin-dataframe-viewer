@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,7 +155,7 @@ internal abstract class AbstractPipEnvEnvironmentTest {
             return try {
                 evalOrExec(expression, execute = false, doTrunc = trimResult, EvaluateException.EVAL_FALLBACK_ERROR_MSG)
             } catch (ex: PluginPyDebuggerException) {
-                throw EvaluateException(EvaluateException.EVAL_FALLBACK_ERROR_MSG, ex)
+                throw EvaluateException(EvaluateException.EVAL_FALLBACK_ERROR_MSG, null, ex)
             }
         }
 
@@ -163,7 +163,7 @@ internal abstract class AbstractPipEnvEnvironmentTest {
             try {
                 evalOrExec(statements, execute = true, doTrunc = false, EvaluateException.EXEC_FALLBACK_ERROR_MSG)
             } catch (ex: PluginPyDebuggerException) {
-                throw EvaluateException(EvaluateException.EXEC_FALLBACK_ERROR_MSG, ex)
+                throw EvaluateException(EvaluateException.EXEC_FALLBACK_ERROR_MSG, null, ex)
             }
         }
 
@@ -173,14 +173,14 @@ internal abstract class AbstractPipEnvEnvironmentTest {
                 val response = interceptor.onResponse(pythonDebugger.evalOrExec(request))
                 createPluginPyValue(response, fallbackErrorMessage)
             } catch (ex: ExecutionException) {
-                throw ex.cause ?: EvaluateException(ex.message ?: "Unknown error occurred.")
+                throw ex.cause ?: EvaluateException(ex.message ?: "Unknown error occurred.", null)
             }
         }
 
         private fun createPluginPyValue(response: EvalOrExecResponse, fallbackErrorMessage: String): PluginPyValue {
             if (response.isError) {
                 val msg = if (response.value == null) fallbackErrorMessage else "{${response.type}} ${response.value}"
-                throw EvaluateException(msg)
+                throw EvaluateException(msg, response.qualifiedType)
             }
             return PluginPyValue(
                 response.value,

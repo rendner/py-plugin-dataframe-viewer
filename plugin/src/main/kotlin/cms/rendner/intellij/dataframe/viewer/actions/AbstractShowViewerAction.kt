@@ -16,6 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.components.DataFrameViewerDialog
+import cms.rendner.intellij.dataframe.viewer.components.filter.IDataFrameColumnNameContributor
 import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterInputCompletionContributor
 import cms.rendner.intellij.dataframe.viewer.components.filter.SyntheticDataFrameIdentifier
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
@@ -29,10 +30,8 @@ import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toValueEvalExpr
 import cms.rendner.intellij.dataframe.viewer.services.ParentDisposableService
 import cms.rendner.intellij.dataframe.viewer.services.SyntheticDataFramePsiRefProvider
-import com.intellij.codeInsight.completion.CompletionParameters
-import com.intellij.codeInsight.completion.CompletionResultSet
-import com.intellij.codeInsight.completion.CompletionUtilCore
-import com.intellij.codeInsight.completion.PrioritizedLookupElement
+import cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService
+import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.completion.util.ParenthesesInsertHandler
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.Disposable
@@ -42,10 +41,12 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.components.service
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.PlatformIcons
 import com.intellij.xdebugger.XDebugSessionListener
@@ -58,7 +59,7 @@ import com.jetbrains.python.debugger.IPyDebugProcess
 import com.jetbrains.python.debugger.PyDebugValue
 import com.jetbrains.python.debugger.PyFrameAccessor
 import com.jetbrains.python.debugger.PyFrameListener
-import com.jetbrains.python.psi.PyReferenceExpression
+import com.jetbrains.python.psi.*
 
 private class MySelectCodeProviderAction(
     val provider: ITableSourceCodeProvider,
@@ -139,7 +140,12 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
 
             runInEdt {
                 if (dataSource.frameAccessor.debugProcessIsTerminated() || parentDisposable.isDisposed || project.isDisposed) return@runInEdt
-                val completionContributor = MyFilterInputCompletionContributor(dataSource.frameAccessor, codeProvider.getDataFrameLibrary())
+                val completionContributor = MyFilterInputCompletionContributor(
+                    dataSource.frameAccessor,
+                    codeProvider.getDataFrameLibrary(),
+                    ApplicationSettingsService.instance.state.filterInputWithRuntimeCodeCompletionInPythonConsole,
+                    ApplicationSettingsService.instance.state.filterInputWithAdditionCodeCompletion,
+                )
                 DataFrameViewerDialog(
                     project,
                     evaluator,
@@ -269,17 +275,45 @@ private class MyDebugSessionListener(
 private class MyFilterInputCompletionContributor(
     private val frameAccessor: PyFrameAccessor,
     private val syntheticIdentifierType: DataFrameLibrary,
+    private val withPythonConsoleCodeCompletion: Boolean,
+    private val withPluginCodeCompletion: Boolean,
 ): IFilterInputCompletionContributor {
+
+    private data class ColNameCompletionInfo(
+        val completableText: String?,
+        val isInsideString: Boolean,
+        private val result: CompletionResultSet,
+        ) {
+
+        fun addColumnNames(names: List<String>) {
+            result.addAllElements(names.mapIndexed { index: Int, name: String ->
+                PrioritizedLookupElement.withPriority(
+                    LookupElementBuilder
+                        .create(if (isInsideString) name.removeSurrounding("\"") else name)
+                        .withTypeText("column name")
+                        .withIcon(PlatformIcons.PROPERTY_ICON),
+                    1001.0 + index,
+                    )
+            })
+        }
+    }
 
     @Volatile
     var provideSyntheticIdentifier: Boolean = false
 
+    @Volatile
+    private var myColumnNameContributor: IDataFrameColumnNameContributor? = null
+
     override fun getSyntheticIdentifierType() = syntheticIdentifierType
     override fun isSyntheticIdentifierEnabled(): Boolean = provideSyntheticIdentifier
 
+    override fun setColumnNameContributor(nameContributor: IDataFrameColumnNameContributor?) {
+        myColumnNameContributor = nameContributor
+    }
+
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
         addSyntheticIdentifier(parameters, result)
-        addCompletionVariantsForConsole(parameters, result)
+        addExternalCompletionVariants(parameters, result)
     }
 
     private fun addSyntheticIdentifier(parameters: CompletionParameters, result: CompletionResultSet) {
@@ -296,24 +330,102 @@ private class MyFilterInputCompletionContributor(
                         .withItemTextForeground(JBColor.GRAY)
                         .withTypeText("<synthetic>", true)
                         .withIcon(PlatformIcons.VARIABLE_ICON),
-                    1001.0,
+                    1000.0,
                 )
             )
         }
     }
 
-    private fun addCompletionVariantsForConsole(parameters: CompletionParameters, result: CompletionResultSet) {
+    private fun addExternalCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
+        addPandasDataFrameColumnNames(parameters, result)
+        addRuntimeCompletionVariantsForConsole(parameters, result)
+    }
+
+    private fun addPandasDataFrameColumnNames(parameters: CompletionParameters, result: CompletionResultSet) {
+        if (!withPluginCodeCompletion) return
+        if (syntheticIdentifierType != DataFrameLibrary.PANDAS) return
+        val columnNameContributor = myColumnNameContributor ?: return
+
+        val subscriptionExpr = PsiTreeUtil.getParentOfType(parameters.position, PySubscriptionExpression::class.java) ?: return
+        val refExpr = subscriptionExpr.operand as? PyReferenceExpression ?: return
+        // ignore something like "df.loc[<caret>]"
+        if (refExpr.isQualified) return
+
+        var indexExpr = subscriptionExpr.indexExpression ?: return
+
+        if (indexExpr is PyListLiteralExpression) {
+            // df[[<caret>]]
+            if (indexExpr.isEmpty) return
+            val elements =  indexExpr.elements
+            if (elements.size > 1) return
+            indexExpr = elements[0]
+        }
+
+        val completionInfo = getColNameCompletionInfo(indexExpr, parameters, result) ?: return
+        val identifier = refExpr.text
+        val isSyntheticIdentifier = provideSyntheticIdentifier && identifier == SyntheticDataFrameIdentifier.NAME
+
+        ProgressManager.checkCanceled()
+        val variants = columnNameContributor.getColumnNameVariants(
+                identifier,
+                isSyntheticIdentifier,
+                completionInfo.completableText,
+        )
+        ProgressManager.checkCanceled()
+
+        completionInfo.addColumnNames(variants)
+    }
+
+    private fun getColNameCompletionInfo(
+        indexExpr: PyExpression,
+        parameters: CompletionParameters,
+        result: CompletionResultSet,
+        ): ColNameCompletionInfo? {
+        if (indexExpr is PyReferenceExpression) {
+            if (indexExpr.text == CompletionInitializationContext.DUMMY_IDENTIFIER_TRIMMED) {
+                return ColNameCompletionInfo(null, false, result)
+            }
+        }
+        else if (indexExpr is PyStringLiteralExpression) {
+            return ColNameCompletionInfo(
+                indexExpr.text.replace(CompletionInitializationContext.DUMMY_IDENTIFIER, ""),
+                true,
+                result,
+            )
+        }
+        else if (indexExpr is PyNumericLiteralExpression && indexExpr.isIntegerLiteral) {
+            val prefixLength = parameters.offset - indexExpr.getTextRange().startOffset
+            val prefix = indexExpr.text.substring(0, prefixLength)
+
+            return ColNameCompletionInfo(
+                indexExpr.text,
+                false,
+                result.withPrefixMatcher(prefix),
+            )
+        }
+        return null
+    }
+
+    private fun addRuntimeCompletionVariantsForConsole(parameters: CompletionParameters, result: CompletionResultSet) {
         // The console based "frameAccessor" doesn't provide a sourcePosition which could be used for code completion.
         // Instead, the data is fetched from the underlying Python process.
-        if (frameAccessor !is ConsoleCommunication) return
+        if (!withPythonConsoleCodeCompletion || frameAccessor !is ConsoleCommunication) return
 
-        val parent = parameters.position.parent
-        if (parent !is PyReferenceExpression) return
-        val qName = parent.asQualifiedName() ?: return
+        val refExpr = parameters.position.parent as? PyReferenceExpression ?: return
+        val qName = refExpr.asQualifiedName() ?: return
         val actToken = qName.toString().replace(CompletionUtilCore.DUMMY_IDENTIFIER_TRIMMED, "")
 
+        // don't return if actToken is only "_df" instead of "_df."
+        // because there could be other variable names which start with "_df"
+        if (provideSyntheticIdentifier && actToken.startsWith("${SyntheticDataFrameIdentifier.NAME}.")) return
+
         val psiManager = parameters.position.manager
-        frameAccessor.getCompletions(actToken, actToken).forEach {
+
+        ProgressManager.checkCanceled()
+        val variants = frameAccessor.getCompletions(actToken, actToken)
+        ProgressManager.checkCanceled()
+
+        variants.forEachIndexed { index, it ->
             var builder = LookupElementBuilder
                 .create(PydevConsoleElement(psiManager, it.name, it.description))
                 .withIcon(PyCodeCompletionImages.getImageForType(it.type))
@@ -325,7 +437,7 @@ private class MyFilterInputCompletionContributor(
                 builder = builder.withInsertHandler(ParenthesesInsertHandler.WITH_PARAMETERS)
             }
 
-            result.addElement(PrioritizedLookupElement.withPriority(builder, 1000.0))
+            result.addElement(PrioritizedLookupElement.withPriority(builder, 100.0 + index))
         }
     }
 }

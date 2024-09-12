@@ -15,16 +15,44 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
+import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import com.intellij.codeInsight.completion.*
+import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.python.psi.PyNumericLiteralExpression
+import com.jetbrains.python.psi.PySubscriptionExpression
+
 
 /**
  * Adds additional contributions for a [AbstractFilterInput] if a [IFilterInputCompletionContributor] was installed.
  */
 class FilterInputCompletionContributor : CompletionContributor() {
 
+    override fun beforeCompletion(context: CompletionInitializationContext) {
+        // fix for: https://youtrack.jetbrains.com/issue/PY-73241
+        // Code completion can't complete integer literals inside the index [] operator of a dictionary
+
+        // The dummy identifier was already changed - return here
+        // Otherwise an exception is thrown if the "dummyIdentifier" is changed again.
+        if (context.dummyIdentifier != CompletionInitializationContext.DUMMY_IDENTIFIER) return
+
+        // The "dummyIdentifier" is changed for all registered contributors.
+        // So we have to be as specific as possible to not break other contributors.
+        if (context.completionType != CompletionType.BASIC) return
+        val completionContributor = IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR.get(context.file, null) ?: return
+        if (completionContributor.getSyntheticIdentifierType() != DataFrameLibrary.PANDAS) return
+
+        val element = context.file.findElementAt(context.caret.offset) ?: return
+        val subscription = PsiTreeUtil.getParentOfType(element, PySubscriptionExpression::class.java) ?: return
+
+        if ((subscription.indexExpression as? PyNumericLiteralExpression)?.isIntegerLiteral == true) {
+            context.dummyIdentifier = ""
+        }
+    }
+
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
+        if (parameters.completionType != CompletionType.BASIC) return
+
         IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR
-            .get(parameters.originalFile, null)
-            ?.fillCompletionVariants(parameters, result)
+            .get(parameters.originalFile, null)?.fillCompletionVariants(parameters, result)
     }
 }

@@ -109,6 +109,25 @@ interface IPyTableSourceRef: Disposable {
      */
     @Throws(EvaluateException::class)
     fun evaluateGetOrgIndicesOfVisibleColumns(partStart: Int, maxColumns: Int): List<Int>
+
+    /**
+     * Calls the "get_column_name_variants" method of the Python class.
+     *
+     * Provides completion variants for column names.
+     *
+     * @param identifier identifier to reference the DataFrame.
+     * @param isSyntheticIdentifier true if the identifier is the synthetic DataFrame identifier.
+     * @param literalToComplete a string literal (surrounded with "" or ''), an int literal or null to evaluate possible variants.
+     * In case of null the returned names contain string and integer names.
+     *
+     * @return list of matching column names. String literals are surrounded by "".
+     */
+    @Throws(EvaluateException::class)
+    fun evaluateGetColumnNameVariants(
+        identifier: String,
+        isSyntheticIdentifier: Boolean,
+        literalToComplete: String?,
+        ): List<String>
 }
 
 /**

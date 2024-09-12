@@ -15,11 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components
 
-import cms.rendner.intellij.dataframe.viewer.components.filter.FilterInputFactory
-import cms.rendner.intellij.dataframe.viewer.components.filter.AbstractFilterInput
-import cms.rendner.intellij.dataframe.viewer.components.filter.FilterInputState
-import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterInputChangedListener
-import cms.rendner.intellij.dataframe.viewer.components.filter.IFilterInputCompletionContributor
+import cms.rendner.intellij.dataframe.viewer.components.filter.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.IChunkValidationProblemHandler
@@ -59,7 +55,7 @@ class DataFrameViewerDialog(
     private val project: Project,
     private val myEvaluator: IPluginPyValueEvaluator,
     dataSourceInfo: DataSourceInfo,
-    filterCompletionContributor: IFilterInputCompletionContributor,
+    private val filterCompletionContributor: IFilterInputCompletionContributor,
     private val dataSourceTransformHint: DataSourceTransformHint?,
     ) :
         DialogWrapper(project, false),
@@ -273,12 +269,23 @@ class DataFrameViewerDialog(
 
     private class RunningCreatorProcess(var creator: TableSourceCreator, var progressIndicator: ProgressIndicator)
 
+    private class MyColumnNameContributor(private val tableSourceRef: IPyTableSourceRef): IDataFrameColumnNameContributor {
+        override fun getColumnNameVariants(
+            identifier: String,
+            isSyntheticIdentifier: Boolean,
+            literalToComplete: String?
+        ): List<String> {
+            return tableSourceRef.evaluateGetColumnNameVariants(identifier, isSyntheticIdentifier, literalToComplete)
+        }
+    }
+
     private inner class MyTableSourceCreator(evaluator: IPluginPyValueEvaluator) : TableSourceCreator(evaluator) {
 
         override fun handleFailure(request: Request, failure: CreateTableSourceFailure) = runInEdt {
             if (shouldHandleCreatorResult(this)) {
                 cleanupRunningCreatorProcess()
                 updateApplyFilterButtonState()
+                filterCompletionContributor.setColumnNameContributor(null)
                 when (failure.errorKind) {
                     CreateTableSourceErrorKind.RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE,
                     CreateTableSourceErrorKind.INVALID_FINGERPRINT -> close(CANCEL_EXIT_CODE)
@@ -332,6 +339,7 @@ class DataFrameViewerDialog(
                 }
 
                 if (myDataSourceInfo.filterable) {
+                    filterCompletionContributor.setColumnNameContributor(MyColumnNameContributor(result.tableSourceRef))
                     if (request.filterInputState!!.text.isNotEmpty() && request.filterInputState.text == myFilterInput!!.getText()) {
                         myFilterInput.saveInputInHistory()
                     }

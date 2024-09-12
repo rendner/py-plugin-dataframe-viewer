@@ -22,6 +22,7 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PandasCodeProvider
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PolarsCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 
 /**
@@ -71,6 +72,16 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         config: CreateTableSourceConfig? = null,
     ): T {
         val tableSource = createTableSource(evaluator, dataSourceExpr, PandasCodeProvider(), config)
+        check(tableSource is T)
+        return tableSource
+    }
+
+    protected inline fun <reified T: IPyTableSourceRef>createPolarsTableSource(
+        evaluator: IPluginPyValueEvaluator,
+        dataSourceExpr: String,
+        config: CreateTableSourceConfig? = null,
+    ): T {
+        val tableSource = createTableSource(evaluator, dataSourceExpr, PolarsCodeProvider(), config)
         check(tableSource is T)
         return tableSource
     }

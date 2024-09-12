@@ -13,8 +13,9 @@
 #  limitations under the License.
 import inspect
 from abc import ABC, abstractmethod
-from typing import Any, List, Union, TypeVar, Type
+from typing import Any, List, Union, TypeVar
 
+from cms_rendner_sdfv.base.temp import TEMP_VARS
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, TableFrame, \
     TableSourceKind, TableStructure, CreateTableSourceErrorKind
@@ -196,9 +197,6 @@ class AbstractTableSource(ABC):
             exclude_row_header=exclude_row_header,
             exclude_col_header=exclude_col_header,
         )
-
-
-TEMP_VARS = {}
 
 
 class AbstractTableSourceFactory(ABC):

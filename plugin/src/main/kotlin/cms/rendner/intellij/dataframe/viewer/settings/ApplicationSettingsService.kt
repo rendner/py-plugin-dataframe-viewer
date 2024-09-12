@@ -40,7 +40,9 @@ class ApplicationSettingsService : PersistentStateComponent<ApplicationSettingsS
 
     data class MyState (
         var pandasStyledFuncValidationEnabled: Boolean = false,
-        var fsUseFilterInputFromInternalApi: Boolean = true,
+        var filterInputFromInternalApi: Boolean = true,
+        var filterInputWithAdditionCodeCompletion: Boolean = true,
+        var filterInputWithRuntimeCodeCompletionInPythonConsole: Boolean = true,
     )
 
     override fun getState(): MyState {

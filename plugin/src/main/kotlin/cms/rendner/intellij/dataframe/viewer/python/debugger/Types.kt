@@ -18,7 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.python.debugger
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 
 /**
- * Holds a reference to a Python object or a result evaluated on Python side.
+ * Describes a Python object or a result evaluated on Python side.
  *
  * @property value the evaluation result as string
  * @property type the class type of the Python object
@@ -41,7 +41,7 @@ data class PluginPyValue(
         get() = value!!
 
     val qualifiedType: String
-        get() = "$typeQualifier.$type"
+        get() = if (typeQualifier.isNotEmpty()) "$typeQualifier.$type" else type
 }
 
 /**

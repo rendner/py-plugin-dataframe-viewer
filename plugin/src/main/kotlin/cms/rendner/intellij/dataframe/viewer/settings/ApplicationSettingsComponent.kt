@@ -32,8 +32,12 @@ class SettingsComponent {
 
     private val myPandasStyledFuncValidationEnabledCheckBox =
         JBCheckBox("Validate pandas style functions")
-    private val myFSUseFilterInputFromInternalApiCheckBox =
-        JBCheckBox("Filter input: use editor from internal IntelliJ API")
+    private val myFilterInputFromInternalApiCheckBox =
+        JBCheckBox("Use editor from internal IntelliJ API")
+    private val myFilterInputWithAdditionCodeCompletion =
+        JBCheckBox("Code completion provided by plugin")
+    private val myFilterInputWithRuntimeCodeCompletionInPythonConsole =
+        JBCheckBox("Runtime code completion (Python Console)")
 
     private val myPanel: JPanel
 
@@ -43,24 +47,43 @@ class SettingsComponent {
             myPandasStyledFuncValidationEnabledCheckBox.isSelected = value
         }
 
-    var fsUseFilterInputFromInternalApi: Boolean
-        get() = myFSUseFilterInputFromInternalApiCheckBox.isSelected
+    var filterInputFromInternalApi: Boolean
+        get() = myFilterInputFromInternalApiCheckBox.isSelected
         set(value) {
-            myFSUseFilterInputFromInternalApiCheckBox.isSelected = value
+            myFilterInputFromInternalApiCheckBox.isSelected = value
+        }
+
+    var filterInputWithAdditionCodeCompletion: Boolean
+        get() = myFilterInputWithAdditionCodeCompletion.isSelected
+        set(value) {
+            myFilterInputWithAdditionCodeCompletion.isSelected = value
+        }
+
+    var filterInputWithRuntimeCodeCompletionInPythonConsole: Boolean
+        get() = myFilterInputWithRuntimeCodeCompletionInPythonConsole.isSelected
+        set(value) {
+            myFilterInputWithRuntimeCodeCompletionInPythonConsole.isSelected = value
         }
 
 
     init {
         val dataFetchingSettingsPanel = FormBuilder.createFormBuilder()
             .addComponent(myPandasStyledFuncValidationEnabledCheckBox)
-            .addTooltip("Validates that styling functions return stable results for chunks of different sizes.")
+            .addTooltip("Validates that styling functions return stable results for chunked results. Only used for pandas.Styler.")
             .panel
         dataFetchingSettingsPanel.border = createTitleBorder("Data fetching")
 
+        val filterInputSettingsPanel = FormBuilder.createFormBuilder()
+            .addComponent(myFilterInputFromInternalApiCheckBox)
+            .addTooltip("Stores a filter history. May not be available due to internal API changes.")
+            .addComponent(myFilterInputWithAdditionCodeCompletion)
+            .addTooltip("Adds completion for pandas DataFrame column names.")
+            .addComponent(myFilterInputWithRuntimeCodeCompletionInPythonConsole)
+            .addTooltip("Adds code completion when plugin is used with Python Console.")
+            .panel
+        filterInputSettingsPanel.border = createTitleBorder("Filter input")
+
         val featureSwitchPanel = FormBuilder.createFormBuilder()
-            .addComponent(myFSUseFilterInputFromInternalApiCheckBox)
-            .addTooltip("Stores the filter history. May not be available due to internal API changes.")
-            .addTooltip("(For pandas DataFrames)")
             .panel
         featureSwitchPanel.border = createTitleBorder("Feature switches")
 
@@ -74,6 +97,7 @@ class SettingsComponent {
             )
             .addVerticalGap(10)
             .addComponent(dataFetchingSettingsPanel)
+            .addComponent(filterInputSettingsPanel)
             .addComponent(featureSwitchPanel)
             .addComponentFillVertically(Box.createVerticalGlue() as JComponent, 0)
             .panel

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
 import cms.rendner.junit.RequiresPandas
+import cms.rendner.junit.RequiresPolars
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.junit.jupiter.api.Order
@@ -30,22 +31,8 @@ import org.junit.jupiter.api.Test
  * The functionality of the methods is tested in the Python plugin-code projects.
  */
 @Order(3)
-@RequiresPandas
-internal class TableSourceRefTest : AbstractPluginCodeTest() {
-
-    override fun afterContainerStart() {
-        /*
-        The TableSource doesn't use jinja2.
-        To proof that a normal TableSource also works without jinja2, the module has to be removed.
-
-        Normally this test should be done in the Python project. But this would require a Python project
-        without jinja2 for the TableSource code and one with jinja for the PatchedStyler.
-        Having two separate Python projects for each supported version of pandas doesn't scale well.
-         */
-
-        // long-running process
-        uninstallPythonModules("jinja2")
-    }
+@RequiresPolars
+internal class PolarsTableSourceRefTest : AbstractPluginCodeTest() {
 
     @Test
     fun evaluateTableStructure_shouldBeCallable() {
@@ -86,15 +73,6 @@ internal class TableSourceRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun evaluateGetOrgIndicesOfVisibleColumns_shouldBeCallable() {
-        runWithTableSource { tableSource ->
-            assertThatNoException().isThrownBy {
-                tableSource.evaluateGetOrgIndicesOfVisibleColumns(0, 999)
-            }
-        }
-    }
-
-    @Test
     fun evaluateGetColumnNameVariants_shouldBeCallable() {
         runWithTableSource { tableSource ->
             tableSource.evaluateGetColumnNameVariants("df", false, "''").let {
@@ -105,18 +83,18 @@ internal class TableSourceRefTest : AbstractPluginCodeTest() {
 
     private fun runWithTableSource(block: (patchedStyler: IPyTableSourceRef) -> Unit) {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
-            block(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df"))
+            block(createPolarsTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df"))
         }
     }
 
     private fun createDataFrameSnippet() = """
-                import pandas as pd
-                
-                df = pd.DataFrame.from_dict({
-                    "col_0": [0, 1],
-                    "col_1": [2, 3],
-                })
-                
-                breakpoint()
-            """.trimIndent()
+            |import polars as pl
+            |
+            |df = pl.from_dict({
+            |    "col_0": [0, 1],
+            |    "col_1": [2, 3],
+            |})
+            |
+            |breakpoint()
+        """.trimMargin()
 }

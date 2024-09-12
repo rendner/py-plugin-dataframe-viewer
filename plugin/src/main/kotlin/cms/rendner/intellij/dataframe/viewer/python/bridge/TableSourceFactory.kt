@@ -16,6 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.python.bridge
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
+import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.CreateTableSourceException
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceKind
@@ -30,7 +31,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private val json: Json by lazy { Json { ignoreUnknownKeys = true } }
-private val tempVarsDictRef = stringifyImportWithObjectRef("cms_rendner_sdfv.base.table_source", "TEMP_VARS")
+private val tempVarsDictRef = stringifyImportWithObjectRef("cms_rendner_sdfv.base.temp", "TEMP_VARS")
 
 /**
  * Creates [IPyTableSourceRef] instances to enable "communication" with pandas objects.
@@ -137,6 +138,28 @@ class TableSourceFactory {
                     numberParam(maxColumns)
                 }
             )
+        }
+
+        override fun evaluateGetColumnNameVariants(
+            identifier: String,
+            isSyntheticIdentifier: Boolean,
+            literalToComplete: String?,
+            ): List<String> {
+            return try {
+                fetchResultAsJsonAndDecode(
+                    stringifyMethodCall(refExpr, "get_column_name_variants") {
+                        if (isSyntheticIdentifier) noneParam() else refParam(identifier)
+                        boolParam(isSyntheticIdentifier)
+                        if (literalToComplete == null ) noneParam() else refParam(literalToComplete)
+                    }
+                )
+            } catch (e: EvaluateException) {
+                if (e.pythonErrorQName == PythonQualifiedTypes.NameError) {
+                    // If "identifier" is a non-existing variable name Python raises a "NameError".
+                    // In that case the error is swallowed and an empty list returned.
+                    emptyList()
+                } else throw e
+            }
         }
 
         protected inline fun <reified T> fetchResultAsJsonAndDecode(methodCallExpr: String): T {

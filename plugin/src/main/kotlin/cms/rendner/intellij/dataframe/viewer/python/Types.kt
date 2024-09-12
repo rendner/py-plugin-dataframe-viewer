@@ -28,6 +28,7 @@ object PythonQualifiedTypes {
     const val FLOAT = "builtins.float"
     const val MODULE = "builtins.module"
     const val NameError = "builtins.NameError"
+    const val SyntaxError = "builtins.SyntaxError"
 }
 
 object PandasTypes {

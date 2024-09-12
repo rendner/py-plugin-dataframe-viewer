@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package cms.rendner.integration.debugger
 
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
+import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.*
@@ -39,11 +40,11 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 debuggerApi.evaluator.execute("multi = 'line_1\nline_2'")
-            }.withMessageStartingWith("{SyntaxError}")
+            }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.SyntaxError)
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 debuggerApi.evaluator.evaluate("'line_1\nline_2'")
-            }.withMessageStartingWith("{SyntaxError}")
+            }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.SyntaxError)
         }
     }
 
@@ -76,7 +77,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 debuggerApi.evaluator.evaluate("abc(42)")
-            }.withMessageContaining("{NameError} name 'abc' is not defined")
+            }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.NameError)
         }
     }
 
@@ -139,7 +140,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 debuggerApi.evaluator.execute("import")
-            }.withMessageContaining("{SyntaxError} invalid syntax")
+            }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.SyntaxError)
         }
     }
 
@@ -192,7 +193,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 debuggerApi.evaluator.evaluate("${dict.refExpr}['a']")
-            }.withMessageContaining("{NameError} name '${dict.refExpr}' is not defined")
+            }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.NameError)
         }
     }
 

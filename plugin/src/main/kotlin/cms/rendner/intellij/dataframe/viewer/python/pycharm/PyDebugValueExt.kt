@@ -111,13 +111,16 @@ private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFram
     override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
         try {
             val result: PyDebugValue = frameAccessor.evaluate(expression, false, trimResult)
-                ?: throw EvaluateException("Evaluation aborted, timeout threshold reached.")
+                ?: throw EvaluateException("Evaluation aborted, timeout threshold reached.", null)
             if (result.isErrorOnEval) {
-                throw EvaluateException("{${result.type}} ${result.value ?: EvaluateException.EVAL_FALLBACK_ERROR_MSG}")
+                throw EvaluateException(
+                    "{${result.type}} ${result.value ?: EvaluateException.EVAL_FALLBACK_ERROR_MSG}",
+                    result.qualifiedType,
+                    )
             }
             return result.toPluginType()
         } catch (ex: PyDebuggerException) {
-            throw EvaluateException(EvaluateException.EVAL_FALLBACK_ERROR_MSG, ex.toPluginType())
+            throw EvaluateException(EvaluateException.EVAL_FALLBACK_ERROR_MSG, null, ex.toPluginType())
         }
     }
 
@@ -128,12 +131,15 @@ private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFram
 
         try {
             val result: PyDebugValue = frameAccessor.evaluate(s, true, false)
-                ?: throw EvaluateException("Execution aborted, timeout threshold reached.")
+                ?: throw EvaluateException("Execution aborted, timeout threshold reached.", null)
             if (result.isErrorOnEval) {
-                throw EvaluateException(result.value ?: EvaluateException.EXEC_FALLBACK_ERROR_MSG)
+                throw EvaluateException(
+                    result.value ?: EvaluateException.EXEC_FALLBACK_ERROR_MSG,
+                    result.qualifiedType,
+                )
             }
         } catch (ex: PyDebuggerException) {
-            throw EvaluateException(EvaluateException.EXEC_FALLBACK_ERROR_MSG, ex.toPluginType())
+            throw EvaluateException(EvaluateException.EXEC_FALLBACK_ERROR_MSG, null, ex.toPluginType())
         }
     }
 
