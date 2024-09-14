@@ -45,6 +45,9 @@ object TestProperty {
         return System.getProperty("cms.rendner.dataframe.viewer.dataframe.libraries", "")
             .removeSurrounding(prefix = "[", suffix = "]")
             .split(",")
-            .map { lib -> DataFrameLibrary.values().first { it.moduleName == lib } }
+            .map { libName ->
+                val trimmedLibName = libName.trim()
+                DataFrameLibrary.values().first { it.moduleName == trimmedLibName }
+            }
     }
 }
