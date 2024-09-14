@@ -23,12 +23,14 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.events.ChunkTableMod
 import com.intellij.ide.IdeTooltip
 import com.intellij.ide.IdeTooltipManager
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.table.JBTable
 import org.intellij.lang.annotations.MagicConstant
 import java.awt.*
+import java.awt.datatransfer.StringSelection
 import java.awt.event.*
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
@@ -228,6 +230,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         setMaxItemsForSizeCalculation(1)
 
         registerSortKeyBindings()
+        registerCopyKeyBindings()
         disableProblematicKeyBindings()
     }
 
@@ -382,6 +385,15 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         return columnModel.getColumn(viewColumnIndex) as MyValueTableColumn
     }
 
+    private fun registerCopyKeyBindings() {
+        getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
+            put(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "copySelectedCellValue")
+        }
+        actionMap.apply {
+            put("copySelectedCellValue", MyCopySelectedCellValueAction())
+        }
+    }
+
     private fun registerSortKeyBindings() {
         getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
             put(KeyStroke.getKeyStroke(KeyEvent.VK_A, 0), "sortColumnAscending")
@@ -410,6 +422,25 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
             "doNothing",
         )
         actionMap.put("doNothing", DoNothingAction())
+    }
+
+    private class MyCopySelectedCellValueAction: AbstractAction() {
+        override fun actionPerformed(event: ActionEvent) {
+            (event.source as MyValueTable).let { table ->
+                table.model?.let { tableModel ->
+                    val row = table.selectedRow
+                    val col = table.selectedColumn
+                    if (row != -1 && col != -1) {
+                        val cellValue = tableModel.getValueAt(row, col)
+                        // todo: use CopyPasteManager.getInstance().copyTextToClipboard
+                        //  when setting min version for plugin >= 2024.1
+                        try {
+                            CopyPasteManager.getInstance().setContents(StringSelection(cellValue.text()))
+                        } catch (ignore: Exception) { }
+                    }
+                }
+            }
+        }
     }
 
     private class DoNothingAction : AbstractAction() {

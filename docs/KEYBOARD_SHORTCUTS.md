@@ -17,6 +17,13 @@ Requires a focused table cell to use these actions.
 
 [^2]: Shrinking an unfixed column can have no effect if shrinking would reduce the width below the required column width or the width of the table viewport.
 
+### Table Copy
+Requires a focused table cell to use these actions.
+
+| Shortcut                                                                   | Action                      |
+|----------------------------------------------------------------------------|-----------------------------|
+| <kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>Command</kbd> + <kbd>C</kbd> (macOS) | Copy value of focused cell. |
+
 ### Table Sorting
 Requires a focused table cell to use these actions.
 

@@ -61,12 +61,12 @@ abstract class AbstractChunkDataLoader(
      * @return the fetch-chunk task.
      */
     protected fun submitFetchChunkTask(ctx: LoadChunkContext, executor: Executor): CompletableFuture<Void> {
-        return CompletableFuture.runAsync(createFetchAndValidateTask(ctx), executor)
+        return CompletableFuture.runAsync(createFetchTask(ctx), executor)
     }
 
     protected abstract fun handleChunkData(ctx: LoadChunkContext, chunkData: ChunkData)
 
-    private fun createFetchAndValidateTask(ctx: LoadChunkContext): Runnable {
+    private fun createFetchTask(ctx: LoadChunkContext): Runnable {
         return Runnable {
             var errMessage = ""
             try {

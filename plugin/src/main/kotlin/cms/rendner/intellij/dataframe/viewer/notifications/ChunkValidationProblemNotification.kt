@@ -22,10 +22,10 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.util.text.StringUtil
 import java.awt.Dimension
-import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.lang.Integer.min
 import javax.swing.JOptionPane
@@ -57,8 +57,9 @@ class ChunkValidationProblemNotification(
 
         override fun actionPerformed(p0: AnActionEvent) {
             val message = ClipboardReportGenerator().createReport(problems)
-            val selection = StringSelection(message)
-            Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
+            try {
+                CopyPasteManager.getInstance().setContents(StringSelection(message))
+            } catch (ignore: Exception) { }
         }
     }
 
