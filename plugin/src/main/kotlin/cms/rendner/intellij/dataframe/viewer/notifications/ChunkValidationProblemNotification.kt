@@ -16,12 +16,16 @@
 package cms.rendner.intellij.dataframe.viewer.notifications
 
 import cms.rendner.intellij.dataframe.viewer.DataFrameViewerIcons
+import cms.rendner.intellij.dataframe.viewer.MyPlugin
 import cms.rendner.intellij.dataframe.viewer.python.bridge.ProblemReason
 import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionValidationProblem
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.util.text.StringUtil
@@ -162,8 +166,17 @@ class ChunkValidationProblemNotification(
     private class ClipboardReportGenerator : AbstractReportGenerator() {
         override fun stringify(sections: List<Section>): String {
             return StringBuilder().apply {
+                appendPluginAndIdeInfo(this)
+                appendLine()
                 sections.forEach { appendSection(this, it) }
             }.toString()
+        }
+
+        private fun appendPluginAndIdeInfo(sb: StringBuilder) {
+            try {
+                sb.appendLine("pluginVersion: ${PluginManagerCore.getPlugin(PluginId.getId(MyPlugin.ID))?.version ?: "unknown"}")
+                sb.appendLine("IDE-buildNumber: ${ApplicationInfo.getInstance().build.asString()}")
+            } catch (ignore: Exception) {}
         }
 
         private fun appendSection(sb: StringBuilder, section: Section) {

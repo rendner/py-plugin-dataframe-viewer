@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.notifications
 
+import cms.rendner.intellij.dataframe.viewer.MyPlugin
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationGroup
 import com.intellij.notification.NotificationGroupManager
@@ -24,7 +25,7 @@ import com.intellij.notification.NotificationType
 // https://plugins.jetbrains.com/docs/intellij/notifications.html#notificationgroup-20203-and-later
 private val BALLOON: NotificationGroup = NotificationGroupManager
     .getInstance()
-    .getNotificationGroup("cms.rendner.StyledDataFrameViewer")
+    .getNotificationGroup(MyPlugin.NOTIFICATION_GROUP)
 
 abstract class AbstractBalloonNotification(
     title: String,
