@@ -26,6 +26,7 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.Evaluate
 import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyBool
 import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyImportWithObjectRef
 import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyMethodCall
+import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -86,11 +87,16 @@ class TableSourceFactory {
     private open class PyTableSourceRef(pythonValue: PluginPyValue, val tempVarSlotId: String?) : IPyTableSourceRef {
         protected val refExpr: String = if (tempVarSlotId != null) "$tempVarsDictRef['${tempVarSlotId}']" else pythonValue.refExpr
         protected val evaluator: IPluginPyValueEvaluator = pythonValue.evaluator
+        protected val idsToClean: MutableList<String> = mutableListOf()
 
         override fun dispose() {
-            if (tempVarSlotId == null) return
             try {
-                evaluator.evaluate("$tempVarsDictRef.pop('${tempVarSlotId}', None)")
+                // A cleaner is used to ensure the cleanup.
+                // The underlying tableSource could be gone (stack frame already dropped) and the cleanup would fail.
+                idsToClean.add(tempVarSlotId ?: refExpr)
+                val ids = convertCurrentCleanableIdsToPythonListString()
+                val methodRef = stringifyImportWithObjectRef("cms_rendner_sdfv.base.temp", "EvaluatedVarsCleaner.clear")
+                evaluator.execute("$methodRef(${ids})")
             } catch (ignore: Throwable) {}
         }
 
@@ -163,9 +169,22 @@ class TableSourceFactory {
         }
 
         protected inline fun <reified T> fetchResultAsJsonAndDecode(methodCallExpr: String): T {
-            return evaluator.evaluate("${refExpr}.jsonify($methodCallExpr)").forcedValue.let {
-                json.decodeFromString(it.removeSurrounding("\""))
+            val ids = convertCurrentCleanableIdsToPythonListString()
+            val expr = "${refExpr}.clear($ids).jsonify($methodCallExpr)"
+            return evaluator.evaluate(expr).let {
+                // PyCharms "Python Console" doesn't assign temp-var identifier to refer to an evaluated result.
+                // The "refExpr" is in that case equals the evaluated expression.
+                if (it.refExpr != expr) {
+                    idsToClean.add(it.refExpr)
+                }
+                json.decodeFromString(it.forcedValue.removeSurrounding("\""))
             }
+        }
+
+        protected fun convertCurrentCleanableIdsToPythonListString(): String {
+            val ids = idsToClean.joinToString(prefix = "[", postfix = "]") { stringifyString(it) }
+            idsToClean.clear()
+            return ids
         }
     }
 

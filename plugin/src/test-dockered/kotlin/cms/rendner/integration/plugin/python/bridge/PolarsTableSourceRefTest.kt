@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,9 @@ import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
-import cms.rendner.junit.RequiresPandas
+import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.junit.RequiresPolars
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatNoException
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
@@ -78,6 +77,24 @@ internal class PolarsTableSourceRefTest : AbstractPluginCodeTest() {
             tableSource.evaluateGetColumnNameVariants("df", false, "''").let {
                 assertThat(it).isEqualTo(listOf("\"col_0\"", "\"col_1\""))
             }
+        }
+    }
+
+    @Test
+    fun shouldCleanupOnDispose() {
+        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
+            val tableSource = createPolarsTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df")
+
+            tableSource.dispose()
+
+            // expect instance is disposed and throws if trying to interact with
+            assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
+                tableSource.evaluateTableStructure()
+            }
+
+            // but original df is still accessible
+            val result = debuggerApi.evaluator.evaluate("df")
+            assertThat(result.qualifiedType).isEqualTo("polars.dataframe.frame.DataFrame")
         }
     }
 

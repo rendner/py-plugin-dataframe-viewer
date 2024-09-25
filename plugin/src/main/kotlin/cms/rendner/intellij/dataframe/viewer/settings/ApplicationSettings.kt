@@ -57,9 +57,9 @@ class ApplicationSettings : Configurable {
         return mySettingsComponent?.let {
             val settings = ApplicationSettingsService.instance.state
             it.pandasStyledFuncValidationEnabled != settings.pandasStyledFuncValidationEnabled ||
-            it.filterInputFromInternalApi != settings.filterInputFromInternalApi ||
-            it.filterInputWithAdditionCodeCompletion != settings.filterInputWithAdditionCodeCompletion ||
-            it.filterInputWithRuntimeCodeCompletionInPythonConsole != settings.filterInputWithRuntimeCodeCompletionInPythonConsole
+                    it.filterInputFromInternalApi != settings.filterInputFromInternalApi ||
+                    it.filterInputWithAdditionCodeCompletion != settings.filterInputWithAdditionCodeCompletion ||
+                    it.filterInputWithRuntimeCodeCompletionInPythonConsole != settings.filterInputWithRuntimeCodeCompletionInPythonConsole
         } ?: false
     }
 

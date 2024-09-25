@@ -116,7 +116,7 @@ private class FrameAccessorBasedValueEvaluator(private val frameAccessor: PyFram
                 throw EvaluateException(
                     "{${result.type}} ${result.value ?: EvaluateException.EVAL_FALLBACK_ERROR_MSG}",
                     result.qualifiedType,
-                    )
+                )
             }
             return result.toPluginType()
         } catch (ex: PyDebuggerException) {

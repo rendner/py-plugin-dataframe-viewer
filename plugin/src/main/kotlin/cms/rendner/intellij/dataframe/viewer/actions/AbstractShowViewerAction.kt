@@ -140,11 +140,12 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
 
             runInEdt {
                 if (dataSource.frameAccessor.debugProcessIsTerminated() || parentDisposable.isDisposed || project.isDisposed) return@runInEdt
+                val settings = ApplicationSettingsService.instance.state
                 val completionContributor = MyFilterInputCompletionContributor(
                     dataSource.frameAccessor,
                     codeProvider.getDataFrameLibrary(),
-                    ApplicationSettingsService.instance.state.filterInputWithRuntimeCodeCompletionInPythonConsole,
-                    ApplicationSettingsService.instance.state.filterInputWithAdditionCodeCompletion,
+                    settings.filterInputWithRuntimeCodeCompletionInPythonConsole,
+                    settings.filterInputWithAdditionCodeCompletion,
                 )
                 DataFrameViewerDialog(
                     project,
