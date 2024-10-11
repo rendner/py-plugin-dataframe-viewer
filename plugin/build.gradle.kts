@@ -119,6 +119,10 @@ tasks {
         // order of python versions: latest to oldest
         // order of pipenv environments: latest to oldest
         singlePipenvEnvironmentImage(
+            "3.13",
+            PipenvEnvironment("python_3.13", listOf("pandas", "polars")),
+        ),
+        singlePipenvEnvironmentImage(
             "3.12",
             PipenvEnvironment("python_3.12", listOf("pandas", "polars")),
         ),

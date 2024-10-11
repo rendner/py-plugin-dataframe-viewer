@@ -1,0 +1,7 @@
+Jinja2==3.1.4
+matplotlib==3.9.2
+numpy==2.1.0
+pytz==2024.2
+#pyarrow==17.0.0
+pandas==2.2.3
+polars==1.10.0
