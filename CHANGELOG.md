@@ -171,7 +171,7 @@ All already supported `Styler` methods are now also usable with pandas 1.5.
 ### Added
 #### Table Filtering
 The table can now be filtered by specifying a Python filter expression.
-A detailed description about filtering can be found [here](./docs/FILTERING.md).
+A detailed description about filtering can be found [here](./docs/PANDAS_FILTERING.md).
 
 #### Auto Closing
 The dialog is now automatically closed when the debug session is terminated or the viewed `DataFrame` isn't
@@ -275,7 +275,7 @@ The plugin now offers the possibility to validate styling functions automaticall
 
 The feature is currently in experimental status. Please let me know if anything is not working, feedback of any kind is welcome.
 
-Curious? [Here we go](./docs/VALIDATING_STYLE_FUNCTIONS.md)
+Curious? [Here we go](./docs/PANDAS_VALIDATING_STYLE_FUNCTIONS.md)
 
 ### Fixed
 - small table cell height (cells now have an extra top and bottom padding)

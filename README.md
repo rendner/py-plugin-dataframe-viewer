@@ -20,27 +20,26 @@
 
 
 ## What It Is
-View, [sort](./docs/SORTING.md) and [filter](./docs/FILTERING.md) `DataFrames`, styled [pandas](https://pandas.pydata.org/docs/getting_started/index.html) `DataFrames` or a Python `dict` when debugging.
+View, sort and filter `DataFrames` or a Python `dict` when debugging.
 
 Note: The plugin requires one of the supported Python DataFrame libraries:
 - `pandas`
-- `polars` (experimental)
+- `polars`
 
 ![preview of the plugin](./docs/images/plugin_preview.png)
 
 ## Supported DataFrame Libraries
 - [pandas DataFrame](./docs/PANDAS_DATAFRAME.md)
-- [polars DataFrame (experimental)](./docs/POLARS_DATAFRAME.md)
+- [polars DataFrame](./docs/POLARS_DATAFRAME.md)
 
 ## Features
-- [filtering](./docs/FILTERING.md)
-- [sorting](./docs/SORTING.md)
+- filtering
+- sorting
 - [keyboard shortcuts to work efficiently](./docs/KEYBOARD_SHORTCUTS.md)
 - [settings to configure plugin behavior](./docs/SETTINGS.md)
 
 ## How Does It Work
-The plugin can be used to view DataFrames from a `Debug Session` or a `Python Console` (experimental).
-
+The plugin can be used to view DataFrames from a `Debug Session` or a `Python Console`.
 
 ### Quick Example: Debug Session
 Generate a `DataFrame`:
@@ -73,10 +72,7 @@ This opens a new window which shows the `DataFrame` `df`:
 
 ![DataFrame df](./docs/images/quick_example-dialog.png)
 
-### Quick Example: Python Console (experimental)
-Note: Filtering is currently not implemented for the `Python console`.
-
-
+### Quick Example: Python Console
 Enter the code to generate a `DataFrame`:
 ```python
 # code for pandas

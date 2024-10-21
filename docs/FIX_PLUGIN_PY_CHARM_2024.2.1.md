@@ -1,8 +1,9 @@
+> [!NOTE]
+> The bug was fixed in PyCharm `2024.2.3`.
+
 ## Fixing Non-Working Plugin
 PyCharm 2024.2.1 has a bug which makes the plugin unusable.
 The plugin isn't able to fetch the required data from the underlying Python process and stays empty.
-
-The bug is tracked here: https://youtrack.jetbrains.com/issue/PY-75581
 
 ### Workaround
 As the plugin only loads the required data in the form of strings, you can easily configure a `custom type renderer` as a temporary workaround until the behavior is fixed in PyCharm.

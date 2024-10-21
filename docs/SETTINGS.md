@@ -14,9 +14,33 @@ In the settings dialog select **Tools > Styled DataFrame Viewer**
 ## Data fetching
 
 ### Validate Pandas Style Functions
+Default: `off`
 
 Allows to automatically validate used style functions whenever data is fetched from the running Python process.
-> For more information read: [Validating Style Functions](VALIDATING_STYLE_FUNCTIONS.md)
+> For more information read: [Validating Style Functions](PANDAS_VALIDATING_STYLE_FUNCTIONS.md)
+
+## Filter input
+### Use editor from internal IntelliJ API
+Default: `on`
+
+The internal editor keeps a history of entered expressions (per project).
+And may have some additional features. 
+In case the internal editor is not available, a simplified version is used instead.
+
+### Code completion provided by plugin
+Default: `on`
+
+#### [pandas] Column Names
+When you invoke code completion, the completion popup contains also the column names of the DataFrame.
+
+### Runtime code completion (Python Console)
+Default: `on`
+
+The filter input for the Python Console uses runtime code completion.
+
+Runtime code completion may lead to certain side effects, such as unintentional code execution without an explicit user input.
 
 ## Feature switches
 Enable/disable experimental or unsupported features.
+
+At the moment there are no feature switches available.

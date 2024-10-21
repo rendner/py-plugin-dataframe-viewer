@@ -7,9 +7,9 @@ The plugin allows you to view Python `dicts`, pandas `DataFrames` and styled one
 
 **Features:**
 - [sortable](./SORTING.md)
-- [filterable](./FILTERING.md)
+- [filterable](./PANDAS_FILTERING.md)
 - [keyboard shortcuts to work efficiently](./KEYBOARD_SHORTCUTS.md)
-- [automatic detection of not chunk aware styling functions](./VALIDATING_STYLE_FUNCTIONS.md)
+- [automatic detection of not chunk aware styling functions](./PANDAS_VALIDATING_STYLE_FUNCTIONS.md)
 
 
 ## Data Formatting
@@ -183,4 +183,4 @@ def my_highlight_max_using_kwargs(series, **kwargs):
 Depending on the complexity of a custom styling function it can be hard to determine if the displayed result is always correct.
 
 The plugin can do some of the work for you and automatically try to detect problems in the background.
-Check [Validating Style Functions](./VALIDATING_STYLE_FUNCTIONS.md)
+Check [Validating Style Functions](./PANDAS_VALIDATING_STYLE_FUNCTIONS.md)

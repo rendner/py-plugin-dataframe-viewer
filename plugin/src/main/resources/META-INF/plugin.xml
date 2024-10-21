@@ -9,14 +9,14 @@
     -->
 
     <description><![CDATA[
-    View, <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/SORTING.md">sort</a> and <a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/FILTERING.md">filter</a> <i>DataFrames</i>, styled <a href="https://pandas.pydata.org/docs/getting_started/index.html">pandas</a> <i>DataFrames</i> or a Python <i>dict</i> when debugging.
+    View, sort and filter <i>DataFrames</i> or a Python <i>dict</i> when debugging.
     <br/><br/>
     <a href="https://github.com/rendner/py-plugin-dataframe-viewer">Short introduction</a>
     <br/><br/>
     Note: The plugin requires one of the supported Python DataFrame libraries:
     <ul>
-        <li>pandas</li>
-        <li>polars (experimental)</li>
+        <li>pandas (<a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/PANDAS_DATAFRAME.md">doc</a>)</li>
+        <li>polars (<a href="https://github.com/rendner/py-plugin-dataframe-viewer/blob/main/docs/POLARS_DATAFRAME.md">doc</a>)</li>
     </ul>
     ]]></description>
 
