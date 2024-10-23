@@ -55,10 +55,7 @@ import com.jetbrains.python.console.completion.PydevConsoleElement
 import com.jetbrains.python.console.pydev.ConsoleCommunication
 import com.jetbrains.python.console.pydev.IToken
 import com.jetbrains.python.console.pydev.PyCodeCompletionImages
-import com.jetbrains.python.debugger.IPyDebugProcess
-import com.jetbrains.python.debugger.PyDebugValue
-import com.jetbrains.python.debugger.PyFrameAccessor
-import com.jetbrains.python.debugger.PyFrameListener
+import com.jetbrains.python.debugger.*
 import com.jetbrains.python.psi.*
 
 private class MySelectCodeProviderAction(
@@ -263,10 +260,19 @@ private class MyDebugSessionListener(
     private fun updateProvideSyntheticIdentifierFlag() {
         delegate?.disposable?.let { disposable ->
             BackgroundTaskUtil.executeOnPooledThread(disposable) {
-                frameAccessor?.let {
-                    val result = it.evaluate(SyntheticDataFrameIdentifier.NAME, false, false)
-                    val nameIsNotDefined = result.isErrorOnEval && result.qualifiedType == PythonQualifiedTypes.NameError
-                    filterInputCompletionContributor.provideSyntheticIdentifier = nameIsNotDefined
+                frameAccessor?.let { accessor ->
+                    try {
+                        val result = accessor.evaluate(SyntheticDataFrameIdentifier.NAME, false, false)
+                        val nameIsNotDefined =
+                            result.isErrorOnEval && result.qualifiedType == PythonQualifiedTypes.NameError
+                        filterInputCompletionContributor.provideSyntheticIdentifier = nameIsNotDefined
+                    } catch (ex: PyDebuggerException) {
+                        var nameIsNotDefined = false
+                        ex.message?.let {
+                            nameIsNotDefined = it.contains(PythonQualifiedTypes.NameError.split(".").last())
+                        }
+                        filterInputCompletionContributor.provideSyntheticIdentifier = nameIsNotDefined
+                    }
                 }
             }
         }
