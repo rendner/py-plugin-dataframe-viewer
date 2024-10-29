@@ -121,6 +121,37 @@ internal class TableSourceRefTest : AbstractPluginCodeTest() {
         }
     }
 
+    @Test
+    fun shouldNotReferToDataFrameAfterDispose() {
+        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
+            val tableSource = createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df")
+
+            val beforeDispose = debuggerApi.findReferrerChains("df")
+            assertThat(beforeDispose).filteredOn { it.contains("cms_rendner_sdfv") }.isNotEmpty
+
+            tableSource.dispose()
+
+            val afterDispose = debuggerApi.findReferrerChains("df")
+            assertThat(afterDispose).filteredOn { it.contains("cms_rendner_sdfv") }.isEmpty()
+        }
+    }
+
+    @Test
+    fun shouldNotReferToDataFrameAfterInternalUnlink() {
+        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
+            val tableSource = createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df")
+
+            val beforeUnlink = debuggerApi.findReferrerChains("df")
+            assertThat(beforeUnlink).filteredOn { it.contains("cms_rendner_sdfv") }.isNotEmpty
+
+            val methodCall = "${(tableSource as TestOnlyIPyTableSourceRefApi).testOnly_getRefExpr()}.unlink()"
+            debuggerApi.evaluator.evaluate(methodCall)
+
+            val afterUnlink = debuggerApi.findReferrerChains("df")
+            assertThat(afterUnlink).filteredOn { it.contains("cms_rendner_sdfv") }.isEmpty()
+        }
+    }
+
     private fun runWithTableSource(block: (patchedStyler: IPyTableSourceRef) -> Unit) {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
             block(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df"))

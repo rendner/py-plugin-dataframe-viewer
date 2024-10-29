@@ -44,7 +44,12 @@ abstract class PythonDebugger {
         protected open fun transformResult(result: MarkedResult?): T? = null
 
         fun completeWithResult(result: MarkedResult?) {
-            this.result.complete(transformResult(result))
+            try {
+                this.result.complete(transformResult(result))
+            } catch (t: Throwable) {
+                // A task must not throw an exception - this would end the loop in which the tasks are processed.
+                completeWithError(t)
+            }
         }
 
         fun completeWithError(throwable: Throwable) {
@@ -100,7 +105,7 @@ abstract class PythonDebugger {
     }
 
     private data class ResultError(
-        val cause: String?,
+        val cause: String,
         val type: String?,
         val typeQualifier: String?,
     )
@@ -114,11 +119,15 @@ abstract class PythonDebugger {
 
     private val openTasks = ArrayBlockingQueue<Task<*>>(1)
 
+    @Volatile
+    private var processTasksLoopTerminated = false
+
     /**
      * Evaluates an expression or executes statements.
      * Blocks the caller thread until the operation is complete.
      */
     fun evalOrExec(request: EvalOrExecRequest): EvalOrExecResponse {
+        throwIfProcessTaskLoopIsTerminated()
         return EvaluateTask(request).also { openTasks.put(it) }.result.get()
     }
 
@@ -127,7 +136,18 @@ abstract class PythonDebugger {
      * Blocks the caller thread until the operation is complete.
      */
     fun continueFromBreakpoint() {
+        throwIfProcessTaskLoopIsTerminated()
         ContinueTask().also { openTasks.put(it) }.result.get()
+    }
+
+    /**
+     * Finds all objects which point to the given obj.
+     * A chain does only contain the type of the referrers and not there identifier (name).
+     * Blocks the caller thread until the operation is complete.
+     */
+    fun findReferrerChains(objName: String): List<String> {
+        throwIfProcessTaskLoopIsTerminated()
+        return FindReferrerChainsTask(objName).also { openTasks.put(it) }.result.get()
     }
 
     /**
@@ -135,6 +155,7 @@ abstract class PythonDebugger {
      * Blocks the caller thread until the operation is complete.
      */
     fun quit() {
+        throwIfProcessTaskLoopIsTerminated()
         QuitTask().also { openTasks.put(it) }.result.get()
     }
 
@@ -145,7 +166,8 @@ abstract class PythonDebugger {
      * @param filePath relative file path inside the "transfer/out" folder.
      */
     fun dumpTracesOnExit(filePath: String) {
-        DumpTracesOnExitTask("'$filePath'").also { openTasks.put(it) }.result.get()
+        throwIfProcessTaskLoopIsTerminated()
+        DumpTracesOnExitTask(filePath).also { openTasks.put(it) }.result.get()
     }
 
     /**
@@ -179,6 +201,12 @@ abstract class PythonDebugger {
             } else {
                 throw PluginPyDebuggerException("Unknown error occurred.", ex)
             }
+        }
+    }
+
+    private fun throwIfProcessTaskLoopIsTerminated() {
+        if (processTasksLoopTerminated) {
+            throw PluginPyDebuggerException("Processing of tasks is already terminated.")
         }
     }
 
@@ -217,10 +245,13 @@ abstract class PythonDebugger {
                                 }
                             }
                             is DumpTracesOnExitTask -> {
-                                "!__import__('debugger_helpers').DebuggerInternals.dump_traces_on_exit(${task.filePath})"
+                                "!__import__('debugger_helpers').DebuggerInternals.dump_traces_on_exit('${task.filePath}')"
                             }
                             is QuitTask -> "quit"
                             is ContinueTask -> "continue"
+                            is FindReferrerChainsTask -> {
+                                "!__import__('debugger_helpers').DebuggerInternals.find_referrer_chains('${task.objName}')"
+                            }
                         }
 
                         pythonProcess.writeLine(nextDebugCommand)
@@ -240,6 +271,8 @@ abstract class PythonDebugger {
                 Thread.currentThread().interrupt()
             }
             throw e
+        } finally {
+            processTasksLoopTerminated = true
         }
     }
 
@@ -309,6 +342,23 @@ abstract class PythonDebugger {
                     isError = false,
                     refId = it.refId,
                 )
+            }
+        }
+    }
+
+    private class FindReferrerChainsTask(val objName: String): Task<List<String>>() {
+        override fun transformResult(result: MarkedResult?): List<String> {
+            return if (result?.marker == EXC_MARKER) {
+                throw PluginPyDebuggerException(MarkedResult.parseToError(result).cause)
+            } else if (result == null) {
+                throw PluginPyDebuggerException("FindReferrerChainsTask returned null.")
+            } else {
+                MarkedResult.parseToValue(result, false).let {
+                    // value is a list of strings wrapped in double quotes which also contain ","
+                    it.value!!
+                        .removeSurrounding("[\"", "\"]")
+                        .split("\", \"")
+                }
             }
         }
     }

@@ -45,6 +45,9 @@ class VisibleFrame(AbstractVisibleFrame):
         super().__init__(Region(0, 0, len(source_frame.index), len(source_frame.columns)))
         self._source_frame = source_frame
 
+    def unlink(self):
+        self._source_frame = None
+
     @property
     def index_names(self) -> list:
         return self._source_frame.index.names
@@ -86,6 +89,11 @@ class MappedVisibleFrame(VisibleFrame):
         self.region = Region(0, 0, len(visible_rows), len(visible_cols))
         self.__i_rows = visible_rows
         self.__i_cols = visible_cols
+
+    def unlink(self):
+        super().unlink()
+        self.__i_rows = None
+        self.__i_cols = None
 
     def cell_value_at(self, row: int, col: int):
         return self._source_frame.iat[self.__i_rows[row], self.__i_cols[col]]

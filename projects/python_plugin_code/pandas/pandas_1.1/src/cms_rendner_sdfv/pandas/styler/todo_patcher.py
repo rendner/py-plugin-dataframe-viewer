@@ -33,6 +33,9 @@ class TodoPatcher(ABC):
         # The method "_todo_builder" computes automatically the correct subset for a chunk.
         self.todo: StylerTodo = StylerTodoBuilder(todo).with_subset(None).build()
 
+    def unlink(self):
+        self.__org_subset_frame = None
+
     def patcher_for_style_func_validation(self, chunk: DataFrame) -> 'TodoPatcher':
         subset = self.__calculate_chunk_subset(chunk)
         # requires that the constructor of all subclasses take the same parameters

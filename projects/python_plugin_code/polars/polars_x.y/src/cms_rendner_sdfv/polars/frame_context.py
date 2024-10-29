@@ -41,6 +41,12 @@ class FrameContext(AbstractTableSourceContext):
         self.__sort_criteria: SortCriteria = SortCriteria()
         self.__visible_frame: VisibleFrame = self._recompute_visible_frame()
 
+    def unlink(self):
+        self.__source_frame = None
+        self.__filtered_frame = None
+        self.__sort_criteria = None
+        self.__visible_frame = None
+
     @property
     def visible_frame(self) -> VisibleFrame:
         return self.__visible_frame

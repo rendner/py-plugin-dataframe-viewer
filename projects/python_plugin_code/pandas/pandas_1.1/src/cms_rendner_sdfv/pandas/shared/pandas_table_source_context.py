@@ -41,6 +41,13 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
         self.__filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
         self.__visible_frame: VisibleFrame = self.__recompute_visible_frame()
 
+    def unlink(self):
+        self.__source_frame = None
+        self.__sort_criteria = None
+        self.__filter_criteria = None
+        self.__visible_frame.unlink()
+        self.__visible_frame = None
+
     @property
     def visible_frame(self) -> VisibleFrame:
         return self.__visible_frame

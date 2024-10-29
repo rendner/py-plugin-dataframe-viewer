@@ -30,6 +30,10 @@ class HighlightExtremaPatcher(TodoPatcher):
         self.__attribute: str = f"background-color: {todo.style_func_kwargs.get('color', 'yellow')}"
         self.__computed_values_cache = {}
 
+    def unlink(self):
+        super().unlink()
+        self.__computed_values_cache = None
+
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
         return self._todo_builder(chunk) \
             .with_style_func_kwargs({}) \

@@ -152,6 +152,12 @@ class PatchedStylerContext(PandasTableSourceContext):
         self.__todo_patcher_list: list[TodoPatcher] = self.__create_patchers(styler)
         super().__init__(styler.data, filter_criteria)
 
+    def unlink(self):
+        super().unlink()
+        self.__styler = None
+        [x.unlink() for x in self.__todo_patcher_list]
+        self.__todo_patcher_list = None
+
     def create_styled_chunk_computer_for_validation(self, chunk: DataFrame, patcher: TodoPatcher) -> 'StyledChunkComputer':
         return StyledChunkComputer(
             visible_frame=VisibleFrame(chunk),

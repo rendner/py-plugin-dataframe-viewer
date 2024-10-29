@@ -65,4 +65,5 @@ interface IPythonDebuggerApi {
     fun continueFromBreakpoint()
     fun addInterceptor(interceptor: IDebuggerInterceptor)
     fun removeInterceptor(interceptor: IDebuggerInterceptor)
+    fun findReferrerChains(objName: String): List<String>
 }

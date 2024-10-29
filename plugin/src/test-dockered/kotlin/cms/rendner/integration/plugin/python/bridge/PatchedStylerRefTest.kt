@@ -19,6 +19,7 @@ import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.TestOnlyIPyTableSourceRefApi
 import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
@@ -96,6 +97,37 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
             assertThatNoException().isThrownBy {
                 it.evaluateGetOrgIndicesOfVisibleColumns(0, 999)
             }
+        }
+    }
+
+    @Test
+    fun shouldNotReferToStylersDataFrameAfterDispose() {
+        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
+            val tableSource = createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style.applymap(lambda x: 'color: red')")
+
+            val beforeDispose = debuggerApi.findReferrerChains("df")
+            assertThat(beforeDispose).filteredOn { it.contains("cms_rendner_sdfv") }.isNotEmpty
+
+            tableSource.dispose()
+
+            val afterDispose = debuggerApi.findReferrerChains("df")
+            assertThat(afterDispose).filteredOn { it.contains("cms_rendner_sdfv") }.isEmpty()
+        }
+    }
+
+    @Test
+    fun shouldNotReferToDataFrameAfterInternalUnlink() {
+        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
+            val tableSource = createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style.applymap(lambda x: 'color: red')")
+
+            val beforeUnlink = debuggerApi.findReferrerChains("df")
+            assertThat(beforeUnlink).filteredOn { it.contains("cms_rendner_sdfv") }.isNotEmpty
+
+            val methodCall = "${(tableSource as TestOnlyIPyTableSourceRefApi).testOnly_getRefExpr()}.unlink()"
+            debuggerApi.evaluator.evaluate(methodCall)
+
+            val afterUnlink = debuggerApi.findReferrerChains("df")
+            assertThat(afterUnlink).filteredOn { it.contains("cms_rendner_sdfv") }.isEmpty()
         }
     }
 

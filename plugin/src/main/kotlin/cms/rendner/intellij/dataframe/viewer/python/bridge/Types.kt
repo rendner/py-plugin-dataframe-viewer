@@ -54,6 +54,13 @@ data class PandasVersion(val major: Int, val minor: Int, val rest: String = "") 
     }
 }
 
+interface TestOnlyIPyTableSourceRefApi {
+    /**
+     * The identifier to refer to the table source on Python side.
+     */
+    fun testOnly_getRefExpr(): String
+}
+
 /**
  * Interface to evaluate values of the Python class "TableSource".
  */
@@ -127,7 +134,7 @@ interface IPyTableSourceRef: Disposable {
         identifier: String,
         isSyntheticIdentifier: Boolean,
         literalToComplete: String?,
-        ): List<String>
+    ): List<String>
 }
 
 /**

@@ -147,6 +147,10 @@ internal abstract class AbstractPipEnvEnvironmentTest {
         override fun onResponse(response: EvalOrExecResponse): EvalOrExecResponse {
             return myInterceptors.fold(response) { resp, interceptor -> interceptor.onResponse(resp) }
         }
+
+        override fun findReferrerChains(objName: String): List<String> {
+            return pythonDebugger.findReferrerChains(objName)
+        }
     }
 
 

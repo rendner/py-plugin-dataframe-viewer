@@ -25,6 +25,10 @@ class AbstractVisibleFrame(ABC):
     def __init__(self, region: Region):
         self.region = region
 
+    @abstractmethod
+    def unlink(self):
+        pass
+
     def get_column_indices(self, part_start: int, max_columns: int) -> List[int]:
         # default implementation (has to be overwritten in case columns are excluded or reordered)
         end = min(part_start + max_columns, self.region.cols)
@@ -124,6 +128,10 @@ class AbstractColumnNameCompleter(ABC):
 
 
 class AbstractTableSourceContext(ABC):
+    @abstractmethod
+    def unlink(self):
+        pass
+
     def set_sort_criteria(self, sort_by_column_index: Union[None, List[int]], sort_ascending: Union[None, List[bool]]):
         pass
 
@@ -152,6 +160,10 @@ class AbstractTableSource(ABC):
         self.__kind = kind
         self._context = context
         self.__fingerprint = fingerprint
+
+    def unlink(self):
+        self._context.unlink()
+        self._context = None
 
     def get_kind(self) -> TableSourceKind:
         return self.__kind

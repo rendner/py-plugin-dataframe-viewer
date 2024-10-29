@@ -31,6 +31,10 @@ class HighlightExtremaPatcher(TodoPatcher):
         self.__computed_values_cache = {}
         self._op: str = "unset"
 
+    def unlink(self):
+        super().unlink()
+        self.__computed_values_cache = None
+
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
         return self._todo_builder(chunk) \
             .with_style_func_kwargs({}) \

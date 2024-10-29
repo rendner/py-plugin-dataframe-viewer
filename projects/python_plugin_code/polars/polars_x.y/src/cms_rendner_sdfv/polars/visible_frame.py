@@ -58,6 +58,12 @@ class VisibleFrame(AbstractVisibleFrame):
         self.__row_idx: Union[None, pl.Series] = row_idx
         self.__col_idx: Union[None, List[int]] = col_idx
 
+    def unlink(self):
+        self.__source_frame = None
+        self.__column_names = None
+        self.__row_idx = None
+        self.__col_idx = None
+
     def row_idx_iter(self, region: Region = None) -> Iterator[int]:
         region = self.region.get_bounded_region(region)
         r = 0

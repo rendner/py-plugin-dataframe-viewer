@@ -84,10 +84,12 @@ class TableSourceFactory {
         }
     }
 
-    private open class PyTableSourceRef(pythonValue: PluginPyValue, val tempVarSlotId: String?) : IPyTableSourceRef {
+    private open class PyTableSourceRef(pythonValue: PluginPyValue, val tempVarSlotId: String?) : IPyTableSourceRef, TestOnlyIPyTableSourceRefApi {
         protected val refExpr: String = if (tempVarSlotId != null) "$tempVarsDictRef['${tempVarSlotId}']" else pythonValue.refExpr
         protected val evaluator: IPluginPyValueEvaluator = pythonValue.evaluator
         protected val idsToClean: MutableList<String> = mutableListOf()
+
+        override fun testOnly_getRefExpr() = refExpr
 
         override fun dispose() {
             try {

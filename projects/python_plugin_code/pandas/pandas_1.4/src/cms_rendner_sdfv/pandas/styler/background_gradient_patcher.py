@@ -29,6 +29,10 @@ class BackgroundGradientPatcher(TodoPatcher):
         super().__init__(org_frame, todo)
         self.__computed_params_cache: Dict[str, Tuple[float, float, Sequence]] = {}
 
+    def unlink(self):
+        super().unlink()
+        self.__computed_params_cache = None
+
     def create_patched_todo(self, chunk: DataFrame) -> Optional[StylerTodo]:
         return self._todo_builder(chunk) \
             .with_style_func(self._wrap_with_chunk_parent_provider(self._styling_func)) \

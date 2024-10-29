@@ -267,4 +267,27 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
             assertThat(result2.value).isEqualTo("5")
         }
     }
+
+    @Test
+    fun shouldFindReferrerChains() {
+        createPythonDebuggerWithCodeSnippet(
+            """
+            a = [1, 2, 3]
+            
+            class B:
+                def __init__(self, value):
+                    self.value = value
+                    
+            d = B({ "A": a })
+            
+            breakpoint()
+            """.trimIndent()
+        ) { debuggerApi ->
+
+            val result = debuggerApi.findReferrerChains("a")
+            // Python 3.10:     "<class '__main__.B'>, <class 'dict'>, <class 'dict'>, <class 'list'>"
+            // Python >= 3.11:  "<class '__main__.B'>, <class 'dict'>, <class 'list'>"
+            assertThat(result).filteredOn { it.contains("<class '__main__.B'>") && it.endsWith("<class 'list'>") }.isNotEmpty()
+        }
+    }
 }

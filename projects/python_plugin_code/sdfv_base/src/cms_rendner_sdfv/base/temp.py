@@ -12,8 +12,12 @@ class EvaluatedVarsCleaner:
         names_to_check = id_names
 
         for name in names_to_check:
-            if TEMP_VARS.pop(name, None) is None:
+            temp_var = TEMP_VARS.pop(name, None)
+            if temp_var is None:
                 not_found.append(name)
+            else:
+                if hasattr(temp_var, 'unlink'):
+                    temp_var.unlink()
 
         if not not_found:
             return
@@ -34,7 +38,10 @@ class EvaluatedVarsCleaner:
 
             for name in names_to_check:
                 if name in f_locals:
+                    local_var = f_locals[name]
                     f_locals[name] = None
+                    if hasattr(local_var, 'unlink'):
+                        local_var.unlink()
                 else:
                     not_found.append(name)
 
