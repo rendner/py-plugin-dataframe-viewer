@@ -1,4 +1,32 @@
 # Changelog
+## v0.17.0
+- `Released`: 2024-30-10
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Min Required IntelliJ Version`: 2022.3
+
+### Added
+#### [plugin] Copy Selected Cell Value
+The value of the selected cell can now be copied via:
+- <kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>Command</kbd> + <kbd>C</kbd> (macOS)
+
+#### [Python Console] Filtering
+In the Python Console you can now filter the displayed `DataFrame` by specifying a Python filter expression.
+The filter input for the Python Console uses runtime code completion.
+
+A detailed description can be found here: 
+- [pandas](./docs/PANDAS_FILTERING.md)
+- [polars](./docs/POLARS_FILTERING.md)
+
+#### [polars] Filtering
+You can now filter your polars `DataFrame` by specifying a Python filter expression.
+
+A detailed description can be found [here](./docs/POLARS_FILTERING.md).
+
+#### [pandas] Code Completing For Column Names (experimental)
+A basic code completion was added to complete column names of a `DataFrame`.
+
+A detailed description can be found [here](./docs/PANDAS_FILTERING.md).
+
 ## v0.16.0
 - `Released`: 2024-05-06
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
@@ -169,8 +197,8 @@ All already supported `Styler` methods are now also usable with pandas 1.5.
 - `Min Required IntelliJ Version`: 2021.3
 
 ### Added
-#### Table Filtering
-The table can now be filtered by specifying a Python filter expression.
+#### Filtering
+The `DataFrame` can now be filtered by specifying a Python filter expression.
 A detailed description about filtering can be found [here](./docs/PANDAS_FILTERING.md).
 
 #### Auto Closing
@@ -180,7 +208,7 @@ reachable anymore by the plugin.
 #### Fixed Column Width
 The column width can be changed via shortcuts or by resizing the column.
 You can also mark a column as fixed.
-Marked columns keep their width even if the content would need more space or the width of the table is changed.
+Marked columns keep their width even if the content would need more space or the width of the dialog is changed.
 
 #### Truncated Cell Values
 Cell values are now truncated in case they are longer than 300 chars.
@@ -202,7 +230,7 @@ Lists, for example, always have a closing `]`, even if the shortened value excee
 ### Other
 - plugin logo added to the notifications sent by the plugin
 - name of viewed variable is displayed as dialog title
-- number of rows and columns of the `DataFrame` are displayed below the table
+- number of rows and columns of the `DataFrame` are displayed on the left side below the displayed data
 
 ## v0.8.0
 - `Released`: 2022-07-25
@@ -210,9 +238,9 @@ Lists, for example, always have a closing `]`, even if the shortened value excee
 - `Min Required IntelliJ Version`: 2020.3
 
 ### Added
-#### Table Sorting
-The table columns are now sortable. The multi-column sorting supports up to 9 columns.
-Sorting can be performed by mouse click on the table column headers or by keyboard shortcuts.
+#### Sorting
+The `DataFrame` columns are now sortable. The multi-column sorting supports up to 9 columns.
+Sorting can be performed by mouse click on the column headers or by keyboard shortcuts.
 
 A detailed description about sorting can be found [here](./docs/SORTING.md).
 
@@ -278,7 +306,7 @@ The feature is currently in experimental status. Please let me know if anything 
 Curious? [Here we go](./docs/PANDAS_VALIDATING_STYLE_FUNCTIONS.md)
 
 ### Fixed
-- small table cell height (cells now have an extra top and bottom padding)
+- small cell height (cells now have an extra top and bottom padding)
 
 ### Other
 - fix Intellij-Plugin-API warnings
@@ -388,8 +416,8 @@ And the following methods, added in pandas 1.3, are also on board:
 - `Styler.highlight_quantile`
 - `Styler.text_gradient`
 
-#### Revised Table Header For Multi-Index DataFrames
-Revised table header parsing and rendering to improve handling of multi-index `DataFrames`.
+#### Revised Column Header For Multi-Index DataFrames
+Revised column header parsing and rendering to improve handling of multi-index `DataFrames`.
 
 Index names of multi-index `DataFrames` are now included in the header tooltip. Before it was not possible to see this information.
 
