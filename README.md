@@ -1,9 +1,9 @@
 # Python: Styled DataFrame Viewer
 
-> [!WARNING]  
-> The plugin is broken in PyCharm 2024.2.1, because of a bug in PyCharm.
-> 
-> You can use the following workaround until the bug is fixed: [plugin fix](./docs/FIX_PLUGIN_PY_CHARM_2024.2.1.md)
+> [!INFO]
+> The plugin is broken in PyCharm 2024.2.1, but works again in PyCharm >= 2024.2.3.
+>
+> In case of problems, you can use the following workaround: [plugin fix](./docs/FIX_PLUGIN_PY_CHARM_2024.2.1.md)
 
 ## Installation
 
