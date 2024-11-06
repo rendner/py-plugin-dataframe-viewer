@@ -18,12 +18,33 @@ from typing import Any, Dict, List, Tuple, Union
 
 
 @dataclass(frozen=True)
+class TableStructureColumn:
+    dtype: str
+    labels: List[str]
+    # -1: if no unique column id can be provided
+    id: int
+
+
+@dataclass(frozen=True)
+class TableStructureLegend:
+    index: List[str]
+    column: List[str]
+
+
+@dataclass(frozen=True)
+class TableStructureColumnInfo:
+    columns: List[TableStructureColumn]
+    legend: Union[None, TableStructureLegend]
+
+
+@dataclass(frozen=True)
 class TableStructure:
     org_rows_count: int
     org_columns_count: int
     rows_count: int
     columns_count: int
     fingerprint: str
+    column_info: TableStructureColumnInfo
 
 
 @dataclass(frozen=True)
@@ -48,8 +69,10 @@ class TableFrameLegend:
 @dataclass(frozen=True)
 class TableFrame:
     index_labels: Union[None, List[List[str]]]
+    # todo: deprecated
     columns: Union[None, List[TableFrameColumn]]
     cells: List[List[TableFrameCell]]
+    # todo: deprecated
     legend: Union[None, TableFrameLegend] = None
 
 

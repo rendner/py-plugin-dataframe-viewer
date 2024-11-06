@@ -29,10 +29,9 @@ class AbstractVisibleFrame(ABC):
     def unlink(self):
         pass
 
-    def get_column_indices(self, part_start: int, max_columns: int) -> List[int]:
+    def get_column_indices(self) -> List[int]:
         # default implementation (has to be overwritten in case columns are excluded or reordered)
-        end = min(part_start + max_columns, self.region.cols)
-        return [] if end <= part_start or part_start < 0 else list(range(part_start, end))
+        return list(range(self.region.cols))
 
 
 VF = TypeVar('VF', bound=AbstractVisibleFrame)
@@ -183,9 +182,6 @@ class AbstractTableSource(ABC):
     @staticmethod
     def jsonify(data: Any) -> str:
         return to_json(data)
-
-    def get_org_indices_of_visible_columns(self, part_start: int, max_columns: int) -> List[int]:
-        return self._context.visible_frame.get_column_indices(part_start, max_columns)
 
     def get_table_structure(self) -> TableStructure:
         return self._context.get_table_structure(self.__fingerprint)

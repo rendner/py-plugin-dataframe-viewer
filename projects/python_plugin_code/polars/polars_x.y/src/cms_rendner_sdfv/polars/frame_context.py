@@ -18,7 +18,7 @@ from polars import DataFrame
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator, AbstractTableSourceContext, \
     AbstractColumnNameCompleter
-from cms_rendner_sdfv.base.types import SortCriteria, TableStructure
+from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, TableStructureColumn
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame
 
 
@@ -71,7 +71,25 @@ class FrameContext(AbstractTableSourceContext):
             rows_count=rows_count,
             columns_count=columns_count,
             fingerprint=fingerprint,
+            column_info=self._get_frame_column_info() if columns_count != 0
+            else TableStructureColumnInfo(columns=[], legend=None),
         )
+
+    def _get_frame_column_info(self) -> TableStructureColumnInfo:
+        ts_columns: List[TableStructureColumn] = []
+
+        col_names = self.__source_frame.columns
+        col_dtypes = self.__source_frame.dtypes
+        for col in self.visible_frame.get_column_indices():
+            ts_columns.append(
+                TableStructureColumn(
+                    dtype=str(col_dtypes[col]),
+                    labels=[col_names[col]],
+                    id=col,
+                )
+            )
+
+        return TableStructureColumnInfo(columns=ts_columns, legend=None)
 
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
         # local import to resolve cyclic import

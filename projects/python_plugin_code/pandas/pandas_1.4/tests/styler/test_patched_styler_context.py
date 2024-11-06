@@ -38,14 +38,8 @@ def test_previous_sort_criteria_does_not_affect_later_sort_criteria():
 def test_get_org_indices_of_visible_columns():
     ctx = PatchedStylerContext(df.style)
 
-    actual = ctx.visible_frame.get_column_indices(0, 2)
-    assert list(actual) == [0, 1]
-
-    actual = ctx.visible_frame.get_column_indices(2, 2)
-    assert list(actual) == [2, 3]
-
-    actual = ctx.visible_frame.get_column_indices(4, 2)
-    assert list(actual) == [4]
+    actual = ctx.visible_frame.get_column_indices()
+    assert actual == [0, 1, 2, 3, 4]
 
 
 def test_get_org_indices_of_visible_columns_with_filter():
@@ -53,8 +47,8 @@ def test_get_org_indices_of_visible_columns_with_filter():
     fc = FilterCriteria.from_frame(df[['col_4', 'col_1']])
     ctx = PatchedStylerContext(df.style, fc)
 
-    actual = ctx.visible_frame.get_column_indices(0, 2)
-    assert list(actual) == [1, 4]
+    actual = ctx.visible_frame.get_column_indices()
+    assert actual == [1, 4]
 
 
 def test_styled_chunk_uses_formatting_from_org_styler():

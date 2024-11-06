@@ -11,44 +11,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Callable, List, Optional
-
-from pandas import get_option
-from pandas.core.dtypes.common import (
-    is_complex,
-    is_float,
-    is_integer,
-)
+from typing import List
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
 from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn, TableFrameLegend
 from cms_rendner_sdfv.pandas.frame.frame_context import Chunk, FrameContext
+from cms_rendner_sdfv.pandas.frame.frame_value_formatter import FrameValueFormatter
 from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
-
-
-class _ValueFormatter(ValueFormatter):
-    def __init__(self):
-        self.__precision = get_option("display.precision")
-        self.__float_format: Optional[Callable] = get_option("display.float_format")
-
-    def _default_format(self, x: Any, fallback_formatter) -> Any:
-        if is_float(x) or is_complex(x):
-            if callable(self.__float_format):
-                return self.__float_format(x)
-            return f"{x:.{self.__precision}f}"
-        elif is_integer(x):
-            return str(x)
-
-        return fallback_formatter(x)
-
-    def format_column(self, value: Any) -> str:
-        return self._default_format(value, super().format_column)
-
-    def format_index(self, value: Any) -> str:
-        return self._default_format(value, super().format_index)
-
-    def format_cell(self, value: Any) -> str:
-        return self._default_format(value, super().format_cell)
 
 
 class TableFrameGenerator(AbstractTableFrameGenerator):
@@ -62,7 +31,7 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
                  exclude_col_header: bool = False,
                  ) -> TableFrame:
         chunk = self.__context.get_chunk(region)
-        formatter = _ValueFormatter()
+        formatter = FrameValueFormatter()
 
         return TableFrame(
             index_labels=[] if exclude_row_header else self._extract_index_header_labels(chunk, formatter),

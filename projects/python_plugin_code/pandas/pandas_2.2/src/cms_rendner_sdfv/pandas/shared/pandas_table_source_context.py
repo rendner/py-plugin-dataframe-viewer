@@ -11,13 +11,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from abc import ABC
-from typing import Optional, List, Any
+from abc import ABC, abstractmethod
+from typing import Optional, Any
 
 from pandas import DataFrame
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext, AbstractColumnNameCompleter
-from cms_rendner_sdfv.base.types import SortCriteria, TableStructure
+from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame, MappedVisibleFrame
 
@@ -63,7 +63,13 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
             rows_count=rows_count,
             columns_count=columns_count,
             fingerprint=fingerprint,
+            column_info=self._get_frame_column_info() if columns_count != 0
+            else TableStructureColumnInfo(columns=[], legend=None),
         )
+
+    @abstractmethod
+    def _get_frame_column_info(self) -> TableStructureColumnInfo:
+        pass
 
     def get_column_name_completer(self) -> Optional[AbstractColumnNameCompleter]:
         return PandasColumnNameCompleter(self.__source_frame)

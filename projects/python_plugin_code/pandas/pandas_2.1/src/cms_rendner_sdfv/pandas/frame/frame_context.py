@@ -11,11 +11,15 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any
+from typing import Any, Optional
+
+from pandas import DataFrame
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
-from cms_rendner_sdfv.base.types import Region
+from cms_rendner_sdfv.base.types import Region, TableStructureColumnInfo, TableStructureColumn, TableStructureLegend
+from cms_rendner_sdfv.pandas.frame.frame_value_formatter import FrameValueFormatter
 from cms_rendner_sdfv.pandas.shared.pandas_table_source_context import PandasTableSourceContext
+from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame
 
 
@@ -44,6 +48,14 @@ class Chunk:
 
 
 class FrameContext(PandasTableSourceContext):
+    def __init__(self, source_frame: DataFrame, filter_criteria: Optional[FilterCriteria] = None):
+        super().__init__(source_frame, filter_criteria)
+        self.__source_frame = source_frame
+
+    def unlink(self):
+        self.__source_frame = None
+        super().unlink()
+
     def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
         # local import to resolve cyclic import
         from cms_rendner_sdfv.pandas.frame.table_frame_generator import TableFrameGenerator
@@ -51,3 +63,30 @@ class FrameContext(PandasTableSourceContext):
 
     def get_chunk(self, region: Region) -> Chunk:
         return Chunk(self.visible_frame, self.visible_frame.region.get_bounded_region(region))
+
+    def _get_frame_column_info(self) -> TableStructureColumnInfo:
+        formatter = FrameValueFormatter()
+
+        ts_columns = []
+        dtypes = self.__source_frame.dtypes
+        for col in self.visible_frame.get_column_indices():
+            col_labels = self.__source_frame.columns[col]
+            labels = col_labels if isinstance(col_labels, tuple) else [col_labels]
+            ts_columns.append(
+                TableStructureColumn(
+                    dtype=str(dtypes[col_labels]),
+                    labels=[formatter.format_column(lbl) for lbl in labels],
+                    id=col,
+                )
+            )
+
+        index_legend = [formatter.format_index(lbl) for lbl in self.visible_frame.index_names if lbl is not None]
+        column_legend = [formatter.format_index(lbl) for lbl in self.visible_frame.column_names if lbl is not None]
+
+        return TableStructureColumnInfo(
+            columns=ts_columns,
+            legend=TableStructureLegend(
+                index=index_legend,
+                column=column_legend,
+            ) if index_legend or column_legend else None
+        )

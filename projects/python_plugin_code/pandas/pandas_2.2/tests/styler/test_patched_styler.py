@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 import pytest
-from pandas import MultiIndex, DataFrame
 
-from cms_rendner_sdfv.base.types import TableFrame, TableFrameColumn, TableFrameCell
+from cms_rendner_sdfv.base.types import TableFrame, TableFrameColumn, TableFrameCell, TableStructureColumn, \
+    TableStructureColumnInfo, TableStructureLegend
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, FilterCriteria
 from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionsValidator
@@ -12,11 +12,11 @@ from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 np.random.seed(123456)
 
-midx = MultiIndex.from_product([["x", "y"], ["a", "b", "c"]])
-df = DataFrame(np.random.randn(6, 6), index=midx, columns=midx)
-df.index.names = ["lev0", "lev1"]
+midx_rows = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]], names=['rows-char', 'rows-color'])
+midx_cols = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]], names=['cols-char', 'cols-color'])
+multi_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx_rows, columns=midx_cols)
 
-other_df = pd.DataFrame.from_dict({
+df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
     "col_1": [5, 6, 7, 8, 9],
     "col_2": [10, 11, 12, 13, 14],
@@ -26,7 +26,7 @@ other_df = pd.DataFrame.from_dict({
 
 
 def test_compute_chunk_table_frame():
-    actual = PatchedStyler(PatchedStylerContext(other_df.style), "finger-1") \
+    actual = PatchedStyler(PatchedStylerContext(df.style), "finger-1") \
         .compute_chunk_table_frame(0, 0, 2, 2)
 
     assert_table_frames(
@@ -45,7 +45,7 @@ def test_compute_chunk_table_frame():
 
 
 def test_validate_and_compute_chunk_table_frame():
-    actual = PatchedStyler(PatchedStylerContext(other_df.style), "finger-1") \
+    actual = PatchedStyler(PatchedStylerContext(df.style), "finger-1") \
         .validate_and_compute_chunk_table_frame(0, 0, 2, 2)
 
     assert not actual.problems
@@ -65,30 +65,56 @@ def test_validate_and_compute_chunk_table_frame():
 
 
 def test_table_structure():
-    ts = PatchedStyler(PatchedStylerContext(df.style), "finger-1").get_table_structure()
-    assert ts.org_rows_count == len(df.index)
-    assert ts.org_columns_count == len(df.columns)
-    assert ts.rows_count == len(df.index)
-    assert ts.columns_count == len(df.columns)
+    ts = PatchedStyler(PatchedStylerContext(multi_df.style), "finger-1").get_table_structure()
+    assert ts.org_rows_count == len(multi_df.index)
+    assert ts.org_columns_count == len(multi_df.columns)
+    assert ts.rows_count == len(multi_df.index)
+    assert ts.columns_count == len(multi_df.columns)
     assert ts.fingerprint == "finger-1"
+    assert ts.column_info == TableStructureColumnInfo(
+        legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
+        columns=[
+            TableStructureColumn(dtype='int64', labels=['x', 'a'], id=0),
+            TableStructureColumn(dtype='int64', labels=['x', 'b'], id=1),
+            TableStructureColumn(dtype='int64', labels=['x', 'c'], id=2),
+            TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3),
+            TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4),
+            TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5)
+        ])
+
+
+def test_table_structure_with_str_and_int_column_names():
+    d = {"B": [1], "A": [1], 101: [1], 0: [1]}
+    s = pd.DataFrame.from_dict(d).style
+    ts = PatchedStyler(PatchedStylerContext(s), '').get_table_structure()
+    assert ts.column_info == TableStructureColumnInfo(
+        legend=None,
+        columns=[
+            TableStructureColumn(dtype='int64', labels=['B'],   id=0),
+            TableStructureColumn(dtype='int64', labels=['A'],   id=1),
+            TableStructureColumn(dtype='int64', labels=['101'], id=2),
+            TableStructureColumn(dtype='int64', labels=['0'],   id=3)
+        ])
 
 
 def test_table_structure_columns_count_hide_all_columns():
-    styler = df.style.hide(axis="columns", subset=df.columns)
+    styler = multi_df.style.hide(axis="columns", subset=multi_df.columns)
     ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
     assert ts.org_columns_count == len(styler.data.columns)
     assert ts.columns_count == 0
+    assert ts.column_info == TableStructureColumnInfo(columns=[], legend=None)
 
 
 def test_table_structure_rows_count_hide_all_rows():
-    styler = df.style.hide(axis="index", subset=df.index)
+    styler = multi_df.style.hide(axis="index", subset=multi_df.index)
     ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
     assert ts.org_rows_count == len(styler.data.index)
     assert ts.rows_count == 0
+    assert ts.column_info == TableStructureColumnInfo(columns=[], legend=None)
 
 
 def test_table_structure_diff_matches_hidden_rows_cols():
-    styler = other_df.style \
+    styler = df.style \
         .hide(axis="index", subset=pd.IndexSlice[1:3]) \
         .hide(axis="columns", subset=["col_1", "col_3"])
     ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
@@ -100,10 +126,10 @@ def test_table_structure_diff_matches_hidden_rows_cols():
 
 
 def test_table_structure_diff_matches_hidden_rows_cols_and_filtering():
-    styler = other_df.style \
+    styler = df.style \
         .hide(axis="index", subset=pd.IndexSlice[1:3]) \
         .hide(axis="columns", subset=["col_1", "col_3"])
-    filter_frame = DataFrame(index=other_df.index[1:], columns=other_df.columns[1:])
+    filter_frame = pd.DataFrame(index=df.index[1:], columns=df.columns[1:])
     ts = PatchedStyler(
         PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame)),
         "",
@@ -113,6 +139,39 @@ def test_table_structure_diff_matches_hidden_rows_cols_and_filtering():
     actual_col_diff = ts.org_columns_count - ts.columns_count
     assert actual_row_diff == 4
     assert actual_col_diff == 3
+
+
+def test_table_structure_respects_configured_col_label_formatting():
+    s = multi_df.style.format_index(str.upper, axis='columns')
+    ps = PatchedStyler(PatchedStylerContext(s), '')
+
+    ts = ps.get_table_structure()
+    assert ts.column_info == TableStructureColumnInfo(
+        legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
+        columns=[
+            TableStructureColumn(dtype='int64', labels=['X', 'A'], id=0),
+            TableStructureColumn(dtype='int64', labels=['X', 'B'], id=1),
+            TableStructureColumn(dtype='int64', labels=['X', 'C'], id=2),
+            TableStructureColumn(dtype='int64', labels=['Y', 'A'], id=3),
+            TableStructureColumn(dtype='int64', labels=['Y', 'B'], id=4),
+            TableStructureColumn(dtype='int64', labels=['Y', 'C'], id=5)
+        ])
+
+
+def test_table_structure_respects_relabeled_cols():
+    s = df.style.relabel_index(['1', '2', '3', '4', '5'], axis='columns')
+    ps = PatchedStyler(PatchedStylerContext(s), '')
+
+    ts = ps.get_table_structure()
+    assert ts.column_info == TableStructureColumnInfo(
+        legend=None,
+        columns=[
+            TableStructureColumn(dtype='int64', labels=['1'], id=0),
+            TableStructureColumn(dtype='int64', labels=['2'], id=1),
+            TableStructureColumn(dtype='int64', labels=['3'], id=2),
+            TableStructureColumn(dtype='int64', labels=['4'], id=3),
+            TableStructureColumn(dtype='int64', labels=['5'], id=4)
+        ])
 
 
 class FakeFormatterDict(dict):
@@ -128,7 +187,7 @@ class FakeFormatterDict(dict):
 @pytest.mark.parametrize(
     "rows_per_chunk, cols_per_chunk", [
         (1, 2),
-        other_df.shape  # single chunk
+        df.shape  # single chunk
     ])
 def test_render_chunk_translates_display_funcs_correct_also_with_hidden_rows_cols(
         formatter,
@@ -136,7 +195,7 @@ def test_render_chunk_translates_display_funcs_correct_also_with_hidden_rows_col
         cols_per_chunk,
 ):
     assert_patched_styler(
-        other_df,
+        df,
         lambda styler: styler
         .hide(axis="index", subset=pd.IndexSlice[1:3])
         .hide(axis="columns", subset=["col_1", "col_3"])
@@ -147,16 +206,8 @@ def test_render_chunk_translates_display_funcs_correct_also_with_hidden_rows_col
 
 
 def test_jsonify():
-    json = PatchedStyler(PatchedStylerContext(df.style), "").jsonify({"a": 12, "b": (True, False)})
+    json = PatchedStyler(PatchedStylerContext(multi_df.style), "").jsonify({"a": 12, "b": (True, False)})
     assert json == '{"a": 12, "b": [true, false]}'
-
-
-def test_get_org_indices_of_visible_columns():
-    ps = PatchedStyler(PatchedStylerContext(df.style), "")
-
-    num_cols = 3
-    actual = ps.get_org_indices_of_visible_columns(0, num_cols)
-    assert actual == list(range(0, num_cols))
 
 
 def test_should_not_revalidate_faulty_styling_functions():
@@ -178,7 +229,7 @@ def test_should_not_revalidate_faulty_styling_functions():
             raise Exception("panic")
         return ['' for _ in s]
 
-    styler = other_df.style.apply(my_style_func, axis='index')
+    styler = df.style.apply(my_style_func, axis='index')
     ctx = PatchedStylerContext(styler)
     ps = PatchedStyler(ctx, "")
 

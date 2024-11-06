@@ -50,7 +50,7 @@ def test_filter_by_columns():
     assert list(actual_columns) == list(expected_columns)
 
     expected_org_indices = [1, 4]
-    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices()
     assert actual_org_indices == expected_org_indices
 
 
@@ -62,5 +62,5 @@ def test_filter_with_empty_filter():
     assert ts.rows_count == 0
     assert ts.columns_count == 0
 
-    actual_org_indices = ctx.visible_frame.get_column_indices(0, 100)
+    actual_org_indices = ctx.visible_frame.get_column_indices()
     assert actual_org_indices == []

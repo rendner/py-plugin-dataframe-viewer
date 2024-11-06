@@ -40,7 +40,7 @@ class VisibleColumnInfo:
 
 class VisibleFrame(AbstractVisibleFrame):
     def __init__(self, source_frame: DataFrame):
-        super().__init__(Region(0, 0, len(source_frame.index), len(source_frame.columns)))
+        super().__init__(Region(first_row=0, first_col=0, rows=len(source_frame.index), cols=len(source_frame.columns)))
         self._source_frame = source_frame
 
     def unlink(self):
@@ -76,15 +76,11 @@ class VisibleFrame(AbstractVisibleFrame):
     def to_source_frame_cell_coordinates(self, row: int, col: int):
         return row, col
 
-    def get_column_indices(self, part_start: int, max_columns: int):
-        r = self.region.get_bounded_region(Region(part_start, 0, max_columns, 0))
-        return list(range(r.first_row, r.first_row + r.rows))
-
 
 class MappedVisibleFrame(VisibleFrame):
     def __init__(self, source_frame: DataFrame, visible_rows: np.ndarray, visible_cols: np.ndarray):
         super().__init__(source_frame)
-        self.region = Region(0, 0, len(visible_rows), len(visible_cols))
+        self.region = Region(first_row=0, first_col=0, rows=len(visible_rows), cols=len(visible_cols))
         self.__i_rows = visible_rows
         self.__i_cols = visible_cols
 
@@ -114,5 +110,5 @@ class MappedVisibleFrame(VisibleFrame):
     def to_source_frame_cell_coordinates(self, row: int, col: int) -> tuple[int, int]:
         return self.__i_rows[row], self.__i_cols[col]
 
-    def get_column_indices(self, part_start: int, max_columns: int) -> list[int]:
-        return list(self.__i_cols[part_start:part_start + max_columns])
+    def get_column_indices(self) -> list[int]:
+        return list(self.__i_cols)

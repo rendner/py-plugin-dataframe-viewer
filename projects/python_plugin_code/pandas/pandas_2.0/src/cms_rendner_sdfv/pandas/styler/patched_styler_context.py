@@ -17,9 +17,10 @@ from pandas import Index, DataFrame
 from pandas.io.formats.style import Styler
 
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
-from cms_rendner_sdfv.base.types import Region
+from cms_rendner_sdfv.base.types import Region, TableStructureColumnInfo, TableStructureColumn, TableStructureLegend
 from cms_rendner_sdfv.pandas.shared.pandas_table_source_context import PandasTableSourceContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
+from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
 from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame
 from cms_rendner_sdfv.pandas.styler.apply_map_patcher import ApplyMapPatcher
 from cms_rendner_sdfv.pandas.styler.apply_patcher import ApplyPatcher
@@ -179,6 +180,52 @@ class PatchedStylerContext(PandasTableSourceContext):
             org_styler=self.__styler,
             todo_patcher_list=self.__todo_patcher_list,
         ).compute(region)
+
+    def _get_frame_column_info(self) -> TableStructureColumnInfo:
+        formatter = ValueFormatter()
+        frame = self.__styler.data
+
+        ts_columns = []
+        dtypes = frame.dtypes
+        for col in self.visible_frame.get_column_indices():
+            col_labels = frame.columns[col]
+            labels = col_labels
+            if not isinstance(labels, tuple):
+                labels = [labels]
+            labels = [
+                self.__styler._display_funcs_columns[(lvl, col)](lbl)
+                for lvl, lbl in enumerate(labels)
+                # hide_columns_ := list of booleans, True means lbl should be excluded
+                if not self.__styler.hide_columns_[lvl]
+            ]
+            ts_columns.append(
+                TableStructureColumn(
+                    dtype=str(dtypes[col_labels]),
+                    labels=[formatter.format_column(lbl) for lbl in labels],
+                    id=col,
+                )
+            )
+
+        index_legend = [
+            formatter.format_index(lbl)
+            for lvl, lbl in enumerate(self.visible_frame.index_names)
+            # hide_index_ := list of booleans, True means lbl should be excluded
+            if lbl is not None and not self.__styler.hide_index_[lvl]
+        ]
+
+        column_legend = [
+            formatter.format_index(lbl)
+            for lvl, lbl in enumerate(self.visible_frame.column_names)
+            # hide_columns_ := list of booleans, True means lbl should be excluded
+            if lbl is not None and not self.__styler.hide_columns_[lvl]
+        ]
+
+        legend = TableStructureLegend(
+            index=index_legend,
+            column=column_legend,
+        ) if index_legend or column_legend else None
+
+        return TableStructureColumnInfo(columns=ts_columns, legend=legend)
 
     def _get_initial_visible_frame_indexes(self):
         index, columns = super()._get_initial_visible_frame_indexes()

@@ -81,7 +81,7 @@ class VisibleFrame(AbstractVisibleFrame):
     def get_chunk(self, region: Region = None) -> Chunk:
         return Chunk(self, self.region.get_bounded_region(region))
 
-    def get_column_indices(self, part_start: int, max_columns: int) -> List[int]:
+    def get_column_indices(self) -> List[int]:
         if self.__col_idx is None:
-            return super().get_column_indices(part_start, max_columns)
-        return list(self.__col_idx[part_start:part_start + max_columns])
+            return super().get_column_indices()
+        return list(self.__col_idx)

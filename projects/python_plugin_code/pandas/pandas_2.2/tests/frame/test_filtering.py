@@ -69,7 +69,7 @@ def test_filter_by_columns():
     assert list(actual_columns) == list(expected_columns)
 
     expected_org_indices = [0, 4]
-    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices()
     assert actual_org_indices == expected_org_indices
 
 
@@ -91,7 +91,7 @@ def test_filter_by_rows_and_columns():
     assert list(actual.columns) == list(filter_frame.columns)
 
     expected_org_indices = [0, 4]
-    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual.columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices()
     assert actual_org_indices == expected_org_indices
 
 
@@ -110,7 +110,7 @@ def test_filter_with_empty_columns():
     actual_columns = ctx.visible_frame.to_frame(ctx.visible_frame.region).columns
     assert list(actual_columns) == []
 
-    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual_columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices()
     assert actual_org_indices == []
 
 
@@ -131,7 +131,7 @@ def test_filter_with_non_existing_rows_and_columns():
     assert list(actual.index) == []
     assert list(actual.columns) == []
 
-    actual_org_indices = ctx.visible_frame.get_column_indices(0, len(actual.columns))
+    actual_org_indices = ctx.visible_frame.get_column_indices()
     assert actual_org_indices == []
 
 
