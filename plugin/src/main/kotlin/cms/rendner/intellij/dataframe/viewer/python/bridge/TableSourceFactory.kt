@@ -139,15 +139,6 @@ class TableSourceFactory {
             )
         }
 
-        override fun evaluateGetOrgIndicesOfVisibleColumns(partStart: Int, maxColumns: Int): List<Int> {
-            return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(refExpr, "get_org_indices_of_visible_columns") {
-                    numberParam(partStart)
-                    numberParam(maxColumns)
-                }
-            )
-        }
-
         override fun evaluateGetColumnNameVariants(
             identifier: String,
             isSyntheticIdentifier: Boolean,

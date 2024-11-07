@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,10 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
 
 class TableModelFactory(private val chunkSize: ChunkSize) {
 
-    fun createModel(
-        tableStructure: TableStructure,
-        sortable: Boolean = true,
-        frameColumnOrgIndexList: List<Int>? = null,
-        ): RecordingModel {
+    fun createModel(tableStructure: TableStructure, sortable: Boolean = true): RecordingModel {
         val loader = RecordingLoader()
         val model = ChunkedDataFrameModel(
             tableStructure,
-            ColumnIndexTranslator(frameColumnOrgIndexList),
             loader,
             chunkSize,
             sortable,
@@ -50,6 +45,9 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
             rowCount,
             columnCount,
             fingerprint = "",
+            TableStructureColumnInfo(
+                (0 until columnCount).map { TableStructureColumn(it, "string", listOf("col_$it")) }
+            ),
         )
     }
 

@@ -86,15 +86,6 @@ internal class TableSourceRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun evaluateGetOrgIndicesOfVisibleColumns_shouldBeCallable() {
-        runWithTableSource { tableSource ->
-            assertThatNoException().isThrownBy {
-                tableSource.evaluateGetOrgIndicesOfVisibleColumns(0, 999)
-            }
-        }
-    }
-
-    @Test
     fun evaluateGetColumnNameVariants_shouldBeCallable() {
         runWithTableSource { tableSource ->
             tableSource.evaluateGetColumnNameVariants("df", false, "''").let {

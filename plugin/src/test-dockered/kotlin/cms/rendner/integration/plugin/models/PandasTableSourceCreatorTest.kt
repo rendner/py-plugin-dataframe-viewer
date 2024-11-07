@@ -38,7 +38,6 @@ internal class PandasTableSourceCreatorTest : AbstractTableSourceCreatorTest(Pan
             creator.result!!.let {
                 assertThat(it.tableSourceRef).isNotNull
                 assertThat(it.tableStructure).isNotNull
-                assertThat(it.columnIndexTranslator).isNotNull
                 assertThat(it.currentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
             }
         }

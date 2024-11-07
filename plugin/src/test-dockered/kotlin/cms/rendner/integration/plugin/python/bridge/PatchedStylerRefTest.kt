@@ -92,15 +92,6 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun evaluateGetOrgIndicesOfVisibleColumns_shouldBeCallable() {
-        runWithPatchedStyler {
-            assertThatNoException().isThrownBy {
-                it.evaluateGetOrgIndicesOfVisibleColumns(0, 999)
-            }
-        }
-    }
-
-    @Test
     fun shouldNotReferToStylersDataFrameAfterDispose() {
         createPythonDebuggerWithCodeSnippet(createDataFrameSnippet()) { debuggerApi ->
             val tableSource = createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style.applymap(lambda x: 'color: red')")

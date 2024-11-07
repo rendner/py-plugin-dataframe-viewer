@@ -246,7 +246,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
 
     private data class ColumnCacheKey(val type: String, val index: Int) {
         companion object {
-            fun indexInUnfilteredTableSource(indexToCache: Int) = ColumnCacheKey("indexInUnfilteredTableSource", indexToCache)
+            fun uniqueColumnId(indexToCache: Int) = ColumnCacheKey("uniqueColumnId", indexToCache)
             fun modelIndex(indexToCache: Int) = ColumnCacheKey("modelIndex", indexToCache)
         }
     }
@@ -257,11 +257,13 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     ): List<MyValueTableColumn> {
         val result = mutableListOf<MyValueTableColumn>()
         for (modelIndex in 0 until valueModel.columnCount) {
-            val columnIndexInUnfilteredTableSource = valueModel.convertToColumnIndexInUnfilteredTableSource(modelIndex)
-            result.add(MyValueTableColumn(modelIndex, columnIndexInUnfilteredTableSource).apply {
+            val uniqueColumnId = valueModel.getUniqueColumnId(modelIndex)
+            result.add(MyValueTableColumn(modelIndex, uniqueColumnId).apply {
                 this.minWidth = MIN_COLUMN_WIDTH
-                prevTableColumnCache[ColumnCacheKey.indexInUnfilteredTableSource(columnIndexInUnfilteredTableSource)]?.let { prevColumn ->
-                    this.copyStateFrom(prevColumn)
+                if (uniqueColumnId != -1) {
+                    prevTableColumnCache[ColumnCacheKey.uniqueColumnId(uniqueColumnId)]?.let { prevColumn ->
+                        this.copyStateFrom(prevColumn)
+                    }
                 }
             })
         }
@@ -285,7 +287,9 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         if (myModelHasSameDataSource) {
             for (column in columnModel.columns) {
                 if (column !is MyValueTableColumn) continue
-                prevColumnCache[ColumnCacheKey.indexInUnfilteredTableSource(column.indexInUnfilteredTableSource)] = column
+                if (column.uniqueColumnId != -1) {
+                    prevColumnCache[ColumnCacheKey.uniqueColumnId(column.uniqueColumnId)] = column
+                }
                 if (keepSortKeyState) prevColumnCache[ColumnCacheKey.modelIndex(column.modelIndex)] = column
             }
         }
@@ -300,11 +304,13 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
             MyExternalDataRowSorter(model).apply {
                 if (keepSortKeyState) {
                     rowSorter?.sortKeys?.let { oldSortKeys ->
-                        val newColumnCache = newColumns.associateBy { ColumnCacheKey.indexInUnfilteredTableSource(it.indexInUnfilteredTableSource) }
+                        // it is OK, to add invalid cache entries (with an "uniqueColumnId" of -1) to the new cache
+                        // because the cache is only used temporary and "prevColumnCache" has no invalid entries
+                        val newColumnCache = newColumns.associateBy { ColumnCacheKey.uniqueColumnId(it.uniqueColumnId) }
                         sortKeys = oldSortKeys.mapNotNull {
-                            val indexInUnfilteredTableSource = prevColumnCache[ColumnCacheKey.modelIndex(it.column)]?.indexInUnfilteredTableSource
+                            val uniqueColumnId = prevColumnCache[ColumnCacheKey.modelIndex(it.column)]?.uniqueColumnId
                                 ?: return@mapNotNull null
-                            val newModelIndex = newColumnCache[ColumnCacheKey.indexInUnfilteredTableSource(indexInUnfilteredTableSource)]?.modelIndex
+                            val newModelIndex = newColumnCache[ColumnCacheKey.uniqueColumnId(uniqueColumnId)]?.modelIndex
                                 ?: return@mapNotNull null
                             if (newModelIndex == -1) null else SortKey(newModelIndex, it.sortOrder)
                         }
@@ -719,20 +725,17 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
 
     private class MyValueTableColumn(
         modelIndex: Int,
-        indexInUnfilteredTableSource: Int,
+        uniqueColumnId: Int,
         var hasFixedWidth: Boolean = false,
     ) : TableColumn(modelIndex) {
 
         var autoFitPreferredWidth: Int = preferredWidth
 
         init {
-            super.identifier = indexInUnfilteredTableSource
+            super.identifier = uniqueColumnId
         }
 
-        /**
-         * The index of the column in the original unfiltered data source.
-         */
-        val indexInUnfilteredTableSource: Int
+        val uniqueColumnId: Int
             get() = getIdentifier() as Int
 
         override fun setIdentifier(identifier: Any?) {

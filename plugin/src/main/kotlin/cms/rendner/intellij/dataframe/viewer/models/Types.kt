@@ -112,15 +112,13 @@ interface ITableValueDataModel : ITableDataModel {
     fun setSortKeys(sortKeys: List<SortKey>)
 
     /**
-     * Returns the index for a column in the unfiltered table source.
-     * The index of a column from the data model cannot be mapped one-to-one to
-     * the index of the column of a table source. Because some columns could be
-     * filtered out by the model. And for example pandas styler can hide columns
-     * which nevertheless exist in a pandas DataFrame.
+     * Returns a unique column-id for the column in the table source.
+     * This id has to be stable and independent of the actual index of the column (index could change when columns are filtered out).
+     * Same column should always return the same id. The id is used to restore the state (width, sort-state, etc.) of a column.
      *
-     * @return the index of the column in the table source.
+     * @return the unique column-id in the table source or "-1" if the table source can't provide stable unique ids.
      */
-    fun convertToColumnIndexInUnfilteredTableSource(columnIndex: Int) = columnIndex
+    fun getUniqueColumnId(columnIndex: Int) = columnIndex
 
     /**
      * Enables or disables data fetching.

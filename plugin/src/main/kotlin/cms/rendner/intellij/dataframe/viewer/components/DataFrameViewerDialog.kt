@@ -317,7 +317,6 @@ class DataFrameViewerDialog(
                 val chunkLoader = createChunkLoader(result.tableSourceRef, settings)
                 ChunkedDataFrameModel(
                     result.tableStructure,
-                    result.columnIndexTranslator,
                     chunkLoader,
                     ChunkSize(30, 20),
                     request.info.sortable,

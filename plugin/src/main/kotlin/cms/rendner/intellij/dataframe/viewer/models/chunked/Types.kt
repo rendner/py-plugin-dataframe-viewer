@@ -122,19 +122,24 @@ data class ChunkData(
  */
 data class ChunkSize(val rows: Int, val columns: Int)
 
-/**
- * Translates the index of a visible columns into the original index of the unfiltered dataSource.
- *
- * Some table sources allow to filter out columns. To keep the ui-state of the displayed columns (width, sorting, etc.),
- * after a sorting or reaching another breakpoint, the original index is used to identify the columns.
- *
- * @param orgIndices the original indices.
- */
-data class ColumnIndexTranslator(private val orgIndices: List<Int>? = null) {
-    fun translateToOriginalIndex(index: Int): Int {
-        return orgIndices?.let { it[index] } ?: index
-    }
-}
+@Serializable
+data class TableStructureLegend(
+    val index: List<String>,
+    val column: List<String>,
+)
+
+@Serializable
+data class TableStructureColumn(
+    val id: Int,
+    val dtype: String,
+    val labels: List<String>,
+)
+
+@Serializable
+data class TableStructureColumnInfo(
+    val columns: List<TableStructureColumn>,
+    val legend: TableStructureLegend? = null,
+)
 
 /**
  * Describes the table structure of a table source.
@@ -152,6 +157,7 @@ data class TableStructure(
     @SerialName("rows_count") val rowsCount: Int,
     @SerialName("columns_count") val columnsCount: Int,
     @SerialName("fingerprint") val fingerprint: String,
+    @SerialName("column_info") val columnInfo: TableStructureColumnInfo,
 )
 
 /**

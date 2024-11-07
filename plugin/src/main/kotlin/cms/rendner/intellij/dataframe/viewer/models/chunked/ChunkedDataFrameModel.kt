@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import javax.swing.table.AbstractTableModel
  * The [IChunkDataLoader.dispose] method of the [chunkDataLoader] is automatically called when the model is disposed.
  *
  * @param tableStructure describes the structure of the model.
- * @param columnIndexTranslator indices of the visible columns in the unfiltered table source.
  * @param chunkDataLoader used for lazy data loading.
  * @param chunkSize size of the chunks to load.
  * @param sortable true if model can be sorted.
@@ -40,7 +39,6 @@ import javax.swing.table.AbstractTableModel
  */
 class ChunkedDataFrameModel(
     private val tableStructure: TableStructure,
-    private val columnIndexTranslator: ColumnIndexTranslator,
     private val chunkDataLoader: IChunkDataLoader,
     private val chunkSize: ChunkSize,
     private val sortable: Boolean = false,
@@ -390,8 +388,8 @@ class ChunkedDataFrameModel(
         override fun getColumnName(columnIndex: Int) = getColumnHeaderAt(columnIndex).text()
         override fun getLegendHeader() = source.getColumnLegendHeader()
         override fun getLegendHeaders() = source.getLegendHeaders()
-        override fun convertToColumnIndexInUnfilteredTableSource(columnIndex: Int): Int {
-            return source.columnIndexTranslator.translateToOriginalIndex(columnIndex)
+        override fun getUniqueColumnId(columnIndex: Int): Int {
+            return source.tableStructure.columnInfo.columns[columnIndex].id
         }
     }
 

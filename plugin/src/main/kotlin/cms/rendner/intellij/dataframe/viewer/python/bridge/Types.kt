@@ -100,24 +100,6 @@ interface IPyTableSourceRef: Disposable {
     ): TableFrame
 
     /**
-     * Calls the "get_org_indices_of_visible_columns" method of the Python class.
-     *
-     * This method is only called if a table source is filterable and the [TableStructure],
-     * retrieved from the table source, returns different values for [TableStructure.orgColumnsCount]
-     * and [TableStructure.columnsCount].
-     *
-     * @param partStart the start index in the original unfiltered column list.
-     * @param maxColumns the number of requested columns, starting from [partStart].
-     *
-     * @return A list of indices.
-     * The number of elements matches [maxColumns]. In case
-     * [partStart] + [maxColumns] exceeds the length of the original columns, the list
-     * is shorter than [maxColumns].
-     */
-    @Throws(EvaluateException::class)
-    fun evaluateGetOrgIndicesOfVisibleColumns(partStart: Int, maxColumns: Int): List<Int>
-
-    /**
      * Calls the "get_column_name_variants" method of the Python class.
      *
      * Provides completion variants for column names.

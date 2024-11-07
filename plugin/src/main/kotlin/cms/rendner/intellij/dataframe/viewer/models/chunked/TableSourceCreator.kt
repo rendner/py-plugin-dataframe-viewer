@@ -42,13 +42,11 @@ abstract class TableSourceCreator(val evaluator: IPluginPyValueEvaluator) {
      * the created table source in Python.
      * @param tableSourceRef the table source instance to interop with the instance created in Python.
      * @param tableStructure the table structure of the table source.
-     * @param columnIndexTranslator to translate the index of visible columns back to the there original index.
      */
     data class Result(
         val currentStackFrameRefExpr: String,
         val tableSourceRef: IPyTableSourceRef,
         val tableStructure: TableStructure,
-        val columnIndexTranslator: ColumnIndexTranslator,
     )
 
     /**
@@ -152,40 +150,12 @@ abstract class TableSourceCreator(val evaluator: IPluginPyValueEvaluator) {
         }
 
         ProgressManager.checkCanceled()
-
         val tableStructure = tableSourceRef.evaluateTableStructure()
-        val columnIndexTranslator =
-            if (request.info.filterable &&
-                tableStructure.columnsCount > 0 &&
-                tableStructure.columnsCount != tableStructure.orgColumnsCount) {
-            var entryOffset = 0
-            val maxEntries = 1000
-            val frameColumnIndexList = mutableListOf<Int>()
-
-            while (entryOffset < tableStructure.columnsCount) {
-                ProgressManager.checkCanceled()
-                try {
-                    tableSourceRef.evaluateGetOrgIndicesOfVisibleColumns(entryOffset, maxEntries).also {
-                        frameColumnIndexList.addAll(it)
-                    }
-                } catch (ex: EvaluateException) {
-                    handleFailure(request, ex, "${ex.localizedMessage} => caused by: 'evaluateGetOrgIndicesOfVisibleColumns($entryOffset)'")
-                    return
-                }
-                entryOffset += maxEntries
-            }
-
-            ColumnIndexTranslator(frameColumnIndexList)
-        } else ColumnIndexTranslator()
+        ProgressManager.checkCanceled()
 
         handleSuccess(
             request,
-            Result(
-                dataSourceRefExpr,
-                tableSourceRef,
-                tableStructure,
-                columnIndexTranslator,
-            ),
+            Result(dataSourceRefExpr, tableSourceRef, tableStructure),
         )
     }
 }
