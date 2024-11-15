@@ -17,15 +17,14 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 
 import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataResultHandler
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AbstractModelDataLoader
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
 
 class TableModelFactory(private val chunkSize: ChunkSize) {
 
     fun createModel(tableStructure: TableStructure, sortable: Boolean = true): RecordingModel {
-        val loader = RecordingLoader()
-        val model = ChunkedDataFrameModel(
+        val loader = RecordingModelDataLoader()
+        val model = LazyDataFrameModel(
             tableStructure,
             loader,
             chunkSize,
@@ -53,7 +52,7 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
 
     class RecordingModel internal constructor(
         private val model: IDataFrameModel,
-        private val loader: RecordingLoader,
+        private val loader: RecordingModelDataLoader,
     ) : IDataFrameModel by model {
 
         val recordedLoadRequests: List<LoadRequest>
@@ -61,44 +60,39 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
                 return loader.recordedRequests
             }
 
-        val recordedSortCriteria: SortCriteria
+        val recordedSortCriteria: SortCriteria?
             get() {
-                return loader.recordedSortCriteria
+                return loader.recordedSorting
             }
 
         fun enableDataFetching(enabled: Boolean) {
-            getValueDataModel().enableDataFetching(enabled)
+            getValuesDataModel().enableDataFetching(enabled)
         }
     }
 
-    class RecordingLoader : IChunkDataLoader {
+    class RecordingModelDataLoader : AbstractModelDataLoader() {
         val recordedRequests: MutableList<LoadRequest> = mutableListOf()
-        var recordedSortCriteria: SortCriteria = SortCriteria()
-
-        private var resultHandler: IChunkDataResultHandler? = null
+        var recordedSorting: SortCriteria? = null
 
         override fun loadChunk(request: LoadRequest) {
             recordedRequests.add(request)
-            resultHandler?.onChunkLoaded(request, createResponseFor(request))
+            notifyChunkDataSuccess(request, createResponseFor(request))
         }
 
-        override fun setSortCriteria(sortCriteria: SortCriteria) {
-            recordedSortCriteria = sortCriteria
+        override fun loadColumnStatistics(columnIndex: Int) {
+            notifyColumnStatisticsSuccess(columnIndex, emptyMap())
         }
 
-        override fun setResultHandler(resultHandler: IChunkDataResultHandler) {
-            this.resultHandler = resultHandler
+        override fun setSorting(sorting: SortCriteria) {
+            recordedSorting = sorting
         }
 
         override fun isAlive() = true
-        override fun dispose() {}
 
         private fun createResponseFor(request: LoadRequest): ChunkData {
             val chunkRegion = request.chunkRegion
             return ChunkData(
                 ChunkHeaderLabels(
-                    null,
-                    createColumnHeader(if (request.excludeColumnHeaders) 0 else chunkRegion.numberOfColumns),
                     createHeaderLabels(if (request.excludeRowHeaders) 0 else chunkRegion.numberOfRows)
                 ),
                 ChunkValuesPlaceholder(StringValue("col")),
@@ -110,15 +104,6 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
                 emptyList()
             } else {
                 val header = HeaderLabel()
-                return List(size) { header }
-            }
-        }
-
-        private fun createColumnHeader(size: Int): List<ColumnHeader> {
-            return if (size == 0) {
-                emptyList()
-            } else {
-                val header = ColumnHeader(null, HeaderLabel())
                 return List(size) { header }
             }
         }

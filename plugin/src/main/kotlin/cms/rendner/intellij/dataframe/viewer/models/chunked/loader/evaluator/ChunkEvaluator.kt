@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator
+package cms.rendner.intellij.dataframe.viewer.models.chunked.loader.evaluator
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
@@ -30,13 +30,13 @@ open class ChunkEvaluator(
     override fun evaluateTableFrame(
         chunkRegion: ChunkRegion,
         excludeRowHeader: Boolean,
-        excludeColumnHeader: Boolean
+        newSorting: SortCriteria?,
     ): TableFrame {
-        return tableSourceRef.evaluateComputeChunkTableFrame(chunkRegion, excludeRowHeader, excludeColumnHeader)
+        return tableSourceRef.evaluateComputeChunkTableFrame(chunkRegion, excludeRowHeader, newSorting)
     }
 
-    override fun setSortCriteria(sortCriteria: SortCriteria) {
-        tableSourceRef.evaluateSetSortCriteria(sortCriteria)
+    override fun evaluateColumnStatistics(columnIndex: Int): Map<String, String> {
+        return tableSourceRef.evaluateColumnStatistics(columnIndex)
     }
 }
 
@@ -68,9 +68,9 @@ class ValidatedChunkEvaluator(
     override fun evaluateTableFrame(
         chunkRegion: ChunkRegion,
         excludeRowHeader: Boolean,
-        excludeColumnHeader: Boolean,
+        newSorting: SortCriteria?,
     ): TableFrame {
-        val result = tableSourceRef.evaluateValidateAndComputeChunkTableFrame(chunkRegion, excludeRowHeader, excludeColumnHeader)
+        val result = tableSourceRef.evaluateValidateAndComputeChunkTableFrame(chunkRegion, excludeRowHeader, newSorting)
         result.problems.filter { !reportedStyleFuncIndices.contains(it.funcInfo.index) }.let { newProblems ->
             if (newProblems.isNotEmpty()) {
                 problemHandler.handleValidationProblems(newProblems)

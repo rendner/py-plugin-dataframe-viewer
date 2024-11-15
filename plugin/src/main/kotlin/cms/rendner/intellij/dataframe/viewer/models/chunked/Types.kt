@@ -15,9 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
-import cms.rendner.intellij.dataframe.viewer.models.ColumnHeader
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
-import cms.rendner.intellij.dataframe.viewer.models.LegendHeaders
 import cms.rendner.intellij.dataframe.viewer.models.Value
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrame
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
@@ -34,7 +32,7 @@ interface IChunkEvaluator {
      *
      * @param chunkRegion the region of the data to evaluate
      * @param excludeRowHeader if true, the row headers are excluded from the result.
-     * @param excludeColumnHeader if true, the column headers are excluded from the result.
+     * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
      * @return returns a table representation of the chunk.
      * @throws EvaluateException in case the evaluation fails.
      */
@@ -42,15 +40,11 @@ interface IChunkEvaluator {
     fun evaluateTableFrame(
         chunkRegion: ChunkRegion,
         excludeRowHeader: Boolean,
-        excludeColumnHeader: Boolean
+        newSorting: SortCriteria?,
     ): TableFrame
 
-    /**
-     * Applies the sort criteria to the table source.
-     * @throws EvaluateException in case the evaluation fails.
-     */
     @Throws(EvaluateException::class)
-    fun setSortCriteria(sortCriteria: SortCriteria)
+    fun evaluateColumnStatistics(columnIndex: Int): Map<String, String>
 }
 
 interface IChunkValues {
@@ -79,13 +73,9 @@ data class ChunkValues(val rows: List<ChunkValuesRow>) : IChunkValues {
 /**
  * The headers of a chunk.
  *
- * @property legend the legend headers (contain additional information for multi index like in pandas DataFrames)
- * @property columns list of column headers
  * @property rows list of row headers, null if there are no row labels
  */
 data class ChunkHeaderLabels(
-    val legend: LegendHeaders?,
-    val columns: List<ColumnHeader>,
     val rows: List<IHeaderLabel>?
 )
 

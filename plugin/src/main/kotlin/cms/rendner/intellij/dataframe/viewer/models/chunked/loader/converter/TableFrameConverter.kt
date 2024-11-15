@@ -13,31 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.models.chunked.converter
+package cms.rendner.intellij.dataframe.viewer.models.chunked.loader.converter
 
 import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrame
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrameCell
-import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrameColumn
-import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrameLegend
 import com.intellij.util.SmartList
 
 class TableFrameConverter {
     companion object {
         private val valueConverter = CSSValueConverter()
 
-        fun convert(table: TableFrame, excludeRowHeader: Boolean, excludeColumnHeader: Boolean): ChunkData {
+        fun convert(table: TableFrame, excludeRowHeader: Boolean): ChunkData {
             return ChunkData(
-                if (excludeRowHeader && excludeColumnHeader) null else toChunkHeaderLabels(table),
+                if (excludeRowHeader) null else toChunkHeaderLabels(table),
                 toChunkValues(table.cells),
             )
         }
 
+        fun convertHeaderLabel(label: List<String>?): IHeaderLabel {
+            return when(label?.size) {
+                0, null -> HeaderLabel()
+                1 -> HeaderLabel(label[0])
+                else -> LeveledHeaderLabel(label.last(), SmartList(label.subList(0, label.size - 1)))
+            }
+        }
+
         private fun toChunkHeaderLabels(table: TableFrame): ChunkHeaderLabels {
             return ChunkHeaderLabels(
-                legend = convertLegendLabels(table.legend),
-                columns = convertColumnHeaderLabels(table.columns),
                 rows = table.indexLabels.let { if (it == null) null else convertRowHeaderLabels(it) },
             )
         }
@@ -76,22 +80,6 @@ class TableFrameConverter {
 
         private fun convertRowHeaderLabels(labels: List<List<String>>): List<IHeaderLabel> {
             return SmartList(labels.map {  convertHeaderLabel(it) })
-        }
-
-        private fun convertColumnHeaderLabels(labels: List<TableFrameColumn>): List<ColumnHeader> {
-            return SmartList(labels.map {  ColumnHeader(it.dtype, convertHeaderLabel(it.labels), it.describe) })
-        }
-
-        private fun convertLegendLabels(legend: TableFrameLegend?): LegendHeaders? {
-            return if (legend == null) null else LegendHeaders(convertHeaderLabel(legend.index), convertHeaderLabel(legend.column))
-        }
-
-        private fun convertHeaderLabel(label: List<String>?): IHeaderLabel {
-            return when(label?.size) {
-                0, null -> HeaderLabel()
-                1 -> HeaderLabel(label[0])
-                else -> LeveledHeaderLabel(label.last(), SmartList(label.subList(0, label.size - 1)))
-            }
         }
     }
 }

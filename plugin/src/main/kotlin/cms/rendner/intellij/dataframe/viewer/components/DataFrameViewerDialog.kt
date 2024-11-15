@@ -17,13 +17,11 @@ package cms.rendner.intellij.dataframe.viewer.components
 
 import cms.rendner.intellij.dataframe.viewer.components.filter.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
-import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ChunkEvaluator
-import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.IChunkValidationProblemHandler
-import cms.rendner.intellij.dataframe.viewer.models.chunked.evaluator.ValidatedChunkEvaluator
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AsyncChunkDataLoader
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoader
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IChunkDataLoaderErrorHandler
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions.ChunkDataLoaderException
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.evaluator.ChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.evaluator.IChunkValidationProblemHandler
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.evaluator.ValidatedChunkEvaluator
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AsyncModelDataLoader
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.IModelDataLoader
 import cms.rendner.intellij.dataframe.viewer.notifications.ChunkValidationProblemNotification
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
@@ -60,7 +58,6 @@ class DataFrameViewerDialog(
     ) :
         DialogWrapper(project, false),
         IChunkValidationProblemHandler,
-        IChunkDataLoaderErrorHandler,
         IPluginEdtAwareDebugSessionListener {
 
     private var myDataSourceInfo: DataSourceInfo
@@ -231,29 +228,36 @@ class DataFrameViewerDialog(
         return myTable.getPreferredFocusedComponent()
     }
 
-    private fun createChunkLoader(
+    private fun createModelDataLoader(
         tableSourceRef: IPyTableSourceRef,
         settings: ApplicationSettingsService.MyState,
-    ): IChunkDataLoader {
-        return AsyncChunkDataLoader(
+    ): IModelDataLoader {
+        return AsyncModelDataLoader(
             if (tableSourceRef is IPyPatchedStylerRef && settings.pandasStyledFuncValidationEnabled)
                 ValidatedChunkEvaluator(tableSourceRef, this)
             else ChunkEvaluator(tableSourceRef),
-            this,
-        )
+        ).also {
+            it.addResultHandler(object: IModelDataLoader.IResultHandler {
+                override fun onResult(result: IModelDataLoader.IResultHandler.Result) {
+                    if (result !is IModelDataLoader.IResultHandler.Failure) return
+                    if (isShouldAbortDataFetchingSilentlyException(result.throwable)) return
+                    when (result) {
+                        is IModelDataLoader.IResultHandler.ChunkDataFailure -> {
+                            ErrorNotification(
+                                "Error during fetching/processing chunk",
+                                "${result.throwable.message ?: "Unknown error occurred"}\nfor ${result.request.chunkRegion}",
+                                result.throwable
+                            ).notify(project)
+                        }
+                        else -> Unit
+                    }
+                }
+            })
+        }
     }
 
     override fun handleValidationProblems(problems: List<StyleFunctionValidationProblem>) {
         ChunkValidationProblemNotification(problems).notify(project)
-    }
-
-    override fun handleChunkDataError(region: ChunkRegion, exception: ChunkDataLoaderException) {
-        if (isShouldAbortDataFetchingSilentlyException(exception.cause)) return
-        ErrorNotification(
-            "Error during fetching/processing chunk",
-            "${exception.message ?: "Unknown error occurred"}\nfor $region",
-            exception
-        ).notify(project)
     }
 
     private fun shouldHandleCreatorResult(creator: TableSourceCreator): Boolean {
@@ -314,17 +318,17 @@ class DataFrameViewerDialog(
 
                 val settings = ApplicationSettingsService.instance.state
                 // note: loader doesn't sync on settings, user has to re-open the dialog after settings are changed
-                val chunkLoader = createChunkLoader(result.tableSourceRef, settings)
-                ChunkedDataFrameModel(
+                val modelDataLoader = createModelDataLoader(result.tableSourceRef, settings)
+                LazyDataFrameModel(
                     result.tableStructure,
-                    chunkLoader,
+                    modelDataLoader,
                     ChunkSize(30, 20),
                     request.info.sortable,
                     request.info.hasIndexLabels,
                 ).let { model ->
-                    myLastDataModelDisposable = Disposer.newDisposable(disposable, "modelDisposable").also {
+                    myLastDataModelDisposable = Disposer.newDisposable(disposable, "dataFrameModelDisposable").also {
                         Disposer.register(it, model)
-                        Disposer.register(it, chunkLoader)
+                        Disposer.register(it, modelDataLoader)
                         Disposer.register(it, result.tableSourceRef)
                     }
                     myTable.setDataFrameModel(model)

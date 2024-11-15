@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
 
-internal class ChunkedDataFrameModelTest {
+internal class LazyDataFrameModelTest {
 
     private val chunkSize = ChunkSize(2, 2)
     private val tableModelFactory = TableModelFactory(chunkSize)
@@ -36,9 +36,9 @@ internal class ChunkedDataFrameModelTest {
     fun doesNotFetchIfDataFetchingIsDisabled() {
         setup(tableModelFactory.createTableStructure())
 
-        model.getValueDataModel().enableDataFetching(false)
+        model.getValuesDataModel().enableDataFetching(false)
 
-        model.getValueDataModel().getValueAt(0, 0)
+        model.getValuesDataModel().getValueAt(0, 0)
 
         assertThat(model.recordedLoadRequests.size).isEqualTo(0)
     }
@@ -47,7 +47,7 @@ internal class ChunkedDataFrameModelTest {
     fun doesFetchChunkIfValueIsRequested() {
         setup(tableModelFactory.createTableStructure())
 
-        model.getValueDataModel().getValueAt(0, 0)
+        model.getValuesDataModel().getValueAt(0, 0)
 
         assertThat(model.recordedLoadRequests.size).isEqualTo(1)
     }
@@ -56,8 +56,8 @@ internal class ChunkedDataFrameModelTest {
     fun doesNotRefetchChunkIfValueIsRequestedTwice() {
         setup(tableModelFactory.createTableStructure())
 
-        model.getValueDataModel().getValueAt(0, 0)
-        model.getValueDataModel().getValueAt(0, 0)
+        model.getValuesDataModel().getValueAt(0, 0)
+        model.getValuesDataModel().getValueAt(0, 0)
 
         assertThat(model.recordedLoadRequests.size).isEqualTo(1)
     }
@@ -66,21 +66,20 @@ internal class ChunkedDataFrameModelTest {
     fun doesNotRefetchChunkIfValueFromSameChunkIsRequested() {
         setup(tableModelFactory.createTableStructure())
 
-        model.getValueDataModel().getValueAt(0, 0)
-        model.getValueDataModel().getValueAt(chunkSize.rows - 1, chunkSize.columns - 1)
+        model.getValuesDataModel().getValueAt(0, 0)
+        model.getValuesDataModel().getValueAt(chunkSize.rows - 1, chunkSize.columns - 1)
 
         assertThat(model.recordedLoadRequests.size).isEqualTo(1)
     }
 
     @Test
-    fun doesFetchHeadersIfNotHidden() {
+    fun doesFetchRowHeadersIfNotHidden() {
         setup(tableModelFactory.createTableStructure())
 
-        model.getValueDataModel().getValueAt(0, 0)
+        model.getValuesDataModel().getValueAt(0, 0)
 
         val loadRequest = model.recordedLoadRequests.first()
         assertThat(loadRequest.excludeRowHeaders).isFalse
-        assertThat(loadRequest.excludeColumnHeaders).isFalse
     }
 
     @Test
@@ -93,10 +92,13 @@ internal class ChunkedDataFrameModelTest {
         )
 
         assertThatExceptionOfType(IndexOutOfBoundsException::class.java).isThrownBy {
-            model.getValueDataModel().getValueAt(1, 1)
+            model.getValuesDataModel().getValueAt(1, 1)
         }
         assertThatExceptionOfType(IndexOutOfBoundsException::class.java).isThrownBy {
-            model.getValueDataModel().getColumnHeaderAt(1)
+            model.getValuesDataModel().getColumnLabelAt(1)
+        }
+        assertThatExceptionOfType(IndexOutOfBoundsException::class.java).isThrownBy {
+            model.getValuesDataModel().getColumnDtypeAt(1)
         }
 
         assertThatExceptionOfType(IndexOutOfBoundsException::class.java).isThrownBy {
@@ -110,7 +112,7 @@ internal class ChunkedDataFrameModelTest {
         setup(tableStructure)
 
         // fetch all values
-        val valueModel = model.getValueDataModel()
+        val valueModel = model.getValuesDataModel()
         for (r in 0 until tableStructure.rowsCount) {
             for (c in 0 until tableStructure.columnsCount) {
                 valueModel.getValueAt(r, c)
@@ -121,12 +123,6 @@ internal class ChunkedDataFrameModelTest {
             assertThat(requests).isNotEmpty
 
             requests.forEach {
-                if (it.chunkRegion.firstRow > 0) {
-                    assertThat(it.excludeColumnHeaders).isTrue
-                } else {
-                    assertThat(it.excludeColumnHeaders).isFalse
-                }
-
                 if (it.chunkRegion.firstColumn > 0) {
                     assertThat(it.excludeRowHeaders).isTrue
                 } else {
@@ -142,7 +138,7 @@ internal class ChunkedDataFrameModelTest {
         setup(tableStructure)
 
         // load only the last chunk
-        model.getValueDataModel().getValueAt(
+        model.getValuesDataModel().getValueAt(
             tableStructure.rowsCount - 1,
             tableStructure.columnsCount - 1
         )
@@ -150,7 +146,6 @@ internal class ChunkedDataFrameModelTest {
         assertThat(model.recordedLoadRequests).hasSize(1)
         model.recordedLoadRequests.first().let {
             assertThat(it.excludeRowHeaders).isFalse
-            assertThat(it.excludeColumnHeaders).isFalse
         }
     }
 }

@@ -22,7 +22,6 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TestOnlyIPyTableSourceRefApi
 import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatNoException
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
@@ -53,13 +52,11 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
                 it.evaluateValidateAndComputeChunkTableFrame(
                     ChunkRegion(0, 0, 2, 2),
                     excludeRowHeader = false,
-                    excludeColumnHeader = false,
+                    null,
                 )
             ).matches { validatedTable ->
                 validatedTable.frame.let { table ->
-                    table.indexLabels!!.isNotEmpty()
-                            && table.columns.isNotEmpty()
-                            && table.cells.isNotEmpty()
+                    table.indexLabels!!.isNotEmpty() && table.cells.isNotEmpty()
                 } && validatedTable.problems.isEmpty()
             }
         }
@@ -72,21 +69,10 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
                 it.evaluateComputeChunkTableFrame(
                     ChunkRegion(0, 0, 2, 2),
                     excludeRowHeader = false,
-                    excludeColumnHeader = false,
+                    SortCriteria(listOf(0), listOf(true)),
                 )
             ).matches { table ->
-                table.indexLabels!!.isNotEmpty()
-                    && table.columns.isNotEmpty()
-                    && table.cells.isNotEmpty()
-            }
-        }
-    }
-
-    @Test
-    fun evaluateSetSortCriteria_shouldBeCallable() {
-        runWithPatchedStyler {
-            assertThatNoException().isThrownBy {
-                it.evaluateSetSortCriteria(SortCriteria(listOf(0), listOf(true)))
+                table.indexLabels!!.isNotEmpty() && table.cells.isNotEmpty()
             }
         }
     }

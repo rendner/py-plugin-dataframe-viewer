@@ -19,7 +19,7 @@ import cms.rendner.intellij.dataframe.viewer.components.renderer.CustomizedCellR
 import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueCellRenderer
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header.CenteredHeaderLabelStyler
 import cms.rendner.intellij.dataframe.viewer.models.*
-import cms.rendner.intellij.dataframe.viewer.models.chunked.events.ChunkTableModelEvent
+import cms.rendner.intellij.dataframe.viewer.models.events.DataFrameTableModelEvent
 import com.intellij.ide.IdeTooltip
 import com.intellij.ide.IdeTooltipManager
 import com.intellij.openapi.application.ApplicationManager
@@ -57,22 +57,22 @@ class DataFrameTable : JScrollPane() {
 
     private var myDataFrameModel: IDataFrameModel = EmptyDataFrameModel()
     private var myIndexTable: MyIndexTable? = null
-    private val myValueTable: MyValueTable = MyValueTable(myDataFrameModel.getValueDataModel())
+    private val myValuesTable: MyValuesTable = MyValuesTable(myDataFrameModel.getValuesDataModel())
 
     init {
-        setViewportView(myValueTable)
+        setViewportView(myValuesTable)
         minimumSize = Dimension(MIN_TABLE_WIDTH, 200)
     }
 
-    fun getValueTable() = myValueTable
+    fun getValuesTable() = myValuesTable
 
-    fun getPreferredFocusedComponent(): JComponent = myValueTable
+    fun getPreferredFocusedComponent(): JComponent = myValuesTable
 
-    fun getRowHeight() = myValueTable.rowHeight
+    fun getRowHeight() = myValuesTable.rowHeight
 
-    fun getRowCount() = myValueTable.rowCount
+    fun getRowCount() = myValuesTable.rowCount
 
-    fun getColumnCount() = myValueTable.columnCount
+    fun getColumnCount() = myValuesTable.columnCount
 
     fun getDataFrameModel() = myDataFrameModel
 
@@ -119,7 +119,7 @@ class DataFrameTable : JScrollPane() {
                 myIndexTable.let {
                     if (it == null) {
                         myIndexTable = MyIndexTable(
-                            myValueTable,
+                            myValuesTable,
                             max(MIN_COLUMN_WIDTH, MIN_TABLE_WIDTH - MIN_COLUMN_WIDTH),
                         ).also { indexTable ->
                             indexTable.setModel(newIndexModel)
@@ -133,13 +133,13 @@ class DataFrameTable : JScrollPane() {
             }
         }
 
-        model.getValueDataModel().let {
+        model.getValuesDataModel().let {
             if (isSameDataSource) {
-                myValueTable.setModelWithSameDataSource(it)
+                myValuesTable.setModelWithSameDataSource(it)
             } else {
-                myValueTable.setModel(it)
+                myValuesTable.setModel(it)
             }
-            setColumnHeaderView(myValueTable.tableHeader)
+            setColumnHeaderView(myValuesTable.tableHeader)
         }
 
         setFocusedCell(cellToFocus)
@@ -154,8 +154,8 @@ class DataFrameTable : JScrollPane() {
      */
     fun getFocusedCell(): CellPosition {
         return CellPosition(
-            myValueTable.selectionModel.leadSelectionIndex,
-            myValueTable.columnModel.selectionModel.leadSelectionIndex,
+            myValuesTable.selectionModel.leadSelectionIndex,
+            myValuesTable.columnModel.selectionModel.leadSelectionIndex,
         )
     }
 
@@ -167,19 +167,19 @@ class DataFrameTable : JScrollPane() {
      * Position is altered in case the indices are out of bounds.
      */
     fun setFocusedCell(position: CellPosition) {
-        if (myValueTable.isEmpty) return
+        if (myValuesTable.isEmpty) return
 
-        val lastRowIndex = max(0, myValueTable.rowCount - 1)
-        val lastColIndex = max(0, myValueTable.columnCount - 1)
+        val lastRowIndex = max(0, myValuesTable.rowCount - 1)
+        val lastColIndex = max(0, myValuesTable.columnCount - 1)
 
         val sanitized = CellPosition(
             min(lastRowIndex, max(0, position.rowIndex)),
             min(lastColIndex, max(0, position.columnIndex)),
         )
         // apply without scrolling
-        myValueTable.autoscrolls = false
-        myValueTable.changeSelection(sanitized.rowIndex, sanitized.columnIndex, false, false)
-        myValueTable.autoscrolls = true
+        myValuesTable.autoscrolls = false
+        myValuesTable.changeSelection(sanitized.rowIndex, sanitized.columnIndex, false, false)
+        myValuesTable.autoscrolls = true
     }
 
     override fun updateUI() {
@@ -196,7 +196,7 @@ interface IColumnResizeBehavior {
     fun isFixed(viewColumnIndex: Int): Boolean
 }
 
-class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(model) {
+class MyValuesTable(model: IDataFrameValuesDataModel) : MyTable<IDataFrameValuesDataModel>(model) {
     /**
     This flag is needed to guarantee that we don't access not yet initialized class properties.
     This is required because [JTable.setModel] is called in the JTable constructor.
@@ -252,12 +252,12 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     }
 
     private fun createColumns(
-        valueModel: ITableValueDataModel,
+        valueModel: IDataFrameValuesDataModel,
         prevTableColumnCache: Map<ColumnCacheKey, MyValueTableColumn>,
     ): List<MyValueTableColumn> {
         val result = mutableListOf<MyValueTableColumn>()
         for (modelIndex in 0 until valueModel.columnCount) {
-            val uniqueColumnId = valueModel.getUniqueColumnId(modelIndex)
+            val uniqueColumnId = valueModel.getUniqueColumnIdAt(modelIndex)
             result.add(MyValueTableColumn(modelIndex, uniqueColumnId).apply {
                 this.minWidth = MIN_COLUMN_WIDTH
                 if (uniqueColumnId != -1) {
@@ -270,14 +270,14 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         return result
     }
 
-    fun setModelWithSameDataSource(tableModel: ITableValueDataModel) {
+    fun setModelWithSameDataSource(tableModel: IDataFrameValuesDataModel) {
         myModelHasSameDataSource = true
         setModel(tableModel)
         myModelHasSameDataSource = false
     }
 
     override fun setModel(model: TableModel) {
-        if (model !is ITableValueDataModel) throw IllegalArgumentException("The model has to implement ITableValueDataModel.")
+        if (model !is IDataFrameValuesDataModel) throw IllegalArgumentException("The model has to implement ITableValueDataModel.")
 
         model.enableDataFetching(false)
 
@@ -384,7 +384,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     }
 
     override fun createDefaultDataModel(): TableModel {
-        return EmptyDataFrameModel().getValueDataModel()
+        return EmptyDataFrameModel().getValuesDataModel()
     }
 
     private fun castedColumnAt(viewColumnIndex: Int): MyValueTableColumn {
@@ -432,7 +432,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
 
     private class MyCopySelectedCellValueAction: AbstractAction() {
         override fun actionPerformed(event: ActionEvent) {
-            (event.source as MyValueTable).let { table ->
+            (event.source as MyValuesTable).let { table ->
                 table.model?.let { tableModel ->
                     val row = table.selectedRow
                     val col = table.selectedColumn
@@ -457,10 +457,10 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
         private val sortOrder: SortOrder,
         private val shiftKeyIsDown: Boolean
     ) : AbstractAction() {
-        override fun accept(sender: Any?) = sender is MyValueTable
+        override fun accept(sender: Any?) = sender is MyValuesTable
 
         override fun actionPerformed(event: ActionEvent) {
-            (event.source as MyValueTable).let { table ->
+            (event.source as MyValuesTable).let { table ->
                 val viewColumnIndex = table.columnModel.selectionModel.leadSelectionIndex
                 if (viewColumnIndex == -1) return
                 table.rowSorter?.let {
@@ -547,7 +547,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
                 val tableColumn = castedColumnAt(viewColumnIndex)
                 val renderer = tableColumn.headerRenderer ?: tableHeader.defaultRenderer
                 val columnHeaderWidth = renderer.getTableCellRendererComponent(
-                    this@MyValueTable,
+                    this@MyValuesTable,
                     tableColumn.headerValue,
                     false,
                     false,
@@ -762,7 +762,7 @@ class MyValueTable(model: ITableValueDataModel) : MyTable<ITableValueDataModel>(
     }
 }
 
-class MyExternalDataRowSorter(private val model: ITableValueDataModel) : RowSorter<ITableValueDataModel>() {
+class MyExternalDataRowSorter(private val model: IDataFrameValuesDataModel) : RowSorter<IDataFrameValuesDataModel>() {
 
     private var mySortKeys: List<SortKey> = emptyList()
     private var myShiftKeyIsDown: Boolean = false
@@ -875,9 +875,9 @@ class MyExternalDataRowSorter(private val model: ITableValueDataModel) : RowSort
 }
 
 class MyIndexTable(
-    private val mainTable: MyValueTable,
+    private val mainTable: JTable,
     private val maxColumnWidth: Int,
-) : MyTable<ITableIndexDataModel>() {
+) : MyTable<IDataFrameIndexDataModel>() {
 
     init {
         // disable automatic row height adjustment - use the value from the mainTable
@@ -950,7 +950,7 @@ class MyIndexTable(
     }
 }
 
-abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) {
+abstract class MyTable<M : TableModel> (model: M? = null) : JBTable(model) {
 
     init {
         emptyText.text = ""
@@ -978,19 +978,16 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
     }
 
     override fun onTableChanged(event: TableModelEvent) {
-        if (event is ChunkTableModelEvent) {
+        if (event is DataFrameTableModelEvent) {
             val payload = event.payload
-            if (ChunkTableModelEvent.UpdateType.HEADER_LABELS == payload.type) {
-                if (tableHeader == null) return
-                model?.let { model ->
-                    val columnModel = tableHeader.columnModel
+            if (DataFrameTableModelEvent.UpdateType.COLUMN_STATISTICS == payload.type) {
+                (tableHeader as? MyTable<*>.MyTableHeader)?.let {
                     for (modelColumnIndex in payload.firstColumn..payload.lastColumn) {
-                        columnModel.getColumn(convertColumnIndexToView(modelColumnIndex)).let {
-                            it.headerValue = model.getColumnName(it.modelIndex)
-                        }
+                        it.maybeTooltipChanged(convertColumnIndexToView(modelColumnIndex))
                     }
-                    tableHeader.repaint()
                 }
+            } else {
+                super.onTableChanged(event)
             }
         } else {
             super.onTableChanged(event)
@@ -1012,20 +1009,25 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
 
     private inner class MyTableHeader : JBTable.JBTableHeader() {
 
-        private var myToolTip = MyHeaderToolTip(this)
+        private var myTooltip = MyHeaderTooltip(this)
+        private var myMouseIsInsideHeader: Boolean = false
 
         init {
             if (ApplicationManager.getApplication() != null) {
                 this.putClientProperty(IdeTooltip.TOOLTIP_DISMISS_DELAY_KEY, 25_000)
-                IdeTooltipManager.getInstance().setCustomTooltip(this, myToolTip)
+                IdeTooltipManager.getInstance().setCustomTooltip(this, myTooltip)
             }
         }
 
         override fun processMouseEvent(e: MouseEvent?) {
             if (e?.id == MouseEvent.MOUSE_RELEASED) setRowSorterShiftKeyFlag(e.isShiftDown)
             super.processMouseEvent(e)
-            if (e?.id == MouseEvent.MOUSE_CLICKED) setRowSorterShiftKeyFlag(false)
-            if (e?.id == MouseEvent.MOUSE_PRESSED) resetTooltip()
+            when (e?.id) {
+                MouseEvent.MOUSE_CLICKED -> setRowSorterShiftKeyFlag(false)
+                MouseEvent.MOUSE_PRESSED -> resetTooltip()
+                MouseEvent.MOUSE_ENTERED -> myMouseIsInsideHeader = true
+                MouseEvent.MOUSE_EXITED -> myMouseIsInsideHeader = false
+            }
         }
 
         override fun setResizingColumn(column: TableColumn?) {
@@ -1037,11 +1039,17 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
         }
 
         fun resetTooltip() {
-            myToolTip.reset()
+            myTooltip.reset()
+        }
+
+        fun maybeTooltipChanged(viewColumnIndex: Int) {
+            if (myMouseIsInsideHeader) {
+                myTooltip.maybeTextChanged(viewColumnIndex)
+            }
         }
 
         override fun getToolTipText(event: MouseEvent): String {
-            myToolTip.updateHoveredColumn(this.columnAtPoint(event.point), event.point)
+            myTooltip.updateHoveredColumn(this.columnAtPoint(event.point), event.point)
             return ""
         }
 
@@ -1065,9 +1073,10 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
         }
     }
 
-    private inner class MyHeaderToolTip(component: JComponent) : IdeTooltip(component, Point(), null, component) {
+    private inner class MyHeaderTooltip(component: JComponent) : IdeTooltip(component, Point(), null, component) {
 
         private var myViewColumnIndex: Int = -1
+        private var myMaybeWaitingForText: Boolean = false
 
         init {
             preferredPosition = Balloon.Position.below
@@ -1076,6 +1085,7 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
         fun updateHoveredColumn(viewColumnIndex: Int, p: Point) {
             if (viewColumnIndex != myViewColumnIndex) {
                 myViewColumnIndex = viewColumnIndex
+                myMaybeWaitingForText = false
                 this.hide()
             }
             point = p
@@ -1085,15 +1095,29 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
             updateHoveredColumn(-1, Point())
         }
 
+        fun maybeTextChanged(viewColumnIndex: Int) {
+            if (viewColumnIndex == myViewColumnIndex && myMaybeWaitingForText) {
+                IdeTooltipManager.getInstance().show(this, true)
+            }
+        }
+
+        override fun onHidden() {
+            myMaybeWaitingForText = false
+        }
+
         override fun beforeShow(): Boolean {
-            val text = createToolTipText() ?: return false
+            val text = createText()
+            if (text == null) {
+                myMaybeWaitingForText = true
+                return false
+            }
             if (tipComponent == null) {
                 tipComponent = JBLabel(text)
             } else (tipComponent as JBLabel).text = text
             return true
         }
 
-        private fun createToolTipText(): String? {
+        private fun createText(): String? {
             val modelColumnIndex = convertColumnIndexToModel(myViewColumnIndex)
             model?.let { model ->
                 val sb = StringBuilder("<html>")
@@ -1107,7 +1131,7 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
                 val colorizedText = { text: String -> "<font color='${hexColor}'>$text</font>" }
                 val separator = colorizedText("/")
 
-                if (model is ITableIndexDataModel) {
+                if (model is IDataFrameIndexDataModel) {
                     model.getLegendHeaders().let {
                         if (it.column is LeveledHeaderLabel) {
                             sb.append("${colorizedText("levels &rarr;: ")} ${it.column.text(separator)}")
@@ -1118,11 +1142,16 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
                             sb.append("<br/>")
                         }
                     }
-                } else if (model is ITableValueDataModel) {
-                    model.getColumnHeaderAt(modelColumnIndex).let {
-                        val label = if (it.label is LeveledHeaderLabel) it.label.text(separator) else it.text()
+                } else if (model is IDataFrameValuesDataModel) {
+                    // If no statistics is there no tooltip is shown.
+                    // This prevents jumping tooltip, if tooltip without statistics is already
+                    // opened and the tip is updated with the lazy loaded statistics.
+                    val statistics = model.getColumnStatisticsAt(modelColumnIndex) ?: return null
+
+                    model.getColumnLabelAt(modelColumnIndex).let {
+                        val label = if (it is LeveledHeaderLabel) it.text(separator) else it.text()
                         sb.append("<h3 style='margin-top: 0px; margin-bottom: 6px'>${label}</h3>")
-                        sb.append("${colorizedText("dtype: ")} ${it.dtype ?: "?"}")
+                        sb.append("${colorizedText("dtype: ")} ${model.getColumnDtypeAt(modelColumnIndex)}")
                         sb.append("<br/>")
                     }
                     model.getLegendHeader().let {
@@ -1131,21 +1160,20 @@ abstract class MyTable<M : ITableDataModel> (model: M? = null) : JBTable(model) 
                             sb.append("<br/>")
                         }
                     }
-                    model.getColumnHeaderAt(modelColumnIndex).describe?.let {
-                        if (it.isNotEmpty()) {
-                            sb.append("<hr style='margin-top: 3px; margin-bottom: 3px'>")
-                            sb.append("<h3 style='margin-top: 0px; margin-bottom: 0px'>Describe</h3>")
-                            sb.append("<table>")
-                            it.forEach { (k, v) ->
-                                sb.append("<tr>")
-                                sb.append("<td>${colorizedText("$k: ")}</td>")
-                                sb.append("<td width='8' />")
-                                // Use 'nowrap' to not break the formatting in case values are too long.
-                                sb.append("<td style='white-space: nowrap;'>$v</td>")
-                                sb.append("</tr>")
-                            }
-                            sb.append("</table>")
+
+                    if (statistics.isNotEmpty()) {
+                        sb.append("<hr style='margin-top: 3px; margin-bottom: 3px'>")
+                        sb.append("<h3 style='margin-top: 0px; margin-bottom: 0px'>Statistics</h3>")
+                        sb.append("<table>")
+                        statistics.forEach { (k, v) ->
+                            sb.append("<tr>")
+                            sb.append("<td>${colorizedText("$k: ")}</td>")
+                            sb.append("<td width='8' />")
+                            // Use 'nowrap' to not break the formatting in case values are too long.
+                            sb.append("<td style='white-space: nowrap;'>$v</td>")
+                            sb.append("</tr>")
                         }
+                        sb.append("</table>")
                     }
                 }
 

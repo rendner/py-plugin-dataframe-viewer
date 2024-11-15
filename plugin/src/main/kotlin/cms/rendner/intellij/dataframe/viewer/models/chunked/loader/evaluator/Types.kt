@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.models.chunked.loader.exceptions
+package cms.rendner.intellij.dataframe.viewer.models.chunked.loader.evaluator
 
-class ChunkDataLoaderException(message: String, cause: Throwable? = null) : Exception(message, cause)
+import cms.rendner.intellij.dataframe.viewer.python.bridge.StyleFunctionValidationProblem
+
+/**
+ * An interface to handle validation problems.
+ */
+interface IChunkValidationProblemHandler {
+    /**
+     * The handler is only called in case of problems.
+     *
+     * @param problems a list of problems
+     */
+    fun handleValidationProblems(problems: List<StyleFunctionValidationProblem>)
+}

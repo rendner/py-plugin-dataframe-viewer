@@ -66,21 +66,10 @@ internal class TableSourceRefTest : AbstractPluginCodeTest() {
                 tableSource.evaluateComputeChunkTableFrame(
                     ChunkRegion(0, 0, 2, 2),
                     excludeRowHeader = false,
-                    excludeColumnHeader = false,
+                    SortCriteria(listOf(0), listOf(true)),
                 )
             ).matches { table ->
-                (table.indexLabels == null || table.indexLabels!!.isNotEmpty())
-                    && table.columns.isNotEmpty()
-                    && table.cells.isNotEmpty()
-            }
-        }
-    }
-
-    @Test
-    fun evaluateSetSortCriteria_shouldBeCallable() {
-        runWithTableSource { tableSource ->
-            assertThatNoException().isThrownBy {
-                tableSource.evaluateSetSortCriteria(SortCriteria(listOf(0), listOf(true)))
+                table.indexLabels!!.isNotEmpty() && table.cells.isNotEmpty()
             }
         }
     }

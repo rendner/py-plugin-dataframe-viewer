@@ -38,10 +38,6 @@ interface IHeaderLabel {
     fun text(): String
 }
 
-data class ColumnHeader(val dtype: String?, val label: IHeaderLabel, val describe: Map<String, String>? = null) : IHeaderLabel {
-    override fun text() = label.text()
-}
-
 data class HeaderLabel(val label: String = "") : IHeaderLabel {
     override fun text() = label
 
@@ -59,7 +55,7 @@ data class LeveledHeaderLabel(val lastLevel: String = "", val leadingLevels: Lis
     }
 }
 
-data class LegendHeaders(val row: IHeaderLabel? = null, val column: IHeaderLabel? = null)
+data class LegendHeaders(val row: IHeaderLabel, val column: IHeaderLabel)
 
 @Suppress("EnumEntryName")
 enum class TextAlign {
@@ -78,13 +74,12 @@ data class StyleProperties(
     }
 }
 
-interface ITableDataModel : TableModel {
-    fun getLegendHeader(): IHeaderLabel
-    fun getLegendHeaders(): LegendHeaders
-}
+interface IDataFrameIndexDataModel : TableModel {
 
-interface ITableIndexDataModel : ITableDataModel {
-
+    /**
+     * Return the index (label) of the row.
+     * @param rowIndex the index of the row in the model.
+     */
     fun getValueAt(rowIndex: Int): IHeaderLabel
 
     @Deprecated(message = "use 'getValueAt(rowIndex)'", replaceWith = ReplaceWith("getValueAt(rowIndex)"))
@@ -96,12 +91,22 @@ interface ITableIndexDataModel : ITableDataModel {
     override fun getColumnName(columnIndex: Int) = getLegendHeader().text()
 
     fun getColumnHeader(): IHeaderLabel
+
+    fun getLegendHeader(): IHeaderLabel
+    fun getLegendHeaders(): LegendHeaders
 }
 
-interface ITableValueDataModel : ITableDataModel {
+interface IDataFrameValuesDataModel : TableModel {
     override fun getValueAt(rowIndex: Int, columnIndex: Int): Value
-    fun getColumnHeaderAt(columnIndex: Int): ColumnHeader
+
+    fun getColumnLabelAt(columnIndex: Int): IHeaderLabel
+    fun getColumnDtypeAt(columnIndex: Int): String
+
     fun isSortable(): Boolean = false
+
+    fun getLegendHeader(): IHeaderLabel
+
+    fun getColumnStatisticsAt(columnIndex: Int): Map<String, String>?
 
     /**
      * Sets the sort keys.
@@ -118,7 +123,7 @@ interface ITableValueDataModel : ITableDataModel {
      *
      * @return the unique column-id in the table source or "-1" if the table source can't provide stable unique ids.
      */
-    fun getUniqueColumnId(columnIndex: Int) = columnIndex
+    fun getUniqueColumnIdAt(columnIndex: Int) = columnIndex
 
     /**
      * Enables or disables data fetching.
@@ -140,13 +145,13 @@ interface IDataFrameModel : Disposable {
     /**
      * Returns the model which provides the cell values and column labels.
      */
-    fun getValueDataModel(): ITableValueDataModel
+    fun getValuesDataModel(): IDataFrameValuesDataModel
 
     /**
      * Returns the model which provides the index labels.
      * null if no index labels should be displayed.
      */
-    fun getIndexDataModel(): ITableIndexDataModel?
+    fun getIndexDataModel(): IDataFrameIndexDataModel?
 
     /**
      * Fingerprint of the model.

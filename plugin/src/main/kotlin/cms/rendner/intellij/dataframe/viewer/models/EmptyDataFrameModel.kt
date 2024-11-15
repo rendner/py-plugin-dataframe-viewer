@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ import javax.swing.RowSorter
 import javax.swing.table.AbstractTableModel
 
 class EmptyDataFrameModel : IDataFrameModel {
-    private val myEmptyIndexModel: ITableIndexDataModel = MyEmptyIndexModel()
-    private val myEmptyValueModel: ITableValueDataModel = MyEmptyValueModel()
+    private val myEmptyIndexModel: IDataFrameIndexDataModel = MyEmptyIndexModel()
+    private val myEmptyValueModel: IDataFrameValuesDataModel = MyEmptyValuesModel()
 
-    override fun getValueDataModel() = myEmptyValueModel
+    override fun getValuesDataModel() = myEmptyValueModel
 
     override fun getIndexDataModel() = myEmptyIndexModel
 
@@ -31,7 +31,7 @@ class EmptyDataFrameModel : IDataFrameModel {
     override fun dispose() {}
 }
 
-private class MyEmptyValueModel : AbstractTableModel(), ITableValueDataModel {
+private class MyEmptyValuesModel : AbstractTableModel(), IDataFrameValuesDataModel {
 
     override fun getRowCount() = 0
     override fun getColumnCount() = 0
@@ -41,8 +41,16 @@ private class MyEmptyValueModel : AbstractTableModel(), ITableValueDataModel {
         throw UnsupportedOperationException("Operation 'getValueAt' isn't supported.")
     }
 
-    override fun getColumnHeaderAt(columnIndex: Int): ColumnHeader {
-        throw UnsupportedOperationException("Operation 'getColumnHeaderAt' isn't supported.")
+    override fun getColumnLabelAt(columnIndex: Int): IHeaderLabel {
+        throw UnsupportedOperationException("Operation 'getColumnLabelAt' isn't supported.")
+    }
+
+    override fun getColumnDtypeAt(columnIndex: Int): String {
+        throw UnsupportedOperationException("Operation 'getColumnDtypeAt' isn't supported.")
+    }
+
+    override fun getColumnStatisticsAt(columnIndex: Int): Map<String, String>? {
+        throw UnsupportedOperationException("Operation 'getColumnStatisticsAt' isn't supported.")
     }
 
     override fun setSortKeys(sortKeys: List<RowSorter.SortKey>) {
@@ -56,13 +64,9 @@ private class MyEmptyValueModel : AbstractTableModel(), ITableValueDataModel {
     override fun getLegendHeader(): IHeaderLabel {
         throw UnsupportedOperationException("Operation 'getLegendHeader' isn't supported.")
     }
-
-    override fun getLegendHeaders(): LegendHeaders {
-        throw UnsupportedOperationException("Operation 'getLegendHeaders' isn't supported.")
-    }
 }
 
-private class MyEmptyIndexModel : AbstractTableModel(), ITableIndexDataModel {
+private class MyEmptyIndexModel : AbstractTableModel(), IDataFrameIndexDataModel {
 
     override fun getRowCount() = 0
     override fun getColumnCount() = 0

@@ -109,15 +109,10 @@ class TableSourceFactory {
             )
         }
 
-        override fun evaluateSetSortCriteria(sortCriteria: SortCriteria?) {
-            evaluator.evaluate(
-                stringifyMethodCall(refExpr, "set_sort_criteria") {
-                    sortCriteria?.byIndex.let {
-                        if (it.isNullOrEmpty()) noneParam() else refParam(it.toString())
-                    }
-                    sortCriteria?.ascending.let {
-                        if (it.isNullOrEmpty()) noneParam() else refParam(it.map { e -> stringifyBool(e) }.toString())
-                    }
+        override fun evaluateColumnStatistics(colIndex: Int): Map<String, String> {
+            return fetchResultAsJsonAndDecode(
+                stringifyMethodCall(refExpr, "get_column_statistics") {
+                    numberParam(colIndex)
                 }
             )
         }
@@ -125,16 +120,18 @@ class TableSourceFactory {
         override fun evaluateComputeChunkTableFrame(
             chunk: ChunkRegion,
             excludeRowHeader: Boolean,
-            excludeColumnHeader: Boolean
+            newSorting: SortCriteria?,
         ): TableFrame {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(refExpr, "compute_chunk_table_frame") {
+                stringifyMethodCall(
+                    if (newSorting != null) stringifiedSetSortCriteriaMethodCall(newSorting) else refExpr,
+                    "compute_chunk_table_frame",
+                ) {
                     numberParam(chunk.firstRow)
                     numberParam(chunk.firstColumn)
                     numberParam(chunk.numberOfRows)
                     numberParam(chunk.numberOfColumns)
                     boolParam(excludeRowHeader)
-                    boolParam(excludeColumnHeader)
                 }
             )
         }
@@ -143,13 +140,13 @@ class TableSourceFactory {
             identifier: String,
             isSyntheticIdentifier: Boolean,
             literalToComplete: String?,
-            ): List<String> {
+        ): List<String> {
             return try {
                 fetchResultAsJsonAndDecode(
                     stringifyMethodCall(refExpr, "get_column_name_variants") {
                         if (isSyntheticIdentifier) noneParam() else refParam(identifier)
                         boolParam(isSyntheticIdentifier)
-                        if (literalToComplete == null ) noneParam() else refParam(literalToComplete)
+                        if (literalToComplete == null) noneParam() else refParam(literalToComplete)
                     }
                 )
             } catch (e: EvaluateException) {
@@ -179,6 +176,17 @@ class TableSourceFactory {
             idsToClean.clear()
             return ids
         }
+
+        protected fun stringifiedSetSortCriteriaMethodCall(sortCriteria: SortCriteria): String {
+            return stringifyMethodCall(refExpr, "set_sort_criteria") {
+                sortCriteria.byIndex.let {
+                    if (it.isEmpty()) noneParam() else refParam(it.toString())
+                }
+                sortCriteria.ascending.let {
+                    if (it.isEmpty()) noneParam() else refParam(it.map { e -> stringifyBool(e) }.toString())
+                }
+            }
+        }
     }
 
     /**
@@ -198,16 +206,18 @@ class TableSourceFactory {
         override fun evaluateValidateAndComputeChunkTableFrame(
             chunk: ChunkRegion,
             excludeRowHeader: Boolean,
-            excludeColumnHeader: Boolean,
+            newSorting: SortCriteria?,
         ): ValidatedTableFrame {
             return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(refExpr, "validate_and_compute_chunk_table_frame") {
+                stringifyMethodCall(
+                    if (newSorting != null) stringifiedSetSortCriteriaMethodCall(newSorting) else refExpr,
+                    "validate_and_compute_chunk_table_frame",
+                ) {
                     numberParam(chunk.firstRow)
                     numberParam(chunk.firstColumn)
                     numberParam(chunk.numberOfRows)
                     numberParam(chunk.numberOfColumns)
                     boolParam(excludeRowHeader)
-                    boolParam(excludeColumnHeader)
                 }
             )
         }

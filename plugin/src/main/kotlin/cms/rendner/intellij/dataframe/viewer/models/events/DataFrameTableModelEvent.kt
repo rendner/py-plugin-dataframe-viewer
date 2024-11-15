@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.models.chunked.events
+package cms.rendner.intellij.dataframe.viewer.models.events
 
-import cms.rendner.intellij.dataframe.viewer.models.ITableDataModel
+import cms.rendner.intellij.dataframe.viewer.models.IDataFrameValuesDataModel
 import javax.swing.event.TableModelEvent
+import javax.swing.table.TableModel
 
 @Suppress("RemoveRedundantQualifierName")
-class ChunkTableModelEvent private constructor(
-    source: ITableDataModel,
+class DataFrameTableModelEvent private constructor(
+    source: TableModel,
     firstRow: Int,
     lastRow: Int,
     column: Int,
@@ -29,7 +30,7 @@ class ChunkTableModelEvent private constructor(
 ) : TableModelEvent(source, firstRow, lastRow, column, type) {
 
     enum class UpdateType(val value: Int) {
-        HEADER_LABELS(TableModelEvent.DELETE - 1),
+        COLUMN_STATISTICS(TableModelEvent.DELETE - 1),
         VALUES(TableModelEvent.DELETE - 2)
     }
 
@@ -53,41 +54,25 @@ class ChunkTableModelEvent private constructor(
 
     companion object {
 
-        fun createHeaderLabelsChanged(
-            source: ITableDataModel,
+        fun createColumnStatisticsChanged(
+            source: IDataFrameValuesDataModel,
             firstColumn: Int,
             lastColumn: Int
         ): TableModelEvent {
-            /*
-               TableModelEvent example for notifying the table that a single cell was changed, cell at (2, 6):
-               TableModelEvent(source, 2, 2, 6);
-
-               Use non-existing coordinates for the event to deliver the payload.
-            */
-            return ChunkTableModelEvent(
+            return createHeaderUpdateEvent(
                 source,
-                Int.MIN_VALUE, // don't use -1 this will reset the selection (JTable::tableChanged)
-                Int.MIN_VALUE, // don't use Int.MAX_VALUE this will reset the selection (JTable::tableChanged)
-                Int.MIN_VALUE,
-                TableModelEvent.UPDATE,
-                UpdatePayload(
-                    0,
-                    0,
-                    firstColumn,
-                    lastColumn,
-                    UpdateType.HEADER_LABELS
-                )
+                UpdatePayload(-1, -1, firstColumn, lastColumn, UpdateType.COLUMN_STATISTICS),
             )
         }
 
         fun createValuesChanged(
-            source: ITableDataModel,
+            source: TableModel,
             firstRow: Int,
             lastRow: Int,
             firstColumn: Int,
             lastColumn: Int
         ): TableModelEvent {
-            return ChunkTableModelEvent(
+            return DataFrameTableModelEvent(
                 source,
                 firstRow,
                 lastRow,
@@ -100,6 +85,23 @@ class ChunkTableModelEvent private constructor(
                     lastColumn,
                     UpdateType.VALUES
                 )
+            )
+        }
+
+        private fun createHeaderUpdateEvent(source: TableModel, payload: UpdatePayload): TableModelEvent {
+            /*
+               TableModelEvent example for notifying the table that a single cell was changed, cell at (2, 6):
+               TableModelEvent(source, 2, 2, 6);
+
+               Use non-existing coordinates for the event to deliver the payload.
+            */
+            return DataFrameTableModelEvent(
+                source,
+                Int.MIN_VALUE, // don't use -1 this will reset the selection (JTable::tableChanged)
+                Int.MIN_VALUE, // don't use Int.MAX_VALUE this will reset the selection (JTable::tableChanged)
+                Int.MIN_VALUE,
+                TableModelEvent.UPDATE,
+                payload,
             )
         }
     }

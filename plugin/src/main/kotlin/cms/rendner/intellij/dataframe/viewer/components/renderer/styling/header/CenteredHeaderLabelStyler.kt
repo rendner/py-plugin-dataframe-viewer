@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header
 
-import cms.rendner.intellij.dataframe.viewer.components.MyValueTable
+import cms.rendner.intellij.dataframe.viewer.components.MyValuesTable
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.IRendererComponentStyler
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.ExpandableItemsHandler
@@ -90,7 +90,7 @@ class CenteredHeaderLabelStyler(
     }
 
     private fun paintFixedColumnIndicator(component: Component, table: JTable?, column: Int) {
-        if (component is JComponent && table is MyValueTable) {
+        if (component is JComponent && table is MyValuesTable) {
             if (table.getColumnResizeBehavior().isFixed(column)) {
                 myFixedColumnIndicator.updateColor(component.foreground)
                 component.border = myFixedColumnIndicator

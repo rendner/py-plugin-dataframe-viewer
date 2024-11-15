@@ -69,26 +69,29 @@ interface IPyTableSourceRef: Disposable {
      * Calls the "get_table_structure" method of the Python class.
      * The returned result contains information about the visible rows and columns of a DataFrame.
      *
-     * @return structural information about the pandas DataFrame.
+     * @return structural information about the DataFrame.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
     fun evaluateTableStructure(): TableStructure
 
     /**
-     * Calls the "set_sort_criteria" method of the Python class.
+     * Calls the "get_column_statistics" method of the Python class.
+     * The returned result contains a statistic about the values of the specified column.
      *
-     * @param sortCriteria the new sort criteria, <code>null</code> for no sorting.
+     * @param colIndex the index of the column for which the statistics are to be loaded.
+     * @return the column statistics.
+     * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
-    fun evaluateSetSortCriteria(sortCriteria: SortCriteria?)
+    fun evaluateColumnStatistics(colIndex: Int): Map<String, String>
 
     /**
      * Calls the "compute_chunk_table_frame" method of the Python class.
      *
      * @param chunk the region of the data to evaluate
      * @param excludeRowHeader if true, row headers are excluded from the result.
-     * @param excludeColumnHeader if true, column headers are excluded from the result.
+     * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
      * @return returns a table representation of the chunk.
      * @throws EvaluateException in case the evaluation fails.
      */
@@ -96,7 +99,7 @@ interface IPyTableSourceRef: Disposable {
     fun evaluateComputeChunkTableFrame(
         chunk: ChunkRegion,
         excludeRowHeader: Boolean,
-        excludeColumnHeader: Boolean
+        newSorting: SortCriteria?,
     ): TableFrame
 
     /**
@@ -182,7 +185,7 @@ interface IPyPatchedStylerRef: IPyTableSourceRef {
      *
      * @param chunk the region of the data to evaluate and validate
      * @param excludeRowHeader if true, row headers are excluded from the result.
-     * @param excludeColumnHeader if true, column headers are excluded from the result.
+     * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
      * @return returns a table representation of the chunk and the validation problems found.
      * @throws EvaluateException in case the evaluation fails.
      */
@@ -190,15 +193,9 @@ interface IPyPatchedStylerRef: IPyTableSourceRef {
     fun evaluateValidateAndComputeChunkTableFrame(
         chunk: ChunkRegion,
         excludeRowHeader: Boolean,
-        excludeColumnHeader: Boolean,
+        newSorting: SortCriteria?,
     ): ValidatedTableFrame
 }
-
-@Serializable
-data class TableFrameLegend(val index: List<String>, val column: List<String>)
-
-@Serializable
-data class TableFrameColumn(val dtype: String, val labels: List<String>, val describe: Map<String, String>? = null)
 
 @Serializable
 data class TableFrameCell(val value: String, val css: Map<String, String>?)
@@ -206,10 +203,8 @@ data class TableFrameCell(val value: String, val css: Map<String, String>?)
 @Serializable
 data class TableFrame(
     @SerialName("index_labels") val indexLabels: List<List<String>>?,
-    val columns: List<TableFrameColumn>,
     val cells: List<List<TableFrameCell>>,
-    val legend: TableFrameLegend?,
-    )
+)
 
 @Serializable
 data class ValidatedTableFrame(

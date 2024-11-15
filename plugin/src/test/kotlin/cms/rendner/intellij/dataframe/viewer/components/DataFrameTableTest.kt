@@ -36,7 +36,7 @@ internal class DataFrameTableTest {
     fun valueTable_shouldMarkColumnFixed() {
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableModelFactory.createTableStructure()))
-        tableComponent.getValueTable().getColumnResizeBehavior().let {
+        tableComponent.getValuesTable().getColumnResizeBehavior().let {
             assertThat(it.isFixed(0)).isFalse
             it.markFixed(0)
             assertThat(it.isFixed(0)).isTrue
@@ -49,13 +49,13 @@ internal class DataFrameTableTest {
 
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tsA))
-        tableComponent.getValueTable().getColumnResizeBehavior().let {
+        tableComponent.getValuesTable().getColumnResizeBehavior().let {
             assertThat(it.isFixed(1)).isFalse
             it.markFixed(1)
             assertThat(it.isFixed(1)).isTrue
         }
 
-        val oldColumn = tableComponent.getValueTable().columnModel.getColumn(1)
+        val oldColumn = tableComponent.getValuesTable().columnModel.getColumn(1)
 
         val tsB = tsA.copy(
             columnInfo=tsA.columnInfo.copy(columns=tsA.columnInfo.columns.reversed()),
@@ -63,8 +63,8 @@ internal class DataFrameTableTest {
 
         val lastIndex = tsB.columnsCount - 1
         tableComponent.setDataFrameModel(createModel(tsB))
-        val newColumn = tableComponent.getValueTable().columnModel.getColumn(lastIndex - 1)
-        tableComponent.getValueTable().getColumnResizeBehavior().let {
+        val newColumn = tableComponent.getValuesTable().columnModel.getColumn(lastIndex - 1)
+        tableComponent.getValuesTable().getColumnResizeBehavior().let {
             assertThat(newColumn.identifier).isEqualTo(oldColumn.identifier)
             assertThat(it.isFixed(lastIndex - 1)).isTrue
         }
@@ -74,7 +74,7 @@ internal class DataFrameTableTest {
     fun valueTable_shouldToggleColumnFixedState() {
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableModelFactory.createTableStructure()))
-        tableComponent.getValueTable().getColumnResizeBehavior().let {
+        tableComponent.getValuesTable().getColumnResizeBehavior().let {
             it.markFixed(0)
             it.toggleFixed(0)
             it.toggleFixed(1)
@@ -87,7 +87,7 @@ internal class DataFrameTableTest {
     fun valueTable_shouldClearColumnFixedState() {
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableModelFactory.createTableStructure()))
-        tableComponent.getValueTable().getColumnResizeBehavior().let {
+        tableComponent.getValuesTable().getColumnResizeBehavior().let {
             it.markFixed(0)
             it.clearFixed(0)
             assertThat(it.isFixed(0)).isFalse
@@ -104,8 +104,8 @@ internal class DataFrameTableTest {
     fun valueTable_lastColumnCantMarkedAsFixed() {
         val tableComponent = DataFrameTable()
         tableComponent.setDataFrameModel(createModel(tableModelFactory.createTableStructure()))
-        tableComponent.getValueTable().getColumnResizeBehavior().let {
-            val lastColIndex = tableComponent.getValueTable().columnCount - 1
+        tableComponent.getValuesTable().getColumnResizeBehavior().let {
+            val lastColIndex = tableComponent.getValuesTable().columnCount - 1
             assertThat(it.isFixed(lastColIndex)).isFalse
             it.markFixed(lastColIndex)
             assertThat(it.isFixed(lastColIndex)).isFalse
@@ -116,14 +116,14 @@ internal class DataFrameTableTest {
     fun valueTable_rowSorter_shouldBeNull() {
         val model = createModel(tableModelFactory.createTableStructure(), sortable = false)
         val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
-        assertThat(tableComponent.getValueTable().rowSorter).isNull()
+        assertThat(tableComponent.getValuesTable().rowSorter).isNull()
     }
 
     @Test
     fun valueTable_rowSorter_sortShouldSortSingleColumn() {
         val model = createModel(tableModelFactory.createTableStructure())
         val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.ASCENDING, false)
             assertThat(model.recordedSortCriteria).isEqualTo(SortCriteria(listOf(0), listOf(true)))
 
@@ -136,7 +136,7 @@ internal class DataFrameTableTest {
     fun valueTable_rowSorter_toggleShouldCycleBetweenAscDescUnsorted() {
         val model = createModel(tableModelFactory.createTableStructure())
         val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.ASCENDING, false)
             assertThat(model.recordedSortCriteria).isEqualTo(SortCriteria(listOf(0), listOf(true)))
 
@@ -155,7 +155,7 @@ internal class DataFrameTableTest {
     fun valueTable_rowSorter_multiSort_sortShouldSortMultipleColumns() {
         val model = createModel(tableModelFactory.createTableStructure())
         val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             for (i in 0 until 9) {
                 it.setSortOrder(i, SortOrder.ASCENDING, true)
             }
@@ -167,7 +167,7 @@ internal class DataFrameTableTest {
     fun valueTable_rowSorter_multiSort_sortShouldStartSingleColumnSort() {
         val model = createModel(tableModelFactory.createTableStructure())
         val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.ASCENDING, true)
             it.setSortOrder(1, SortOrder.ASCENDING, true)
             it.setSortOrder(2, SortOrder.ASCENDING, true)
@@ -182,7 +182,7 @@ internal class DataFrameTableTest {
     fun valueTable_rowSorter_multiSort_toggleShouldToggleSingleColumnAndKeepMultiSort() {
         val model = createModel(tableModelFactory.createTableStructure())
         val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.ASCENDING, true)
             it.setSortOrder(1, SortOrder.ASCENDING, true)
             it.setSortOrder(2, SortOrder.ASCENDING, true)
@@ -199,7 +199,7 @@ internal class DataFrameTableTest {
     fun valueTable_rowSorter_multiSort_toggleShouldCycleBetweenAscDesc() {
         val model = createModel(tableModelFactory.createTableStructure())
         val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.ASCENDING, true)
             it.setSortOrder(1, SortOrder.ASCENDING, true)
             assertThat(model.recordedSortCriteria).isEqualTo(SortCriteria(listOf(0, 1), listOf(true, true)))
@@ -218,7 +218,7 @@ internal class DataFrameTableTest {
     fun valueTable_rowSorter_multiSort_toggleShouldClearMultiSortAndStartSingleSort() {
         val model = createModel(tableModelFactory.createTableStructure())
         val tableComponent = DataFrameTable().apply { setDataFrameModel(model) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.ASCENDING, true)
             it.setSortOrder(1, SortOrder.ASCENDING, true)
             it.setSortOrder(2, SortOrder.ASCENDING, true)
@@ -235,7 +235,7 @@ internal class DataFrameTableTest {
         val tsA = tableModelFactory.createTableStructure().copy(fingerprint = dataSourceFingerprint)
         val modelA = createModel(tsA)
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             it.setSortOrder(7, SortOrder.DESCENDING, true)  // last col
             it.setSortOrder(6, SortOrder.ASCENDING, true)   // 2nd-last col
             it.setSortOrder(5, SortOrder.DESCENDING, true)  // 3rd-last col
@@ -261,18 +261,18 @@ internal class DataFrameTableTest {
         tableComponent.setDataFrameModel(modelB)
         assertThat(modelB.recordedSortCriteria).isEqualTo(expectedSortCriteria)
 
-        assertThat(modelB.getValueDataModel().getUniqueColumnId(0))
-            .isEqualTo(modelA.getValueDataModel().getUniqueColumnId(7))
+        assertThat(modelB.getValuesDataModel().getUniqueColumnIdAt(0))
+            .isEqualTo(modelA.getValuesDataModel().getUniqueColumnIdAt(7))
 
-        assertThat(modelB.getValueDataModel().getUniqueColumnId(1))
-            .isEqualTo(modelA.getValueDataModel().getUniqueColumnId(5))
+        assertThat(modelB.getValuesDataModel().getUniqueColumnIdAt(1))
+            .isEqualTo(modelA.getValuesDataModel().getUniqueColumnIdAt(5))
     }
 
     @Test
     fun valueTable_rowSorter_shouldClearSortStateOnModelChangeIfDifferentDataSource() {
         val modelA = createModel(tableModelFactory.createTableStructure().copy(fingerprint = "A"))
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
-        tableComponent.getValueTable().rowSorter!!.let {
+        tableComponent.getValuesTable().rowSorter!!.let {
             it.setSortOrder(0, SortOrder.ASCENDING, true)
             it.setSortOrder(1, SortOrder.ASCENDING, true)
             it.setSortOrder(2, SortOrder.ASCENDING, true)
@@ -280,7 +280,7 @@ internal class DataFrameTableTest {
 
         val modelB = createModel(tableModelFactory.createTableStructure().copy(fingerprint =  "B"))
         tableComponent.setDataFrameModel(modelB)
-        assertThat(modelB.recordedSortCriteria).isEqualTo(SortCriteria())
+        assertThat(modelB.recordedSortCriteria).isEqualTo(null)
     }
 
     @Test
@@ -290,7 +290,7 @@ internal class DataFrameTableTest {
         val tsA = tableModelFactory.createTableStructure().copy(fingerprint = dataSourceFingerprint)
         val modelA = createModel(tsA)
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
-        val oldColumn = tableComponent.getValueTable().columnModel.getColumn(1).also {
+        val oldColumn = tableComponent.getValuesTable().columnModel.getColumn(1).also {
                 it.width = 123
                 it.preferredWidth = 123
                 it.headerValue = "123"
@@ -302,7 +302,7 @@ internal class DataFrameTableTest {
 
         val modelB = createModel(tsB)
         tableComponent.setDataFrameModel(modelB)
-        tableComponent.getValueTable().columnModel.getColumn(tsB.columnsCount - 2).let { c ->
+        tableComponent.getValuesTable().columnModel.getColumn(tsB.columnsCount - 2).let { c ->
             assertThat(c.identifier).isEqualTo(oldColumn.identifier)
             assertThat(c.headerValue).isEqualTo(oldColumn.headerValue)
             assertThat(c.width).isEqualTo(oldColumn.width)
@@ -314,7 +314,7 @@ internal class DataFrameTableTest {
     fun valueTable_columns_shouldIgnoreColumnStateIfDifferentDataSource() {
         val modelA = createModel(tableModelFactory.createTableStructure().copy(fingerprint = "A"))
         val tableComponent = DataFrameTable().apply { setDataFrameModel(modelA) }
-        val oldColumn = tableComponent.getValueTable().columnModel.getColumn(0).also {
+        val oldColumn = tableComponent.getValuesTable().columnModel.getColumn(0).also {
             it.width = 123
             it.preferredWidth = 123
             it.headerValue = "123"
@@ -322,7 +322,7 @@ internal class DataFrameTableTest {
 
         val modelB = createModel(tableModelFactory.createTableStructure().copy(fingerprint = "B"))
         tableComponent.setDataFrameModel(modelB)
-        tableComponent.getValueTable().columnModel.getColumn(0).let { c ->
+        tableComponent.getValuesTable().columnModel.getColumn(0).let { c ->
             assertThat(c.identifier).isEqualTo(oldColumn.identifier)
             assertThat(c.headerValue).isNotEqualTo(oldColumn.headerValue)
             assertThat(c.width).isNotEqualTo(oldColumn.width)
