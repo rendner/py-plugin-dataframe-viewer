@@ -1,13 +1,12 @@
 from pandas import DataFrame
 
-from cms_rendner_sdfv.base.types import TableFrame, TableFrameColumn, TableFrameCell
+from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
-from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df = DataFrame.from_dict({
-    "col_0": [0,   1,   2, 3,  4],
-    "col_1": [5,   6,  7,  8,  9],
+    "col_0": [0, 1, 2, 3, 4],
+    "col_1": [5, 6, 7, 8, 9],
     "col_2": [10, 11, 12, 13, 14],
     "col_3": [15, 16, 17, 18, 19],
     "col_4": [20, 21, 22, 23, 24],
@@ -19,41 +18,31 @@ def test_combined_chunks_do_not_include_filtered_out_values():
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
     actual_frame = ctx.get_table_frame_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
-    assert_table_frames(
-        actual_frame,
-        TableFrame(
-            columns=[
-                TableFrameColumn(dtype='int64', labels=['col_0']),
-                TableFrameColumn(dtype='int64', labels=['col_1']),
-                TableFrameColumn(dtype='int64', labels=['col_2']),
-                TableFrameColumn(dtype='int64', labels=['col_3']),
-                TableFrameColumn(dtype='int64', labels=['col_4'])
+    assert actual_frame == TableFrame(
+        index_labels=[['1'], ['3'], ['4']],
+        cells=[
+            [
+                TableFrameCell(value='1'),
+                TableFrameCell(value='6'),
+                TableFrameCell(value='11'),
+                TableFrameCell(value='16'),
+                TableFrameCell(value='21'),
             ],
-            index_labels=[['1'], ['3'], ['4']],
-            cells=[
-                [
-                    TableFrameCell(value='1'),
-                    TableFrameCell(value='6'),
-                    TableFrameCell(value='11'),
-                    TableFrameCell(value='16'),
-                    TableFrameCell(value='21'),
-                ],
-                [
-                    TableFrameCell(value='3'),
-                    TableFrameCell(value='8'),
-                    TableFrameCell(value='13'),
-                    TableFrameCell(value='18'),
-                    TableFrameCell(value='23'),
-                ],
-                [
-                    TableFrameCell(value='4'),
-                    TableFrameCell(value='9'),
-                    TableFrameCell(value='14'),
-                    TableFrameCell(value='19'),
-                    TableFrameCell(value='24'),
-                ]
+            [
+                TableFrameCell(value='3'),
+                TableFrameCell(value='8'),
+                TableFrameCell(value='13'),
+                TableFrameCell(value='18'),
+                TableFrameCell(value='23'),
             ],
-        )
+            [
+                TableFrameCell(value='4'),
+                TableFrameCell(value='9'),
+                TableFrameCell(value='14'),
+                TableFrameCell(value='19'),
+                TableFrameCell(value='24'),
+            ]
+        ],
     )
 
 

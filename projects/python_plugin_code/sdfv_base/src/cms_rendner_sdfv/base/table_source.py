@@ -13,7 +13,7 @@
 #  limitations under the License.
 import inspect
 from abc import ABC, abstractmethod
-from typing import Any, List, Union, TypeVar
+from typing import Any, List, Union, TypeVar, Dict
 
 from cms_rendner_sdfv.base.temp import TEMP_VARS, EvaluatedVarsCleaner
 from cms_rendner_sdfv.base.transforms import to_json
@@ -33,6 +33,10 @@ class AbstractVisibleFrame(ABC):
         # default implementation (has to be overwritten in case columns are excluded or reordered)
         return list(range(self.region.cols))
 
+    @abstractmethod
+    def get_column_statistics(self, col_index: int) -> Dict[str, str]:
+        pass
+
 
 VF = TypeVar('VF', bound=AbstractVisibleFrame)
 
@@ -45,7 +49,6 @@ class AbstractTableFrameGenerator(ABC):
     def generate(self,
                  region: Region = None,
                  exclude_row_header: bool = False,
-                 exclude_col_header: bool = False,
                  ) -> TableFrame:
         pass
 
@@ -61,21 +64,17 @@ class AbstractTableFrameGenerator(ABC):
 
         for local_chunk in region.iterate_local_chunkwise(rows_per_chunk, cols_per_chunk):
 
-            chunk_contains_elements_of_first_row = local_chunk.first_row == 0
             chunk_contains_row_start_element = local_chunk.first_col == 0
 
             chunk_table = self.generate(
                 region=local_chunk.translate(region.first_row, region.first_col),
                 # request headers only once
                 exclude_row_header=not chunk_contains_row_start_element,
-                exclude_col_header=not chunk_contains_elements_of_first_row,
             )
 
             if result is None:
                 result = chunk_table
             else:
-                if chunk_contains_elements_of_first_row:
-                    result.columns.extend(chunk_table.columns)
                 if chunk_contains_row_start_element:
                     if result.index_labels is not None:
                         assert chunk_table.index_labels is not None
@@ -85,7 +84,7 @@ class AbstractTableFrameGenerator(ABC):
                     for i, row in enumerate(chunk_table.cells):
                         result.cells[i + local_chunk.first_row].extend(row)
 
-        return result if result is not None else TableFrame(index_labels=[], columns=[], legend=None, cells=[])
+        return result if result is not None else TableFrame(index_labels=[], cells=[])
 
 
 class AbstractColumnNameCompleter(ABC):
@@ -186,11 +185,16 @@ class AbstractTableSource(ABC):
     def get_table_structure(self) -> TableStructure:
         return self._context.get_table_structure(self.__fingerprint)
 
+    def get_column_statistics(self, col_index: int) -> Union[None, Dict[str, str]]:
+        return self._context.visible_frame.get_column_statistics(col_index)
+
     def set_sort_criteria(self,
                           by_column_index: Union[None, List[int]] = None,
                           ascending: Union[None, List[bool]] = None,
-                          ):
+                          ) -> 'AbstractTableSource':
         self._context.set_sort_criteria(by_column_index, ascending)
+        # allow to chain the calls
+        return self
 
     def compute_chunk_table_frame(self,
                                   first_row: int,
@@ -198,16 +202,15 @@ class AbstractTableSource(ABC):
                                   rows: int,
                                   cols: int,
                                   exclude_row_header: bool = False,
-                                  exclude_col_header: bool = False
                                   ) -> TableFrame:
         return self._context.get_table_frame_generator().generate(
             region=Region(first_row, first_col, rows, cols),
             exclude_row_header=exclude_row_header,
-            exclude_col_header=exclude_col_header,
         )
 
-    def clear(self, id_names: List[str]):
+    def clear(self, id_names: List[str]) -> 'AbstractTableSource':
         EvaluatedVarsCleaner.clear(id_names, 1)
+        # allow to chain the calls
         return self
 
 

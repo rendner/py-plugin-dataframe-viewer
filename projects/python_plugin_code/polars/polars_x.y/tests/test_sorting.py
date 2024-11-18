@@ -4,7 +4,6 @@ import polars as pl
 import pytest
 
 from cms_rendner_sdfv.polars.frame_context import FrameContext
-from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df = pl.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -35,7 +34,7 @@ def _assert_frame_sorting(
         cols_per_chunk=cols_per_chunk,
     )
 
-    assert_table_frames(actual_frame, expected_frame)
+    assert actual_frame == expected_frame
 
 
 @pytest.mark.parametrize(

@@ -2,14 +2,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import TableFrame, TableFrameColumn, TableFrameCell, TableStructureColumnInfo, \
+from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, TableStructureColumnInfo, \
     TableStructureLegend, TableStructureColumn
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionsValidator
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
-from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 np.random.seed(123456)
 
@@ -30,19 +29,13 @@ def test_compute_chunk_table_frame():
     actual = PatchedStyler(PatchedStylerContext(df.style), "finger-1") \
         .compute_chunk_table_frame(0, 0, 2, 2)
 
-    assert_table_frames(
-        actual,
-        TableFrame(
-            index_labels=[['0'], ['1']],
-            columns=[
-                TableFrameColumn(dtype='int64', labels=['col_0']),
-                TableFrameColumn(dtype='int64', labels=['col_1']),
-            ],
-            cells=[
-                [TableFrameCell(value='0'), TableFrameCell(value='5')],
-                [TableFrameCell(value='1'), TableFrameCell(value='6')],
-            ],
-        ))
+    assert actual == TableFrame(
+        index_labels=[['0'], ['1']],
+        cells=[
+            [TableFrameCell(value='0'), TableFrameCell(value='5')],
+            [TableFrameCell(value='1'), TableFrameCell(value='6')],
+        ],
+    )
 
 
 def test_validate_and_compute_chunk_table_frame():
@@ -50,19 +43,13 @@ def test_validate_and_compute_chunk_table_frame():
         .validate_and_compute_chunk_table_frame(0, 0, 2, 2)
 
     assert not actual.problems
-    assert_table_frames(
-        actual.frame,
-        TableFrame(
-            index_labels=[['0'], ['1']],
-            columns=[
-                TableFrameColumn(dtype='int64', labels=['col_0']),
-                TableFrameColumn(dtype='int64', labels=['col_1']),
-            ],
-            cells=[
-                [TableFrameCell(value='0'), TableFrameCell(value='5')],
-                [TableFrameCell(value='1'), TableFrameCell(value='6')],
-            ],
-        ))
+    assert actual.frame == TableFrame(
+        index_labels=[['0'], ['1']],
+        cells=[
+            [TableFrameCell(value='0'), TableFrameCell(value='5')],
+            [TableFrameCell(value='1'), TableFrameCell(value='6')],
+        ],
+    )
 
 
 def test_table_structure():
@@ -218,13 +205,13 @@ def test_should_not_revalidate_faulty_styling_functions():
     ctx = PatchedStylerContext(styler)
     ps = PatchedStyler(ctx, "")
 
-    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False, False)
+    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False)
     assert not result.problems
 
     raise_in_validator = True
 
-    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False, False)
+    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False)
     assert len(result.problems) == len(ctx.get_todo_patcher_list())
 
-    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False, False)
+    result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False)
     assert not result.problems

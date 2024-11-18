@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from cms_rendner_sdfv.base.constants import DESCRIBE_COL_MAX_STR_LEN
 from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame
 
 df_dict = {
@@ -57,16 +58,6 @@ def test_index_at():
     assert mvf.index_at(1) == ('x', 'b')
 
 
-def test_get_column_info():
-    vf = VisibleFrame(source_frame=df)
-
-    info = vf.get_column_info(0)
-    assert str(info.dtype) == "int64"
-
-    info = vf.get_column_info(1)
-    assert str(info.dtype) == "object"
-
-
 def test_to_source_frame_cell_coordinates():
     vf = VisibleFrame(source_frame=df)
     assert vf.to_source_frame_cell_coordinates(0, 0) == (0, 0)
@@ -77,3 +68,38 @@ def test_get_column_indices():
 
     actual = vf.get_column_indices()
     assert actual == list(range(len(multi_df.columns)))
+
+
+def test_get_column_statistics():
+    vf = VisibleFrame(
+        source_frame=pd.DataFrame.from_dict({
+            'categorical': pd.Categorical(['d', 'e', 'f']),
+            'numeric': [1, 2, 3],
+        }))
+
+    actual_categorical = vf.get_column_statistics(0)
+    actual_numeric = vf.get_column_statistics(1)
+
+    assert actual_categorical == {
+        'count': '3',
+        'unique': '3',
+        'top': 'd',
+        'freq': '1',
+    }
+
+    assert actual_numeric == {
+        'count': '3.0',
+        'mean': '2.0',
+        'std': '1.0',
+        'min': '1.0',
+        '25%': '1.5',
+        '50%': '2.0',
+        '75%': '2.5',
+        'max': '3.0',
+    }
+
+
+def test_truncate_column_statistics():
+    vf = VisibleFrame(source_frame=pd.DataFrame.from_dict({'A': ['ab' * DESCRIBE_COL_MAX_STR_LEN]}))
+    actual = vf.get_column_statistics(0)
+    assert len(actual.get('top')) == DESCRIBE_COL_MAX_STR_LEN

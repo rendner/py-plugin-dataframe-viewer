@@ -4,11 +4,10 @@ from typing import Any, Union
 import polars as pl
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, TableFrameColumn, \
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
     TableSourceKind, TableFrameCell, CreateTableSourceErrorKind
 from cms_rendner_sdfv.polars.table_source import TableSource
 from cms_rendner_sdfv.polars.table_source_factory import TableSourceFactory
-from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df_dict = {
     "0": [0, 1, 2],
@@ -53,20 +52,13 @@ def test_create_for_dict():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert_table_frames(
-        table_frame,
-        TableFrame(
-            columns=[
-                TableFrameColumn(dtype='Int64', labels=['0']),
-                TableFrameColumn(dtype='Int64', labels=['1']),
-            ],
-            index_labels=None,
-            cells=[
-                [TableFrameCell(value='0'), TableFrameCell(value='3')],
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')]
-            ],
-        )
+    assert table_frame == TableFrame(
+        index_labels=None,
+        cells=[
+            [TableFrameCell(value='0'), TableFrameCell(value='3')],
+            [TableFrameCell(value='1'), TableFrameCell(value='4')],
+            [TableFrameCell(value='2'), TableFrameCell(value='5')]
+        ],
     )
 
 
@@ -126,19 +118,12 @@ def test_create_with_filter():
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
     table_frame = _get_table_frame(table_source)
-    assert_table_frames(
-        table_frame,
-        TableFrame(
-            columns=[
-                TableFrameColumn(dtype='Int64', labels=['0']),
-                TableFrameColumn(dtype='Int64', labels=['1']),
-            ],
-            index_labels=None,
-            cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
-            ],
-        )
+    assert table_frame == TableFrame(
+        index_labels=None,
+        cells=[
+            [TableFrameCell(value='1'), TableFrameCell(value='4')],
+            [TableFrameCell(value='2'), TableFrameCell(value='5')],
+        ],
     )
 
 

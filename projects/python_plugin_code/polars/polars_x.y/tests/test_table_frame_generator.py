@@ -1,10 +1,9 @@
 import polars as pl
 
 from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
-from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, TableFrameColumn
+from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell
 from cms_rendner_sdfv.polars.constants import CELL_MAX_LIST_LEN
 from cms_rendner_sdfv.polars.frame_context import FrameContext
-from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 
 def test_cell_stringlike_values_have_no_double_quotes():
@@ -58,20 +57,13 @@ def test_generate_by_combining_chunks():
     )
     ctx = FrameContext(df)
     actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert_table_frames(
-        actual,
-        TableFrame(
-            index_labels=None,
-            columns=[
-                TableFrameColumn(dtype='Int64', labels=['0']),
-                TableFrameColumn(dtype='Int64', labels=['1']),
-            ],
-            cells=[
-                [TableFrameCell(value='0'), TableFrameCell(value='3')],
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
-            ],
-        )
+    assert actual == TableFrame(
+        index_labels=None,
+        cells=[
+            [TableFrameCell(value='0'), TableFrameCell(value='3')],
+            [TableFrameCell(value='1'), TableFrameCell(value='4')],
+            [TableFrameCell(value='2'), TableFrameCell(value='5')],
+        ],
     )
 
 
@@ -111,52 +103,3 @@ def test_respects_plugin_max_list_length():
     actual = FrameContext(df).get_table_frame_generator().generate()
 
     assert actual.cells[0][0].value.count('a') == CELL_MAX_LIST_LEN
-
-
-def test_describe():
-    df = pl.DataFrame({
-        'numeric': [1, 2, 3],
-        'string': ['a', 'b', 'c'],
-    })
-
-    ctx = FrameContext(df)
-    actual = ctx.get_table_frame_generator().generate_by_combining_chunks(2, 2)
-    assert_table_frames(
-        actual,
-        TableFrame(
-            index_labels=None,
-            columns=[
-                TableFrameColumn(
-                    dtype='Int64',
-                    labels=['numeric'],
-                    describe={
-                        'count': '3.0',
-                        'null_count': '0.0',
-                        'mean': '2.0',
-                        'std': '1.0',
-                        'min': '1.0',
-                        '25%': '2.0',
-                        '50%': '2.0',
-                        '75%': '3.0',
-                        'max': '3.0',
-                    }
-                ),
-                TableFrameColumn(
-                    dtype='String',
-                    labels=['string'],
-                    describe={
-                        'count': '3',
-                        'null_count': '0',
-                        'min': 'a',
-                        'max': 'c',
-                    }
-                ),
-            ],
-            cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='a')],
-                [TableFrameCell(value='2'), TableFrameCell(value='b')],
-                [TableFrameCell(value='3'), TableFrameCell(value='c')],
-            ],
-        ),
-        include_column_describe=True,
-    )

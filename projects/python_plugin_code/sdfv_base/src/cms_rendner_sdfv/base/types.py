@@ -54,26 +54,9 @@ class TableFrameCell:
 
 
 @dataclass(frozen=True)
-class TableFrameColumn:
-    dtype: str
-    labels: List[str]
-    describe: Union[None, Dict[str, str]] = None
-
-
-@dataclass(frozen=True)
-class TableFrameLegend:
-    index: List[str]
-    column: List[str]
-
-
-@dataclass(frozen=True)
 class TableFrame:
     index_labels: Union[None, List[List[str]]]
-    # todo: deprecated
-    columns: Union[None, List[TableFrameColumn]]
     cells: List[List[TableFrameCell]]
-    # todo: deprecated
-    legend: Union[None, TableFrameLegend] = None
 
 
 @dataclass(frozen=True)

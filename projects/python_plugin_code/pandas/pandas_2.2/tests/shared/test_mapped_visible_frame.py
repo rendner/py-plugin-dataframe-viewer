@@ -65,16 +65,6 @@ def test_index_at():
     assert mvf.index_at(1) == ('y', 'b')
 
 
-def test_get_column_info():
-    vf = _create_visible_frame()
-
-    info = vf.get_column_info(0)
-    assert str(info.dtype) == "int64"
-
-    info = vf.get_column_info(1)
-    assert str(info.dtype) == "string"
-
-
 def test_to_source_frame_cell_coordinates():
     vf = _create_visible_frame()
     assert vf.to_source_frame_cell_coordinates(0, 0) == (0, 0)
@@ -85,3 +75,20 @@ def test_get_column_indices():
 
     actual = vf.get_column_indices()
     assert actual == [0, 3]
+
+
+def test_get_column_statistics():
+    vf = _create_visible_frame()
+
+    actual = vf.get_column_statistics(0)
+    actual.pop('std', None)
+
+    assert actual == {
+        '25%': '4.0',
+        '50%': '4.0',
+        '75%': '4.0',
+        'count': '2.0',
+        'max': '4.0',
+        'mean': '4.0',
+        'min': '4.0'
+    }

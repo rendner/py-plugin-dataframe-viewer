@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
 
-from cms_rendner_sdfv.base.types import TableFrame, TableFrameColumn, TableFrameCell, TableFrameLegend, \
+from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, \
     TableStructureColumnInfo, TableStructureLegend, TableStructureColumn
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
-from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 np.random.seed(123456)
 
@@ -14,23 +13,15 @@ midx_cols = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]], names=['co
 multi_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx_rows, columns=midx_cols)
 
 
-
 def test_compute_chunk_table_frame():
     actual = TableSource(FrameContext(multi_df), "finger-1").compute_chunk_table_frame(0, 0, 2, 2)
-    assert_table_frames(
-        actual,
-        TableFrame(
-            legend=TableFrameLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
-            index_labels=[['x', 'a'], ['x', 'b']],
-            columns=[
-                TableFrameColumn(dtype='int64', labels=['x', 'a'], describe=None),
-                TableFrameColumn(dtype='int64', labels=['x', 'b'], describe=None),
-            ],
-            cells=[
-                [TableFrameCell(value='0', css=None), TableFrameCell(value='1', css=None)],
-                [TableFrameCell(value='6', css=None), TableFrameCell(value='7', css=None)],
-            ],
-        ))
+    assert actual == TableFrame(
+        index_labels=[['x', 'a'], ['x', 'b']],
+        cells=[
+            [TableFrameCell(value='0', css=None), TableFrameCell(value='1', css=None)],
+            [TableFrameCell(value='6', css=None), TableFrameCell(value='7', css=None)],
+        ],
+    )
 
 
 def test_table_structure():

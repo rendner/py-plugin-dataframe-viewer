@@ -11,6 +11,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Dict
+
 import numpy as np
 from pandas import DataFrame, Series
 
@@ -18,24 +20,6 @@ from cms_rendner_sdfv.base.constants import DESCRIBE_COL_MAX_STR_LEN
 from cms_rendner_sdfv.base.helpers import truncate_str
 from cms_rendner_sdfv.base.table_source import AbstractVisibleFrame
 from cms_rendner_sdfv.base.types import Region
-
-
-class VisibleColumnInfo:
-    def __init__(self, column: Series):
-        self.__column = column
-
-    @property
-    def dtype(self):
-        return self.__column.dtype
-
-    def describe(self) -> dict[str, str]:
-        try:
-            return {
-                k: truncate_str(str(v), DESCRIBE_COL_MAX_STR_LEN)
-                for k, v in self.__column.describe().to_dict().items()
-            }
-        except TypeError as e:
-            return {'error': str(e)}
 
 
 class VisibleFrame(AbstractVisibleFrame):
@@ -63,9 +47,6 @@ class VisibleFrame(AbstractVisibleFrame):
     def index_at(self, row: int):
         return self._source_frame.index[row]
 
-    def get_column_info(self, col: int) -> VisibleColumnInfo:
-        return VisibleColumnInfo(self._source_frame.iloc[:, col])
-
     def to_frame(self, region: Region) -> DataFrame:
         r = self.region.get_bounded_region(region)
         return self._source_frame.iloc[
@@ -75,6 +56,19 @@ class VisibleFrame(AbstractVisibleFrame):
 
     def to_source_frame_cell_coordinates(self, row: int, col: int):
         return row, col
+
+    def _get_col_series(self, col_index) -> Series:
+        return self._source_frame.iloc[:, col_index]
+
+    def get_column_statistics(self, col_index: int) -> Dict[str, str]:
+        try:
+            col_series = self._get_col_series(col_index)
+            return {
+                k: truncate_str(str(v), DESCRIBE_COL_MAX_STR_LEN)
+                for k, v in col_series.describe().to_dict().items()
+            }
+        except TypeError as e:
+            return {'error': str(e)}
 
 
 class MappedVisibleFrame(VisibleFrame):
@@ -98,9 +92,6 @@ class MappedVisibleFrame(VisibleFrame):
     def index_at(self, row: int):
         return self._source_frame.index[self.__i_rows[row]]
 
-    def get_column_info(self, col: int) -> VisibleColumnInfo:
-        return VisibleColumnInfo(self._source_frame.iloc[self.__i_rows, self.__i_cols[col]])
-
     def to_frame(self, region: Region) -> DataFrame:
         r = self.region.get_bounded_region(region)
         i_rows = self.__i_rows[r.first_row:r.first_row + r.rows]
@@ -112,3 +103,6 @@ class MappedVisibleFrame(VisibleFrame):
 
     def get_column_indices(self) -> list[int]:
         return list(self.__i_cols)
+
+    def _get_col_series(self, col_index) -> Series:
+        return self._source_frame.iloc[self.__i_rows, self.__i_cols[col_index]]

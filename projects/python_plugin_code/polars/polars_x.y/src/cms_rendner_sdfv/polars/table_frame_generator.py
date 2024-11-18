@@ -18,7 +18,7 @@ import polars as pl
 
 from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
-from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell, TableFrameColumn
+from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell
 from cms_rendner_sdfv.polars.constants import CELL_MAX_LIST_LEN
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame, Chunk
 
@@ -30,35 +30,10 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
     def generate(self,
                  region: Region = None,
                  exclude_row_header: bool = False,
-                 exclude_col_header: bool = False,
                  ) -> TableFrame:
         chunk = self._visible_frame.get_chunk(region)
-
-        columns = [] if exclude_col_header else self._extract_columns(chunk)
         cells = self._extract_cells(chunk)
-
-        return TableFrame(
-            index_labels=None,
-            columns=columns,
-            legend=None,
-            cells=cells,
-        )
-
-    @staticmethod
-    def _extract_columns(chunk: Chunk) -> List[TableFrameColumn]:
-        result: List[TableFrameColumn] = []
-
-        for c in range(chunk.region.cols):
-            series = chunk.series_at(c)
-            result.append(
-                TableFrameColumn(
-                    dtype=str(series.dtype),
-                    labels=[series.name],
-                    describe=chunk.describe(series),
-                )
-            )
-
-        return result
+        return TableFrame(index_labels=None, cells=cells)
 
     @staticmethod
     def _extract_cells(chunk: Chunk) -> List[List[TableFrameCell]]:

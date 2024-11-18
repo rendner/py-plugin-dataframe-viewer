@@ -15,6 +15,7 @@ from typing import Dict, Iterator, List, Union
 
 import polars as pl
 
+from cms_rendner_sdfv.base.constants import DESCRIBE_COL_MAX_STR_LEN
 from cms_rendner_sdfv.base.table_source import AbstractVisibleFrame
 from cms_rendner_sdfv.base.types import Region
 
@@ -26,21 +27,6 @@ class Chunk:
 
     def series_at(self, offset: int) -> pl.Series:
         return self.__frame.series_at(self.region.first_col + offset)
-
-    @staticmethod
-    def describe(s: pl.Series) -> Dict[str, str]:
-        def truncate(v) -> str:
-            vs = str(v)
-            # truncate too long values
-            return vs if len(vs) <= 120 else vs[:120] + '…'
-
-        try:
-            df = s.describe()
-            keys = df.get_column(df.columns[0]).to_list()
-            values = [truncate(v) for v in df.get_column(df.columns[1]).to_list()]
-            return dict(zip(keys, values))
-        except TypeError as e:
-            return {'error': str(e)}
 
     def row_idx_iter(self) -> Iterator[int]:
         return self.__frame.row_idx_iter(self.region)
@@ -85,3 +71,18 @@ class VisibleFrame(AbstractVisibleFrame):
         if self.__col_idx is None:
             return super().get_column_indices()
         return list(self.__col_idx)
+
+    def get_column_statistics(self, col_index: int) -> Dict[str, str]:
+        def truncate(v) -> str:
+            vs = str(v)
+            # truncate too long values
+            return vs if len(vs) <= DESCRIBE_COL_MAX_STR_LEN else vs[:DESCRIBE_COL_MAX_STR_LEN - 1] + '…'
+
+        try:
+            s = self.series_at(col_index)
+            df = s.describe()
+            keys = df.get_column(df.columns[0]).to_list()
+            values = [truncate(v) for v in df.get_column(df.columns[1]).to_list()]
+            return dict(zip(keys, values))
+        except TypeError as e:
+            return {'error': str(e)}

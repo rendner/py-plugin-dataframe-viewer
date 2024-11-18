@@ -5,10 +5,10 @@ import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableFrameColumn, TableSourceKind, TableFrameLegend, TableFrameCell, CreateTableSourceErrorKind
+    TableSourceKind, TableFrameCell, CreateTableSourceErrorKind, \
+    TableStructureColumn, TableStructureLegend
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
 from cms_rendner_sdfv.pandas.frame.table_source_factory import TableSourceFactory
-from tests.helpers.asserts.assert_table_frames import assert_table_frames
 
 df_dict = {
     "col_0": [1, 2, 3],
@@ -55,21 +55,20 @@ def test_create_for_dict_orient_tight():
     assert isinstance(table_source, TableSource)
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
+    table_structure = table_source.get_table_structure()
+    assert table_structure.column_info.columns == [
+        TableStructureColumn(id=0, dtype='int64', labels=['x', '1']),
+        TableStructureColumn(id=1, dtype='int64', labels=['y', '2']),
+    ]
+    assert table_structure.column_info.legend == TableStructureLegend(index=['n1', 'n2'], column=['z1', 'z2'])
+
     table_frame = _get_table_frame(table_source)
-    assert_table_frames(
-        table_frame,
-        TableFrame(
-            columns=[
-                TableFrameColumn(dtype='int64', labels=['x', '1']),
-                TableFrameColumn(dtype='int64', labels=['y', '2']),
-            ],
-            index_labels=[['a', 'b'], ['a', 'c']],
-            legend=TableFrameLegend(index=['n1', 'n2'], column=['z1', 'z2']),
-            cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='3')],
-                [TableFrameCell(value='2'), TableFrameCell(value='4')]
-            ],
-        )
+    assert table_frame == TableFrame(
+        index_labels=[['a', 'b'], ['a', 'c']],
+        cells=[
+            [TableFrameCell(value='1'), TableFrameCell(value='3')],
+            [TableFrameCell(value='2'), TableFrameCell(value='4')]
+        ],
     )
 
 
@@ -78,21 +77,21 @@ def test_create_for_dict_orient_columns():
     assert isinstance(table_source, TableSource)
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
+    table_structure = table_source.get_table_structure()
+    assert table_structure.column_info.columns == [
+        TableStructureColumn(id=0, dtype='int64', labels=['col_0']),
+        TableStructureColumn(id=1, dtype='int64', labels=['col_1']),
+    ]
+    assert table_structure.column_info.legend is None
+
     table_frame = _get_table_frame(table_source)
-    assert_table_frames(
-        table_frame,
-        TableFrame(
-            columns=[
-                TableFrameColumn(dtype='int64', labels=['col_0']),
-                TableFrameColumn(dtype='int64', labels=['col_1']),
-            ],
-            index_labels=[['0'], ['1'], ['2']],
-            cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
-                [TableFrameCell(value='3'), TableFrameCell(value='6')]
-            ],
-        )
+    assert table_frame == TableFrame(
+        index_labels=[['0'], ['1'], ['2']],
+        cells=[
+            [TableFrameCell(value='1'), TableFrameCell(value='4')],
+            [TableFrameCell(value='2'), TableFrameCell(value='5')],
+            [TableFrameCell(value='3'), TableFrameCell(value='6')]
+        ],
     )
 
 
@@ -104,21 +103,21 @@ def test_create_for_dict_orient_index():
     assert isinstance(table_source, TableSource)
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
+    table_structure = table_source.get_table_structure()
+    assert table_structure.column_info.columns == [
+        TableStructureColumn(id=0, dtype='int64', labels=['0']),
+        TableStructureColumn(id=1, dtype='int64', labels=['1']),
+        TableStructureColumn(id=2, dtype='int64', labels=['2']),
+    ]
+    assert table_structure.column_info.legend is None
+
     table_frame = _get_table_frame(table_source)
-    assert_table_frames(
-        table_frame,
-        TableFrame(
-            columns=[
-                TableFrameColumn(dtype='int64', labels=['0']),
-                TableFrameColumn(dtype='int64', labels=['1']),
-                TableFrameColumn(dtype='int64', labels=['2']),
-            ],
-            index_labels=[['col_0'], ['col_1']],
-            cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='2'), TableFrameCell(value='3')],
-                [TableFrameCell(value='4'), TableFrameCell(value='5'), TableFrameCell(value='6')],
-            ],
-        )
+    assert table_frame == TableFrame(
+        index_labels=[['col_0'], ['col_1']],
+        cells=[
+            [TableFrameCell(value='1'), TableFrameCell(value='2'), TableFrameCell(value='3')],
+            [TableFrameCell(value='4'), TableFrameCell(value='5'), TableFrameCell(value='6')],
+        ],
     )
 
 
@@ -178,20 +177,20 @@ def test_create_with_filter():
     assert isinstance(table_source, TableSource)
     assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
+    table_structure = table_source.get_table_structure()
+    assert table_structure.column_info.columns == [
+        TableStructureColumn(id=0, dtype='int64', labels=['col_0']),
+        TableStructureColumn(id=1, dtype='int64', labels=['col_1']),
+    ]
+    assert table_structure.column_info.legend is None
+
     table_frame = _get_table_frame(table_source)
-    assert_table_frames(
-        table_frame,
-        TableFrame(
-            columns=[
-                TableFrameColumn(dtype='int64', labels=['col_0']),
-                TableFrameColumn(dtype='int64', labels=['col_1']),
-            ],
-            index_labels=[['1'], ['2']],
-            cells=[
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
-                [TableFrameCell(value='3'), TableFrameCell(value='6')],
-            ],
-        )
+    assert table_frame == TableFrame(
+        index_labels=[['1'], ['2']],
+        cells=[
+            [TableFrameCell(value='2'), TableFrameCell(value='5')],
+            [TableFrameCell(value='3'), TableFrameCell(value='6')],
+        ],
     )
 
 

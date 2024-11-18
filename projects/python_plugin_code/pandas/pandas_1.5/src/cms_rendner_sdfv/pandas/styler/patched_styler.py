@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import List, Optional
+from typing import List
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import Region, TableSourceKind
@@ -32,7 +32,6 @@ class PatchedStyler(AbstractTableSource):
                                                rows: int,
                                                cols: int,
                                                exclude_row_header: bool = False,
-                                               exclude_col_header: bool = False,
                                                ) -> ValidatedTableFrame:
         region = Region(first_row, first_col, rows, cols)
         validator = StyleFunctionsValidator(
@@ -43,15 +42,8 @@ class PatchedStyler(AbstractTableSource):
             frame=self._context.get_table_frame_generator().generate(
                 region=region,
                 exclude_row_header=exclude_row_header,
-                exclude_col_header=exclude_col_header,
             ),
             problems=validator.validate(region),
         )
         self.__patchers_to_skip_in_validation.extend(validator.failed_patchers)
         return frame
-
-    def set_sort_criteria(self,
-                          by_column_index: Optional[List[int]] = None,
-                          ascending: Optional[List[bool]] = None,
-                          ):
-        self._context.set_sort_criteria(by_column_index, ascending)
