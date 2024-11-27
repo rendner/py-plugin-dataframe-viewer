@@ -1,6 +1,7 @@
 import polars as pl
 
-from cms_rendner_sdfv.base.types import TableStructureColumnInfo, TableStructureColumn
+from cms_rendner_sdfv.base.types import TableStructureColumnInfo, TableStructureColumn, \
+    TableStructure, TableSourceKind, TableInfo, TableFrame, TableFrameCell
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 from cms_rendner_sdfv.polars.table_source import TableSource
 
@@ -12,21 +13,39 @@ df = pl.DataFrame(
 )
 
 
-def test_table_structure():
-    ts = TableSource(FrameContext(df), "finger-1").get_table_structure()
-    assert ts.org_rows_count == df.height
-    assert ts.org_columns_count == df.width
-    assert ts.rows_count == df.height
-    assert ts.columns_count == df.width
-    assert ts.fingerprint == "finger-1"
-    assert ts.column_info == TableStructureColumnInfo(
-        legend=None,
-        columns=[
-            TableStructureColumn(dtype='Int64', labels=['0'], id=0),
-            TableStructureColumn(dtype='Int64', labels=['1'], id=1)
-        ])
+def test_compute_chunk_table_frame():
+    ts = TableSource(FrameContext(df), "finger-1")
+    actual = ts.compute_chunk_table_frame(0, 0, 2, 2)
+
+    assert actual == ts.serialize(TableFrame(
+        index_labels=None,
+        cells=[
+            [TableFrameCell(value='0', css=None), TableFrameCell(value='3', css=None)],
+            [TableFrameCell(value='1', css=None), TableFrameCell(value='4', css=None)],
+        ],
+    ))
 
 
-def test_jsonify():
-    json = TableSource(FrameContext(df), "").jsonify({"a": 12, "b": (True, False)})
-    assert json == '{"a": 12, "b": [true, false]}'
+def test_table_info():
+    ts = TableSource(FrameContext(df), "finger-1")
+
+    assert ts.get_info() == ts.serialize(
+        TableInfo(
+            kind=TableSourceKind.TABLE_SOURCE.name,
+            structure=TableStructure(
+                org_rows_count=df.height,
+                org_columns_count=df.width,
+                rows_count=df.height,
+                columns_count=df.width,
+                fingerprint="finger-1",
+                column_info=TableStructureColumnInfo(
+                    legend=None,
+                    columns=[
+                        TableStructureColumn(dtype='Int64', labels=['0'], id=0),
+                        TableStructureColumn(dtype='Int64', labels=['1'], id=1)
+                    ],
+                )
+            ),
+        )
+    )
+

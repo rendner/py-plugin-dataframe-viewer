@@ -30,7 +30,7 @@ class PatchedStyler(AbstractTableSource):
                                                rows: int,
                                                cols: int,
                                                exclude_row_header: bool = False,
-                                               ) -> ValidatedTableFrame:
+                                               ) -> str:
         region = Region(first_row, first_col, rows, cols)
         validator = StyleFunctionsValidator(
             self._context,
@@ -44,4 +44,4 @@ class PatchedStyler(AbstractTableSource):
             problems=validator.validate(region),
         )
         self.__patchers_to_skip_in_validation.extend(validator.failed_patchers)
-        return frame
+        return self.serialize(frame)

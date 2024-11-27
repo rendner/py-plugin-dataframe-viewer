@@ -5,7 +5,8 @@ import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableSourceKind, TableFrameCell, CreateTableSourceErrorKind
+    TableSourceKind, TableFrameCell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
+    TableStructureColumn
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.table_source_factory import TableSourceFactory
 
@@ -29,15 +30,28 @@ def _create_table_source(
     return result
 
 
-def _get_table_frame(table_source: AbstractTableSource) -> TableFrame:
-    s = table_source.get_table_structure()
-    return table_source.compute_chunk_table_frame(0, 0, s.rows_count, s.columns_count)
-
-
 def test_create_for_styler():
     table_source = _create_table_source(df.style)
     assert isinstance(table_source, PatchedStyler)
-    assert table_source.get_kind() == TableSourceKind.PATCHED_STYLER
+    assert table_source.get_info() == table_source.serialize(
+        TableInfo(
+            kind=TableSourceKind.PATCHED_STYLER.name,
+            structure=TableStructure(
+                org_rows_count=3,
+                org_columns_count=2,
+                rows_count=3,
+                columns_count=2,
+                fingerprint=table_source._fingerprint,
+                column_info=TableStructureColumnInfo(
+                    legend=None,
+                    columns=[
+                        TableStructureColumn(dtype="int64", labels=["col_0"], id=0),
+                        TableStructureColumn(dtype="int64", labels=["col_1"], id=1),
+                    ],
+                ),
+            )
+        )
+    )
 
 
 def test_create_fails_on_unsupported_data_source():
@@ -85,15 +99,40 @@ def test_create_with_filter():
         CreateTableSourceConfig(filter_eval_expr="df.filter(items=[1, 2], axis='index')"),
     )
     assert isinstance(table_source, PatchedStyler)
-    assert table_source.get_kind() == TableSourceKind.PATCHED_STYLER
+    assert table_source.get_info() == table_source.serialize(
+        TableInfo(
+            kind=TableSourceKind.PATCHED_STYLER.name,
+            structure=TableStructure(
+                org_rows_count=3,
+                org_columns_count=2,
+                rows_count=2,
+                columns_count=2,
+                fingerprint=table_source._fingerprint,
+                column_info=TableStructureColumnInfo(
+                    legend=None,
+                    columns=[
+                        TableStructureColumn(id=0, dtype='int64', labels=['col_0']),
+                        TableStructureColumn(id=1, dtype='int64', labels=['col_1']),
+                    ],
+                )
+            ),
+        )
+    )
 
-    table_frame = _get_table_frame(table_source)
-    assert table_frame == TableFrame(
-        index_labels=[['1'], ['2']],
-        cells=[
-            [TableFrameCell(value='2'), TableFrameCell(value='5')],
-            [TableFrameCell(value='3'), TableFrameCell(value='6')]
-        ],
+    assert table_source.compute_chunk_table_frame(
+        0,
+        0,
+        2,
+        2,
+        False,
+    ) == table_source.serialize(
+        TableFrame(
+            index_labels=[['1'], ['2']],
+            cells=[
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+                [TableFrameCell(value='3'), TableFrameCell(value='6')],
+            ],
+        )
     )
 
 
@@ -114,13 +153,23 @@ def test_filter_expr_can_resolve_local_variable():
     )
 
     assert isinstance(table_source, PatchedStyler)
-    assert table_source.get_kind() == TableSourceKind.PATCHED_STYLER
-
-    assert table_source.get_table_structure().columns_count == 2
-    assert table_source.get_table_structure().org_columns_count == 2
-
-    assert table_source.get_table_structure().rows_count == 1
-    assert table_source.get_table_structure().org_rows_count == 2
+    assert table_source.get_info() == table_source.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=2,
+            org_columns_count=2,
+            rows_count=1,
+            columns_count=2,
+            fingerprint=table_source._fingerprint,
+            column_info=TableStructureColumnInfo(
+                legend=None,
+                columns=[
+                    TableStructureColumn(id=0, dtype='int64', labels=['col_0']),
+                    TableStructureColumn(id=1, dtype='int64', labels=['col_1']),
+                ],
+            )
+        )
+    ))
 
 
 def test_filter_expr_can_resolve_synthetic_identifier():
@@ -140,10 +189,20 @@ def test_filter_expr_can_resolve_synthetic_identifier():
     )
 
     assert isinstance(table_source, PatchedStyler)
-    assert table_source.get_kind() == TableSourceKind.PATCHED_STYLER
-
-    assert table_source.get_table_structure().columns_count == 2
-    assert table_source.get_table_structure().org_columns_count == 2
-
-    assert table_source.get_table_structure().rows_count == 1
-    assert table_source.get_table_structure().org_rows_count == 2
+    assert table_source.get_info() == table_source.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=2,
+            org_columns_count=2,
+            rows_count=1,
+            columns_count=2,
+            fingerprint=table_source._fingerprint,
+            column_info=TableStructureColumnInfo(
+                legend=None,
+                columns=[
+                    TableStructureColumn(id=0, dtype='int64', labels=['col_0']),
+                    TableStructureColumn(id=1, dtype='int64', labels=['col_1']),
+                ],
+            )
+        )
+    ))

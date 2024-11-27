@@ -70,7 +70,7 @@ class VisibleFrame(AbstractVisibleFrame):
     def get_column_indices(self) -> List[int]:
         if self.__col_idx is None:
             return super().get_column_indices()
-        return list(self.__col_idx)
+        return self.__col_idx
 
     def get_column_statistics(self, col_index: int) -> Dict[str, str]:
         def truncate(v) -> str:

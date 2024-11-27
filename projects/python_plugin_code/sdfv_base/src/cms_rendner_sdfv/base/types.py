@@ -48,6 +48,12 @@ class TableStructure:
 
 
 @dataclass(frozen=True)
+class TableInfo:
+    kind: str
+    structure: TableStructure
+
+
+@dataclass(frozen=True)
 class TableFrameCell:
     value: str
     css: Union[None, Dict[str, str]] = None

@@ -106,6 +106,6 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
 
         return MappedVisibleFrame(
             self.__source_frame,
-            self.__source_frame.index.get_indexer_for(index),
-            self.__source_frame.columns.get_indexer_for(columns),
+            self.__source_frame.index.get_indexer_for(index).tolist(),
+            self.__source_frame.columns.get_indexer_for(columns).tolist(),
         )

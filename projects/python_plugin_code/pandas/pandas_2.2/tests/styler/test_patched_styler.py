@@ -3,10 +3,11 @@ import numpy as np
 import pytest
 
 from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, TableStructureColumn, \
-    TableStructureColumnInfo, TableStructureLegend
+    TableStructureColumnInfo, TableStructureLegend, TableInfo, TableStructure, TableSourceKind
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, FilterCriteria
 from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionsValidator
+from cms_rendner_sdfv.pandas.styler.types import ValidatedTableFrame, StyleFunctionValidationProblem, StyleFunctionInfo
 from tests.helpers.asserts.assert_patcher_styler import assert_patched_styler
 
 np.random.seed(123456)
@@ -25,140 +26,228 @@ df = pd.DataFrame.from_dict({
 
 
 def test_compute_chunk_table_frame():
-    actual = PatchedStyler(PatchedStylerContext(df.style), "finger-1") \
-        .compute_chunk_table_frame(0, 0, 2, 2)
+    ps = PatchedStyler(PatchedStylerContext(df.style), "finger-1")
+    actual = ps.compute_chunk_table_frame(0, 0, 2, 2)
 
-    assert actual == TableFrame(
+    assert actual == ps.serialize(TableFrame(
         index_labels=[['0'], ['1']],
         cells=[
             [TableFrameCell(value='0'), TableFrameCell(value='5')],
             [TableFrameCell(value='1'), TableFrameCell(value='6')],
         ],
-    )
+    ))
 
 
 def test_validate_and_compute_chunk_table_frame():
-    actual = PatchedStyler(PatchedStylerContext(df.style), "finger-1") \
-        .validate_and_compute_chunk_table_frame(0, 0, 2, 2)
+    ps = PatchedStyler(PatchedStylerContext(df.style), "finger-1")
+    actual = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2)
 
-    assert not actual.problems
-    assert actual.frame == TableFrame(
-        index_labels=[['0'], ['1']],
-        cells=[
-            [TableFrameCell(value='0'), TableFrameCell(value='5')],
-            [TableFrameCell(value='1'), TableFrameCell(value='6')],
-        ],
+    assert actual == ps.serialize(
+        ValidatedTableFrame(
+            frame=TableFrame(
+                index_labels=[["0"], ["1"]],
+                cells=[
+                    [TableFrameCell(value="0", css=None), TableFrameCell(value="5", css=None)],
+                    [TableFrameCell(value="1", css=None), TableFrameCell(value="6", css=None)],
+                ],
+            ),
+            problems=[],
+        )
     )
 
 
-def test_table_structure():
-    ts = PatchedStyler(PatchedStylerContext(multi_df.style), "finger-1").get_table_structure()
-    assert ts.org_rows_count == len(multi_df.index)
-    assert ts.org_columns_count == len(multi_df.columns)
-    assert ts.rows_count == len(multi_df.index)
-    assert ts.columns_count == len(multi_df.columns)
-    assert ts.fingerprint == "finger-1"
-    assert ts.column_info == TableStructureColumnInfo(
-        legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
-        columns=[
-            TableStructureColumn(dtype='int64', labels=['x', 'a'], id=0),
-            TableStructureColumn(dtype='int64', labels=['x', 'b'], id=1),
-            TableStructureColumn(dtype='int64', labels=['x', 'c'], id=2),
-            TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3),
-            TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4),
-            TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5)
-        ])
+def test_table_info():
+    ps = PatchedStyler(PatchedStylerContext(multi_df.style), "finger-1")
+
+    assert ps.get_info() == ps.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=len(multi_df.index),
+            org_columns_count=len(multi_df.columns),
+            rows_count=len(multi_df.index),
+            columns_count=len(multi_df.columns),
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(
+                legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
+                columns=[
+                    TableStructureColumn(dtype='int64', labels=['x', 'a'], id=0),
+                    TableStructureColumn(dtype='int64', labels=['x', 'b'], id=1),
+                    TableStructureColumn(dtype='int64', labels=['x', 'c'], id=2),
+                    TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3),
+                    TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4),
+                    TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5)
+                ],
+            )
+        ),
+    ))
 
 
-def test_table_structure_with_str_and_int_column_names():
+def test_table_info_with_str_and_int_column_names():
     d = {"B": [1], "A": [1], 101: [1], 0: [1]}
-    s = pd.DataFrame.from_dict(d).style
-    ts = PatchedStyler(PatchedStylerContext(s), '').get_table_structure()
-    assert ts.column_info == TableStructureColumnInfo(
-        legend=None,
-        columns=[
-            TableStructureColumn(dtype='int64', labels=['B'],   id=0),
-            TableStructureColumn(dtype='int64', labels=['A'],   id=1),
-            TableStructureColumn(dtype='int64', labels=['101'], id=2),
-            TableStructureColumn(dtype='int64', labels=['0'],   id=3)
-        ])
+    styler = pd.DataFrame.from_dict(d).style
+    ps = PatchedStyler(PatchedStylerContext(styler), "finger-1")
+
+    assert ps.get_info() == ps.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=len(styler.data.index),
+            org_columns_count=len(styler.data.columns),
+            rows_count=len(styler.data.index),
+            columns_count=len(styler.data.columns),
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(
+                legend=None,
+                columns=[
+                    TableStructureColumn(dtype='int64', labels=['B'], id=0),
+                    TableStructureColumn(dtype='int64', labels=['A'], id=1),
+                    TableStructureColumn(dtype='int64', labels=['101'], id=2),
+                    TableStructureColumn(dtype='int64', labels=['0'], id=3)
+                ],
+            )
+        ),
+    ))
 
 
-def test_table_structure_columns_count_hide_all_columns():
+def test_table_info_after_hiding_all_columns():
     styler = multi_df.style.hide(axis="columns", subset=multi_df.columns)
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.org_columns_count == len(styler.data.columns)
-    assert ts.columns_count == 0
-    assert ts.column_info == TableStructureColumnInfo(columns=[], legend=None)
+    ps = PatchedStyler(PatchedStylerContext(styler), "finger-1")
+
+    assert ps.get_info() == ps.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=len(styler.data.index),
+            org_columns_count=len(styler.data.columns),
+            rows_count=0,
+            columns_count=0,
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(columns=[], legend=None)
+        ),
+    ))
 
 
-def test_table_structure_rows_count_hide_all_rows():
+def test_table_info_after_hiding_all_rows():
     styler = multi_df.style.hide(axis="index", subset=multi_df.index)
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
-    assert ts.org_rows_count == len(styler.data.index)
-    assert ts.rows_count == 0
-    assert ts.column_info == TableStructureColumnInfo(columns=[], legend=None)
+    ps = PatchedStyler(PatchedStylerContext(styler), "finger-1")
+
+    assert ps.get_info() == ps.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=len(styler.data.index),
+            org_columns_count=len(styler.data.columns),
+            rows_count=0,
+            columns_count=0,
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(columns=[], legend=None)
+        ),
+    ))
 
 
-def test_table_structure_diff_matches_hidden_rows_cols():
+def test_table_info_after_hiding_some_rows_and_cols():
     styler = df.style \
         .hide(axis="index", subset=pd.IndexSlice[1:3]) \
         .hide(axis="columns", subset=["col_1", "col_3"])
-    ts = PatchedStyler(PatchedStylerContext(styler), "").get_table_structure()
+    ps = PatchedStyler(PatchedStylerContext(styler), "finger-1")
 
-    actual_row_diff = ts.org_rows_count - ts.rows_count
-    actual_col_diff = ts.org_columns_count - ts.columns_count
-    assert actual_row_diff == 3
-    assert actual_col_diff == 2
+    assert ps.get_info() == ps.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=len(styler.data.index),
+            org_columns_count=len(styler.data.columns),
+            rows_count=2,
+            columns_count=3,
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(
+                legend=None,
+                columns=[
+                    TableStructureColumn(dtype='int64', labels=['col_0'], id=0),
+                    TableStructureColumn(dtype='int64', labels=['col_2'], id=2),
+                    TableStructureColumn(dtype='int64', labels=['col_4'], id=4),
+                ],
+            )
+        ),
+    ))
 
 
-def test_table_structure_diff_matches_hidden_rows_cols_and_filtering():
+def test_table_info_after_hiding_some_rows_and_cols_and_filtering():
     styler = df.style \
         .hide(axis="index", subset=pd.IndexSlice[1:3]) \
         .hide(axis="columns", subset=["col_1", "col_3"])
     filter_frame = pd.DataFrame(index=df.index[1:], columns=df.columns[1:])
-    ts = PatchedStyler(
+    ps = PatchedStyler(
         PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame)),
-        "",
-    ).get_table_structure()
+        "finger-1",
+    )
 
-    actual_row_diff = ts.org_rows_count - ts.rows_count
-    actual_col_diff = ts.org_columns_count - ts.columns_count
-    assert actual_row_diff == 4
-    assert actual_col_diff == 3
+    assert ps.get_info() == ps.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=len(styler.data.index),
+            org_columns_count=len(styler.data.columns),
+            rows_count=1,
+            columns_count=2,
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(
+                legend=None,
+                columns=[
+                    TableStructureColumn(dtype='int64', labels=['col_2'], id=2),
+                    TableStructureColumn(dtype='int64', labels=['col_4'], id=4),
+                ],
+            )
+        ),
+    ))
 
 
-def test_table_structure_respects_configured_col_label_formatting():
+def test_table_info_respects_configured_col_label_formatting():
     s = multi_df.style.format_index(str.upper, axis='columns')
-    ps = PatchedStyler(PatchedStylerContext(s), '')
+    ps = PatchedStyler(PatchedStylerContext(s), "finger-1")
 
-    ts = ps.get_table_structure()
-    assert ts.column_info == TableStructureColumnInfo(
-        legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
-        columns=[
-            TableStructureColumn(dtype='int64', labels=['X', 'A'], id=0),
-            TableStructureColumn(dtype='int64', labels=['X', 'B'], id=1),
-            TableStructureColumn(dtype='int64', labels=['X', 'C'], id=2),
-            TableStructureColumn(dtype='int64', labels=['Y', 'A'], id=3),
-            TableStructureColumn(dtype='int64', labels=['Y', 'B'], id=4),
-            TableStructureColumn(dtype='int64', labels=['Y', 'C'], id=5)
-        ])
+    assert ps.get_info() == ps.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=len(multi_df.index),
+            org_columns_count=len(multi_df.columns),
+            rows_count=len(multi_df.index),
+            columns_count=len(multi_df.columns),
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(
+                legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
+                columns=[
+                    TableStructureColumn(dtype='int64', labels=['X', 'A'], id=0),
+                    TableStructureColumn(dtype='int64', labels=['X', 'B'], id=1),
+                    TableStructureColumn(dtype='int64', labels=['X', 'C'], id=2),
+                    TableStructureColumn(dtype='int64', labels=['Y', 'A'], id=3),
+                    TableStructureColumn(dtype='int64', labels=['Y', 'B'], id=4),
+                    TableStructureColumn(dtype='int64', labels=['Y', 'C'], id=5)
+                ],
+            )
+        ),
+    ))
 
 
-def test_table_structure_respects_relabeled_cols():
-    s = df.style.relabel_index(['1', '2', '3', '4', '5'], axis='columns')
-    ps = PatchedStyler(PatchedStylerContext(s), '')
+def test_table_info_respects_relabeled_cols():
+    styler = df.style.relabel_index(['1', '2', '3', '4', '5'], axis='columns')
+    ps = PatchedStyler(PatchedStylerContext(styler), "finger-1")
 
-    ts = ps.get_table_structure()
-    assert ts.column_info == TableStructureColumnInfo(
-        legend=None,
-        columns=[
-            TableStructureColumn(dtype='int64', labels=['1'], id=0),
-            TableStructureColumn(dtype='int64', labels=['2'], id=1),
-            TableStructureColumn(dtype='int64', labels=['3'], id=2),
-            TableStructureColumn(dtype='int64', labels=['4'], id=3),
-            TableStructureColumn(dtype='int64', labels=['5'], id=4)
-        ])
+    assert ps.get_info() == ps.serialize(TableInfo(
+        kind=TableSourceKind.PATCHED_STYLER.name,
+        structure=TableStructure(
+            org_rows_count=len(styler.data.index),
+            org_columns_count=len(styler.data.columns),
+            rows_count=len(styler.data.index),
+            columns_count=len(styler.data.columns),
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(
+                legend=None,
+                columns=[
+                    TableStructureColumn(dtype='int64', labels=['1'], id=0),
+                    TableStructureColumn(dtype='int64', labels=['2'], id=1),
+                    TableStructureColumn(dtype='int64', labels=['3'], id=2),
+                    TableStructureColumn(dtype='int64', labels=['4'], id=3),
+                    TableStructureColumn(dtype='int64', labels=['5'], id=4)
+                ],
+            )
+        ),
+    ))
 
 
 class FakeFormatterDict(dict):
@@ -192,11 +281,6 @@ def test_render_chunk_translates_display_funcs_correct_also_with_hidden_rows_col
     )
 
 
-def test_jsonify():
-    json = PatchedStyler(PatchedStylerContext(multi_df.style), "").jsonify({"a": 12, "b": (True, False)})
-    assert json == '{"a": 12, "b": [true, false]}'
-
-
 def test_should_not_revalidate_faulty_styling_functions():
     def is_in_validator():
         import inspect
@@ -221,12 +305,60 @@ def test_should_not_revalidate_faulty_styling_functions():
     ps = PatchedStyler(ctx, "")
 
     result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False)
-    assert not result.problems
+    assert result == ps.serialize(
+        ValidatedTableFrame(
+            frame=TableFrame(
+                index_labels=[["0"], ["1"]],
+                cells=[
+                    [TableFrameCell(value="0", css=None), TableFrameCell(value="5", css=None)],
+                    [TableFrameCell(value="1", css=None), TableFrameCell(value="6", css=None)],
+                ],
+            ),
+            problems=[],
+        )
+    )
 
     raise_in_validator = True
 
     result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False)
-    assert len(result.problems) == len(ctx.get_todo_patcher_list())
+    assert result == ps.serialize(
+        ValidatedTableFrame(
+            frame=TableFrame(
+                index_labels=[["0"], ["1"]],
+                cells=[
+                    [TableFrameCell(value="0", css=None), TableFrameCell(value="5", css=None)],
+                    [TableFrameCell(value="1", css=None), TableFrameCell(value="6", css=None)],
+                ],
+            ),
+            problems=[
+                StyleFunctionValidationProblem(
+                    reason="EXCEPTION",
+                    message="panic",
+                    func_info=StyleFunctionInfo(
+                        index=0,
+                        qname="test_should_not_revalidate_faulty_styling_functions.<locals>.my_style_func",
+                        resolved_name="my_style_func",
+                        axis="index",
+                        is_chunk_parent_requested=False,
+                        is_apply=True,
+                        is_pandas_builtin=False,
+                        is_supported=False,
+                    )
+                ),
+            ],
+        )
+    )
 
     result = ps.validate_and_compute_chunk_table_frame(0, 0, 2, 2, False)
-    assert not result.problems
+    assert result == ps.serialize(
+        ValidatedTableFrame(
+            frame=TableFrame(
+                index_labels=[["0"], ["1"]],
+                cells=[
+                    [TableFrameCell(value="0", css=None), TableFrameCell(value="5", css=None)],
+                    [TableFrameCell(value="1", css=None), TableFrameCell(value="6", css=None)],
+                ],
+            ),
+            problems=[],
+        )
+    )

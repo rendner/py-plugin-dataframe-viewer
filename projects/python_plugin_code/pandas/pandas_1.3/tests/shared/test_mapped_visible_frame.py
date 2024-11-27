@@ -19,7 +19,7 @@ multi_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx_rows, columns
 
 def _create_visible_frame(df_type: str = 'default') -> MappedVisibleFrame:
     frame = df if df_type == 'default' else multi_df
-    return MappedVisibleFrame(frame, visible_rows=np.array([0, 4]), visible_cols=np.array([0, 3]))
+    return MappedVisibleFrame(frame, visible_rows=[0, 4], visible_cols=[0, 3])
 
 
 def test_index_names():

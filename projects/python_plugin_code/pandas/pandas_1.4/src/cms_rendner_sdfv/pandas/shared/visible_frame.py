@@ -13,7 +13,6 @@
 #  limitations under the License.
 from typing import List, Tuple, Dict
 
-import numpy as np
 from pandas import DataFrame, Series
 
 from cms_rendner_sdfv.base.constants import DESCRIBE_COL_MAX_STR_LEN
@@ -72,7 +71,7 @@ class VisibleFrame(AbstractVisibleFrame):
 
 
 class MappedVisibleFrame(VisibleFrame):
-    def __init__(self, source_frame: DataFrame, visible_rows: np.ndarray, visible_cols: np.ndarray):
+    def __init__(self, source_frame: DataFrame, visible_rows: List[int], visible_cols: List[int]):
         super().__init__(source_frame)
         self.region = Region(first_row=0, first_col=0, rows=len(visible_rows), cols=len(visible_cols))
         self.__i_rows = visible_rows
@@ -102,7 +101,7 @@ class MappedVisibleFrame(VisibleFrame):
         return self.__i_rows[row], self.__i_cols[col]
 
     def get_column_indices(self) -> List[int]:
-        return list(self.__i_cols)
+        return self.__i_cols
 
     def _get_col_series(self, col_index) -> Series:
         return self._source_frame.iloc[self.__i_rows, self.__i_cols[col_index]]

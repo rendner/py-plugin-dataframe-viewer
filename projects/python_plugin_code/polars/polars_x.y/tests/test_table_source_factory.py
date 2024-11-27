@@ -5,7 +5,8 @@ import polars as pl
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableSourceKind, TableFrameCell, CreateTableSourceErrorKind
+    TableSourceKind, TableFrameCell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
+    TableStructureColumn
 from cms_rendner_sdfv.polars.table_source import TableSource
 from cms_rendner_sdfv.polars.table_source_factory import TableSourceFactory
 
@@ -35,30 +36,53 @@ def _create_table_source(
     return result
 
 
-def _get_table_frame(table_source: AbstractTableSource) -> TableFrame:
-    s = table_source.get_table_structure()
-    return table_source.compute_chunk_table_frame(0, 0, s.rows_count, s.columns_count)
-
-
 def test_create_for_frame():
     table_source = _create_table_source(df)
     assert isinstance(table_source, TableSource)
-    assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
 
 def test_create_for_dict():
     table_source = _create_table_source(df_dict)
     assert isinstance(table_source, TableSource)
-    assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
 
-    table_frame = _get_table_frame(table_source)
-    assert table_frame == TableFrame(
-        index_labels=None,
-        cells=[
-            [TableFrameCell(value='0'), TableFrameCell(value='3')],
-            [TableFrameCell(value='1'), TableFrameCell(value='4')],
-            [TableFrameCell(value='2'), TableFrameCell(value='5')]
-        ],
+    expected_row_count = 3
+    expected_col_count = 2
+
+    assert table_source.get_info() == table_source.serialize(
+        TableInfo(
+            kind=TableSourceKind.TABLE_SOURCE.name,
+            structure=TableStructure(
+                org_rows_count=expected_row_count,
+                org_columns_count=expected_col_count,
+                rows_count=expected_row_count,
+                columns_count=expected_col_count,
+                fingerprint=table_source._fingerprint,
+                column_info=TableStructureColumnInfo(
+                    legend=None,
+                    columns=[
+                        TableStructureColumn(id=0, dtype='Int64', labels=['0']),
+                        TableStructureColumn(id=1, dtype='Int64', labels=['1']),
+                    ],
+                )
+            ),
+        )
+    )
+
+    assert table_source.compute_chunk_table_frame(
+        0,
+        0,
+        expected_row_count,
+        expected_col_count,
+        False,
+    ) == table_source.serialize(
+        TableFrame(
+            index_labels=None,
+            cells=[
+                [TableFrameCell(value='0'), TableFrameCell(value='3')],
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5')]
+            ],
+        )
     )
 
 
@@ -115,15 +139,40 @@ def test_create_with_filter():
         CreateTableSourceConfig(filter_eval_expr="df.filter(pl.col('0').is_between(1, 3))"),
     )
     assert isinstance(table_source, TableSource)
-    assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
+    assert table_source.get_info() == table_source.serialize(
+        TableInfo(
+            kind=TableSourceKind.TABLE_SOURCE.name,
+            structure=TableStructure(
+                org_rows_count=3,
+                org_columns_count=2,
+                rows_count=2,
+                columns_count=2,
+                fingerprint=table_source._fingerprint,
+                column_info=TableStructureColumnInfo(
+                    legend=None,
+                    columns=[
+                        TableStructureColumn(id=0, dtype='Int64', labels=['0']),
+                        TableStructureColumn(id=1, dtype='Int64', labels=['1']),
+                    ],
+                )
+            ),
+        )
+    )
 
-    table_frame = _get_table_frame(table_source)
-    assert table_frame == TableFrame(
-        index_labels=None,
-        cells=[
-            [TableFrameCell(value='1'), TableFrameCell(value='4')],
-            [TableFrameCell(value='2'), TableFrameCell(value='5')],
-        ],
+    assert table_source.compute_chunk_table_frame(
+        0,
+        0,
+        2,
+        2,
+        False,
+    ) == table_source.serialize(
+        TableFrame(
+            index_labels=None,
+            cells=[
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+            ],
+        )
     )
 
 
@@ -139,13 +188,41 @@ def test_filter_expr_can_resolve_local_variable():
     )
 
     assert isinstance(table_source, TableSource)
-    assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
+    assert table_source.get_info() == table_source.serialize(
+        TableInfo(
+            kind=TableSourceKind.TABLE_SOURCE.name,
+            structure=TableStructure(
+                org_rows_count=3,
+                org_columns_count=2,
+                rows_count=2,
+                columns_count=2,
+                fingerprint=table_source._fingerprint,
+                column_info=TableStructureColumnInfo(
+                    legend=None,
+                    columns=[
+                        TableStructureColumn(id=0, dtype='Int64', labels=['0']),
+                        TableStructureColumn(id=1, dtype='Int64', labels=['1']),
+                    ],
+                )
+            ),
+        )
+    )
 
-    assert table_source.get_table_structure().columns_count == 2
-    assert table_source.get_table_structure().org_columns_count == 2
-
-    assert table_source.get_table_structure().rows_count == 2
-    assert table_source.get_table_structure().org_rows_count == 3
+    assert table_source.compute_chunk_table_frame(
+        0,
+        0,
+        2,
+        2,
+        False,
+    ) == table_source.serialize(
+        TableFrame(
+            index_labels=None,
+            cells=[
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+            ],
+        )
+    )
 
 
 def test_filter_expr_can_resolve_synthetic_identifier():
@@ -158,13 +235,41 @@ def test_filter_expr_can_resolve_synthetic_identifier():
     )
 
     assert isinstance(table_source, TableSource)
-    assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
+    assert table_source.get_info() == table_source.serialize(
+        TableInfo(
+            kind=TableSourceKind.TABLE_SOURCE.name,
+            structure=TableStructure(
+                org_rows_count=3,
+                org_columns_count=2,
+                rows_count=2,
+                columns_count=2,
+                fingerprint=table_source._fingerprint,
+                column_info=TableStructureColumnInfo(
+                    legend=None,
+                    columns=[
+                        TableStructureColumn(id=0, dtype='Int64', labels=['0']),
+                        TableStructureColumn(id=1, dtype='Int64', labels=['1']),
+                    ],
+                )
+            ),
+        )
+    )
 
-    assert table_source.get_table_structure().columns_count == 2
-    assert table_source.get_table_structure().org_columns_count == 2
-
-    assert table_source.get_table_structure().rows_count == 2
-    assert table_source.get_table_structure().org_rows_count == 3
+    assert table_source.compute_chunk_table_frame(
+        0,
+        0,
+        2,
+        2,
+        False,
+    ) == table_source.serialize(
+        TableFrame(
+            index_labels=None,
+            cells=[
+                [TableFrameCell(value='1'), TableFrameCell(value='4')],
+                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+            ],
+        )
+    )
 
 
 def test_can_filter_out_columns():
@@ -179,10 +284,40 @@ def test_can_filter_out_columns():
     )
 
     assert isinstance(table_source, TableSource)
-    assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
+    assert table_source.get_info() == table_source.serialize(
+        TableInfo(
+            kind=TableSourceKind.TABLE_SOURCE.name,
+            structure=TableStructure(
+                org_rows_count=3,
+                org_columns_count=2,
+                rows_count=2,
+                columns_count=1,
+                fingerprint=table_source._fingerprint,
+                column_info=TableStructureColumnInfo(
+                    legend=None,
+                    columns=[
+                        TableStructureColumn(id=0, dtype='Int64', labels=['0']),
+                    ],
+                )
+            ),
+        )
+    )
 
-    assert table_source.get_table_structure().columns_count == 1
-    assert table_source.get_table_structure().org_columns_count == 2
+    assert table_source.compute_chunk_table_frame(
+        0,
+        0,
+        2,
+        2,
+        False,
+    ) == table_source.serialize(
+        TableFrame(
+            index_labels=None,
+            cells=[
+                [TableFrameCell(value='0')],
+                [TableFrameCell(value='1')],
+            ],
+        )
+    )
 
 
 def test_non_matching_filter_returns_empty_table_source():
@@ -197,7 +332,26 @@ def test_non_matching_filter_returns_empty_table_source():
     )
 
     assert isinstance(table_source, TableSource)
-    assert table_source.get_kind() == TableSourceKind.TABLE_SOURCE
+    assert table_source.get_info() == table_source.serialize(
+        TableInfo(
+            kind=TableSourceKind.TABLE_SOURCE.name,
+            structure=TableStructure(
+                org_rows_count=3,
+                org_columns_count=2,
+                rows_count=0,
+                columns_count=0,
+                fingerprint=table_source._fingerprint,
+                column_info=TableStructureColumnInfo(legend=None, columns=[])
+            ),
+        )
+    )
 
-    assert table_source.get_table_structure().columns_count == 0
-    assert table_source.get_table_structure().org_columns_count == 2
+    assert table_source.compute_chunk_table_frame(
+        0,
+        0,
+        2,
+        2,
+        False,
+    ) == table_source.serialize(
+        TableFrame(index_labels=None, cells=[])
+    )

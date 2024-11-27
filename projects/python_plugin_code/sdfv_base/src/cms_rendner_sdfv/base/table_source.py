@@ -18,7 +18,7 @@ from typing import Any, List, Union, TypeVar, Dict
 from cms_rendner_sdfv.base.temp import TEMP_VARS, EvaluatedVarsCleaner
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, TableFrame, \
-    TableSourceKind, TableStructure, CreateTableSourceErrorKind
+    TableSourceKind, TableStructure, CreateTableSourceErrorKind, TableInfo
 
 
 class AbstractVisibleFrame(ABC):
@@ -153,40 +153,47 @@ class AbstractTableSourceContext(ABC):
 T = TypeVar('T', bound=AbstractTableSourceContext)
 
 
+# All methods of a table source, that return a value (not 'self')
+# and are part of the public API must return a serialized value.
+# Use the method 'serialize' to serialize a value.
 class AbstractTableSource(ABC):
     def __init__(self, kind: TableSourceKind, context: T, fingerprint: str):
         self.__kind = kind
         self._context = context
-        self.__fingerprint = fingerprint
+        self._fingerprint = fingerprint
 
     def unlink(self):
         self._context.unlink()
         self._context = None
 
-    def get_kind(self) -> TableSourceKind:
-        return self.__kind
+    @staticmethod
+    def serialize(data: Any) -> str:
+        return to_json(data)
 
     def get_column_name_variants(self,
                                  source: Any,
                                  is_synthetic_df: bool,
                                  name_to_complete: Union[str, int],
-                                 ) -> List[str]:
+                                 ) -> str:
         completer = self._context.get_column_name_completer()
-        return [] if completer is None else completer.get_variants(
-            source=source,
-            is_synthetic_df=is_synthetic_df,
-            name_to_complete=name_to_complete,
+        return self.serialize(
+            [] if completer is None else completer.get_variants(
+                source=source,
+                is_synthetic_df=is_synthetic_df,
+                name_to_complete=name_to_complete,
+            )
         )
 
-    @staticmethod
-    def jsonify(data: Any) -> str:
-        return to_json(data)
+    def get_info(self) -> str:
+        return self.serialize(
+            TableInfo(
+                kind=TableSourceKind(self.__kind).name,
+                structure=self._context.get_table_structure(self._fingerprint),
+            )
+        )
 
-    def get_table_structure(self) -> TableStructure:
-        return self._context.get_table_structure(self.__fingerprint)
-
-    def get_column_statistics(self, col_index: int) -> Union[None, Dict[str, str]]:
-        return self._context.visible_frame.get_column_statistics(col_index)
+    def get_column_statistics(self, col_index: int) -> str:
+        return self.serialize(self._context.visible_frame.get_column_statistics(col_index))
 
     def set_sort_criteria(self,
                           by_column_index: Union[None, List[int]] = None,
@@ -202,10 +209,12 @@ class AbstractTableSource(ABC):
                                   rows: int,
                                   cols: int,
                                   exclude_row_header: bool = False,
-                                  ) -> TableFrame:
-        return self._context.get_table_frame_generator().generate(
-            region=Region(first_row, first_col, rows, cols),
-            exclude_row_header=exclude_row_header,
+                                  ) -> str:
+        return self.serialize(
+            self._context.get_table_frame_generator().generate(
+                region=Region(first_row, first_col, rows, cols),
+                exclude_row_header=exclude_row_header,
+            )
         )
 
     def clear(self, id_names: List[str]) -> 'AbstractTableSource':

@@ -1,5 +1,9 @@
+import numpy as np
+import pandas as pd
 from pandas import DataFrame
 
+from cms_rendner_sdfv.base.types import TableStructureColumnInfo, TableStructureLegend, TableStructureColumn, \
+    TableStructure
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 
@@ -17,6 +21,12 @@ df2 = DataFrame.from_dict({
     "ABC": [2, 3, 4, 5, 6],
     "B": [3, 4, 5, 6, 7],
 })
+
+np.random.seed(123456)
+
+midx_rows = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]], names=['rows-char', 'rows-color'])
+midx_cols = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]], names=['cols-char', 'cols-color'])
+multi_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx_rows, columns=midx_cols)
 
 
 def test_previous_sort_criteria_does_not_affect_later_sort_criteria():
@@ -78,3 +88,38 @@ def test_column_name_completion_for_synthetic_identifier():
     assert completer.get_variants(None, True, 'X') == []
 
     assert completer.get_variants(None, False, 'A') == []
+
+
+def test_table_structure():
+    ts = FrameContext(multi_df).get_table_structure(fingerprint="finger-1")
+    assert ts == TableStructure(
+        org_rows_count=len(multi_df.index),
+        org_columns_count=len(multi_df.columns),
+        rows_count=len(multi_df.index),
+        columns_count=len(multi_df.columns),
+        fingerprint="finger-1",
+        column_info=TableStructureColumnInfo(
+            legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
+            columns=[
+                TableStructureColumn(dtype='int64', labels=['x', 'a'], id=0),
+                TableStructureColumn(dtype='int64', labels=['x', 'b'], id=1),
+                TableStructureColumn(dtype='int64', labels=['x', 'c'], id=2),
+                TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3),
+                TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4),
+                TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5)
+            ]
+        )
+    )
+
+
+def test_table_structure_column_info_with_str_and_int_column_names():
+    d = {"B": [1], "A": [1], 101: [1], 0: [1]}
+    ts = FrameContext(pd.DataFrame.from_dict(d)).get_table_structure("finger-1")
+    assert ts.column_info == TableStructureColumnInfo(
+        legend=None,
+        columns=[
+            TableStructureColumn(dtype='int64', labels=['B'], id=0),
+            TableStructureColumn(dtype='int64', labels=['A'], id=1),
+            TableStructureColumn(dtype='int64', labels=['101'], id=2),
+            TableStructureColumn(dtype='int64', labels=['0'], id=3)
+        ])
