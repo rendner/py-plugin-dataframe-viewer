@@ -19,14 +19,10 @@ import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.CreateTableSourceException
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceKind
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
-import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyBool
-import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyImportWithObjectRef
-import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyMethodCall
-import cms.rendner.intellij.dataframe.viewer.python.utils.stringifyString
+import cms.rendner.intellij.dataframe.viewer.python.utils.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -60,31 +56,34 @@ class TableSourceFactory {
 
             if (tableSource.qualifiedType == "builtins.str") {
                 val info: CreateTableSourceFailure =
-                    json.decodeFromString(tableSource.forcedValue.removeSurrounding("\""))
+                    json.decodeFromString(tableSource.forcedValue)
                 throw CreateTableSourceException(info)
             }
 
-            val sourceKind: TableSourceKind = tableSourceFactoryImport.tableSourceKind ?: run {
-                when (val kind = evaluator.evaluate("${tableSource.refExpr}.get_kind().name").forcedValue) {
-                    "TABLE_SOURCE" -> TableSourceKind.TABLE_SOURCE
-                    "PATCHED_STYLER" -> TableSourceKind.PATCHED_STYLER
-                    else -> throw CreateTableSourceException(
-                        CreateTableSourceFailure(
-                            CreateTableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE,
-                            "Unsupported table source type '${tableSource.qualifiedType}' (kind:$kind)",
-                        )
-                    )
-                }
-            }
+            val info = json.decodeFromString<TableInfo>(
+                evaluator
+                    .evaluate("${tableSource.refExpr}.get_info()")
+                    .forcedValue
+            )
 
-            return when (sourceKind) {
-                TableSourceKind.TABLE_SOURCE -> PyTableSourceRef(tableSource, config?.tempVarSlotId)
-                TableSourceKind.PATCHED_STYLER -> PyPatchedStylerRef(tableSource, config?.tempVarSlotId)
+            return when (info.kind) {
+                "TABLE_SOURCE" -> PyTableSourceRef(tableSource, info.structure, config?.tempVarSlotId)
+                "PATCHED_STYLER" -> PyPatchedStylerRef(tableSource, info.structure, config?.tempVarSlotId)
+                else -> throw CreateTableSourceException(
+                    CreateTableSourceFailure(
+                        CreateTableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE,
+                        "Unsupported table source type '${tableSource.qualifiedType}' (kind:${info.kind})",
+                    )
+                )
             }
         }
     }
 
-    private open class PyTableSourceRef(pythonValue: PluginPyValue, val tempVarSlotId: String?) : IPyTableSourceRef, TestOnlyIPyTableSourceRefApi {
+    private open class PyTableSourceRef(
+        pythonValue: PluginPyValue,
+        override val tableStructure: TableStructure,
+        protected val tempVarSlotId: String?,
+        ) : IPyTableSourceRef, TestOnlyIPyTableSourceRefApi {
         protected val refExpr: String = if (tempVarSlotId != null) "$tempVarsDictRef['${tempVarSlotId}']" else pythonValue.refExpr
         protected val evaluator: IPluginPyValueEvaluator = pythonValue.evaluator
         protected val idsToClean: MutableList<String> = mutableListOf()
@@ -102,16 +101,9 @@ class TableSourceFactory {
             } catch (ignore: Throwable) {}
         }
 
-        @Throws(EvaluateException::class)
-        override fun evaluateTableStructure(): TableStructure {
-            return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(refExpr, "get_table_structure")
-            )
-        }
-
         override fun evaluateColumnStatistics(colIndex: Int): Map<String, String> {
-            return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(refExpr, "get_column_statistics") {
+            return callOnPythonSide(
+                createCallBuilder().withCall("get_column_statistics") {
                     numberParam(colIndex)
                 }
             )
@@ -122,16 +114,18 @@ class TableSourceFactory {
             excludeRowHeader: Boolean,
             newSorting: SortCriteria?,
         ): TableFrame {
-            return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(
-                    if (newSorting != null) stringifiedSetSortCriteriaMethodCall(newSorting) else refExpr,
-                    "compute_chunk_table_frame",
-                ) {
-                    numberParam(chunk.firstRow)
-                    numberParam(chunk.firstColumn)
-                    numberParam(chunk.numberOfRows)
-                    numberParam(chunk.numberOfColumns)
-                    boolParam(excludeRowHeader)
+            return callOnPythonSide(
+                createCallBuilder().apply {
+                    if (newSorting != null) {
+                        withSetSortCriteria(this, newSorting)
+                    }
+                    this.withCall("compute_chunk_table_frame") {
+                        numberParam(chunk.firstRow)
+                        numberParam(chunk.firstColumn)
+                        numberParam(chunk.numberOfRows)
+                        numberParam(chunk.numberOfColumns)
+                        boolParam(excludeRowHeader)
+                    }
                 }
             )
         }
@@ -142,8 +136,8 @@ class TableSourceFactory {
             literalToComplete: String?,
         ): List<String> {
             return try {
-                fetchResultAsJsonAndDecode(
-                    stringifyMethodCall(refExpr, "get_column_name_variants") {
+                callOnPythonSide(
+                    createCallBuilder().withCall("get_column_name_variants") {
                         if (isSyntheticIdentifier) noneParam() else refParam(identifier)
                         boolParam(isSyntheticIdentifier)
                         if (literalToComplete == null) noneParam() else refParam(literalToComplete)
@@ -158,16 +152,23 @@ class TableSourceFactory {
             }
         }
 
-        protected inline fun <reified T> fetchResultAsJsonAndDecode(methodCallExpr: String): T {
-            val ids = convertCurrentCleanableIdsToPythonListString()
-            val expr = "${refExpr}.clear($ids).jsonify($methodCallExpr)"
+        protected inline fun <reified T> callOnPythonSide(builder: PythonChainedCallsBuilder): T {
+            val expr = builder.toString()
             return evaluator.evaluate(expr).let {
                 // PyCharms "Python Console" doesn't assign temp-var identifier to refer to an evaluated result.
                 // The "refExpr" is in that case equals the evaluated expression.
                 if (it.refExpr != expr) {
                     idsToClean.add(it.refExpr)
                 }
-                json.decodeFromString(it.forcedValue.removeSurrounding("\""))
+                // A Python table source returns its values serialized as a JSON string.
+                // Therefore, the data has to be deserialized into the expected type.
+                json.decodeFromString(it.forcedValue)
+            }
+        }
+
+        protected fun createCallBuilder(): PythonChainedCallsBuilder {
+            return PythonChainedCallsBuilder(refExpr).apply {
+                this.withCall("clear") { refParam(convertCurrentCleanableIdsToPythonListString()) }
             }
         }
 
@@ -177,8 +178,8 @@ class TableSourceFactory {
             return ids
         }
 
-        protected fun stringifiedSetSortCriteriaMethodCall(sortCriteria: SortCriteria): String {
-            return stringifyMethodCall(refExpr, "set_sort_criteria") {
+        protected fun withSetSortCriteria(builder: PythonChainedCallsBuilder, sortCriteria: SortCriteria) {
+            builder.withCall("set_sort_criteria") {
                 sortCriteria.byIndex.let {
                     if (it.isEmpty()) noneParam() else refParam(it.toString())
                 }
@@ -189,35 +190,29 @@ class TableSourceFactory {
         }
     }
 
-    /**
-     * Kotlin implementation of the "PatchedStyler" Python class.
-     * All calls are forwarded to the referenced Python instance. Therefore, the method signatures of
-     * the Python class "PatchedStyler" have to match with the ones used by this class.
-     *
-     * @param pythonValue the wrapped "PatchedStyler" Python instance.
-     * @param tempVarSlotId the id of the slot where the [pythonValue] is stored in Python,
-     * in case it is a temporary variable maintained by the plugin.
-     */
     private class PyPatchedStylerRef(
         pythonValue: PluginPyValue,
+        tableStructure: TableStructure,
         tempVarSlotId: String?
-    ) : PyTableSourceRef(pythonValue, tempVarSlotId), IPyPatchedStylerRef {
+    ) : PyTableSourceRef(pythonValue, tableStructure, tempVarSlotId), IPyPatchedStylerRef {
 
         override fun evaluateValidateAndComputeChunkTableFrame(
             chunk: ChunkRegion,
             excludeRowHeader: Boolean,
             newSorting: SortCriteria?,
         ): ValidatedTableFrame {
-            return fetchResultAsJsonAndDecode(
-                stringifyMethodCall(
-                    if (newSorting != null) stringifiedSetSortCriteriaMethodCall(newSorting) else refExpr,
-                    "validate_and_compute_chunk_table_frame",
-                ) {
-                    numberParam(chunk.firstRow)
-                    numberParam(chunk.firstColumn)
-                    numberParam(chunk.numberOfRows)
-                    numberParam(chunk.numberOfColumns)
-                    boolParam(excludeRowHeader)
+            return callOnPythonSide(
+                createCallBuilder().apply {
+                    if (newSorting != null) {
+                        withSetSortCriteria(this, newSorting)
+                    }
+                    this.withCall("validate_and_compute_chunk_table_frame") {
+                        numberParam(chunk.firstRow)
+                        numberParam(chunk.firstColumn)
+                        numberParam(chunk.numberOfRows)
+                        numberParam(chunk.numberOfColumns)
+                        boolParam(excludeRowHeader)
+                    }
                 }
             )
         }

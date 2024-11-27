@@ -20,10 +20,6 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyTableSourceRef
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 
-enum class TableSourceKind {
-    TABLE_SOURCE,
-    PATCHED_STYLER,
-}
 
 /**
  * Contains information to import a Python TableSourceFactory.
@@ -31,13 +27,10 @@ enum class TableSourceKind {
  *
  * @param packageName the package name of the factory
  * @param className the class name of the factory
- * @param tableSourceKind the kind of the table source created by the factory.
- * Can be specified if a factory always returns the same kind or the kind is known upfront.
  */
 data class TableSourceFactoryImport(
     val packageName: String,
     val className: String,
-    val tableSourceKind: TableSourceKind? = null,
 )
 
 /**

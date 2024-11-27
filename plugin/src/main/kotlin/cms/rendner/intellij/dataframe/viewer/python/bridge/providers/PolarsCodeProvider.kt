@@ -29,7 +29,6 @@ class PolarsCodeProvider: ITableSourceCodeProvider {
             TableSourceFactoryImport(
                 "cms_rendner_sdfv.polars.table_source_factory",
                 "TableSourceFactory",
-                TableSourceKind.TABLE_SOURCE,
             ),
             hasIndexLabels = false,
             sortable = true,

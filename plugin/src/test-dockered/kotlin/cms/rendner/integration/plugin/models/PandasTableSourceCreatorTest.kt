@@ -37,7 +37,6 @@ internal class PandasTableSourceCreatorTest : AbstractTableSourceCreatorTest(Pan
             assertThat(creator.result).isNotNull
             creator.result!!.let {
                 assertThat(it.tableSourceRef).isNotNull
-                assertThat(it.tableStructure).isNotNull
                 assertThat(it.currentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
             }
         }
@@ -59,7 +58,7 @@ internal class PandasTableSourceCreatorTest : AbstractTableSourceCreatorTest(Pan
             )
 
             assertThat(creator.result).isNotNull
-            creator.result!!.let {
+            creator.result!!.tableSourceRef.let {
                 assertThat(it.tableStructure.rowsCount).isLessThan(it.tableStructure.orgRowsCount)
             }
         }
@@ -122,9 +121,9 @@ internal class PandasTableSourceCreatorTest : AbstractTableSourceCreatorTest(Pan
             assertThat(creator2.result).isNotNull
 
             assertThat(
-                creator1.result!!.tableStructure.fingerprint
+                creator1.result!!.tableSourceRef.tableStructure.fingerprint
             ).isEqualTo(
-                creator2.result!!.tableStructure.fingerprint
+                creator2.result!!.tableSourceRef.tableStructure.fingerprint
             )
         }
     }
@@ -144,9 +143,9 @@ internal class PandasTableSourceCreatorTest : AbstractTableSourceCreatorTest(Pan
             assertThat(creator2.result).isNotNull
 
             assertThat(
-                creator1.result!!.tableStructure.fingerprint
+                creator1.result!!.tableSourceRef.tableStructure.fingerprint
             ).isNotEqualTo(
-                creator2.result!!.tableStructure.fingerprint
+                creator2.result!!.tableSourceRef.tableStructure.fingerprint
             )
         }
     }

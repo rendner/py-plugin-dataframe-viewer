@@ -42,7 +42,7 @@ internal class PolarsTableSourceCreatorTest : AbstractTableSourceCreatorTest(Pol
             )
 
             assertThat(creator.result).isNotNull
-            creator.result!!.let {
+            creator.result!!.tableSourceRef.let {
                 assertThat(it.tableStructure.rowsCount).isLessThan(it.tableStructure.orgRowsCount)
             }
         }

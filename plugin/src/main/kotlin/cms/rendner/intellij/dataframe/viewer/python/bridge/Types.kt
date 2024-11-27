@@ -66,14 +66,11 @@ interface TestOnlyIPyTableSourceRefApi {
  */
 interface IPyTableSourceRef: Disposable {
     /**
-     * Calls the "get_table_structure" method of the Python class.
-     * The returned result contains information about the visible rows and columns of a DataFrame.
+     * Information about the visible rows and columns of a DataFrame.
      *
      * @return structural information about the DataFrame.
-     * @throws EvaluateException in case the evaluation fails.
      */
-    @Throws(EvaluateException::class)
-    fun evaluateTableStructure(): TableStructure
+    val tableStructure: TableStructure
 
     /**
      * Calls the "get_column_statistics" method of the Python class.

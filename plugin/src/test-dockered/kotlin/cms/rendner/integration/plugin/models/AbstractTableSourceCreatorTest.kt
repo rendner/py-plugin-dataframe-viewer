@@ -49,7 +49,6 @@ internal abstract class AbstractTableSourceCreatorTest(
             Assertions.assertThat(creator.result).isNotNull
             creator.result!!.let {
                 Assertions.assertThat(it.tableSourceRef).isNotNull
-                Assertions.assertThat(it.tableStructure).isNotNull
                 Assertions.assertThat(it.currentStackFrameRefExpr).isEqualTo(dataSourceInfo.source.currentStackFrameRefExpr)
             }
         }

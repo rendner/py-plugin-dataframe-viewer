@@ -320,7 +320,7 @@ class DataFrameViewerDialog(
                 // note: loader doesn't sync on settings, user has to re-open the dialog after settings are changed
                 val modelDataLoader = createModelDataLoader(result.tableSourceRef, settings)
                 LazyDataFrameModel(
-                    result.tableStructure,
+                    result.tableSourceRef.tableStructure,
                     modelDataLoader,
                     ChunkSize(30, 20),
                     request.info.sortable,
@@ -348,7 +348,7 @@ class DataFrameViewerDialog(
                     }
                 }
 
-                updateFooterLabel(result.tableStructure)
+                updateFooterLabel(result.tableSourceRef.tableStructure)
 
                 // assign focus to the DataFrame table
                 // -> allows immediately to use key bindings of the table like sort/scroll/etc.

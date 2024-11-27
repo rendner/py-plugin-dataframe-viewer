@@ -41,12 +41,10 @@ abstract class TableSourceCreator(val evaluator: IPluginPyValueEvaluator) {
      * @param currentStackFrameRefExpr if [Request.reEvaluate] was true the new expression to refer to
      * the created table source in Python.
      * @param tableSourceRef the table source instance to interop with the instance created in Python.
-     * @param tableStructure the table structure of the table source.
      */
     data class Result(
         val currentStackFrameRefExpr: String,
         val tableSourceRef: IPyTableSourceRef,
-        val tableStructure: TableStructure,
     )
 
     /**
@@ -149,13 +147,9 @@ abstract class TableSourceCreator(val evaluator: IPluginPyValueEvaluator) {
             return
         }
 
-        ProgressManager.checkCanceled()
-        val tableStructure = tableSourceRef.evaluateTableStructure()
-        ProgressManager.checkCanceled()
-
         handleSuccess(
             request,
-            Result(dataSourceRefExpr, tableSourceRef, tableStructure),
+            Result(dataSourceRefExpr, tableSourceRef),
         )
     }
 }

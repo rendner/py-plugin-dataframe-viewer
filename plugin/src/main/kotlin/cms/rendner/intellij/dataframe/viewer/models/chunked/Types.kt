@@ -150,6 +150,13 @@ data class TableStructure(
     @SerialName("column_info") val columnInfo: TableStructureColumnInfo,
 )
 
+@Serializable
+data class TableInfo(
+    @SerialName("kind") val kind: String,
+    @SerialName("structure") val structure: TableStructure,
+)
+
+
 /**
  * Describes the sort criteria for a table source.
  *

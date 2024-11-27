@@ -34,18 +34,6 @@ import org.junit.jupiter.api.Test
 internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
-    fun evaluateTableStructure_shouldBeCallable() {
-        runWithPatchedStyler {
-            it.evaluateTableStructure().let { ts ->
-                assertThat(ts.orgRowsCount).isEqualTo(2)
-                assertThat(ts.orgColumnsCount).isEqualTo(2)
-                assertThat(ts.rowsCount).isEqualTo(2)
-                assertThat(ts.columnsCount).isEqualTo(2)
-            }
-        }
-    }
-
-    @Test
     fun evaluateValidateAndComputeChunkTableFrame_shouldBeCallable() {
         runWithPatchedStyler {
             assertThat(

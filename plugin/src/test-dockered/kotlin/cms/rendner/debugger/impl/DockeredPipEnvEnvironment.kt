@@ -133,10 +133,9 @@ class DockeredPipEnvEnvironment(
         }
 
         ProcessBuilder(processArgs)
-        // uncomment line below to see uninstall info in console output
-        //.inheritIO()
+        .inheritIO() // to see uninstall info in console output
         .start().let {
-            if (!it.waitFor(3, TimeUnit.MINUTES)) {
+            if (!it.waitFor(6, TimeUnit.MINUTES)) {
                 it.destroy()
             }
             if (it.exitValue() != 0) {

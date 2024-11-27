@@ -94,7 +94,7 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
 
             assertThat(tableSource).isNotNull
             // methods should be callable
-            assertThat(tableSource.evaluateTableStructure()).isNotNull
+            assertThat(tableSource.evaluateColumnStatistics(0)).isNotNull
 
             val tempVarsDict = TableSourceFactory.getTempVarsDictRef()
             assertThat(debuggerApi.evaluator.evaluate("len($tempVarsDict)").forcedValue).isEqualTo("1")

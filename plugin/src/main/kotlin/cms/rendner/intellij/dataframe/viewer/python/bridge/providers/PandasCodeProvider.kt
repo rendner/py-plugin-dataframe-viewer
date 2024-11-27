@@ -58,7 +58,6 @@ class PandasCodeProvider : ITableSourceCodeProvider {
         return TableSourceFactoryImport(
             "cms_rendner_sdfv.pandas.frame.table_source_factory",
             "TableSourceFactory",
-            TableSourceKind.TABLE_SOURCE,
         )
     }
 
@@ -66,7 +65,6 @@ class PandasCodeProvider : ITableSourceCodeProvider {
         return TableSourceFactoryImport(
             "cms_rendner_sdfv.pandas.styler.table_source_factory",
             "TableSourceFactory",
-            TableSourceKind.PATCHED_STYLER,
         )
     }
 

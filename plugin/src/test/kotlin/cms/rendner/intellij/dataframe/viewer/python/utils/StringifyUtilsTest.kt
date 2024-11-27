@@ -46,4 +46,34 @@ internal class StringifyUtilsTest {
 
         Assertions.assertThat(call).isEqualTo("a.hello('Python', 2, True, False)")
     }
+
+    @Test
+    fun pythonChainedCallsBuilder_shouldBuildCallExpr() {
+        val instanceIsNullWithoutCalls = PythonChainedCallsBuilder(null).toString()
+        Assertions.assertThat(instanceIsNullWithoutCalls).isEqualTo("")
+
+        val instanceIsNullWithChainedCalls = PythonChainedCallsBuilder(null)
+            .withCall("action") { numberParam(2) }
+            .withCall("command") { stringParam("run") }
+            .toString()
+        Assertions.assertThat(instanceIsNullWithChainedCalls).isEqualTo("action(2).command('run')")
+
+        val instanceIsEmptyStringWithoutCalls = PythonChainedCallsBuilder("").toString()
+        Assertions.assertThat(instanceIsEmptyStringWithoutCalls).isEqualTo("")
+
+        val instanceIsEmptyStringWithChainedCalls = PythonChainedCallsBuilder("")
+            .withCall("action") { numberParam(2) }
+            .withCall("command") { stringParam("run") }
+            .toString()
+        Assertions.assertThat(instanceIsEmptyStringWithChainedCalls).isEqualTo("action(2).command('run')")
+
+        val instanceWithoutCalls = PythonChainedCallsBuilder("a").toString()
+        Assertions.assertThat(instanceWithoutCalls).isEqualTo("a")
+
+        val instanceWithChainedCalls = PythonChainedCallsBuilder("a")
+            .withCall("action") { numberParam(2) }
+            .withCall("command") { stringParam("run") }
+            .toString()
+        Assertions.assertThat(instanceWithChainedCalls).isEqualTo("a.action(2).command('run')")
+    }
 }

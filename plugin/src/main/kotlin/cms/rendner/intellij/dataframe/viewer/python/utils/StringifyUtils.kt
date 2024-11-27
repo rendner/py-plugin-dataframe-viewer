@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,23 @@ fun stringifyImportWithObjectRef(moduleName: String, objectName: String): String
     // __import__ returns always the first module of the module path
     // therefore the module path to the specified object has to be appended, excluding the first package, afterward
     return "__import__('${moduleName}')${moduleName.substring(firstPeriod)}.$objectName"
+}
+
+class PythonChainedCallsBuilder(private val instance: String? = null) {
+    private val calls: MutableList<PythonCallBuilder> = mutableListOf()
+
+    fun withCall(name: String, init: (PythonCallBuilder.()-> Unit)? = null): PythonChainedCallsBuilder {
+        val builder = PythonCallBuilder(name)
+        init?.let { builder.apply(it) }
+        calls.add(builder)
+        return this
+    }
+
+    override fun toString(): String {
+        val callChain = calls.joinToString(separator = ".")
+        if (instance.isNullOrEmpty()) return callChain
+        return if (callChain.isEmpty()) instance else "$instance.$callChain"
+    }
 }
 
 class PythonCallBuilder(

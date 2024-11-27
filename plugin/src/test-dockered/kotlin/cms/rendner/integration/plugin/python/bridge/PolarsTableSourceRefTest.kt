@@ -34,18 +34,6 @@ import org.junit.jupiter.api.Test
 internal class PolarsTableSourceRefTest : AbstractPluginCodeTest() {
 
     @Test
-    fun evaluateTableStructure_shouldBeCallable() {
-        runWithTableSource { tableSource ->
-            tableSource.evaluateTableStructure().let {
-                assertThat(it.orgRowsCount).isEqualTo(2)
-                assertThat(it.orgColumnsCount).isEqualTo(2)
-                assertThat(it.rowsCount).isEqualTo(2)
-                assertThat(it.columnsCount).isEqualTo(2)
-            }
-        }
-    }
-
-    @Test
     fun evaluateComputeChunkTableFrame_shouldBeCallable() {
         runWithTableSource { tableSource ->
             assertThat(
@@ -55,7 +43,7 @@ internal class PolarsTableSourceRefTest : AbstractPluginCodeTest() {
                     SortCriteria(listOf(0), listOf(true)),
                 )
             ).matches { table ->
-                table.indexLabels!!.isNotEmpty() && table.cells.isNotEmpty()
+                table.indexLabels == null && table.cells.isNotEmpty()
             }
         }
     }
@@ -78,7 +66,7 @@ internal class PolarsTableSourceRefTest : AbstractPluginCodeTest() {
 
             // expect instance is disposed and throws if trying to interact with
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                tableSource.evaluateTableStructure()
+                tableSource.evaluateColumnStatistics(0)
             }
 
             // but original df is still accessible
