@@ -27,7 +27,13 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-private val json: Json by lazy { Json { ignoreUnknownKeys = true } }
+private val json: Json by lazy {
+    Json {
+        ignoreUnknownKeys = true
+        serializersModule = bridgeSerializersModule
+    }
+}
+
 private val tempVarsDictRef = stringifyImportWithObjectRef("cms_rendner_sdfv.base.temp", "TEMP_VARS")
 
 /**
@@ -88,6 +94,9 @@ class TableSourceFactory {
         protected val evaluator: IPluginPyValueEvaluator = pythonValue.evaluator
         protected val idsToClean: MutableList<String> = mutableListOf()
 
+        @Volatile
+        private var myCompletionVariants: List<ICompletionVariant>? = null
+
         override fun testOnly_getRefExpr() = refExpr
 
         override fun dispose() {
@@ -130,17 +139,20 @@ class TableSourceFactory {
             )
         }
 
-        override fun evaluateGetColumnNameVariants(
+        override fun evaluateGetColumnNameCompletionVariants(
             identifier: String,
-            isSyntheticIdentifier: Boolean,
-            literalToComplete: String?,
-        ): List<String> {
-            return try {
+            isSyntheticIdentifier: Boolean
+        ): List<ICompletionVariant> {
+            val itsMe = isSyntheticIdentifier || identifier == refExpr
+            if (itsMe) {
+                myCompletionVariants?.let { return it }
+            }
+
+            val variants: List<ICompletionVariant> = try {
                 callOnPythonSide(
-                    createCallBuilder().withCall("get_column_name_variants") {
+                    createCallBuilder().withCall("get_column_name_completion_variants") {
                         if (isSyntheticIdentifier) noneParam() else refParam(identifier)
                         boolParam(isSyntheticIdentifier)
-                        if (literalToComplete == null) noneParam() else refParam(literalToComplete)
                     }
                 )
             } catch (e: EvaluateException) {
@@ -150,6 +162,12 @@ class TableSourceFactory {
                     emptyList()
                 } else throw e
             }
+
+            if (itsMe) {
+                myCompletionVariants = variants
+            }
+
+            return variants
         }
 
         protected inline fun <reified T> callOnPythonSide(builder: PythonChainedCallsBuilder): T {

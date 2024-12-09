@@ -274,12 +274,11 @@ class DataFrameViewerDialog(
     private class RunningCreatorProcess(var creator: TableSourceCreator, var progressIndicator: ProgressIndicator)
 
     private class MyColumnNameContributor(private val tableSourceRef: IPyTableSourceRef): IDataFrameColumnNameContributor {
-        override fun getColumnNameVariants(
+        override fun getCompletionVariants(
             identifier: String,
             isSyntheticIdentifier: Boolean,
-            literalToComplete: String?
-        ): List<String> {
-            return tableSourceRef.evaluateGetColumnNameVariants(identifier, isSyntheticIdentifier, literalToComplete)
+        ): List<ICompletionVariant> {
+            return tableSourceRef.evaluateGetColumnNameCompletionVariants(identifier, isSyntheticIdentifier)
         }
     }
 

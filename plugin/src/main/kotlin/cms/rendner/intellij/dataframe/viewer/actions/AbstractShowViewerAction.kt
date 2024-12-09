@@ -22,8 +22,8 @@ import cms.rendner.intellij.dataframe.viewer.components.filter.SyntheticDataFram
 import cms.rendner.intellij.dataframe.viewer.notifications.ErrorNotification
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
-import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
-import cms.rendner.intellij.dataframe.viewer.python.bridge.PythonPluginCodeInjector
+import cms.rendner.intellij.dataframe.viewer.python.bridge.*
+import cms.rendner.intellij.dataframe.viewer.python.bridge.CompletionVariant
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.debugProcessIsTerminated
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.toPluginType
@@ -291,17 +291,33 @@ private class MyFilterInputCompletionContributor(
         val isInsideString: Boolean,
         private val result: CompletionResultSet,
         ) {
+        private var addedVariants: Int = 0
 
-        fun addColumnNames(names: List<String>) {
-            result.addAllElements(names.mapIndexed { index: Int, name: String ->
+        fun addVariants(variants: List<ICompletionVariant>) {
+            for (variant in variants) {
+                if (variant is NestedCompletionVariant) continue // todo
+                if (variant is CompletionVariant) {
+                    if (isInsideString && variant.fqType != PythonQualifiedTypes.STR) continue
+                    if (!isInsideString && variant.fqType == PythonQualifiedTypes.STR && completableText != null) continue
+                    addElement(
+                        if (variant.fqType == PythonQualifiedTypes.STR && !isInsideString) "\"${variant.value}\""
+                        else variant.value
+                    )
+                }
+            }
+        }
+
+        private fun addElement(text: String) {
+            result.addElement(
                 PrioritizedLookupElement.withPriority(
                     LookupElementBuilder
-                        .create(if (isInsideString) name.removeSurrounding("\"") else name)
+                        .create(text)
                         .withTypeText("column name")
                         .withIcon(PlatformIcons.PROPERTY_ICON),
-                    1001.0 + index,
+                    1001.0 + addedVariants,
                     )
-            })
+            )
+            addedVariants++
         }
     }
 
@@ -373,14 +389,10 @@ private class MyFilterInputCompletionContributor(
         val isSyntheticIdentifier = provideSyntheticIdentifier && identifier == SyntheticDataFrameIdentifier.NAME
 
         ProgressManager.checkCanceled()
-        val variants = columnNameContributor.getColumnNameVariants(
-                identifier,
-                isSyntheticIdentifier,
-                completionInfo.completableText,
-        )
+        val variants = columnNameContributor.getCompletionVariants(identifier, isSyntheticIdentifier)
         ProgressManager.checkCanceled()
 
-        completionInfo.addColumnNames(variants)
+        completionInfo.addVariants(variants)
     }
 
     private fun getColNameCompletionInfo(

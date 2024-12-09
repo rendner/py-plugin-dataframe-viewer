@@ -16,6 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
+import cms.rendner.intellij.dataframe.viewer.python.bridge.ICompletionVariant
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionResultSet
@@ -31,13 +32,11 @@ interface IDataFrameColumnNameContributor {
      *
      * @param identifier identifier to reference the DataFrame.
      * @param isSyntheticIdentifier true if the identifier is the synthetic DataFrame identifier.
-     * @param literalToComplete a string literal (surrounded with "" or ''), an int literal or null to evaluate possible variants.
-     * In case of null the returned names contain string and integer names.
      *
-     * @return list of matching column name literals. String literals are surrounded by "".
+     * @return list of matching column names.
      */
     @Throws(EvaluateException::class)
-    fun getColumnNameVariants(identifier: String, isSyntheticIdentifier: Boolean, literalToComplete: String?): List<String>
+    fun getCompletionVariants(identifier: String, isSyntheticIdentifier: Boolean): List<ICompletionVariant>
 }
 
 interface IFilterInputCompletionContributor {

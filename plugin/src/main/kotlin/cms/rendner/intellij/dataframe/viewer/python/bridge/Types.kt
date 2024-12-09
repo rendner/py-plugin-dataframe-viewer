@@ -28,6 +28,10 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonContentPolymorphicSerializer
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.modules.SerializersModule
 
 data class PandasVersion(val major: Int, val minor: Int, val rest: String = "") {
     companion object {
@@ -100,23 +104,18 @@ interface IPyTableSourceRef: Disposable {
     ): TableFrame
 
     /**
-     * Calls the "get_column_name_variants" method of the Python class.
+     * Calls the "get_column_name_completion_variants" method of the Python class.
      *
      * Provides completion variants for column names.
      *
      * @param identifier identifier to reference the DataFrame.
      * @param isSyntheticIdentifier true if the identifier is the synthetic DataFrame identifier.
-     * @param literalToComplete a string literal (surrounded with "" or ''), an int literal or null to evaluate possible variants.
-     * In case of null the returned names contain string and integer names.
-     *
-     * @return list of matching column names. String literals are surrounded by "".
      */
     @Throws(EvaluateException::class)
-    fun evaluateGetColumnNameVariants(
+    fun evaluateGetColumnNameCompletionVariants(
         identifier: String,
         isSyntheticIdentifier: Boolean,
-        literalToComplete: String?,
-    ): List<String>
+    ): List<ICompletionVariant>
 }
 
 /**
@@ -278,4 +277,32 @@ class PythonBooleanSerializer : KSerializer<Boolean> {
     override fun serialize(encoder: Encoder, value: Boolean) {
         encoder.encodeString(if (value) "True" else "False")
     }
+}
+
+sealed interface ICompletionVariant {
+    val fqType: String
+}
+
+@Serializable
+data class CompletionVariant(
+    @SerialName("fq_type") override val fqType: String,
+    @SerialName("value") val value: String,
+): ICompletionVariant
+
+@Serializable
+data class NestedCompletionVariant(
+    @SerialName("fq_type") override val fqType: String,
+    @SerialName("children") val children: List<CompletionVariant>,
+): ICompletionVariant
+
+object CompletionVariantSerializer : JsonContentPolymorphicSerializer<ICompletionVariant>(ICompletionVariant::class) {
+    override fun selectDeserializer(element: JsonElement) = when {
+        "children" in element.jsonObject -> NestedCompletionVariant.serializer()
+        else -> CompletionVariant.serializer()
+    }
+}
+
+
+val bridgeSerializersModule = SerializersModule {
+    polymorphicDefault(ICompletionVariant::class) { CompletionVariantSerializer }
 }

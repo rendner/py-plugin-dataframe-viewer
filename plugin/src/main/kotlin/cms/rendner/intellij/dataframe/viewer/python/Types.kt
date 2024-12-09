@@ -25,6 +25,7 @@ object PythonQualifiedTypes {
     const val DICT = "builtins.dict"
     const val FUNCTION = "builtins.function"
     const val INT = "builtins.int"
+    const val STR = "builtins.str"
     const val FLOAT = "builtins.float"
     const val MODULE = "builtins.module"
     const val NameError = "builtins.NameError"

@@ -18,6 +18,7 @@ package cms.rendner.integration.plugin.python.bridge
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
+import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.junit.RequiresPolars
@@ -49,10 +50,15 @@ internal class PolarsTableSourceRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun evaluateGetColumnNameVariants_shouldBeCallable() {
+    fun evaluateGetColumnNameCompletionVariants_shouldBeCallable() {
         runWithTableSource { tableSource ->
-            tableSource.evaluateGetColumnNameVariants("df", false, "''").let {
-                assertThat(it).isEqualTo(listOf("\"col_0\"", "\"col_1\""))
+            tableSource.evaluateGetColumnNameCompletionVariants("df", false).let {
+                assertThat(it).isEqualTo(
+                    listOf(
+                        CompletionVariant(fqType = PythonQualifiedTypes.STR, value = "col_0"),
+                        CompletionVariant(fqType = PythonQualifiedTypes.STR, value = "col_1"),
+                    )
+                )
             }
         }
     }
