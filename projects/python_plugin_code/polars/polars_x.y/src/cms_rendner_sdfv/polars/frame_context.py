@@ -16,22 +16,11 @@ from typing import List, Optional, Union, Any
 
 from polars import DataFrame
 
-from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator, AbstractTableSourceContext, \
-    AbstractColumnNameCompleter
-from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, TableStructureColumn
+from cms_rendner_sdfv.base.helpers import fq_type
+from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator, AbstractTableSourceContext
+from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, TableStructureColumn, \
+    CompletionVariant, NestedCompletionVariant
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame
-
-
-class PolarsColumnNameCompleter(AbstractColumnNameCompleter, ABC):
-    def __init__(self, source_frame: DataFrame):
-        self.__source_frame = source_frame
-
-    def _resolve_column_names(self, source: Any, is_synthetic_df: bool) -> List[Any]:
-        if source is None and is_synthetic_df:
-            # To use columns that have already been filtered out, the original unfiltered data source is used.
-            source = self.__source_frame
-
-        return source.columns if isinstance(source, DataFrame) else []
 
 
 class FrameContext(AbstractTableSourceContext):
@@ -51,8 +40,21 @@ class FrameContext(AbstractTableSourceContext):
     def visible_frame(self) -> VisibleFrame:
         return self.__visible_frame
 
-    def get_column_name_completer(self) -> Union[None, AbstractColumnNameCompleter]:
-        return PolarsColumnNameCompleter(self.__source_frame)
+    def get_column_name_completion_variants(self, source: Any, is_synthetic_df: bool) -> List[Union[CompletionVariant, NestedCompletionVariant]]:
+        result = []
+
+        if (source is None and is_synthetic_df) or source is self.__source_frame:
+            # To use columns that have already been filtered out, the original unfiltered data source is used.
+            source = self.__source_frame
+
+        if not isinstance(source, DataFrame):
+            return result
+
+        str_fqt = fq_type("")
+        for col in source.columns:
+            result.append(CompletionVariant(fq_type=str_fqt, value=col))
+
+        return result
 
     def set_sort_criteria(self, sort_by_column_index: Optional[List[int]], sort_ascending: Optional[List[bool]]):
         new_sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)

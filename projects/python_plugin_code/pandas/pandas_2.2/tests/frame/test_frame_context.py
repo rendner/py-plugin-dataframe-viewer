@@ -3,7 +3,7 @@ import pandas as pd
 from pandas import DataFrame
 
 from cms_rendner_sdfv.base.types import TableStructureColumnInfo, TableStructureLegend, TableStructureColumn, \
-    TableStructure
+    TableStructure, CompletionVariant, NestedCompletionVariant
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 
@@ -52,42 +52,81 @@ def test_filter_is_respected():
     assert table_structure.org_rows_count == 5
 
 
-def test_column_name_completion_with_filter():
-    ctx = FrameContext(df2, FilterCriteria.from_frame(df2[['A', 'B']]))
-    completer = ctx.get_column_name_completer()
-
-    assert completer.get_variants(df2, False, '') == [f'"{v}"' for v in df2.columns.values]
-    assert completer.get_variants(df2, False, 'A') == ['"A"', '"AB"', '"ABC"']
-    assert completer.get_variants(df2, False, 'AB') == ['"AB"', '"ABC"']
-    assert completer.get_variants(df2, False, 'ABC') == ['"ABC"']
-    assert completer.get_variants(df2, False, 'B') == ['"B"']
-    assert completer.get_variants(df2, False, 'X') == []
-
-
-def test_column_name_completion_with_prefix():
+def test_column_name_completion_variants():
     ctx = FrameContext(df2)
-    completer = ctx.get_column_name_completer()
 
-    assert completer.get_variants(df2, False, '') == [f'"{v}"' for v in df2.columns.values]
-    assert completer.get_variants(df2, False, 'A') == ['"A"', '"AB"', '"ABC"']
-    assert completer.get_variants(df2, False, 'AB') == ['"AB"', '"ABC"']
-    assert completer.get_variants(df2, False, 'ABC') == ['"ABC"']
-    assert completer.get_variants(df2, False, 'B') == ['"B"']
-    assert completer.get_variants(df2, False, 'X') == []
+    assert ctx.get_column_name_completion_variants(source=df, is_synthetic_df=False) == [
+        CompletionVariant(fq_type='builtins.str', value='col_0'),
+        CompletionVariant(fq_type='builtins.str', value='col_1'),
+        CompletionVariant(fq_type='builtins.str', value='col_2'),
+        CompletionVariant(fq_type='builtins.str', value='col_3'),
+        CompletionVariant(fq_type='builtins.str', value='col_4')
+    ]
+
+    assert ctx.get_column_name_completion_variants(source=df2, is_synthetic_df=False) == [
+        CompletionVariant(fq_type='builtins.str', value='A'),
+        CompletionVariant(fq_type='builtins.str', value='AB'),
+        CompletionVariant(fq_type='builtins.str', value='ABC'),
+        CompletionVariant(fq_type='builtins.str', value='B')
+    ]
+
+    assert ctx.get_column_name_completion_variants(source=None, is_synthetic_df=True) == [
+        CompletionVariant(fq_type='builtins.str', value='A'),
+        CompletionVariant(fq_type='builtins.str', value='AB'),
+        CompletionVariant(fq_type='builtins.str', value='ABC'),
+        CompletionVariant(fq_type='builtins.str', value='B')
+    ]
+
+    assert ctx.get_column_name_completion_variants(source=None, is_synthetic_df=False) == []
 
 
-def test_column_name_completion_for_synthetic_identifier():
-    ctx = FrameContext(df2)
-    completer = ctx.get_column_name_completer()
+def test_column_name_completion_variants_with_tuples():
+    ctx = FrameContext(multi_df)
 
-    assert completer.get_variants(None, True, '') == [f'"{v}"' for v in df2.columns.values]
-    assert completer.get_variants(None, True, 'A') == ['"A"', '"AB"', '"ABC"']
-    assert completer.get_variants(None, True, 'AB') == ['"AB"', '"ABC"']
-    assert completer.get_variants(None, True, 'ABC') == ['"ABC"']
-    assert completer.get_variants(None, True, 'B') == ['"B"']
-    assert completer.get_variants(None, True, 'X') == []
-
-    assert completer.get_variants(None, False, 'A') == []
+    assert ctx.get_column_name_completion_variants(source=multi_df, is_synthetic_df=False) == [
+        NestedCompletionVariant(
+            fq_type='builtins.tuple',
+            children=[
+                CompletionVariant(fq_type='builtins.str', value='x'),
+                CompletionVariant(fq_type='builtins.str', value='a'),
+            ],
+        ),
+        NestedCompletionVariant(
+            fq_type='builtins.tuple',
+            children=[
+                CompletionVariant(fq_type='builtins.str', value='x'),
+                CompletionVariant(fq_type='builtins.str', value='b'),
+            ],
+        ),
+        NestedCompletionVariant(
+            fq_type='builtins.tuple',
+            children=[
+                CompletionVariant(fq_type='builtins.str', value='x'),
+                CompletionVariant(fq_type='builtins.str', value='c'),
+            ],
+        ),
+        NestedCompletionVariant(
+            fq_type='builtins.tuple',
+            children=[
+                CompletionVariant(fq_type='builtins.str', value='y'),
+                CompletionVariant(fq_type='builtins.str', value='a'),
+            ],
+        ),
+        NestedCompletionVariant(
+            fq_type='builtins.tuple',
+            children=[
+                CompletionVariant(fq_type='builtins.str', value='y'),
+                CompletionVariant(fq_type='builtins.str', value='b'),
+            ],
+        ),
+        NestedCompletionVariant(
+            fq_type='builtins.tuple',
+            children=[
+                CompletionVariant(fq_type='builtins.str', value='y'),
+                CompletionVariant(fq_type='builtins.str', value='c'),
+            ],
+        ),
+    ]
 
 
 def test_table_structure():

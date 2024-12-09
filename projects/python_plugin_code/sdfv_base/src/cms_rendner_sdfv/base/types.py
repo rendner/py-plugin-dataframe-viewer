@@ -176,3 +176,14 @@ class TableSourceKind(Enum):
     TABLE_SOURCE = 1
     PATCHED_STYLER = 2
 
+
+@dataclass(frozen=True)
+class CompletionVariant:
+    fq_type: str
+    value: str
+
+
+@dataclass(frozen=True)
+class NestedCompletionVariant:
+    fq_type: str
+    children: List[CompletionVariant]

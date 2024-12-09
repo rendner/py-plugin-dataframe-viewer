@@ -1,7 +1,7 @@
 import polars as pl
 
 from cms_rendner_sdfv.base.types import TableStructureColumnInfo, TableStructureColumn, \
-    TableStructure
+    TableStructure, CompletionVariant
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 
 df = pl.from_dict({
@@ -43,42 +43,32 @@ def test_filter_is_respected():
     assert table_structure.org_rows_count == 5
 
 
-def test_column_name_completion_with_filter():
-    ctx = FrameContext(df2, df2.drop(["A", "B"]))
-    completer = ctx.get_column_name_completer()
-
-    assert completer.get_variants(df2, False, '') == [f'"{v}"' for v in df2.columns]
-    assert completer.get_variants(df2, False, 'A') == ['"A"', '"AB"', '"ABC"']
-    assert completer.get_variants(df2, False, 'AB') == ['"AB"', '"ABC"']
-    assert completer.get_variants(df2, False, 'ABC') == ['"ABC"']
-    assert completer.get_variants(df2, False, 'B') == ['"B"']
-    assert completer.get_variants(df2, False, 'X') == []
-
-
-def test_column_name_completion_with_prefix():
+def test_column_name_completion_variants():
     ctx = FrameContext(df2)
-    completer = ctx.get_column_name_completer()
 
-    assert completer.get_variants(df2, False, '') == [f'"{v}"' for v in df2.columns]
-    assert completer.get_variants(df2, False, 'A') == ['"A"', '"AB"', '"ABC"']
-    assert completer.get_variants(df2, False, 'AB') == ['"AB"', '"ABC"']
-    assert completer.get_variants(df2, False, 'ABC') == ['"ABC"']
-    assert completer.get_variants(df2, False, 'B') == ['"B"']
-    assert completer.get_variants(df2, False, 'X') == []
+    assert ctx.get_column_name_completion_variants(source=df, is_synthetic_df=False) == [
+        CompletionVariant(fq_type='builtins.str', value='col_0'),
+        CompletionVariant(fq_type='builtins.str', value='col_1'),
+        CompletionVariant(fq_type='builtins.str', value='col_2'),
+        CompletionVariant(fq_type='builtins.str', value='col_3'),
+        CompletionVariant(fq_type='builtins.str', value='col_4')
+    ]
 
+    assert ctx.get_column_name_completion_variants(source=df2, is_synthetic_df=False) == [
+        CompletionVariant(fq_type='builtins.str', value='A'),
+        CompletionVariant(fq_type='builtins.str', value='AB'),
+        CompletionVariant(fq_type='builtins.str', value='ABC'),
+        CompletionVariant(fq_type='builtins.str', value='B')
+    ]
 
-def test_column_name_completion_for_synthetic_identifier():
-    ctx = FrameContext(df2)
-    completer = ctx.get_column_name_completer()
+    assert ctx.get_column_name_completion_variants(source=None, is_synthetic_df=True) == [
+        CompletionVariant(fq_type='builtins.str', value='A'),
+        CompletionVariant(fq_type='builtins.str', value='AB'),
+        CompletionVariant(fq_type='builtins.str', value='ABC'),
+        CompletionVariant(fq_type='builtins.str', value='B')
+    ]
 
-    assert completer.get_variants(None, True, '') == [f'"{v}"' for v in df2.columns]
-    assert completer.get_variants(None, True, 'A') == ['"A"', '"AB"', '"ABC"']
-    assert completer.get_variants(None, True, 'AB') == ['"AB"', '"ABC"']
-    assert completer.get_variants(None, True, 'ABC') == ['"ABC"']
-    assert completer.get_variants(None, True, 'B') == ['"B"']
-    assert completer.get_variants(None, True, 'X') == []
-
-    assert completer.get_variants(None, False, 'A') == []
+    assert ctx.get_column_name_completion_variants(source=None, is_synthetic_df=False) == []
 
 
 def test_table_structure():
