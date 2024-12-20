@@ -34,17 +34,8 @@ class Chunk:
             self.region.first_col + col,
         )
 
-    def col_labels_at(self, col: int) -> List[Any]:
-        labels = self.__visible_frame.column_at(self.region.first_col + col)
-        if not isinstance(labels, tuple):
-            labels = [labels]
-        return labels
-
     def row_labels_at(self, row: int) -> List[Any]:
-        labels = self.__visible_frame.index_at(self.region.first_row + row)
-        if not isinstance(labels, tuple):
-            labels = [labels]
-        return labels
+        return self.__visible_frame.row_labels_at(self.region.first_row + row)
 
 
 class FrameContext(PandasTableSourceContext):
@@ -69,16 +60,12 @@ class FrameContext(PandasTableSourceContext):
 
         ts_columns = []
         dtypes = self.__source_frame.dtypes
+        nlevels = self.__source_frame.columns.nlevels
         for col in self.visible_frame.get_column_indices():
-            col_labels = self.__source_frame.columns[col]
-            labels = col_labels if isinstance(col_labels, tuple) else [col_labels]
-            ts_columns.append(
-                TableStructureColumn(
-                    dtype=str(dtypes[col_labels]),
-                    labels=[formatter.format_column(lbl) for lbl in labels],
-                    id=col,
-                )
-            )
+            col_label = self.__source_frame.columns[col]
+            labels = [col_label] if nlevels == 1 else col_label
+            labels = [formatter.format_column(lbl) for lbl in labels]
+            ts_columns.append(TableStructureColumn(dtype=str(dtypes[col_label]), labels=labels, id=col))
 
         index_legend = [formatter.format_index(lbl) for lbl in self.visible_frame.index_names if lbl is not None]
         column_legend = [formatter.format_index(lbl) for lbl in self.visible_frame.column_names if lbl is not None]

@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional
+from typing import Optional, Any, Union
 
 from pandas import Index, DataFrame
 from pandas.io.formats.style import Styler
@@ -40,28 +40,14 @@ class StyledChunk:
         self.region = region
 
     @property
-    def column_labels_hidden(self):
-        return self.__styler.hide_column_names
+    def row_labels_hidden(self) -> bool:
+        return self.__styler.hide_index_names or all(self.__styler.hide_index_)
 
-    @property
-    def row_labels_hidden(self):
-        return self.__styler.hide_index_names
-
-    @property
-    def hidden_row_level_map(self) -> list[bool]:
-        return self.__styler.hide_index_
-
-    @property
-    def hidden_col_level_map(self) -> list[bool]:
-        return self.__styler.hide_columns_
-
-    def cell_css_at(self, row: int, col: int):
+    def cell_css_at(self, row: int, col: int) -> list[tuple[str, Union[str, float]]]:
         return self.__styler.ctx[(row, col)]
 
-    def row_labels_at(self, row: int):
-        labels = self.__visible_frame.index_at(self.region.first_row + row)
-        if not isinstance(labels, tuple):
-            labels = [labels]
+    def row_labels_at(self, row: int) -> list[Any]:
+        labels = self.__visible_frame.row_labels_at(self.region.first_row + row)
         org_row = self.__to_source_frame_cell_coordinates(row, 0)[0]
         return [
             self.__styler._display_funcs_index[(org_row, lvl)](lbl)
@@ -69,18 +55,7 @@ class StyledChunk:
             if not self.__styler.hide_index_[lvl]
         ]
 
-    def col_labels_at(self, col: int):
-        labels = self.__visible_frame.column_at(self.region.first_col + col)
-        if not isinstance(labels, tuple):
-            labels = [labels]
-        org_col = self.__to_source_frame_cell_coordinates(0, col)[1]
-        return [
-            self.__styler._display_funcs_columns[(lvl, org_col)](lbl)
-            for lvl, lbl in enumerate(labels)
-            if not self.__styler.hide_columns_[lvl]
-        ]
-
-    def cell_value_at(self, row: int, col: int):
+    def cell_value_at(self, row: int, col: int) -> str:
         v = self.__visible_frame.cell_value_at(
             self.region.first_row + row,
             self.region.first_col + col,
@@ -188,24 +163,19 @@ class PatchedStylerContext(PandasTableSourceContext):
 
         ts_columns = []
         dtypes = frame.dtypes
+        nlevels = frame.columns.nlevels
         for col in self.visible_frame.get_column_indices():
-            col_labels = frame.columns[col]
-            labels = col_labels
-            if not isinstance(labels, tuple):
-                labels = [labels]
+            col_label = frame.columns[col]
+            labels = [col_label] if nlevels == 1 else col_label
             labels = [
-                self.__styler._display_funcs_columns[(lvl, col)](lbl)
-                for lvl, lbl in enumerate(labels)
+                formatter.format_column(
+                    self.__styler._display_funcs_columns[(lvl, col)](labels[lvl])
+                )
+                for lvl in range(nlevels)
                 # hide_columns_ := list of booleans, True means lbl should be excluded
                 if not self.__styler.hide_columns_[lvl]
             ]
-            ts_columns.append(
-                TableStructureColumn(
-                    dtype=str(dtypes[col_labels]),
-                    labels=[formatter.format_column(lbl) for lbl in labels],
-                    id=col,
-                )
-            )
+            ts_columns.append(TableStructureColumn(dtype=str(dtypes[col_label]), labels=labels, id=col))
 
         index_legend = [
             formatter.format_index(lbl)

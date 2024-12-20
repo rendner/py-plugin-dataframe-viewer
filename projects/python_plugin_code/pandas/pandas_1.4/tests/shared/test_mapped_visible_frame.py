@@ -45,24 +45,14 @@ def test_cell_value_at():
     assert vf.cell_value_at(0, 1) == "4"
 
 
-def test_column_at():
+def test_row_labels_at():
     vf = _create_visible_frame()
-    assert vf.column_at(0) == "col_0"
-    assert vf.column_at(1) == "col_3"
+    assert vf.row_labels_at(0) == [0]
+    assert vf.row_labels_at(1) == [4]
 
     mvf = _create_visible_frame('multi_index')
-    assert mvf.index_at(0) == ('x', 'a')
-    assert mvf.index_at(1) == ('y', 'b')
-
-
-def test_index_at():
-    vf = _create_visible_frame()
-    assert vf.index_at(0) == 0
-    assert vf.index_at(1) == 4
-
-    mvf = _create_visible_frame('multi_index')
-    assert mvf.index_at(0) == ('x', 'a')
-    assert mvf.index_at(1) == ('y', 'b')
+    assert mvf.row_labels_at(0) == ['x', 'a']
+    assert mvf.row_labels_at(1) == ['y', 'b']
 
 
 def test_to_source_frame_cell_coordinates():

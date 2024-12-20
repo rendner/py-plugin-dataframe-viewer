@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict
+from typing import Dict, Any
 
 from pandas import DataFrame, Series
 
@@ -40,11 +40,11 @@ class VisibleFrame(AbstractVisibleFrame):
     def cell_value_at(self, row: int, col: int):
         return self._source_frame.iat[row, col]
 
-    def column_at(self, col: int):
-        return self._source_frame.columns[col]
-
-    def index_at(self, row: int):
-        return self._source_frame.index[row]
+    def row_labels_at(self, row: int) -> list[Any]:
+        labels = self._source_frame.index[row]
+        if self._source_frame.index.nlevels == 1:
+            return [labels]
+        return list(labels)
 
     def to_frame(self, region: Region) -> DataFrame:
         r = self.region.get_bounded_region(region)
@@ -85,11 +85,11 @@ class MappedVisibleFrame(VisibleFrame):
     def cell_value_at(self, row: int, col: int):
         return self._source_frame.iat[self.__i_rows[row], self.__i_cols[col]]
 
-    def column_at(self, col: int):
-        return self._source_frame.columns[self.__i_cols[col]]
-
-    def index_at(self, row: int):
-        return self._source_frame.index[self.__i_rows[row]]
+    def row_labels_at(self, row: int) -> list[Any]:
+        labels = self._source_frame.index[self.__i_rows[row]]
+        if self._source_frame.index.nlevels == 1:
+            return [labels]
+        return list(labels)
 
     def to_frame(self, region: Region) -> DataFrame:
         r = self.region.get_bounded_region(region)

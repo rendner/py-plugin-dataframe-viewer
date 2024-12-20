@@ -34,22 +34,21 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         if styled_chunk.row_labels_hidden:
             exclude_row_header = True
 
+        col_range = range(styled_chunk.region.cols)
         cells: List[List[TableFrameCell]] = []
         index_labels: List[List[str]] = []
         for r in range(styled_chunk.region.rows):
+            if not exclude_row_header:
+                index_labels.append([formatter.format_index(lbl) for lbl in styled_chunk.row_labels_at(r)])
+
             row_cells = []
             cells.append(row_cells)
-            for c in range(styled_chunk.region.cols):
-                if c == 0 and not exclude_row_header:
-                    row_labels = styled_chunk.row_labels_at(r)
-                    if row_labels:
-                        index_labels.append([formatter.format_index(lbl) for lbl in row_labels])
-
+            for c in col_range:
                 css = styled_chunk.cell_css_at(r, c)
                 row_cells.append(
                     TableFrameCell(
                         value=formatter.format_cell(styled_chunk.cell_value_at(r, c)),
-                        css=None if not css or css is None else {k: v for k, v in css},
+                        css=None if not css or css is None else {k: str(v) for k, v in css},
                     ),
                 )
 

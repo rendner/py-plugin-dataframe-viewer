@@ -26,6 +26,21 @@ def test_compute_chunk_table_frame():
     ))
 
 
+def test_compute_chunk_table_frame_with_multiindex():
+    midx = pd.MultiIndex.from_product([[("A", "B"), "y"], ["a", "b", "c"]])
+    my_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx, columns=midx)
+    ts = TableSource(FrameContext(my_df), "finger-1")
+    actual = ts.compute_chunk_table_frame(0, 0, 2, 2)
+
+    assert actual == ts.serialize(TableFrame(
+        index_labels=[['(A, B)', 'a'], ['(A, B)', 'b']],
+        cells=[
+            [TableFrameCell(value='0'), TableFrameCell(value='1')],
+            [TableFrameCell(value='6'), TableFrameCell(value='7')],
+        ],
+    ))
+
+
 def test_table_info():
     ts = TableSource(FrameContext(multi_df), "finger-1")
 
@@ -52,3 +67,62 @@ def test_table_info():
             ),
         )
     )
+
+
+def test_table_info_with_none_leveled_column_names():
+    d = {
+        ("A", "B"): [1, 2, 3],
+        "B": [1, 2, 3],
+        "A": [1, 2, 3],
+        101: [4, 5, 6],
+        0: [9, 9, 9],
+    }
+    my_df = pd.DataFrame.from_dict(d)
+    ts = TableSource(FrameContext(my_df), "finger-1")
+    assert ts.get_info() == ts.serialize(TableInfo(
+        kind=TableSourceKind.TABLE_SOURCE.name,
+        structure=TableStructure(
+            org_rows_count=len(my_df.index),
+            org_columns_count=len(my_df.columns),
+            rows_count=len(my_df.index),
+            columns_count=len(my_df.columns),
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(
+                legend=None,
+                columns=[
+                    TableStructureColumn(dtype='int64', labels=['(A, B)'], id=0),
+                    TableStructureColumn(dtype='int64', labels=['B'], id=1),
+                    TableStructureColumn(dtype='int64', labels=['A'], id=2),
+                    TableStructureColumn(dtype='int64', labels=['101'], id=3),
+                    TableStructureColumn(dtype='int64', labels=['0'], id=4),
+                ],
+            )
+        ),
+    ))
+
+
+def test_table_info_with_leveled_column_names():
+    midx = pd.MultiIndex.from_product([[("A", "B"), "y"], ["a", "b", "c"]])
+    my_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx, columns=midx)
+    ts = TableSource(FrameContext(my_df), "finger-1")
+    assert ts.get_info() == ts.serialize(TableInfo(
+        kind=TableSourceKind.TABLE_SOURCE.name,
+        structure=TableStructure(
+            org_rows_count=len(my_df.index),
+            org_columns_count=len(my_df.columns),
+            rows_count=len(my_df.index),
+            columns_count=len(my_df.columns),
+            fingerprint="finger-1",
+            column_info=TableStructureColumnInfo(
+                legend=None,
+                columns=[
+                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'a'], id=0),
+                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'b'], id=1),
+                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'c'], id=2),
+                    TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3),
+                    TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4),
+                    TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5),
+                ],
+            )
+        ),
+    ))

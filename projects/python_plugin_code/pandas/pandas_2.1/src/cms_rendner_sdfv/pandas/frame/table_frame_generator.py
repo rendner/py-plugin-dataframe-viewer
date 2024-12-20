@@ -13,9 +13,8 @@
 #  limitations under the License.
 from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
 from cms_rendner_sdfv.base.types import Region, TableFrame, TableFrameCell
-from cms_rendner_sdfv.pandas.frame.frame_context import Chunk, FrameContext
+from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.frame.frame_value_formatter import FrameValueFormatter
-from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
 
 
 class TableFrameGenerator(AbstractTableFrameGenerator):
@@ -30,26 +29,15 @@ class TableFrameGenerator(AbstractTableFrameGenerator):
         chunk = self.__context.get_chunk(region)
         formatter = FrameValueFormatter()
 
-        return TableFrame(
-            index_labels=[] if exclude_row_header else self._extract_index_header_labels(chunk, formatter),
-            cells=self._extract_cells(chunk, formatter),
-        )
-
-    @staticmethod
-    def _extract_index_header_labels(chunk: Chunk, formatter: ValueFormatter) -> list[list[str]]:
-        result: list[list[str]] = []
-
-        for r in range(chunk.region.rows):
-            result.append([formatter.format_index(lbl) for lbl in chunk.row_labels_at(r)])
-
-        return result
-
-    @staticmethod
-    def _extract_cells(chunk: Chunk, formatter: ValueFormatter) -> list[list[TableFrameCell]]:
-        result: list[list[TableFrameCell]] = []
-
         col_range = range(chunk.region.cols)
-        for r in range(chunk.region.rows):
-            result.append([TableFrameCell(value=formatter.format_cell(chunk.cell_value_at(r, c))) for c in col_range])
+        cells: list[list[TableFrameCell]] = []
+        index_labels: list[list[str]] = []
 
-        return result
+        for r in range(chunk.region.rows):
+            if not exclude_row_header:
+                index_labels.append([formatter.format_index(lbl) for lbl in chunk.row_labels_at(r)])
+            cells.append(
+                [TableFrameCell(value=formatter.format_cell(chunk.cell_value_at(r, c))) for c in col_range]
+            )
+
+        return TableFrame(index_labels=index_labels, cells=cells)

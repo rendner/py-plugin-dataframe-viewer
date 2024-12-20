@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from pandas import Index, DataFrame
 from pandas.io.formats.style import Styler
@@ -38,25 +38,16 @@ class StyledChunk:
         self.region = region
 
     @property
-    def row_labels_hidden(self):
+    def row_labels_hidden(self) -> bool:
         return self.__styler.hidden_index
 
-    def cell_css_at(self, row: int, col: int):
+    def cell_css_at(self, row: int, col: int) -> List[str]:
         return self.__styler.ctx[(row, col)]
 
-    def row_labels_at(self, row: int):
-        labels = self.__visible_frame.index_at(self.region.first_row + row)
-        if not isinstance(labels, tuple):
-            labels = [labels]
-        return labels
+    def row_labels_at(self, row: int) -> List[Any]:
+        return self.__visible_frame.row_labels_at(self.region.first_row + row)
 
-    def col_labels_at(self, col: int):
-        labels = self.__visible_frame.column_at(self.region.first_col + col)
-        if not isinstance(labels, tuple):
-            labels = [labels]
-        return labels
-
-    def cell_value_at(self, row: int, col: int):
+    def cell_value_at(self, row: int, col: int) -> str:
         v = self.__visible_frame.cell_value_at(
             self.region.first_row + row,
             self.region.first_col + col,
@@ -156,18 +147,15 @@ class PatchedStylerContext(PandasTableSourceContext):
 
         ts_columns = []
         dtypes = frame.dtypes
+        nlevels = frame.columns.nlevels
         for col in self.visible_frame.get_column_indices():
-            col_labels = frame.columns[col]
-            labels = col_labels
-            if not isinstance(labels, tuple):
-                labels = [labels]
-            ts_columns.append(
-                TableStructureColumn(
-                    dtype=str(dtypes[col_labels]),
-                    labels=[formatter.format_column(lbl) for lbl in labels],
-                    id=col,
-                )
-            )
+            col_label = frame.columns[col]
+            labels = [col_label] if nlevels == 1 else col_label
+            labels = [
+                formatter.format_column(labels[lvl])
+                for lvl in range(nlevels)
+            ]
+            ts_columns.append(TableStructureColumn(dtype=str(dtypes[col_label]), labels=labels, id=col))
 
         index_legend = [
             formatter.format_index(lbl)
