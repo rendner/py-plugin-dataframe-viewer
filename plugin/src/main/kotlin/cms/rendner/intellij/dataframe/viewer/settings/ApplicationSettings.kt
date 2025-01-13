@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ class ApplicationSettings : Configurable {
             it.filterInputFromInternalApi = settings.filterInputFromInternalApi
             it.filterInputWithAdditionCodeCompletion = settings.filterInputWithAdditionCodeCompletion
             it.filterInputWithRuntimeCodeCompletionInPythonConsole = settings.filterInputWithRuntimeCodeCompletionInPythonConsole
+            it.showDTypeInColumnHeader = settings.showDTypeInColumnHeader
         }
     }
 
@@ -59,7 +60,8 @@ class ApplicationSettings : Configurable {
             it.pandasStyledFuncValidationEnabled != settings.pandasStyledFuncValidationEnabled ||
                     it.filterInputFromInternalApi != settings.filterInputFromInternalApi ||
                     it.filterInputWithAdditionCodeCompletion != settings.filterInputWithAdditionCodeCompletion ||
-                    it.filterInputWithRuntimeCodeCompletionInPythonConsole != settings.filterInputWithRuntimeCodeCompletionInPythonConsole
+                    it.filterInputWithRuntimeCodeCompletionInPythonConsole != settings.filterInputWithRuntimeCodeCompletionInPythonConsole ||
+                    it.showDTypeInColumnHeader != settings.showDTypeInColumnHeader
         } ?: false
     }
 
@@ -70,6 +72,7 @@ class ApplicationSettings : Configurable {
             settings.filterInputFromInternalApi = it.filterInputFromInternalApi
             settings.filterInputWithAdditionCodeCompletion = it.filterInputWithAdditionCodeCompletion
             settings.filterInputWithRuntimeCodeCompletionInPythonConsole = it.filterInputWithRuntimeCodeCompletionInPythonConsole
+            settings.showDTypeInColumnHeader = it.showDTypeInColumnHeader
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,9 @@ class DataFrameViewerDialog(
     private var myLastDataModelDisposable: Disposable? = null
     private var myRunningCreatorProcess: RunningCreatorProcess? = null
 
+    // dialog doesn't sync on settings, user has to re-open the dialog after settings are changed
+    private var myFrozenSettings = ApplicationSettingsService.instance.state.copy()
+
     init {
         myDataSourceInfo = dataSourceInfo
 
@@ -91,7 +94,7 @@ class DataFrameViewerDialog(
         setCrossClosesWindow(true)
         disableApplyFilterButton()
 
-        myTable = DataFrameTable()
+        myTable = DataFrameTable(myFrozenSettings.showDTypeInColumnHeader)
         myTable.preferredSize = Dimension(635, 404)
 
         init()
@@ -228,12 +231,9 @@ class DataFrameViewerDialog(
         return myTable.getPreferredFocusedComponent()
     }
 
-    private fun createModelDataLoader(
-        tableSourceRef: IPyTableSourceRef,
-        settings: ApplicationSettingsService.MyState,
-    ): IModelDataLoader {
+    private fun createModelDataLoader(tableSourceRef: IPyTableSourceRef): IModelDataLoader {
         return AsyncModelDataLoader(
-            if (tableSourceRef is IPyPatchedStylerRef && settings.pandasStyledFuncValidationEnabled)
+            if (tableSourceRef is IPyPatchedStylerRef && myFrozenSettings.pandasStyledFuncValidationEnabled)
                 ValidatedChunkEvaluator(tableSourceRef, this)
             else ChunkEvaluator(tableSourceRef),
         ).also {
@@ -315,9 +315,7 @@ class DataFrameViewerDialog(
                     Disposer.dispose(it)
                 }
 
-                val settings = ApplicationSettingsService.instance.state
-                // note: loader doesn't sync on settings, user has to re-open the dialog after settings are changed
-                val modelDataLoader = createModelDataLoader(result.tableSourceRef, settings)
+                val modelDataLoader = createModelDataLoader(result.tableSourceRef)
                 LazyDataFrameModel(
                     result.tableSourceRef.tableStructure,
                     modelDataLoader,

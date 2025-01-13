@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import javax.swing.JPanel
  * Provides the settings view.
  */
 class SettingsComponent {
-
     private val myPandasStyledFuncValidationEnabledCheckBox =
         JBCheckBox("Validate pandas style functions")
     private val myFilterInputFromInternalApiCheckBox =
@@ -38,6 +37,8 @@ class SettingsComponent {
         JBCheckBox("Code completion provided by plugin")
     private val myFilterInputWithRuntimeCodeCompletionInPythonConsole =
         JBCheckBox("Runtime code completion (Python Console)")
+    private val myShowDTypeInColumnHeader =
+        JBCheckBox("Show column dtype in header")
 
     private val myPanel: JPanel
 
@@ -65,13 +66,19 @@ class SettingsComponent {
             myFilterInputWithRuntimeCodeCompletionInPythonConsole.isSelected = value
         }
 
+    var showDTypeInColumnHeader: Boolean
+        get() = myShowDTypeInColumnHeader.isSelected
+        set(value) {
+            myShowDTypeInColumnHeader.isSelected = value
+        }
 
     init {
         val dataFetchingSettingsPanel = FormBuilder.createFormBuilder()
             .addComponent(myPandasStyledFuncValidationEnabledCheckBox)
             .addTooltip("Validates that styling functions return stable results for chunked results. Only used for pandas.Styler.")
-            .panel
-        dataFetchingSettingsPanel.border = createTitleBorder("Data fetching")
+            .panel.apply {
+                border = createTitleBorder("Data fetching")
+            }
 
         val filterInputSettingsPanel = FormBuilder.createFormBuilder()
             .addComponent(myFilterInputFromInternalApiCheckBox)
@@ -80,12 +87,20 @@ class SettingsComponent {
             .addTooltip("Adds completion for pandas DataFrame column names.")
             .addComponent(myFilterInputWithRuntimeCodeCompletionInPythonConsole)
             .addTooltip("Adds code completion when plugin is used with Python Console.")
-            .panel
-        filterInputSettingsPanel.border = createTitleBorder("Filter input")
+            .panel.apply {
+                border = createTitleBorder("Filter input")
+            }
 
-        val featureSwitchPanel = FormBuilder.createFormBuilder()
-            .panel
-        featureSwitchPanel.border = createTitleBorder("Feature switches")
+        val tableSettingsPanel = FormBuilder.createFormBuilder()
+            .addComponent(myShowDTypeInColumnHeader)
+            .panel.apply {
+                border = createTitleBorder("Table")
+            }
+
+        /* val featureSwitchPanel = FormBuilder.createFormBuilder()
+            .panel.apply {
+                border = createTitleBorder("Feature switches")
+            } */
 
         myPanel = FormBuilder.createFormBuilder()
             .addComponent(
@@ -96,9 +111,10 @@ class SettingsComponent {
                 )
             )
             .addVerticalGap(10)
-            .addComponent(dataFetchingSettingsPanel)
+            .addComponent(tableSettingsPanel)
             .addComponent(filterInputSettingsPanel)
-            .addComponent(featureSwitchPanel)
+            .addComponent(dataFetchingSettingsPanel)
+            // .addComponent(featureSwitchPanel)
             .addComponentFillVertically(Box.createVerticalGlue() as JComponent, 0)
             .panel
     }

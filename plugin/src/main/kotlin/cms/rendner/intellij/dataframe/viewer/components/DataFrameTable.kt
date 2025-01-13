@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components
 
-import cms.rendner.intellij.dataframe.viewer.components.renderer.CustomizedCellRenderer
+import cms.rendner.intellij.dataframe.viewer.components.renderer.IndexRowHeaderRenderer
+import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueColumnHeaderRendererWithDtype
 import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueCellRenderer
-import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header.CenteredHeaderLabelStyler
+import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueColumnHeaderRenderer
 import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.events.DataFrameTableModelEvent
 import com.intellij.ide.IdeTooltip
@@ -53,11 +54,11 @@ private const val MAX_AUTO_EXPAND_COLUMN_WIDTH = 350
 
 data class CellPosition(val rowIndex: Int, val columnIndex: Int)
 
-class DataFrameTable : JScrollPane() {
+class DataFrameTable(showDType: Boolean = false): JScrollPane() {
 
     private var myDataFrameModel: IDataFrameModel = EmptyDataFrameModel()
     private var myIndexTable: MyIndexTable? = null
-    private val myValuesTable: MyValuesTable = MyValuesTable(myDataFrameModel.getValuesDataModel())
+    private val myValuesTable: MyValuesTable = MyValuesTable(showDType, myDataFrameModel.getValuesDataModel())
 
     init {
         setViewportView(myValuesTable)
@@ -196,7 +197,10 @@ interface IColumnResizeBehavior {
     fun isFixed(viewColumnIndex: Int): Boolean
 }
 
-class MyValuesTable(model: IDataFrameValuesDataModel) : MyTable<IDataFrameValuesDataModel>(model) {
+class MyValuesTable(
+    showDType: Boolean,
+    model: IDataFrameValuesDataModel,
+    ) : MyTable<IDataFrameValuesDataModel>(model) {
     /**
     This flag is needed to guarantee that we don't access not yet initialized class properties.
     This is required because [JTable.setModel] is called in the JTable constructor.
@@ -216,6 +220,15 @@ class MyValuesTable(model: IDataFrameValuesDataModel) : MyTable<IDataFrameValues
         autoResizeMode = JTable.AUTO_RESIZE_OFF
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
 
+
+        if (showDType) {
+            tableHeader?.apply {
+                defaultRenderer = ValueColumnHeaderRendererWithDtype(
+                    createDefaultHeaderRenderer(),
+                    createDefaultHeaderRenderer(),
+                )
+            }
+        }
         setDefaultRenderer(Object::class.java, ValueCellRenderer())
 
         getColumnModel().selectionModel.addListSelectionListener {
@@ -888,7 +901,7 @@ class MyIndexTable(
         isFocusable = false
         autoResizeMode = JTable.AUTO_RESIZE_OFF
 
-        setDefaultRenderer(Object::class.java, createTableHeaderRenderer(true))
+        setDefaultRenderer(Object::class.java, IndexRowHeaderRenderer(createDefaultHeaderRenderer()))
         adjustPreferredScrollableViewportSize()
     }
 
@@ -960,7 +973,7 @@ abstract class MyTable<M : TableModel> (model: M? = null) : JBTable(model) {
         rowSorter = null
         tableHeader?.apply{
             reorderingAllowed = false
-            defaultRenderer = createTableHeaderRenderer(false)
+            defaultRenderer = ValueColumnHeaderRenderer(createDefaultHeaderRenderer())
         }
     }
 
@@ -999,8 +1012,8 @@ abstract class MyTable<M : TableModel> (model: M? = null) : JBTable(model) {
         super.setModel(model)
     }
 
-    protected fun createTableHeaderRenderer(isRowHeader: Boolean): TableCellRenderer {
-        return getCastedTableHeader().createTableHeaderRenderer(isRowHeader)
+    protected fun createDefaultHeaderRenderer(): TableCellRenderer {
+        return getCastedTableHeader().createDefaultRenderer()
     }
 
     private fun getCastedTableHeader(): MyTable<*>.MyTableHeader {
@@ -1051,13 +1064,6 @@ abstract class MyTable<M : TableModel> (model: M? = null) : JBTable(model) {
         override fun getToolTipText(event: MouseEvent): String {
             myTooltip.updateHoveredColumn(this.columnAtPoint(event.point), event.point)
             return ""
-        }
-
-        fun createTableHeaderRenderer(isRowHeader: Boolean): TableCellRenderer {
-            return CustomizedCellRenderer(
-                super.createDefaultRenderer(),
-                CenteredHeaderLabelStyler(isRowHeader)
-            )
         }
 
         private fun setRowSorterShiftKeyFlag(isDown: Boolean) {

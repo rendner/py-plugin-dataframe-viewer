@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header
 
 import cms.rendner.intellij.dataframe.viewer.components.MyValuesTable
-import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.IRendererComponentStyler
 import com.intellij.ui.ColorUtil
-import com.intellij.ui.ExpandableItemsHandler
 import com.intellij.util.ui.GraphicsUtil
 import java.awt.*
 import java.awt.font.FontRenderContext
@@ -27,11 +25,9 @@ import javax.swing.*
 import javax.swing.border.Border
 import javax.swing.border.MatteBorder
 
-class CenteredHeaderLabelStyler(
-    private val isRowHeader: Boolean = false
-) : IRendererComponentStyler {
+class ValueColumnHeaderLabelStyler: CommonHeaderLabelStyler(false) {
 
-    private val mySortArrowIconRenderer = MyFastSortArrowIconRenderer()
+    private val mySortArrowIconRenderer = MyCachingSortArrowIconRenderer()
     private val myFixedColumnIndicator = MyFixedColumnBorder()
 
     override fun applyStyle(
@@ -43,46 +39,11 @@ class CenteredHeaderLabelStyler(
         row: Int,
         column: Int
     ) {
-        if (component is JComponent) {
-            /*
-            An expandable cell is very useful for truncated cells. If a user hovers
-            over a cell the missing text is shown in an expanded cell. But this feature
-            doesn't seem to work correctly for table headers.
-
-            There are two different issues:
-
-            A) Value Table
-            No expansion is displayed for the table header if truncated.
-
-            B) Index Table
-            An expansion is displayed if truncated, but dotted text stays dotted.
-            It looks like the table header renderer isn't repainted.
-
-            Therefore, disable it completely for all table headers. To have a consistent behavior.
-            */
-            component.putClientProperty(ExpandableItemsHandler.RENDERER_DISABLED, true)
-        }
+        super.applyStyle(component, table, value, isSelected, hasFocus, row, column)
 
         if (component is JLabel) {
-            component.horizontalAlignment = SwingConstants.CENTER
-            component.horizontalTextPosition = SwingConstants.LEADING
-            component.verticalAlignment = SwingConstants.CENTER
-
             if (table?.rowSorter != null) {
                 component.icon = getPreparedSortArrowIconRenderer(component, table, column)
-            }
-        }
-
-        val rowOrColumnSelected = if (isRowHeader) {
-            table?.isRowSelected(row) == true
-        } else {
-            table?.isColumnSelected(column) == true
-        }
-
-        if (rowOrColumnSelected) {
-            try {
-                UIManager.getColor("TableHeader.separatorColor")?.let { component.background = it }
-            } catch (ignore: NullPointerException) {
             }
         }
 
@@ -153,7 +114,7 @@ class CenteredHeaderLabelStyler(
         }
     }
 
-    private class MyFastSortArrowIconRenderer : Icon {
+    private class MyCachingSortArrowIconRenderer : Icon {
         private val myInsets = Insets(2, 4, 2, 4)
         private val myGapBetweenTextAndArrow = 2
         private val myFontRenderContext = FontRenderContext(null, true, false)
@@ -258,8 +219,8 @@ class CenteredHeaderLabelStyler(
         private fun computeArrowPolygons(): List<Polygon> {
             return when (mySortOrder) {
                 SortOrder.UNSORTED -> createUpDownArrow(0, 0, myArrowPolygonSize)
-                SortOrder.ASCENDING -> listOf(createUpArrow(0, 0, myArrowPolygonSize))
-                SortOrder.DESCENDING -> listOf(createDownArrow(0, 0, myArrowPolygonSize))
+                SortOrder.ASCENDING -> listOf(createUpArrow(0, myArrowPolygonSize / 2, myArrowPolygonSize))
+                SortOrder.DESCENDING -> listOf(createDownArrow(0, myArrowPolygonSize / 2, myArrowPolygonSize))
             }
         }
 
@@ -268,8 +229,8 @@ class CenteredHeaderLabelStyler(
         }
 
         private fun computeIconHeight(): Int {
-            val arrowSize = if (mySortOrder == SortOrder.UNSORTED) 2 * myArrowPolygonSize else myArrowPolygonSize
-            return myInsets.top + arrowSize + myInsets.bottom
+            // always use height of the double arrow to prevent jumping header height
+            return myInsets.top + (2 * myArrowPolygonSize) + myInsets.bottom
         }
 
         private fun computeArrowPolygonSize(): Int {
