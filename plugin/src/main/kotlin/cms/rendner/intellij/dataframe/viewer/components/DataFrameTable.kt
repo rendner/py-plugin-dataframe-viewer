@@ -28,6 +28,7 @@ import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import org.intellij.lang.annotations.MagicConstant
 import java.awt.*
@@ -54,7 +55,7 @@ private const val MAX_AUTO_EXPAND_COLUMN_WIDTH = 350
 
 data class CellPosition(val rowIndex: Int, val columnIndex: Int)
 
-class DataFrameTable(showDType: Boolean = false): JScrollPane() {
+class DataFrameTable(showDType: Boolean = false): JBScrollPane() {
 
     private var myDataFrameModel: IDataFrameModel = EmptyDataFrameModel()
     private var myIndexTable: MyIndexTable? = null
@@ -242,9 +243,13 @@ class MyValuesTable(
         // 1 because we use the same cell renderer for all cells
         setMaxItemsForSizeCalculation(1)
 
-        registerSortKeyBindings()
-        registerCopyKeyBindings()
-        disableProblematicKeyBindings()
+        ApplicationManager.getApplication()?.let {
+            if (!it.isHeadlessEnvironment) {
+                registerSortKeyBindings()
+                registerCopyKeyBindings()
+                disableProblematicKeyBindings()
+            }
+        }
     }
 
     fun getColumnResizeBehavior(): IColumnResizeBehavior {
