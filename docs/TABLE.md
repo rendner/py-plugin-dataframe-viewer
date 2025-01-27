@@ -35,7 +35,7 @@ The data is loaded only when needed.
 Each time you scroll through the table, the data for the currently visible area is loaded, if it does not already exist.
 
 ## Debugger
-The data of the pandas `DataFrame` can only be loaded when the debugger is suspended for example when reaching a breakpoint.
+The data of the `DataFrame` can only be loaded when the debugger is suspended for example when reaching a breakpoint.
 Breakpoints are special markers that suspend program execution at a specific point.
 Between two breakpoints no data can be fetched from the `DataFrame`.
 

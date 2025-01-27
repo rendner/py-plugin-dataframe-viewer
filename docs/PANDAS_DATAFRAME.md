@@ -111,8 +111,6 @@ Fetching styled data in chunks is way faster and less memory consuming.
 But of course there is one problem when it comes to custom styling functions.
 
 #### The Problem
-To be able to fetch styled chunks, smaller parts of the `DataFrame`, the configured styling functions are applied on the chunks.
-
 As we already know, `Styler.applymap` (`Styler.map`) works through the `DataFrame` elementwise, therefore it is safe to use in combination with chunks.
 
 `Styler.apply` passes each column or row of a `DataFrame` one-at-a-time or the entire `DataFrame` at once, depending on the axis keyword argument.

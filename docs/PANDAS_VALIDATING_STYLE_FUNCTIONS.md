@@ -20,7 +20,6 @@ And this might have to be done not only for one `DataFrame`, but for many ones t
 The plugin provides an automatic validation for pandas `DataFrames` by using a similar algorithm as described above.
 
 Whenever a chunk is fetched from a `DataFrame`, the plugin can validate that the used style functions return a stable styling for different sizes of chunks.
-A short video to demo the feature, taken from an earlier PoC, can be found here: [Validation Demo](https://twitter.com/rendner/status/1530298351698296833?s=20&t=6wXXchcZvLfHJK5ZndpNFA)
 
 
 ### Things To Keep In Mind:
