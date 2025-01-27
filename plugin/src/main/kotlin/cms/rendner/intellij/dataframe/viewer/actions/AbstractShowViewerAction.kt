@@ -280,7 +280,14 @@ private class MyFilterInputCompletionContributor(
 
         fun addVariants(variants: List<ICompletionVariant>) {
             for (variant in variants) {
-                if (variant is NestedCompletionVariant) continue // todo
+                if (variant is NestedCompletionVariant) {
+                    if (!isInsideString && variant.fqType == PythonQualifiedTypes.TUPLE) {
+                        val parts = variant.children.map {
+                            if (it.fqType == PythonQualifiedTypes.STR) "\"${it.value}\"" else it.value
+                        }
+                        addElement("(${parts.joinToString(", ")})")
+                    }
+                }
                 if (variant is CompletionVariant) {
                     if (isInsideString && variant.fqType != PythonQualifiedTypes.STR) continue
                     if (!isInsideString && variant.fqType == PythonQualifiedTypes.STR && completableText != null) continue
