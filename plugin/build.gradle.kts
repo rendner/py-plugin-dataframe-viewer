@@ -26,11 +26,11 @@ dependencies {
     // https://github.com/Kotlin/kotlinx.serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
-    // https://github.com/junit-team/junit5-samples/blob/r5.8.2/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
-    testImplementation(platform("org.junit:junit-bom:5.8.2"))
+    // https://github.com/junit-team/junit5-samples/blob/r5.11.4/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
+    testImplementation(platform("org.junit:junit-bom:5.11.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-
-    testImplementation("org.assertj:assertj-core:3.23.1")
+    // https://github.com/assertj/assertj
+    testImplementation("org.assertj:assertj-core:3.27.3")
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
