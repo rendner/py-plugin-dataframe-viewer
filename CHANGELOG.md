@@ -1,4 +1,23 @@
 # Changelog
+## v0.18.0
+- `Released`: 2025-01-27
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Min Required IntelliJ Version`: 2023.3
+
+### Added
+#### Show Column DType
+The `dtype` is now displayed in the column header.
+The feature can be enabled/disabled in the plugin settings.
+
+#### [pandas] Code Completing For Column Names (experimental)
+Multilevel column names are now also listed in the code completion popup when calling code completion inside an empty list literal (e.g. `df[...]`).
+
+### Fixed
+- horizontal scrolling causes sporadic vertical scrolling (macOS)
+
+### Other
+- configure plugin compatibility "until 2025.3" (min required version is now 2023.3)
+
 ## v0.17.0
 - `Released`: 2024-10-30
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
