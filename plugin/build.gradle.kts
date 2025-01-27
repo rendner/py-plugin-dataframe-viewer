@@ -8,9 +8,9 @@ plugins {
     id("org.jetbrains.intellij") version "1.13.0"
     // Kotlin JVM plugin to add support for Kotlin
     // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#kotlin-standard-library
-    kotlin("jvm") version "1.7.0"
+    kotlin("jvm") version "1.9.21"
     // https://kotlinlang.org/docs/serialization.html#example-json-serialization
-    kotlin("plugin.serialization") version "1.7.0"
+    kotlin("plugin.serialization") version "1.9.21"
 }
 
 group = "cms.rendner.intellij"
@@ -24,7 +24,7 @@ dependencies {
     // https://github.com/beryx/awt-color-factory
     implementation("org.beryx:awt-color-factory:1.0.2")
     // https://github.com/Kotlin/kotlinx.serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
     // https://github.com/junit-team/junit5-samples/blob/r5.8.2/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
     testImplementation(platform("org.junit:junit-bom:5.8.2"))
@@ -37,7 +37,7 @@ dependencies {
 // https://intellij-support.jetbrains.com/hc/en-us/community/posts/206590865-Creating-PyCharm-plugins
 intellij {
     plugins.add("python-ce") // is required even if we specify a PyCharm IDE
-    version.set("2022.3")
+    version.set("2023.3")
     type.set("PC")
     downloadSources.set(true)
     updateSinceUntilBuild.set(false)
@@ -277,6 +277,7 @@ tasks {
 
     test {
         useJUnitPlatform()
+        jvmArgs("-Djava.awt.headless=true")
     }
 
     buildSearchableOptions {
@@ -344,13 +345,13 @@ tasks {
     runPluginVerifier {
         // See https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#tasks-runpluginverifier
         // See https://data.services.jetbrains.com/products?fields=code,name,releases.version,releases.build,releases.type&code=PC
-        //ideVersions.addAll(listOf("PC-2022.3", "PC-2023.1"))
+        //ideVersions.addAll(listOf("PC-2023.3", "PC-2025.1"))
     }
 
     listProductsReleases {
-        sinceVersion.set("2022.3")
-        // untilVersion.set("2024.3")
-        untilVersion.set("2024.1.1")
+        sinceVersion.set("2023.3")
+        // untilVersion.set("2025.1")
+        untilVersion.set("251.17181.23")
     }
 }
 

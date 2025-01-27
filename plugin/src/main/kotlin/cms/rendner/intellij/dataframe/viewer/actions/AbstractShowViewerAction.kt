@@ -172,24 +172,11 @@ abstract class AbstractShowViewerAction : AnAction(), DumbAware {
     }
 }
 
-/**
- * The "PyFrameListener" had a breaking change in 2023.2.
- * "sessionStopped()" -> "sessionStopped(communication: PyFrameAccessor?)"
- *
- * This interface is used to make the plugin code compatible with
- * versions < 2023.2. and >= 2023.2.
- */
-// todo: remove interface when setting min version for plugin >= 2023.2
-interface PyFrameListenerBreakingChanges {
-    fun sessionStopped()
-    fun sessionStopped(communication: PyFrameAccessor?)
-}
-
 private class MyDebugSessionListener(
     frameAccessor: PyFrameAccessor,
     delegate: DataFrameViewerDialog,
     private val filterInputCompletionContributor: MyFilterInputCompletionContributor,
-): XDebugSessionListener, PyFrameListener, PyFrameListenerBreakingChanges, Disposable {
+): XDebugSessionListener, PyFrameListener, Disposable {
 
     // Props are nullable to free circular references on dispose
     // ("PyFrameAccessor" has no "removeFrameListener")
@@ -207,9 +194,7 @@ private class MyDebugSessionListener(
         updateProvideSyntheticIdentifierFlag()
     }
 
-    override fun frameChanged() = runInEdt {
-        stackFrameChanged()
-    }
+    override fun frameChanged() = stackFrameChanged()
 
     override fun sessionPaused() = runInEdt {
         delegate?.sessionPaused()

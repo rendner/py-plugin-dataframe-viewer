@@ -304,5 +304,5 @@ object CompletionVariantSerializer : JsonContentPolymorphicSerializer<ICompletio
 
 
 val bridgeSerializersModule = SerializersModule {
-    polymorphicDefault(ICompletionVariant::class) { CompletionVariantSerializer }
+    polymorphicDefaultDeserializer(ICompletionVariant::class) { CompletionVariantSerializer }
 }
