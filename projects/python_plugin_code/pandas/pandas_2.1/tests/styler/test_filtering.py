@@ -18,7 +18,7 @@ def test_filter_values_before_styling_breaks_styling():
     styler = df.style.highlight_min(subset=IndexSlice[2:4])
     assert "background-color: yellow;" in styler.to_html()
 
-    # filter out the min value beforehand and style afterwards will pick another min value (unwanted behavior)
+    # filter out the min value beforehand and style afterward will pick another min value (unwanted behavior)
     styler_filtered = df.filter(items=[1, 3, 4], axis='index').style.highlight_min(subset=IndexSlice[2:4])
     assert "background-color: yellow;" in styler_filtered.to_html()
 
@@ -32,8 +32,8 @@ def test_combined_chunks_do_not_include_a_highlighted_min_after_filtering_min_va
     ctx = PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame))
 
     # expect: no styled min value
-    table = ctx.get_table_frame_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
-    for row in table.cells:
+    chunk_data = ctx.get_chunk_data_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
+    for row in chunk_data.cells:
         for entry in row:
             assert entry.css is None
 
@@ -46,10 +46,10 @@ def test_combined_chunks_do_include_highlighted_min_values_after_filtering():
     filter_frame = df.filter(items=[1, 2], axis='index')
     ctx = PatchedStylerContext(styler, FilterCriteria.from_frame(filter_frame))
 
-    table = ctx.get_table_frame_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
+    chunk_data = ctx.get_chunk_data_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
 
     highlighted_values_found = 0
-    for row in table.cells:
+    for row in chunk_data.cells:
         for entry in row:
             if entry.css is not None:
                 if entry.css['background-color'] == 'yellow':

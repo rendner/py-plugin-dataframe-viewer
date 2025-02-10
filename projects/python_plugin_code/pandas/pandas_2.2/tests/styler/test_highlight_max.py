@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 import pytest
 
-from cms_rendner_sdfv.base.types import TableFrameCell
+from cms_rendner_sdfv.base.types import Cell
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
-from tests.helpers.asserts.assert_patcher_styler import assert_patched_styler
+from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -23,20 +23,20 @@ def test_expected_cell_styling():
     })
 
     ctx = PatchedStylerContext(my_df.style.highlight_max())
-    actual = ctx.get_table_frame_generator().generate()
+    actual = ctx.get_chunk_data_generator().generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0'),
-            TableFrameCell(value='3'),
+            Cell(value='0'),
+            Cell(value='3'),
         ],
         [
-            TableFrameCell(value='1'),
-            TableFrameCell(value='4'),
+            Cell(value='1'),
+            Cell(value='4'),
         ],
         [
-            TableFrameCell(value='2', css={'background-color': 'yellow'}),
-            TableFrameCell(value='5', css={'background-color': 'yellow'}),
+            Cell(value='2', css={'background-color': 'yellow'}),
+            Cell(value='5', css={'background-color': 'yellow'}),
         ],
     ]
 

@@ -3,7 +3,7 @@ import pytest
 
 from cms_rendner_sdfv.base.types import Region
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from tests.helpers.asserts.assert_patcher_styler import assert_patched_styler
+from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],

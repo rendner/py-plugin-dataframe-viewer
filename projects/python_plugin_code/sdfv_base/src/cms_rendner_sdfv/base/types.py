@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -54,15 +54,15 @@ class TableInfo:
 
 
 @dataclass(frozen=True)
-class TableFrameCell:
+class Cell:
     value: str
     css: Union[None, Dict[str, str]] = None
 
 
 @dataclass(frozen=True)
-class TableFrame:
+class ChunkData:
     index_labels: Union[None, List[List[str]]]
-    cells: List[List[TableFrameCell]]
+    cells: List[List[Cell]]
 
 
 @dataclass(frozen=True)

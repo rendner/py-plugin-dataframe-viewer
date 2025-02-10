@@ -27,17 +27,17 @@ def _assert_frame_sorting(
     # create: expected
     sorted_df = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending)
     expected_ctx = FrameContext(sorted_df)
-    expected_frame = expected_ctx.get_table_frame_generator().generate()
+    expected_chunk_data = expected_ctx.get_chunk_data_generator().generate()
 
     # create: actual
     actual_ctx = FrameContext(df)
     actual_ctx.set_sort_criteria(sort_by_column_index, sort_ascending)
-    actual_frame = actual_ctx.get_table_frame_generator().generate_by_combining_chunks(
+    actual_chunk_data = actual_ctx.get_chunk_data_generator().generate_by_combining_chunks(
         rows_per_chunk=rows_per_chunk,
         cols_per_chunk=cols_per_chunk,
     )
 
-    assert actual_frame == expected_frame
+    assert actual_chunk_data == expected_chunk_data
 
 
 @pytest.mark.parametrize(

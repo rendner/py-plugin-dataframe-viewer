@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from tests.helpers.table_frame_validator import TableFrameValidator
+from tests.helpers.chunk_data_validator import ChunkDataValidator
 
 
 def assert_patched_styler(
@@ -30,5 +30,5 @@ def assert_patched_styler(
     init_styler_func(styler)
     ctx = PatchedStylerContext(styler)
 
-    result = TableFrameValidator.with_context(ctx).validate(rows_per_chunk, cols_per_chunk)
+    result = ChunkDataValidator.with_context(ctx).validate(rows_per_chunk, cols_per_chunk)
     assert result.actual == result.expected

@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from typing import List, Optional, Union, Any
 from polars import DataFrame
 
 from cms_rendner_sdfv.base.helpers import fq_type
-from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator, AbstractTableSourceContext
+from cms_rendner_sdfv.base.table_source import AbstractChunkDataGenerator, AbstractTableSourceContext
 from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, TableStructureColumn, \
     CompletionVariant, NestedCompletionVariant
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame
@@ -93,10 +93,10 @@ class FrameContext(AbstractTableSourceContext):
 
         return TableStructureColumnInfo(columns=ts_columns, legend=None)
 
-    def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
+    def get_chunk_data_generator(self) -> AbstractChunkDataGenerator:
         # local import to resolve cyclic import
-        from cms_rendner_sdfv.polars.table_frame_generator import TableFrameGenerator
-        return TableFrameGenerator(self.__visible_frame)
+        from cms_rendner_sdfv.polars.chunk_data_generator import ChunkDataGenerator
+        return ChunkDataGenerator(self.__visible_frame)
 
     def _recompute_visible_frame(self) -> VisibleFrame:
         col_idx = None

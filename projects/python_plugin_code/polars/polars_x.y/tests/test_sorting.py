@@ -14,7 +14,7 @@ df = pl.from_dict({
 })
 
 
-def _assert_frame_sorting(
+def assert_chunk_data_sorting(
         df: pl.DataFrame,
         rows_per_chunk: int,
         cols_per_chunk: int,
@@ -24,17 +24,17 @@ def _assert_frame_sorting(
     # create: expected
     sorted_df = df.sort(by=[df.columns[i] for i in sort_by_column_index], descending=sort_descending)
     expected_ctx = FrameContext(sorted_df)
-    expected_frame = expected_ctx.get_table_frame_generator().generate()
+    expected_chunk_data = expected_ctx.get_chunk_data_generator().generate()
 
     # create: actual
     actual_ctx = FrameContext(df)
     actual_ctx.set_sort_criteria(sort_by_column_index, sort_ascending=[not desc for desc in sort_descending])
-    actual_frame = actual_ctx.get_table_frame_generator().generate_by_combining_chunks(
+    actual_chunk_data = actual_ctx.get_chunk_data_generator().generate_by_combining_chunks(
         rows_per_chunk=rows_per_chunk,
         cols_per_chunk=cols_per_chunk,
     )
 
-    assert actual_frame == expected_frame
+    assert actual_chunk_data == expected_chunk_data
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ def _assert_frame_sorting(
     ]
 )
 def test_sorting_by_multiple_columns(sort_by, descending):
-    _assert_frame_sorting(
+    assert_chunk_data_sorting(
         df,
         2,
         2,

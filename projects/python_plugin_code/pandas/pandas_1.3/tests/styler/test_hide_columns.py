@@ -22,7 +22,7 @@ def test_chunked_with_style(subset, rows_per_chunk, cols_per_chunk):
     assert_patched_styler(
         df,
         # the max value (located in "col_4") is hidden if subset is != None
-        # so the chunked table should also not include the highlighted value
+        # so the chunked result should also not include the highlighted value
         lambda styler: styler.highlight_max(axis=None).hide_columns(subset),
         rows_per_chunk,
         cols_per_chunk

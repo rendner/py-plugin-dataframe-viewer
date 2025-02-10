@@ -155,7 +155,6 @@ def test_hide_row_of_a_styled_subset_before_styling_should_not_break_sorting():
     )
 
 
-
 @pytest.mark.parametrize("axis", [None, "index", "columns"])
 def test_sorting_with_highlight_between(axis):
     assert_patched_styler_sorting(

@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 from pandas import DataFrame
 
-from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
+from cms_rendner_sdfv.base.table_source import AbstractChunkDataGenerator
 from cms_rendner_sdfv.base.types import Region, TableStructureColumnInfo, TableStructureColumn, \
     TableStructureLegend
 from cms_rendner_sdfv.pandas.frame.frame_value_formatter import FrameValueFormatter
@@ -49,10 +49,10 @@ class FrameContext(PandasTableSourceContext):
         self.__source_frame = None
         super().unlink()
 
-    def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
+    def get_chunk_data_generator(self) -> AbstractChunkDataGenerator:
         # local import to resolve cyclic import
-        from cms_rendner_sdfv.pandas.frame.table_frame_generator import TableFrameGenerator
-        return TableFrameGenerator(self)
+        from cms_rendner_sdfv.pandas.frame.chunk_data_generator import ChunkDataGenerator
+        return ChunkDataGenerator(self)
 
     def get_chunk(self, region: Region) -> Chunk:
         return Chunk(self.visible_frame, self.visible_frame.region.get_bounded_region(region))

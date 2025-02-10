@@ -4,8 +4,8 @@ from typing import Any, Union
 import polars as pl
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableSourceKind, TableFrameCell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkData, \
+    TableSourceKind, Cell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
     TableStructureColumn
 from cms_rendner_sdfv.polars.table_source import TableSource
 from cms_rendner_sdfv.polars.table_source_factory import TableSourceFactory
@@ -68,19 +68,18 @@ def test_create_for_dict():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         expected_row_count,
         expected_col_count,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=None,
             cells=[
-                [TableFrameCell(value='0'), TableFrameCell(value='3')],
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')]
+                [Cell(value='0'), Cell(value='3')],
+                [Cell(value='1'), Cell(value='4')],
+                [Cell(value='2'), Cell(value='5')]
             ],
         )
     )
@@ -159,18 +158,17 @@ def test_create_with_filter():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         2,
         2,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=None,
             cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+                [Cell(value='1'), Cell(value='4')],
+                [Cell(value='2'), Cell(value='5')],
             ],
         )
     )
@@ -208,18 +206,17 @@ def test_filter_expr_can_resolve_local_variable():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         2,
         2,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=None,
             cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+                [Cell(value='1'), Cell(value='4')],
+                [Cell(value='2'), Cell(value='5')],
             ],
         )
     )
@@ -255,18 +252,17 @@ def test_filter_expr_can_resolve_synthetic_identifier():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         2,
         2,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=None,
             cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
+                [Cell(value='1'), Cell(value='4')],
+                [Cell(value='2'), Cell(value='5')],
             ],
         )
     )
@@ -303,18 +299,17 @@ def test_can_filter_out_columns():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         2,
         2,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=None,
             cells=[
-                [TableFrameCell(value='0')],
-                [TableFrameCell(value='1')],
+                [Cell(value='0')],
+                [Cell(value='1')],
             ],
         )
     )
@@ -346,12 +341,11 @@ def test_non_matching_filter_returns_empty_table_source():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         2,
         2,
-        False,
     ) == table_source.serialize(
-        TableFrame(index_labels=None, cells=[])
+        ChunkData(index_labels=None, cells=[])
     )

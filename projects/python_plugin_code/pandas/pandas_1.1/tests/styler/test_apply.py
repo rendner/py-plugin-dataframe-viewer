@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 import numpy as np
 
-from cms_rendner_sdfv.base.types import TableFrameCell
+from cms_rendner_sdfv.base.types import Cell
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 from tests.helpers.custom_styler_functions import highlight_even_numbers, highlight_max_values
@@ -23,20 +23,20 @@ def test_expected_cell_styling():
     })
 
     ctx = PatchedStylerContext(my_df.style.apply(highlight_even_numbers))
-    actual = ctx.get_table_frame_generator().generate()
+    actual = ctx.get_chunk_data_generator().generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0', css={'background-color': 'red'}),
-            TableFrameCell(value='3'),
+            Cell(value='0', css={'background-color': 'red'}),
+            Cell(value='3'),
         ],
         [
-            TableFrameCell(value='1'),
-            TableFrameCell(value='4', css={'background-color': 'red'}),
+            Cell(value='1'),
+            Cell(value='4', css={'background-color': 'red'}),
         ],
         [
-            TableFrameCell(value='2', css={'background-color': 'red'}),
-            TableFrameCell(value='5'),
+            Cell(value='2', css={'background-color': 'red'}),
+            Cell(value='5'),
         ],
     ]
 

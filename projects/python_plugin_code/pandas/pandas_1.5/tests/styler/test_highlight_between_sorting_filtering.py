@@ -3,7 +3,7 @@ import pytest
 from pandas import Index
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.types import TableFrameCell
+from cms_rendner_sdfv.base.types import Cell
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 
@@ -33,24 +33,24 @@ def test_cells__axis_index(combine: bool):
         right=[2, 8, 3],
     ))
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0', css={'background-color': 'yellow'}),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0', css={'background-color': 'yellow'}),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='1'),
-            TableFrameCell(value='4'),
-            TableFrameCell(value='7', css={'background-color': 'yellow'}),
+            Cell(value='1'),
+            Cell(value='4'),
+            Cell(value='7', css={'background-color': 'yellow'}),
         ],
         [
-            TableFrameCell(value='2', css={'background-color': 'yellow'}),
-            TableFrameCell(value='5'),
-            TableFrameCell(value='8'),
+            Cell(value='2', css={'background-color': 'yellow'}),
+            Cell(value='5'),
+            Cell(value='8'),
         ],
     ]
 
@@ -64,24 +64,24 @@ def test_cells__axis_index__sorted(combine: bool):
     ))
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[False])
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='2', css={'background-color': 'yellow'}),
-            TableFrameCell(value='5'),
-            TableFrameCell(value='8'),
+            Cell(value='2', css={'background-color': 'yellow'}),
+            Cell(value='5'),
+            Cell(value='8'),
         ],
         [
-            TableFrameCell(value='1'),
-            TableFrameCell(value='4'),
-            TableFrameCell(value='7', css={'background-color': 'yellow'}),
+            Cell(value='1'),
+            Cell(value='4'),
+            Cell(value='7', css={'background-color': 'yellow'}),
         ],
         [
-            TableFrameCell(value='0', css={'background-color': 'yellow'}),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0', css={'background-color': 'yellow'}),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
     ]
 
@@ -97,21 +97,21 @@ def test_cells__axis_index__column_filtered_out(combine: bool):
         FilterCriteria(index=df.index, columns=Index(['a', 'c'])),
     )
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0', css={'background-color': 'yellow'}),
-            TableFrameCell(value='6'),
+            Cell(value='0', css={'background-color': 'yellow'}),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='1'),
-            TableFrameCell(value='7', css={'background-color': 'yellow'}),
+            Cell(value='1'),
+            Cell(value='7', css={'background-color': 'yellow'}),
         ],
         [
-            TableFrameCell(value='2', css={'background-color': 'yellow'}),
-            TableFrameCell(value='8'),
+            Cell(value='2', css={'background-color': 'yellow'}),
+            Cell(value='8'),
         ],
     ]
 
@@ -127,19 +127,19 @@ def test_cells__axis_index__row_filtered_out(combine: bool):
         FilterCriteria(index=Index([0, 2]), columns=df.columns),
     )
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0', css={'background-color': 'yellow'}),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0', css={'background-color': 'yellow'}),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='2', css={'background-color': 'yellow'}),
-            TableFrameCell(value='5'),
-            TableFrameCell(value='8'),
+            Cell(value='2', css={'background-color': 'yellow'}),
+            Cell(value='5'),
+            Cell(value='8'),
         ],
     ]
 
@@ -152,24 +152,24 @@ def test_cells__axis_columns(combine: bool):
         right=[1, 6, 9],
     ))
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0', css={'background-color': 'yellow'}),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0', css={'background-color': 'yellow'}),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='1', css={'background-color': 'yellow'}),
-            TableFrameCell(value='4', css={'background-color': 'yellow'}),
-            TableFrameCell(value='7'),
+            Cell(value='1', css={'background-color': 'yellow'}),
+            Cell(value='4', css={'background-color': 'yellow'}),
+            Cell(value='7'),
         ],
         [
-            TableFrameCell(value='2'),
-            TableFrameCell(value='5', css={'background-color': 'yellow'}),
-            TableFrameCell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2'),
+            Cell(value='5', css={'background-color': 'yellow'}),
+            Cell(value='8', css={'background-color': 'yellow'}),
         ],
     ]
 
@@ -183,24 +183,24 @@ def test_cells__axis_columns__sorted(combine: bool):
     ))
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[False])
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='2'),
-            TableFrameCell(value='5', css={'background-color': 'yellow'}),
-            TableFrameCell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2'),
+            Cell(value='5', css={'background-color': 'yellow'}),
+            Cell(value='8', css={'background-color': 'yellow'}),
         ],
         [
-            TableFrameCell(value='1', css={'background-color': 'yellow'}),
-            TableFrameCell(value='4', css={'background-color': 'yellow'}),
-            TableFrameCell(value='7'),
+            Cell(value='1', css={'background-color': 'yellow'}),
+            Cell(value='4', css={'background-color': 'yellow'}),
+            Cell(value='7'),
         ],
         [
-            TableFrameCell(value='0', css={'background-color': 'yellow'}),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0', css={'background-color': 'yellow'}),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
     ]
 
@@ -216,21 +216,21 @@ def test_cells__axis_columns__column_filtered_out(combine: bool):
         FilterCriteria(index=df.index, columns=Index(['a', 'c'])),
     )
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0', css={'background-color': 'yellow'}),
-            TableFrameCell(value='6'),
+            Cell(value='0', css={'background-color': 'yellow'}),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='1', css={'background-color': 'yellow'}),
-            TableFrameCell(value='7'),
+            Cell(value='1', css={'background-color': 'yellow'}),
+            Cell(value='7'),
         ],
         [
-            TableFrameCell(value='2'),
-            TableFrameCell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2'),
+            Cell(value='8', css={'background-color': 'yellow'}),
         ],
     ]
 
@@ -246,19 +246,19 @@ def test_cells__axis_columns__row_filtered_out(combine: bool):
         FilterCriteria(index=Index([0, 2]), columns=df.columns),
     )
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0', css={'background-color': 'yellow'}),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0', css={'background-color': 'yellow'}),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='2'),
-            TableFrameCell(value='5', css={'background-color': 'yellow'}),
-            TableFrameCell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2'),
+            Cell(value='5', css={'background-color': 'yellow'}),
+            Cell(value='8', css={'background-color': 'yellow'}),
         ],
     ]
 
@@ -273,24 +273,24 @@ def test_cells__axis_none(combine: bool):
         )
     )
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0'),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0'),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='1', css={'background-color': 'yellow'}),
-            TableFrameCell(value='4', css={'background-color': 'yellow'}),
-            TableFrameCell(value='7'),
+            Cell(value='1', css={'background-color': 'yellow'}),
+            Cell(value='4', css={'background-color': 'yellow'}),
+            Cell(value='7'),
         ],
         [
-            TableFrameCell(value='2'),
-            TableFrameCell(value='5'),
-            TableFrameCell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2'),
+            Cell(value='5'),
+            Cell(value='8', css={'background-color': 'yellow'}),
         ],
     ]
 
@@ -306,24 +306,24 @@ def test_cells__axis_none__sorted(combine: bool):
     )
     ctx.set_sort_criteria(sort_by_column_index=[0], sort_ascending=[False])
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='2'),
-            TableFrameCell(value='5'),
-            TableFrameCell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2'),
+            Cell(value='5'),
+            Cell(value='8', css={'background-color': 'yellow'}),
         ],
         [
-            TableFrameCell(value='1', css={'background-color': 'yellow'}),
-            TableFrameCell(value='4', css={'background-color': 'yellow'}),
-            TableFrameCell(value='7'),
+            Cell(value='1', css={'background-color': 'yellow'}),
+            Cell(value='4', css={'background-color': 'yellow'}),
+            Cell(value='7'),
         ],
         [
-            TableFrameCell(value='0'),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0'),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
     ]
 
@@ -339,21 +339,21 @@ def test_cells__axis_none__column_filtered_out(combine: bool):
         FilterCriteria(index=df.index, columns=Index(['a', 'c'])),
     )
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0'),
-            TableFrameCell(value='6'),
+            Cell(value='0'),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='1', css={'background-color': 'yellow'}),
-            TableFrameCell(value='7'),
+            Cell(value='1', css={'background-color': 'yellow'}),
+            Cell(value='7'),
         ],
         [
-            TableFrameCell(value='2'),
-            TableFrameCell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2'),
+            Cell(value='8', css={'background-color': 'yellow'}),
         ],
     ]
 
@@ -369,18 +369,18 @@ def test_cells__axis_none__row_filtered_out(combine: bool):
         FilterCriteria(index=Index([0, 2]), columns=df.columns),
     )
 
-    generator = ctx.get_table_frame_generator()
+    generator = ctx.get_chunk_data_generator()
     actual = generator.generate_by_combining_chunks(1, 1) if combine else generator.generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0'),
-            TableFrameCell(value='3'),
-            TableFrameCell(value='6'),
+            Cell(value='0'),
+            Cell(value='3'),
+            Cell(value='6'),
         ],
         [
-            TableFrameCell(value='2'),
-            TableFrameCell(value='5'),
-            TableFrameCell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2'),
+            Cell(value='5'),
+            Cell(value='8', css={'background-color': 'yellow'}),
         ],
     ]

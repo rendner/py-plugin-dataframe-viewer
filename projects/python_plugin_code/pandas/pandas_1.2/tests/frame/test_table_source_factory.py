@@ -4,8 +4,8 @@ from typing import Any, Union
 import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableSourceKind, TableFrameCell, CreateTableSourceErrorKind, TableStructureColumn, TableInfo, TableStructure, \
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkData, \
+    TableSourceKind, Cell, CreateTableSourceErrorKind, TableStructureColumn, TableInfo, TableStructure, \
     TableStructureColumnInfo
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
 from cms_rendner_sdfv.pandas.frame.table_source_factory import TableSourceFactory
@@ -64,19 +64,18 @@ def test_create_for_dict_orient_columns():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         expected_row_count,
         expected_col_count,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=[["0"], ["1"], ["2"]],
             cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='4')],
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
-                [TableFrameCell(value='3'), TableFrameCell(value='6')]
+                [Cell(value='1'), Cell(value='4')],
+                [Cell(value='2'), Cell(value='5')],
+                [Cell(value='3'), Cell(value='6')]
             ],
         )
     )
@@ -113,18 +112,17 @@ def test_create_for_dict_orient_index():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         expected_row_count,
         expected_col_count,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=[['col_0'], ['col_1']],
             cells=[
-                [TableFrameCell(value='1'), TableFrameCell(value='2'), TableFrameCell(value='3')],
-                [TableFrameCell(value='4'), TableFrameCell(value='5'), TableFrameCell(value='6')],
+                [Cell(value='1'), Cell(value='2'), Cell(value='3')],
+                [Cell(value='4'), Cell(value='5'), Cell(value='6')],
             ],
         )
     )
@@ -205,18 +203,17 @@ def test_create_with_filter():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         2,
         2,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=[['1'], ['2']],
             cells=[
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
-                [TableFrameCell(value='3'), TableFrameCell(value='6')],
+                [Cell(value='2'), Cell(value='5')],
+                [Cell(value='3'), Cell(value='6')],
             ],
         )
     )

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import TableFrameCell
+from cms_rendner_sdfv.base.types import Cell
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
@@ -22,20 +22,20 @@ def test_expected_cell_styling():
     })
 
     ctx = PatchedStylerContext(my_df.style.highlight_between(left=2, right=4))
-    actual = ctx.get_table_frame_generator().generate()
+    actual = ctx.get_chunk_data_generator().generate()
 
     assert actual.cells == [
         [
-            TableFrameCell(value='0'),
-            TableFrameCell(value='3', css={'background-color': 'yellow'}),
+            Cell(value='0'),
+            Cell(value='3', css={'background-color': 'yellow'}),
         ],
         [
-            TableFrameCell(value='1'),
-            TableFrameCell(value='4', css={'background-color': 'yellow'}),
+            Cell(value='1'),
+            Cell(value='4', css={'background-color': 'yellow'}),
         ],
         [
-            TableFrameCell(value='2', css={'background-color': 'yellow'}),
-            TableFrameCell(value='5'),
+            Cell(value='2', css={'background-color': 'yellow'}),
+            Cell(value='5'),
         ],
     ]
 

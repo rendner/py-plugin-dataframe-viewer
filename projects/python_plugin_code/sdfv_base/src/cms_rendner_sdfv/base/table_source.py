@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from typing import Any, List, Union, TypeVar, Dict
 
 from cms_rendner_sdfv.base.temp import TEMP_VARS, EvaluatedVarsCleaner
 from cms_rendner_sdfv.base.transforms import to_json
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, TableFrame, \
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, ChunkData, \
     TableSourceKind, TableStructure, CreateTableSourceErrorKind, TableInfo, \
     CompletionVariant, NestedCompletionVariant
 
@@ -42,22 +42,22 @@ class AbstractVisibleFrame(ABC):
 VF = TypeVar('VF', bound=AbstractVisibleFrame)
 
 
-class AbstractTableFrameGenerator(ABC):
+class AbstractChunkDataGenerator(ABC):
     def __init__(self, visible_frame: VF):
         self._visible_frame: VF = visible_frame
 
     @abstractmethod
     def generate(self,
                  region: Region = None,
-                 exclude_row_header: bool = False,
-                 ) -> TableFrame:
+                 with_row_headers: bool = True,
+                 ) -> ChunkData:
         pass
 
     def generate_by_combining_chunks(self,
                                      rows_per_chunk: int,
                                      cols_per_chunk: int,
                                      region: Region = None,
-                                     ) -> TableFrame:
+                                     ) -> ChunkData:
         result = None
 
         if region is None:
@@ -70,7 +70,7 @@ class AbstractTableFrameGenerator(ABC):
             chunk_table = self.generate(
                 region=local_chunk.translate(region.first_row, region.first_col),
                 # request headers only once
-                exclude_row_header=not chunk_contains_row_start_element,
+                with_row_headers=chunk_contains_row_start_element,
             )
 
             if result is None:
@@ -85,7 +85,7 @@ class AbstractTableFrameGenerator(ABC):
                     for i, row in enumerate(chunk_table.cells):
                         result.cells[i + local_chunk.first_row].extend(row)
 
-        return result if result is not None else TableFrame(index_labels=[], cells=[])
+        return result if result is not None else ChunkData(index_labels=[], cells=[])
 
 
 class AbstractTableSourceContext(ABC):
@@ -110,7 +110,7 @@ class AbstractTableSourceContext(ABC):
         pass
 
     @abstractmethod
-    def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
+    def get_chunk_data_generator(self) -> AbstractChunkDataGenerator:
         pass
 
 
@@ -161,17 +161,17 @@ class AbstractTableSource(ABC):
         # allow to chain the calls
         return self
 
-    def compute_chunk_table_frame(self,
-                                  first_row: int,
-                                  first_col: int,
-                                  rows: int,
-                                  cols: int,
-                                  exclude_row_header: bool = False,
-                                  ) -> str:
+    def compute_chunk_data(self,
+                           first_row: int,
+                           first_col: int,
+                           rows: int,
+                           cols: int,
+                           with_row_headers: bool = True,
+                           ) -> str:
         return self.serialize(
-            self._context.get_table_frame_generator().generate(
+            self._context.get_chunk_data_generator().generate(
                 region=Region(first_row, first_col, rows, cols),
-                exclude_row_header=exclude_row_header,
+                with_row_headers=with_row_headers,
             )
         )
 

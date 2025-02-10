@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
-from tests.helpers.asserts.assert_patcher_styler import assert_patched_styler
+from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
 np.random.seed(123456)
 
@@ -30,7 +30,7 @@ def test_hide_columns_chunked_with_style(subset, rows_per_chunk, cols_per_chunk)
     assert_patched_styler(
         df,
         # the max value is hidden if subset is != None ("col_4")
-        # so the chunked table should also not include the highlighted value
+        # so the chunked result should also not include the highlighted value
         lambda styler: styler.highlight_max(axis=None).hide(axis="columns", subset=subset),
         rows_per_chunk,
         cols_per_chunk
@@ -77,7 +77,7 @@ def test_hide_index_with_style(subset, rows_per_chunk, cols_per_chunk):
     assert_patched_styler(
         df,
         # the max value (located in "col_4") is hidden if subset is != None
-        # so the chunked table should also not include the highlighted value
+        # so the chunked result should also not include the highlighted value
         lambda styler: styler.highlight_max(axis=None).hide(axis="index", subset=subset),
         rows_per_chunk,
         cols_per_chunk

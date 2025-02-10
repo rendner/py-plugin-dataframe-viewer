@@ -4,8 +4,8 @@ from typing import Any, Union
 import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, TableFrame, \
-    TableSourceKind, TableFrameCell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkData, \
+    TableSourceKind, Cell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
     TableStructureColumn
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.table_source_factory import TableSourceFactory
@@ -119,18 +119,17 @@ def test_create_with_filter():
         )
     )
 
-    assert table_source.compute_chunk_table_frame(
+    assert table_source.compute_chunk_data(
         0,
         0,
         2,
         2,
-        False,
     ) == table_source.serialize(
-        TableFrame(
+        ChunkData(
             index_labels=[['1'], ['2']],
             cells=[
-                [TableFrameCell(value='2'), TableFrameCell(value='5')],
-                [TableFrameCell(value='3'), TableFrameCell(value='6')],
+                [Cell(value='2'), Cell(value='5')],
+                [Cell(value='3'), Cell(value='6')],
             ],
         )
     )

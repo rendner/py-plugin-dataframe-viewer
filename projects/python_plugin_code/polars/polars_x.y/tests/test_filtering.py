@@ -2,7 +2,7 @@ from typing import List
 
 import polars as pl
 
-from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell
+from cms_rendner_sdfv.base.types import ChunkData, Cell
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 
 df = pl.DataFrame({
@@ -23,13 +23,13 @@ def test_combined_chunks_do_not_include_filtered_out_values():
     filter_frame = df.select(pl.col('col_1')).filter(pl.col('col_1').is_between(1, 7))
     ctx = FrameContext(df, filter_frame)
 
-    actual_frame = ctx.get_table_frame_generator().generate_by_combining_chunks(rows_per_chunk=1, cols_per_chunk=1)
-    assert actual_frame == TableFrame(
+    actual_chunk_data = ctx.get_chunk_data_generator().generate_by_combining_chunks(rows_per_chunk=1, cols_per_chunk=1)
+    assert actual_chunk_data == ChunkData(
         index_labels=None,
         cells=[
-            [TableFrameCell(value='5')],
-            [TableFrameCell(value='6')],
-            [TableFrameCell(value='7')],
+            [Cell(value='5')],
+            [Cell(value='6')],
+            [Cell(value='7')],
         ],
     )
 

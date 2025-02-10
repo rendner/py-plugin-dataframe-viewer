@@ -1,9 +1,9 @@
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import TableFrameCell
+from cms_rendner_sdfv.base.types import Cell
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from tests.helpers.asserts.assert_patcher_styler import assert_patched_styler
+from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
 df = pd.DataFrame.from_dict({
     "col_0": [0, 1, 2, 3, 4],
@@ -18,8 +18,8 @@ def test_props_are_set():
     styler = df.style.set_properties(**{'background-color': 'pink'})
     ctx = PatchedStylerContext(styler)
 
-    actual = ctx.get_table_frame_generator().generate()
-    cells: list[TableFrameCell] = sum(actual.cells, [])
+    actual = ctx.get_chunk_data_generator().generate()
+    cells: list[Cell] = sum(actual.cells, [])
 
     assert len(cells) == df.size
     assert any(c.css == {'background-color': 'pink'} for c in cells)

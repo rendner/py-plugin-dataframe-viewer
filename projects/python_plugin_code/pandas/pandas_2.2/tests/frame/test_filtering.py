@@ -1,6 +1,6 @@
 from pandas import DataFrame
 
-from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell
+from cms_rendner_sdfv.base.types import ChunkData, Cell
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 
@@ -17,30 +17,30 @@ def test_combined_chunks_do_not_include_filtered_out_values():
     filter_frame = df.filter(items=[1, 3, 4], axis='index')
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
-    actual_frame = ctx.get_table_frame_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
-    assert actual_frame == TableFrame(
+    actual_chunk_data = ctx.get_chunk_data_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
+    assert actual_chunk_data == ChunkData(
         index_labels=[['1'], ['3'], ['4']],
         cells=[
             [
-                TableFrameCell(value='1'),
-                TableFrameCell(value='6'),
-                TableFrameCell(value='11'),
-                TableFrameCell(value='16'),
-                TableFrameCell(value='21'),
+                Cell(value='1'),
+                Cell(value='6'),
+                Cell(value='11'),
+                Cell(value='16'),
+                Cell(value='21'),
             ],
             [
-                TableFrameCell(value='3'),
-                TableFrameCell(value='8'),
-                TableFrameCell(value='13'),
-                TableFrameCell(value='18'),
-                TableFrameCell(value='23'),
+                Cell(value='3'),
+                Cell(value='8'),
+                Cell(value='13'),
+                Cell(value='18'),
+                Cell(value='23'),
             ],
             [
-                TableFrameCell(value='4'),
-                TableFrameCell(value='9'),
-                TableFrameCell(value='14'),
-                TableFrameCell(value='19'),
-                TableFrameCell(value='24'),
+                Cell(value='4'),
+                Cell(value='9'),
+                Cell(value='14'),
+                Cell(value='19'),
+                Cell(value='24'),
             ]
         ],
     )

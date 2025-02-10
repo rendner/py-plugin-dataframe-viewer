@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from cms_rendner_sdfv.base.types import TableFrame, TableFrameCell, TableStructure, TableStructureColumnInfo, \
+from cms_rendner_sdfv.base.types import ChunkData, Cell, TableStructure, TableStructureColumnInfo, \
     TableStructureColumn, TableInfo, TableStructureLegend, TableSourceKind
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
@@ -13,30 +13,30 @@ midx_cols = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]], names=['co
 multi_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx_rows, columns=midx_cols)
 
 
-def test_compute_chunk_table_frame():
+def test_compute_chunk_data():
     ts = TableSource(FrameContext(multi_df), "finger-1")
-    actual = ts.compute_chunk_table_frame(0, 0, 2, 2)
+    actual = ts.compute_chunk_data(0, 0, 2, 2)
 
-    assert actual == ts.serialize(TableFrame(
+    assert actual == ts.serialize(ChunkData(
         index_labels=[['x', 'a'], ['x', 'b']],
         cells=[
-            [TableFrameCell(value='0', css=None), TableFrameCell(value='1', css=None)],
-            [TableFrameCell(value='6', css=None), TableFrameCell(value='7', css=None)],
+            [Cell(value='0', css=None), Cell(value='1', css=None)],
+            [Cell(value='6', css=None), Cell(value='7', css=None)],
         ],
     ))
 
 
-def test_compute_chunk_table_frame_with_multiindex():
+def test_compute_chunk_data_with_multiindex():
     midx = pd.MultiIndex.from_product([[("A", "B"), "y"], ["a", "b", "c"]])
     my_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx, columns=midx)
     ts = TableSource(FrameContext(my_df), "finger-1")
-    actual = ts.compute_chunk_table_frame(0, 0, 2, 2)
+    actual = ts.compute_chunk_data(0, 0, 2, 2)
 
-    assert actual == ts.serialize(TableFrame(
+    assert actual == ts.serialize(ChunkData(
         index_labels=[['(A, B)', 'a'], ['(A, B)', 'b']],
         cells=[
-            [TableFrameCell(value='0'), TableFrameCell(value='1')],
-            [TableFrameCell(value='6'), TableFrameCell(value='7')],
+            [Cell(value='0'), Cell(value='1')],
+            [Cell(value='6'), Cell(value='7')],
         ],
     ))
 

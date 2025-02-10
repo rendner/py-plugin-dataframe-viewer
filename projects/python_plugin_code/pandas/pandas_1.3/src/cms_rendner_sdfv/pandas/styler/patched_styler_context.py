@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.table_source import AbstractTableFrameGenerator
+from cms_rendner_sdfv.base.table_source import AbstractChunkDataGenerator
 from cms_rendner_sdfv.base.types import Region, TableStructureColumnInfo, TableStructureColumn, TableStructureLegend
 from cms_rendner_sdfv.pandas.shared.pandas_table_source_context import PandasTableSourceContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
@@ -154,10 +154,10 @@ class PatchedStylerContext(PandasTableSourceContext):
             todo_patcher_list=[patcher.patcher_for_style_func_validation(chunk)]
         )
 
-    def get_table_frame_generator(self) -> AbstractTableFrameGenerator:
+    def get_chunk_data_generator(self) -> AbstractChunkDataGenerator:
         # local import to resolve cyclic import
-        from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
-        return TableFrameGenerator(self)
+        from cms_rendner_sdfv.pandas.styler.chunk_data_generator import ChunkDataGenerator
+        return ChunkDataGenerator(self)
 
     def get_todo_patcher_list(self) -> List[TodoPatcher]:
         return self.__todo_patcher_list

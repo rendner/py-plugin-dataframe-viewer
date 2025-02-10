@@ -1,4 +1,4 @@
-#  Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,23 +17,23 @@ from typing import Callable, Dict, List, Optional
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.types import TableFrameCell, TableFrame
+from cms_rendner_sdfv.base.types import Cell, ChunkData
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from cms_rendner_sdfv.pandas.styler.table_frame_generator import TableFrameGenerator
+from cms_rendner_sdfv.pandas.styler.chunk_data_generator import ChunkDataGenerator
 
 """
 Q: How can we test that a styler chunk is correctly sorted?
     note:
         -> the feature "style and sort afterwards" doesn't exist in pandas
-        -> "sort first and style afterwards" doesn't work see test case "test_sort_values_before_styling_breaks_styling"
+        -> "sort first and style afterward" doesn't work see test case "test_sort_values_before_styling_breaks_styling"
 
     idea:
         - all cell values have to be unique
-        - create a FrameTable for:
+        - create a ChunkData for:
             - the styler expected result 
             - the sorted expected result
             - the styler and sorted actual result (combined from chunks)
-        - convert each table into a dict with the unique cell value as key
+        - convert each ChunkData into a dict with the unique cell value as key
         - iterate over dicts and ensure:
             - actual cell has the same styling as in the expected styler cells
             - actual cell has the same position as in the expected sorted cells
@@ -52,15 +52,15 @@ def assert_patched_styler_sorting(
     # create: expected styler
     styler = df.style
     init_styler_func(styler)
-    styled_table = TableFrameGenerator(PatchedStylerContext(styler)).generate()
-    expected_styled_cells = _map_cells_by_unique_display_value(styled_table)
+    styled_chunk_data = ChunkDataGenerator(PatchedStylerContext(styler)).generate()
+    expected_styled_cells = _map_cells_by_unique_display_value(styled_chunk_data)
 
     # create: expected sorted
     sorted_styler = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending).style
     if init_expected_sorted_styler_func is not None:
         init_expected_sorted_styler_func(sorted_styler)
-    sorted_table = TableFrameGenerator(PatchedStylerContext(sorted_styler)).generate()
-    expected_sorted_cells = _map_cells_by_unique_display_value(sorted_table)
+    sorted_chunk_data = ChunkDataGenerator(PatchedStylerContext(sorted_styler)).generate()
+    expected_sorted_cells = _map_cells_by_unique_display_value(sorted_chunk_data)
 
     # create: actual styler and sorted
     chunk_styler = df.style
@@ -68,7 +68,7 @@ def assert_patched_styler_sorting(
     ps_ctx = PatchedStylerContext(chunk_styler)
     ps_ctx.set_sort_criteria(sort_by_column_index, sort_ascending)
     actual_cells = _map_cells_by_unique_display_value(
-        TableFrameGenerator(ps_ctx).generate_by_combining_chunks(rows_per_chunk=rows_per_chunk, cols_per_chunk=cols_per_chunk)
+        ChunkDataGenerator(ps_ctx).generate_by_combining_chunks(rows_per_chunk=rows_per_chunk, cols_per_chunk=cols_per_chunk)
     )
 
     _compare_cells(
@@ -80,7 +80,7 @@ def assert_patched_styler_sorting(
 
 @dataclass
 class CellInfo:
-    cell: TableFrameCell
+    cell: Cell
     row: int
     col: int
 
@@ -105,9 +105,9 @@ def _compare_cells(
         assert value.cell.css == expected_styled_info.cell.css
 
 
-def _map_cells_by_unique_display_value(table: TableFrame) -> Dict[str, CellInfo]:
+def _map_cells_by_unique_display_value(chunk_data: ChunkData) -> Dict[str, CellInfo]:
     result = {}
-    for ri, row in enumerate(table.cells):
+    for ri, row in enumerate(chunk_data.cells):
         for ci, cell in enumerate(row):
             if cell.value in result:
                 raise KeyError("All cell elements must have a unique value.")
