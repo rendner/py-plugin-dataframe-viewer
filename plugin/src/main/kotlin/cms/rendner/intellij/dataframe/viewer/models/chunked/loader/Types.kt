@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ interface IModelDataLoader : Disposable {
     /**
      * Requests to load a chunk of data from the underlying DataFrame.
      */
-    fun loadChunk(request: LoadRequest)
+    fun loadChunk(chunk: ChunkRegion)
 
     /**
      * Requests to load the column statistics for a column from the underlying DataFrame.
@@ -55,6 +55,17 @@ interface IModelDataLoader : Disposable {
     fun isAlive(): Boolean
 
     /**
+     * Sets the mandatory request creator for the loader.
+     *
+     * @param reqCreator the creator to use.
+     */
+    fun setLoadRequestCreator(reqCreator: ILoadRequestCreator)
+
+    interface ILoadRequestCreator {
+        fun createLoadRequestFor(chunk: ChunkRegion): LoadRequest
+    }
+
+    /**
      * Sets a handler to handle loaded data or occurred errors.
      * All added handler are automatically removed on dispose.
      *
@@ -73,12 +84,12 @@ interface IModelDataLoader : Disposable {
             TOO_MANY_PENDING_REQUESTS,
         }
 
-        data class ChunkDataSuccess(val request: LoadRequest, val data: ChunkData) : Result
-        data class ChunkDataRejected(val request: LoadRequest, val reason: RejectReason) : Result
+        data class ChunkDataSuccess(val chunk: ChunkRegion, val data: ChunkData) : Result
+        data class ChunkDataRejected(val chunk: ChunkRegion, val reason: RejectReason) : Result
         data class ColumnStatisticsSuccess(val columnIndex: Int, val statistics: Map<String, String>) : Result
 
         data class ColumnStatisticsFailure(val columnIndex: Int, override val throwable: Throwable) : Failure
-        data class ChunkDataFailure(val request: LoadRequest, override val throwable: Throwable) : Failure
+        data class ChunkDataFailure(val chunk: ChunkRegion, override val throwable: Throwable) : Failure
 
         fun onResult(result: Result)
     }
@@ -87,25 +98,36 @@ interface IModelDataLoader : Disposable {
 abstract class AbstractModelDataLoader : IModelDataLoader {
 
     private var myResultHandlers: MutableList<IModelDataLoader.IResultHandler> = CopyOnWriteArrayList()
+    private var myLoadRequestCreator: IModelDataLoader.ILoadRequestCreator? = null
 
     override fun dispose() {
         myResultHandlers.clear()
+        myLoadRequestCreator = null
+    }
+
+    override fun setLoadRequestCreator(reqCreator: IModelDataLoader.ILoadRequestCreator) {
+        myLoadRequestCreator = reqCreator
     }
 
     override fun addResultHandler(handler: IModelDataLoader.IResultHandler) {
         myResultHandlers.add(handler)
     }
 
-    protected fun notifyChunkDataSuccess(request: LoadRequest, data: ChunkData) {
-        notify(IModelDataLoader.IResultHandler.ChunkDataSuccess(request, data))
+    protected fun createLoadRequestFor(chunk: ChunkRegion): LoadRequest {
+        val creator = myLoadRequestCreator ?: throw IllegalStateException("Can't create a load request, LoadRequestCreator is missing.")
+        return creator.createLoadRequestFor(chunk)
     }
 
-    protected fun notifyChunkDataRejected(request: LoadRequest, reason: IModelDataLoader.IResultHandler.RejectReason) {
-        notify(IModelDataLoader.IResultHandler.ChunkDataRejected(request, reason))
+    protected fun notifyChunkDataSuccess(chunk: ChunkRegion, data: ChunkData) {
+        notify(IModelDataLoader.IResultHandler.ChunkDataSuccess(chunk, data))
     }
 
-    protected fun notifyChunkDataFailure(request: LoadRequest, throwable: Throwable) {
-        notify(IModelDataLoader.IResultHandler.ChunkDataFailure(request, throwable))
+    protected fun notifyChunkDataRejected(chunk: ChunkRegion, reason: IModelDataLoader.IResultHandler.RejectReason) {
+        notify(IModelDataLoader.IResultHandler.ChunkDataRejected(chunk, reason))
+    }
+
+    protected fun notifyChunkDataFailure(chunk: ChunkRegion, throwable: Throwable) {
+        notify(IModelDataLoader.IResultHandler.ChunkDataFailure(chunk, throwable))
     }
 
     protected fun notifyColumnStatisticsSuccess(columnIndex: Int, statistics: Map<String, String>) {

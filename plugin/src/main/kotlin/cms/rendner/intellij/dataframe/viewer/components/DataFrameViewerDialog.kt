@@ -245,7 +245,7 @@ class DataFrameViewerDialog(
                         is IModelDataLoader.IResultHandler.ChunkDataFailure -> {
                             ErrorNotification(
                                 "Error during fetching/processing chunk",
-                                "${result.throwable.message ?: "Unknown error occurred"}\nfor ${result.request.chunkRegion}",
+                                "${result.throwable.message ?: "Unknown error occurred"}\nfor ${result.chunk}",
                                 result.throwable
                             ).notify(project)
                         }

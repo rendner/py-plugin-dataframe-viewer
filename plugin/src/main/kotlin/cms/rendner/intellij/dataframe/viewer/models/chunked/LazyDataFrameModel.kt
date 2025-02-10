@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,9 @@ class LazyDataFrameModel(
     private val chunkSize: ChunkSize,
     private val sortable: Boolean = false,
     private val hasIndexLabels: Boolean = false,
-) : IDataFrameModel, IModelDataLoader.IResultHandler {
+) : IDataFrameModel,
+    IModelDataLoader.IResultHandler,
+    IModelDataLoader.ILoadRequestCreator {
 
     private val myValuesModel = ValuesModel(this)
     private val myIndexModel = IndexModel(this)
@@ -104,6 +106,7 @@ class LazyDataFrameModel(
 
     init {
         chunkDataLoader.addResultHandler(this)
+        chunkDataLoader.setLoadRequestCreator(this)
         myLegendHeaders = tableStructure.columnInfo.legend?.let {
             LegendHeaders(
                 convertHeaderLabel(it.index),
@@ -242,21 +245,23 @@ class LazyDataFrameModel(
             && !myFailedChunks.contains(chunkRegion)
         ) {
             myPendingChunks.add(chunkRegion)
-            chunkDataLoader.loadChunk(
-                LoadRequest(
-                    chunkRegion,
-                    myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] != null,
-                )
-            )
+            chunkDataLoader.loadChunk(chunkRegion)
         }
         return myNotYetLoadedChunkValues
+    }
+
+    override fun createLoadRequestFor(chunk: ChunkRegion): LoadRequest {
+        return LoadRequest(
+            chunk,
+            myFetchedChunkRowHeaderLabels[chunk.firstRow] != null,
+        )
     }
 
     override fun onResult(result: IModelDataLoader.IResultHandler.Result) {
         when (result) {
             // CHUNK
             is IModelDataLoader.IResultHandler.ChunkDataRejected -> {
-                myPendingChunks.remove(result.request.chunkRegion)
+                myPendingChunks.remove(result.chunk)
                 val scheduleInvokeLater = myRejectedChunkRegions.isEmpty
                 // Create a union of all rejected requests to fire only one "fireValueModelValuesUpdated" event.
                 // This reduces the amount of fired events during scrolling over many rows/columns of a huge DataFrame.
@@ -266,10 +271,10 @@ class LazyDataFrameModel(
                 // because the table only repaints the visible rows and columns.
                 myRejectedChunkRegions = myRejectedChunkRegions.union(
                     Rectangle(
-                        result.request.chunkRegion.firstColumn,
-                        result.request.chunkRegion.firstRow,
-                        result.request.chunkRegion.numberOfColumns,
-                        result.request.chunkRegion.numberOfRows,
+                        result.chunk.firstColumn,
+                        result.chunk.firstRow,
+                        result.chunk.numberOfColumns,
+                        result.chunk.numberOfRows,
                     )
                 )
                 if (scheduleInvokeLater) {
@@ -289,24 +294,23 @@ class LazyDataFrameModel(
             }
             is IModelDataLoader.IResultHandler.ChunkDataSuccess -> {
                 if (disposed) return
-                val chunkRegion = result.request.chunkRegion
 
-                myPendingChunks.remove(chunkRegion)
+                myPendingChunks.remove(result.chunk)
 
                 result.data.headerLabels?.let { headerLabels ->
-                    if (headerLabels.rows != null && !myFetchedChunkRowHeaderLabels.containsKey(chunkRegion.firstRow)) {
-                        myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] = headerLabels.rows
+                    if (headerLabels.rows != null && !myFetchedChunkRowHeaderLabels.containsKey(result.chunk.firstRow)) {
+                        myFetchedChunkRowHeaderLabels[result.chunk.firstRow] = headerLabels.rows
                         if (headerLabels.rows.isNotEmpty()) {
-                            fireIndexModelValuesUpdated(chunkRegion)
+                            fireIndexModelValuesUpdated(result.chunk)
                         }
                     }
                 }
-                myFetchedChunkValues[chunkRegion] = result.data.values
-                fireValuesModelValuesUpdated(chunkRegion)
+                myFetchedChunkValues[result.chunk] = result.data.values
+                fireValuesModelValuesUpdated(result.chunk)
             }
             is IModelDataLoader.IResultHandler.ChunkDataFailure -> {
                 if (disposed) return
-                result.request.chunkRegion.let {
+                result.chunk.let {
                     myPendingChunks.remove(it)
                     myFailedChunks.add(it)
                 }

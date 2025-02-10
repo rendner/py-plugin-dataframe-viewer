@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,8 +44,8 @@ class AsyncModelDataLoader(
     }
 
     private var myIsAliveFlag = true
-    private var myActiveRequest: LoadRequest? = null
-    private val myPendingRequests: Deque<LoadRequest> = ArrayDeque()
+    private var myPendingChunk: ChunkRegion? = null
+    private val myRequestedChunks: Deque<ChunkRegion> = ArrayDeque()
     private val myExecutorService = Executors.newSingleThreadExecutor()
     private var myMaxWaitingRequests: Int = 4
 
@@ -57,8 +57,8 @@ class AsyncModelDataLoader(
     override fun dispose() {
         super.dispose()
         myIsAliveFlag = false
-        myPendingRequests.clear()
-        myActiveRequest = null
+        myRequestedChunks.clear()
+        myPendingChunk = null
         shutdownExecutorSilently(myExecutorService, 0, TimeUnit.SECONDS)
     }
 
@@ -76,34 +76,28 @@ class AsyncModelDataLoader(
 
     /**
      * Adds a load request to an internal waiting queue.
-     * Load requests are ignored if already disposed.
+     * Load requests are ignored if this loader is already disposed.
      *
-     * The added requests are processed according to the LIFO principle (last-in-first-out).
+     * Added requests are processed according to the LIFO principle (last-in-first-out).
      * Entries of the waiting queue are processed as soon as the next chunk can be fetched.
      *
      * Since the internal waiting queue has a limited capacity, the oldest waiting request
      * is rejected as this limit exceeds to free space for the new one.
-     *
-     * Adding a load request with the same [ChunkRegion] as a previous added one:
-     * - before the previous one is processed, will replace the old one
-     * - which is currently processed, will not add the new one
-     * - which was already processed in the past, will add the new one
-     *
      */
-    override fun loadChunk(request: LoadRequest) {
+    override fun loadChunk(chunk: ChunkRegion) {
         if (!myIsAliveFlag) return
         when {
-            !mySortingIsDirty && request.chunkRegion == myActiveRequest?.chunkRegion -> return
-            myPendingRequests.isEmpty() -> myPendingRequests.add(request)
-            myPendingRequests.firstOrNull() == request -> return
+            !mySortingIsDirty && chunk == myPendingChunk -> return
+            myRequestedChunks.isEmpty() -> myRequestedChunks.add(chunk)
+            myRequestedChunks.firstOrNull() == chunk -> return
             else -> {
-                myPendingRequests.removeIf { r -> r.chunkRegion == request.chunkRegion }
-                myPendingRequests.addFirst(request)
+                myRequestedChunks.remove(chunk)
+                myRequestedChunks.addFirst(chunk)
             }
         }
-        if (myPendingRequests.size > myMaxWaitingRequests) {
+        if (myRequestedChunks.size > myMaxWaitingRequests) {
             notifyChunkDataRejected(
-                myPendingRequests.pollLast(),
+                myRequestedChunks.pollLast(),
                 IModelDataLoader.IResultHandler.RejectReason.TOO_MANY_PENDING_REQUESTS,
             )
         }
@@ -112,11 +106,9 @@ class AsyncModelDataLoader(
     }
 
     private fun fetchNextChunk() {
-        if (myActiveRequest == null && myPendingRequests.isNotEmpty()) {
-            myPendingRequests.pollFirst().let {
-                myActiveRequest = it
-                myExecutorService.execute(createFetchChunkTask(it, if (mySortingIsDirty) mySorting else null))
-            }
+        if (myPendingChunk == null) {
+            val chunk = myRequestedChunks.pollFirst() ?: return
+            myExecutorService.execute(createFetchChunkTask(chunk, if (mySortingIsDirty) mySorting else null))
         }
     }
 
@@ -129,7 +121,9 @@ class AsyncModelDataLoader(
         }
     }
 
-    private fun createFetchChunkTask(request: LoadRequest, newSorting: SortCriteria?): Runnable {
+    private fun createFetchChunkTask(chunk: ChunkRegion, newSorting: SortCriteria?): Runnable {
+        val request = createLoadRequestFor(chunk)
+        myPendingChunk = chunk
         return Runnable {
             try {
                 if (Thread.currentThread().isInterrupted) return@Runnable
@@ -154,15 +148,15 @@ class AsyncModelDataLoader(
 
                     if (mySortingIsDirty) {
                         notifyChunkDataRejected(
-                            request,
+                            request.chunkRegion,
                             IModelDataLoader.IResultHandler.RejectReason.SORT_CRITERIA_CHANGED,
                         )
                     } else {
-                        notifyChunkDataSuccess(request, chunkData)
+                        notifyChunkDataSuccess(request.chunkRegion, chunkData)
                     }
 
                     // start next queued request
-                    myActiveRequest = null
+                    myPendingChunk = null
                     if (myIsAliveFlag) {
                         fetchNextChunk()
                     }
@@ -173,7 +167,7 @@ class AsyncModelDataLoader(
 
                 runInEdt {
                     updateAliveFlag(throwable)
-                    notifyChunkDataFailure(request, throwable)
+                    notifyChunkDataFailure(request.chunkRegion, throwable)
                 }
             }
         }
