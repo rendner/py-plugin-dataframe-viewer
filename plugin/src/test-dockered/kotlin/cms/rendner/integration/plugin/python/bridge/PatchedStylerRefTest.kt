@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,33 +34,33 @@ import org.junit.jupiter.api.Test
 internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
     @Test
-    fun evaluateValidateAndComputeChunkTableFrame_shouldBeCallable() {
+    fun evaluateValidateAndComputeChunkData_shouldBeCallable() {
         runWithPatchedStyler {
             assertThat(
-                it.evaluateValidateAndComputeChunkTableFrame(
-                    ChunkRegion(0, 0, 2, 2),
-                    excludeRowHeader = false,
-                    null,
+                it.evaluateValidateAndComputeChunkData(
+                    chunk = ChunkRegion(0, 0, 2, 2),
+                    withRowHeaders = true,
+                    newSorting = null,
                 )
-            ).matches { validatedTable ->
-                validatedTable.frame.let { table ->
-                    table.indexLabels!!.isNotEmpty() && table.cells.isNotEmpty()
-                } && validatedTable.problems.isEmpty()
+            ).matches { result ->
+                result.data.let { data ->
+                    data.indexLabels!!.isNotEmpty() && data.cells.isNotEmpty()
+                } && result.problems.isEmpty()
             }
         }
     }
 
     @Test
-    fun evaluateComputeChunkTableFrame_shouldBeCallable() {
+    fun evaluateComputeChunkData_shouldBeCallable() {
         runWithPatchedStyler {
             assertThat(
-                it.evaluateComputeChunkTableFrame(
-                    ChunkRegion(0, 0, 2, 2),
-                    excludeRowHeader = false,
-                    SortCriteria(listOf(0), listOf(true)),
+                it.evaluateComputeChunkData(
+                    chunk = ChunkRegion(0, 0, 2, 2),
+                    withRowHeaders = true,
+                    newSorting = SortCriteria(listOf(0), listOf(true)),
                 )
-            ).matches { table ->
-                table.indexLabels!!.isNotEmpty() && table.cells.isNotEmpty()
+            ).matches { result ->
+                result.indexLabels!!.isNotEmpty() && result.cells.isNotEmpty()
             }
         }
     }

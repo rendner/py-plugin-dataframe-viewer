@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,18 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.loader.converter
 
 import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
-import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrame
-import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrameCell
+import cms.rendner.intellij.dataframe.viewer.python.bridge.ChunkData as BridgeChunkData
+import cms.rendner.intellij.dataframe.viewer.python.bridge.Cell as BridgeCell
 import com.intellij.util.SmartList
 
-class TableFrameConverter {
+class ChunkDataConverter {
     companion object {
         private val valueConverter = CSSValueConverter()
 
-        fun convert(table: TableFrame, excludeRowHeader: Boolean): ChunkData {
+        fun convert(bridgeChunkData: BridgeChunkData, withRowHeaders: Boolean): ChunkData {
             return ChunkData(
-                if (excludeRowHeader) null else toChunkHeaderLabels(table),
-                toChunkValues(table.cells),
+                toChunkValues(bridgeChunkData.cells),
+                if (withRowHeaders) bridgeChunkData.indexLabels.let { if (it == null) null else convertRowHeaderLabels(it) } else null,
             )
         }
 
@@ -40,13 +40,7 @@ class TableFrameConverter {
             }
         }
 
-        private fun toChunkHeaderLabels(table: TableFrame): ChunkHeaderLabels {
-            return ChunkHeaderLabels(
-                rows = table.indexLabels.let { if (it == null) null else convertRowHeaderLabels(it) },
-            )
-        }
-
-        private fun toChunkValues(cells: List<List<TableFrameCell>>): IChunkValues {
+        private fun toChunkValues(cells: List<List<BridgeCell>>): IChunkValues {
             val values = SmartList<ChunkValuesRow>()
             for (row in cells) {
                 val rowValues = SmartList<Value>()

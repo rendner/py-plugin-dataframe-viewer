@@ -88,20 +88,20 @@ interface IPyTableSourceRef: Disposable {
     fun evaluateColumnStatistics(colIndex: Int): Map<String, String>
 
     /**
-     * Calls the "compute_chunk_table_frame" method of the Python class.
+     * Calls the "compute_chunk_data" method of the Python class.
      *
      * @param chunk the region of the data to evaluate
-     * @param excludeRowHeader if true, row headers are excluded from the result.
+     * @param withRowHeaders if true, row headers are included in the result.
      * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
      * @return returns a table representation of the chunk.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
-    fun evaluateComputeChunkTableFrame(
+    fun evaluateComputeChunkData(
         chunk: ChunkRegion,
-        excludeRowHeader: Boolean,
+        withRowHeaders: Boolean,
         newSorting: SortCriteria?,
-    ): TableFrame
+    ): ChunkData
 
     /**
      * Calls the "get_column_name_completion_variants" method of the Python class.
@@ -177,34 +177,34 @@ data class StyleFunctionValidationProblem(
  */
 interface IPyPatchedStylerRef: IPyTableSourceRef {
     /**
-     * Calls the "validate_and_compute_chunk_table_frame" method of the Python class.
+     * Calls the "validate_and_compute_chunk_data" method of the Python class.
      *
      * @param chunk the region of the data to evaluate and validate
-     * @param excludeRowHeader if true, row headers are excluded from the result.
+     * @param withRowHeaders if true, row headers are included in the result.
      * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
      * @return returns a table representation of the chunk and the validation problems found.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
-    fun evaluateValidateAndComputeChunkTableFrame(
+    fun evaluateValidateAndComputeChunkData(
         chunk: ChunkRegion,
-        excludeRowHeader: Boolean,
+        withRowHeaders: Boolean,
         newSorting: SortCriteria?,
-    ): ValidatedTableFrame
+    ): ValidatedChunkData
 }
 
 @Serializable
-data class TableFrameCell(val value: String, val css: Map<String, String>?)
+data class Cell(val value: String, val css: Map<String, String>?)
 
 @Serializable
-data class TableFrame(
+data class ChunkData(
     @SerialName("index_labels") val indexLabels: List<List<String>>?,
-    val cells: List<List<TableFrameCell>>,
+    val cells: List<List<Cell>>,
 )
 
 @Serializable
-data class ValidatedTableFrame(
-    val frame: TableFrame,
+data class ValidatedChunkData(
+    val data: ChunkData,
     val problems: List<StyleFunctionValidationProblem>,
 )
 

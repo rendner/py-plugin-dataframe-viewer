@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ internal class LazyDataFrameModelTest {
         model.getValuesDataModel().getValueAt(0, 0)
 
         val loadRequest = model.recordedLoadRequests.first()
-        assertThat(loadRequest.excludeRowHeaders).isFalse
+        assertThat(loadRequest.withRowHeaders).isTrue
     }
 
     @Test
@@ -123,10 +123,10 @@ internal class LazyDataFrameModelTest {
             assertThat(requests).isNotEmpty
 
             requests.forEach {
-                if (it.chunkRegion.firstColumn > 0) {
-                    assertThat(it.excludeRowHeaders).isTrue
+                if (it.chunkRegion.firstColumn == 0) {
+                    assertThat(it.withRowHeaders).isTrue
                 } else {
-                    assertThat(it.excludeRowHeaders).isFalse
+                    assertThat(it.withRowHeaders).isFalse
                 }
             }
         }
@@ -145,7 +145,7 @@ internal class LazyDataFrameModelTest {
 
         assertThat(model.recordedLoadRequests).hasSize(1)
         model.recordedLoadRequests.first().let {
-            assertThat(it.excludeRowHeaders).isFalse
+            assertThat(it.withRowHeaders).isTrue
         }
     }
 }

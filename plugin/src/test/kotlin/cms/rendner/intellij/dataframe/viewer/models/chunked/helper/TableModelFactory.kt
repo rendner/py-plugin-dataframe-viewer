@@ -94,10 +94,8 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
         private fun createResponseFor(request: LoadRequest): ChunkData {
             val chunkRegion = request.chunkRegion
             return ChunkData(
-                ChunkHeaderLabels(
-                    createHeaderLabels(if (request.excludeRowHeaders) 0 else chunkRegion.numberOfRows)
-                ),
-                ChunkValuesPlaceholder(StringValue("col")),
+                values = ChunkValuesPlaceholder(StringValue("col")),
+                rowHeaderLabels = createHeaderLabels(if (request.withRowHeaders) chunkRegion.numberOfRows else 0)
             )
         }
 

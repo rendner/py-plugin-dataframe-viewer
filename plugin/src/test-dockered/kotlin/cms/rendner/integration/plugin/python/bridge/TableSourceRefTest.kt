@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,16 +49,16 @@ internal class TableSourceRefTest : AbstractPluginCodeTest() {
     }
 
     @Test
-    fun evaluateComputeChunkTableFrame_shouldBeCallable() {
+    fun evaluateComputeChunkData_shouldBeCallable() {
         runWithTableSource { tableSource ->
             assertThat(
-                tableSource.evaluateComputeChunkTableFrame(
-                    ChunkRegion(0, 0, 2, 2),
-                    excludeRowHeader = false,
-                    SortCriteria(listOf(0), listOf(true)),
+                tableSource.evaluateComputeChunkData(
+                    chunk = ChunkRegion(0, 0, 2, 2),
+                    withRowHeaders = true,
+                    newSorting = SortCriteria(listOf(0), listOf(true)),
                 )
-            ).matches { table ->
-                table.indexLabels!!.isNotEmpty() && table.cells.isNotEmpty()
+            ).matches { result ->
+                result.indexLabels!!.isNotEmpty() && result.cells.isNotEmpty()
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked
 
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.Value
-import cms.rendner.intellij.dataframe.viewer.python.bridge.TableFrame
+import cms.rendner.intellij.dataframe.viewer.python.bridge.ChunkData
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -27,21 +27,20 @@ import kotlinx.serialization.Serializable
  */
 interface IChunkEvaluator {
     /**
-     * Evaluates a table like representation for a chunk of a table source.
-     * Excluding already fetched headers reduces the amount of data which to be fetched and parsed.
+     * Evaluates chunk data of a table source.
      *
      * @param chunkRegion the region of the data to evaluate
-     * @param excludeRowHeader if true, the row headers are excluded from the result.
+     * @param withRowHeaders if true, the row headers are included in the result.
      * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
-     * @return returns a table representation of the chunk.
+     * @return returns the chunk data of the specified region.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
-    fun evaluateTableFrame(
+    fun evaluateChunkData(
         chunkRegion: ChunkRegion,
-        excludeRowHeader: Boolean,
+        withRowHeaders: Boolean,
         newSorting: SortCriteria?,
-    ): TableFrame
+    ): ChunkData
 
     @Throws(EvaluateException::class)
     fun evaluateColumnStatistics(columnIndex: Int): Map<String, String>
@@ -71,15 +70,6 @@ data class ChunkValues(val rows: List<ChunkValuesRow>) : IChunkValues {
 }
 
 /**
- * The headers of a chunk.
- *
- * @property rows list of row headers, null if there are no row labels
- */
-data class ChunkHeaderLabels(
-    val rows: List<IHeaderLabel>?
-)
-
-/**
  * Describes the location and size of a chunk inside a table source.
  *
  * @property firstRow index of the first row of the chunk
@@ -96,12 +86,12 @@ data class ChunkRegion(
 
 /**
  * The data of a chunk.
- * @property headerLabels the row and column labels of the chunk.
- * @property values the values of the chunk.
- */
+ * @property values the cell values of the chunk.
+ * @property rowHeaderLabels (optional), the row labels of the chunk.
+*/
 data class ChunkData(
-    val headerLabels: ChunkHeaderLabels?,
-    val values: IChunkValues
+    val values: IChunkValues,
+    val rowHeaderLabels: List<IHeaderLabel>? = null,
 )
 
 /**

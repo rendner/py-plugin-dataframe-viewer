@@ -16,7 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked.loader
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.converter.TableFrameConverter
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.converter.ChunkDataConverter
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.shutdownExecutorSilently
 import com.intellij.openapi.application.runInEdt
@@ -127,16 +127,16 @@ class AsyncModelDataLoader(
         return Runnable {
             try {
                 if (Thread.currentThread().isInterrupted) return@Runnable
-                val table = chunkEvaluator.evaluateTableFrame(
+                val bridgeChunkData = chunkEvaluator.evaluateChunkData(
                     request.chunkRegion,
-                    request.excludeRowHeaders,
+                    request.withRowHeaders,
                     newSorting,
                 )
 
                 if (Thread.currentThread().isInterrupted) return@Runnable
-                val chunkData = TableFrameConverter.convert(
-                    table,
-                    request.excludeRowHeaders,
+                val chunkData = ChunkDataConverter.convert(
+                    bridgeChunkData,
+                    request.withRowHeaders,
                 )
 
                 if (Thread.currentThread().isInterrupted) return@Runnable

@@ -16,7 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
 import cms.rendner.intellij.dataframe.viewer.models.*
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.converter.TableFrameConverter.Companion.convertHeaderLabel
+import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.converter.ChunkDataConverter.Companion.convertHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.events.DataFrameTableModelEvent
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.*
 import java.awt.Rectangle
@@ -253,7 +253,7 @@ class LazyDataFrameModel(
     override fun createLoadRequestFor(chunk: ChunkRegion): LoadRequest {
         return LoadRequest(
             chunk,
-            myFetchedChunkRowHeaderLabels[chunk.firstRow] != null,
+            myFetchedChunkRowHeaderLabels[chunk.firstRow] == null,
         )
     }
 
@@ -297,10 +297,10 @@ class LazyDataFrameModel(
 
                 myPendingChunks.remove(result.chunk)
 
-                result.data.headerLabels?.let { headerLabels ->
-                    if (headerLabels.rows != null && !myFetchedChunkRowHeaderLabels.containsKey(result.chunk.firstRow)) {
-                        myFetchedChunkRowHeaderLabels[result.chunk.firstRow] = headerLabels.rows
-                        if (headerLabels.rows.isNotEmpty()) {
+                result.data.rowHeaderLabels?.let {
+                    if (!myFetchedChunkRowHeaderLabels.containsKey(result.chunk.firstRow)) {
+                        myFetchedChunkRowHeaderLabels[result.chunk.firstRow] = it
+                        if (it.isNotEmpty()) {
                             fireIndexModelValuesUpdated(result.chunk)
                         }
                     }

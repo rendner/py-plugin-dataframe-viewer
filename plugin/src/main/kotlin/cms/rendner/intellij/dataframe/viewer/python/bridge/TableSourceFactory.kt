@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvalu
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.utils.*
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -118,22 +117,22 @@ class TableSourceFactory {
             )
         }
 
-        override fun evaluateComputeChunkTableFrame(
+        override fun evaluateComputeChunkData(
             chunk: ChunkRegion,
-            excludeRowHeader: Boolean,
+            withRowHeaders: Boolean,
             newSorting: SortCriteria?,
-        ): TableFrame {
+        ): ChunkData {
             return callOnPythonSide(
                 createCallBuilder().apply {
                     if (newSorting != null) {
                         withSetSortCriteria(this, newSorting)
                     }
-                    this.withCall("compute_chunk_table_frame") {
+                    this.withCall("compute_chunk_data") {
                         numberParam(chunk.firstRow)
                         numberParam(chunk.firstColumn)
                         numberParam(chunk.numberOfRows)
                         numberParam(chunk.numberOfColumns)
-                        boolParam(excludeRowHeader)
+                        boolParam(withRowHeaders)
                     }
                 }
             )
@@ -214,22 +213,22 @@ class TableSourceFactory {
         tempVarSlotId: String?
     ) : PyTableSourceRef(pythonValue, tableStructure, tempVarSlotId), IPyPatchedStylerRef {
 
-        override fun evaluateValidateAndComputeChunkTableFrame(
+        override fun evaluateValidateAndComputeChunkData(
             chunk: ChunkRegion,
-            excludeRowHeader: Boolean,
+            withRowHeaders: Boolean,
             newSorting: SortCriteria?,
-        ): ValidatedTableFrame {
+        ): ValidatedChunkData {
             return callOnPythonSide(
                 createCallBuilder().apply {
                     if (newSorting != null) {
                         withSetSortCriteria(this, newSorting)
                     }
-                    this.withCall("validate_and_compute_chunk_table_frame") {
+                    this.withCall("validate_and_compute_chunk_data") {
                         numberParam(chunk.firstRow)
                         numberParam(chunk.firstColumn)
                         numberParam(chunk.numberOfRows)
                         numberParam(chunk.numberOfColumns)
-                        boolParam(excludeRowHeader)
+                        boolParam(withRowHeaders)
                     }
                 }
             )

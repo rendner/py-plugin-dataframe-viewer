@@ -146,9 +146,9 @@ abstract class AbstractModelDataLoader : IModelDataLoader {
 /**
  * Load request to load a chunk.
  * @property chunkRegion the region in the DataFrame to load.
- * @property excludeRowHeaders if the row headers of the DataFrame should be excluded from the result
+ * @property withRowHeaders if the row headers of the DataFrame should be included.
  */
 data class LoadRequest(
     val chunkRegion: ChunkRegion,
-    val excludeRowHeaders: Boolean,
+    val withRowHeaders: Boolean,
 )

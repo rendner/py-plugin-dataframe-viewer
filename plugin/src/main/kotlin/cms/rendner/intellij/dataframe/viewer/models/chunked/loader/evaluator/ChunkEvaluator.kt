@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.loader.evaluator
 
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
+import cms.rendner.intellij.dataframe.viewer.python.bridge.ChunkData
 
 /**
  * Evaluates the table representation of a chunk.
@@ -27,12 +28,12 @@ open class ChunkEvaluator(
     private val tableSourceRef: IPyTableSourceRef,
 ) : IChunkEvaluator {
 
-    override fun evaluateTableFrame(
+    override fun evaluateChunkData(
         chunkRegion: ChunkRegion,
-        excludeRowHeader: Boolean,
+        withRowHeaders: Boolean,
         newSorting: SortCriteria?,
-    ): TableFrame {
-        return tableSourceRef.evaluateComputeChunkTableFrame(chunkRegion, excludeRowHeader, newSorting)
+    ): ChunkData {
+        return tableSourceRef.evaluateComputeChunkData(chunkRegion, withRowHeaders, newSorting)
     }
 
     override fun evaluateColumnStatistics(columnIndex: Int): Map<String, String> {
@@ -65,18 +66,18 @@ class ValidatedChunkEvaluator(
      */
     private val reportedStyleFuncIndices = mutableSetOf<Int>()
 
-    override fun evaluateTableFrame(
+    override fun evaluateChunkData(
         chunkRegion: ChunkRegion,
-        excludeRowHeader: Boolean,
+        withRowHeaders: Boolean,
         newSorting: SortCriteria?,
-    ): TableFrame {
-        val result = tableSourceRef.evaluateValidateAndComputeChunkTableFrame(chunkRegion, excludeRowHeader, newSorting)
+    ): ChunkData {
+        val result = tableSourceRef.evaluateValidateAndComputeChunkData(chunkRegion, withRowHeaders, newSorting)
         result.problems.filter { !reportedStyleFuncIndices.contains(it.funcInfo.index) }.let { newProblems ->
             if (newProblems.isNotEmpty()) {
                 problemHandler.handleValidationProblems(newProblems)
                 newProblems.forEach { reportedStyleFuncIndices.add(it.funcInfo.index) }
             }
         }
-        return result.frame
+        return result.data
     }
 }
