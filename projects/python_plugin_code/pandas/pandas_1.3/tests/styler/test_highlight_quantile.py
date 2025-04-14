@@ -1,8 +1,9 @@
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
+from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
 df = pd.DataFrame.from_dict({
@@ -25,16 +26,16 @@ def test_expected_cell_styling():
 
     assert actual.cells == [
         [
-            Cell(value='0.000000'),
-            Cell(value='0.300000'),
+            Cell(value='0.000000', meta=CellMeta.min().pack()),
+            Cell(value='0.300000', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='0.100000', css={'background-color': 'yellow'}),
-            Cell(value='0.400000', css={'background-color': 'yellow'}),
+            Cell(value='0.100000', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='0.400000', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
         ],
         [
-            Cell(value='0.200000', css={'background-color': 'yellow'}),
-            Cell(value='0.500000', css={'background-color': 'yellow'}),
+            Cell(value='0.200000', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='0.500000', meta=CellMeta.max(background_color='yellow').pack()),
         ],
     ]
 
@@ -49,7 +50,7 @@ def test_expected_cell_styling():
 def test_chunked(axis, color, props, rows_per_chunk, cols_per_chunk):
     assert_patched_styler(
         df,
-        lambda styler: styler.highlight_quantile(axis=axis, q_left=0.8, color=color),
+        lambda styler: styler.highlight_quantile(axis=axis, q_left=0.8, color=color, props=props),
         rows_per_chunk,
         cols_per_chunk
     )
@@ -105,4 +106,11 @@ def test_pandas_test_example_highlight_quantile(kwargs):
         lambda styler: styler.highlight_quantile(**kwargs),
         2,
         2
+    )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.highlight_quantile,
+        ['axis', 'subset', 'color', 'q_left', 'q_right', 'interpolation', 'inclusive', 'props']
     )

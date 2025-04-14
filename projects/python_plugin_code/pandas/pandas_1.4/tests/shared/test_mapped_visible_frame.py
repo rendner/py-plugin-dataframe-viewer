@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Literal
 
+from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
 from cms_rendner_sdfv.pandas.shared.visible_frame import MappedVisibleFrame
 
 df_dict = {
@@ -70,7 +71,7 @@ def test_get_column_indices():
 def test_get_column_statistics():
     vf = _create_visible_frame()
 
-    actual = vf.get_column_statistics(0)
+    actual = vf.get_column_statistics(0, ValueFormatter())
     actual.pop('std', None)
 
     assert actual == {

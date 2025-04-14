@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 import pytest
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
+from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
 df = pd.DataFrame.from_dict({
@@ -26,16 +27,16 @@ def test_expected_cell_styling():
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='3', css={'background-color': 'yellow'}),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='3', meta=CellMeta.min(background_color='yellow').pack()),
         ],
         [
-            Cell(value='1'),
-            Cell(value='4'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
         ],
         [
-            Cell(value='2'),
-            Cell(value='5'),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
         ],
     ]
 
@@ -87,8 +88,15 @@ def test_highlight_min_nulls(axis):
     # GH 42750
     assert_patched_styler(
         pd.DataFrame({"a": [pd.NA, -1, None], "b": [np.nan, -1, 1]}),
-        # replace pd.NA values with '' otherwise the are rendered as <NA> and interpreted as html tag
+        # replace pd.NA values with '' otherwise they are rendered as <NA> and interpreted as html tag
         lambda styler: styler.format(na_rep='').highlight_min(axis=axis),
         2,
         2
+    )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.highlight_min,
+        ['axis', 'subset', 'color', 'props']
     )

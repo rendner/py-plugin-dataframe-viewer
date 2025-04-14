@@ -4,9 +4,9 @@ from typing import Any, Union
 import polars as pl
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkData, \
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkDataResponse, \
     TableSourceKind, Cell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
-    TableStructureColumn
+    TableStructureColumn, Region, CellMeta
 from cms_rendner_sdfv.polars.table_source import TableSource
 from cms_rendner_sdfv.polars.table_source_factory import TableSourceFactory
 
@@ -69,17 +69,22 @@ def test_create_for_dict():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        expected_row_count,
-        expected_col_count,
+        Region(0, 0, expected_row_count, expected_col_count),
     ) == table_source.serialize(
-        ChunkData(
-            index_labels=None,
+        ChunkDataResponse(
             cells=[
-                [Cell(value='0'), Cell(value='3')],
-                [Cell(value='1'), Cell(value='4')],
-                [Cell(value='2'), Cell(value='5')]
+                [
+                    Cell(value='0', meta=CellMeta.min().pack()),
+                    Cell(value='3', meta=CellMeta.min().pack()),
+                ],
+                [
+                    Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+                    Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+                ],
+                [
+                    Cell(value='2', meta=CellMeta.max().pack()),
+                    Cell(value='5', meta=CellMeta.max().pack()),
+                ]
             ],
         )
     )
@@ -159,16 +164,18 @@ def test_create_with_filter():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        2,
-        2,
+        Region(0, 0, 2, 2),
     ) == table_source.serialize(
-        ChunkData(
-            index_labels=None,
+        ChunkDataResponse(
             cells=[
-                [Cell(value='1'), Cell(value='4')],
-                [Cell(value='2'), Cell(value='5')],
+                [
+                    Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+                    Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+                ],
+                [
+                    Cell(value='2', meta=CellMeta.max().pack()),
+                    Cell(value='5', meta=CellMeta.max().pack()),
+                ],
             ],
         )
     )
@@ -207,16 +214,18 @@ def test_filter_expr_can_resolve_local_variable():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        2,
-        2,
+        Region(0, 0, 2, 2),
     ) == table_source.serialize(
-        ChunkData(
-            index_labels=None,
+        ChunkDataResponse(
             cells=[
-                [Cell(value='1'), Cell(value='4')],
-                [Cell(value='2'), Cell(value='5')],
+                [
+                    Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+                    Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+                ],
+                [
+                    Cell(value='2', meta=CellMeta.max().pack()),
+                    Cell(value='5', meta=CellMeta.max().pack()),
+                ],
             ],
         )
     )
@@ -227,7 +236,7 @@ def test_filter_expr_can_resolve_synthetic_identifier():
         df,
         CreateTableSourceConfig(
             filter_eval_expr="_df.filter(pl.col('0').is_between(1, 3))",
-            filter_eval_expr_provide_frame=True, # required to provide the synthetic identifier "_df"
+            filter_eval_expr_provide_frame=True,  # required to provide the synthetic identifier "_df"
         ),
     )
 
@@ -253,16 +262,18 @@ def test_filter_expr_can_resolve_synthetic_identifier():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        2,
-        2,
+        Region(0, 0, 2, 2),
     ) == table_source.serialize(
-        ChunkData(
-            index_labels=None,
+        ChunkDataResponse(
             cells=[
-                [Cell(value='1'), Cell(value='4')],
-                [Cell(value='2'), Cell(value='5')],
+                [
+                    Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+                    Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+                ],
+                [
+                    Cell(value='2', meta=CellMeta.max().pack()),
+                    Cell(value='5', meta=CellMeta.max().pack()),
+                ],
             ],
         )
     )
@@ -300,16 +311,12 @@ def test_can_filter_out_columns():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        2,
-        2,
+        Region(0, 0, 2, 2),
     ) == table_source.serialize(
-        ChunkData(
-            index_labels=None,
+        ChunkDataResponse(
             cells=[
-                [Cell(value='0')],
-                [Cell(value='1')],
+                [Cell(value='0', meta=CellMeta.min().pack())],
+                [Cell(value='1', meta=CellMeta(cmap_value=50000).pack())],
             ],
         )
     )
@@ -342,10 +349,7 @@ def test_non_matching_filter_returns_empty_table_source():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        2,
-        2,
+        Region(0, 0, 2, 2),
     ) == table_source.serialize(
-        ChunkData(index_labels=None, cells=[])
+        ChunkDataResponse(cells=[])
     )

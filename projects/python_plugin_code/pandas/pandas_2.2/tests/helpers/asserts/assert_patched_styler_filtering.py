@@ -17,8 +17,7 @@ from typing import Callable, Optional, Union, Any
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.types import Cell, ChunkData
-from cms_rendner_sdfv.pandas.styler.chunk_data_generator import ChunkDataGenerator
+from cms_rendner_sdfv.base.types import Cell, ChunkDataResponse
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, FilterCriteria
 
 """
@@ -51,23 +50,24 @@ def assert_patched_styler_filtering(
     # create: expected styled
     styler = df.style
     init_styler_func(styler)
-    styled_chunk_data = ChunkDataGenerator(PatchedStylerContext(styler)).generate()
+    styled_chunk_data = PatchedStylerContext(styler).get_chunk_data_generator().generate()
     expected_styled_cells = _map_cells_by_unique_display_value(styled_chunk_data, True)
 
     # create: expected filtered
     filtered_styler = df.filter(items=filter_keep_items, axis=filter_axis).style
-    filtered_chunk_data = ChunkDataGenerator(PatchedStylerContext(filtered_styler)).generate()
+    filtered_chunk_data = PatchedStylerContext(filtered_styler).get_chunk_data_generator().generate()
     expected_filtered_cells = _map_cells_by_unique_display_value(filtered_chunk_data)
 
     # create: actual styled and filtered
     chunk_styler = df.style
     init_styler_func(chunk_styler)
-    styled_and_filtered_chunk_data = ChunkDataGenerator(
-        PatchedStylerContext(
+    styled_and_filtered_chunk_data = PatchedStylerContext(
             chunk_styler,
             FilterCriteria.from_frame(df.filter(items=filter_keep_items, axis=filter_axis)),
-        ),
-    ).generate_by_combining_chunks(rows_per_chunk=rows_per_chunk, cols_per_chunk=cols_per_chunk)
+        ).get_chunk_data_generator().generate_by_combining_chunks(
+        rows_per_chunk=rows_per_chunk,
+        cols_per_chunk=cols_per_chunk,
+    )
     actual_cells = _map_cells_by_unique_display_value(styled_and_filtered_chunk_data)
 
     _compare_cells(
@@ -100,10 +100,10 @@ def _compare_cells(
 
         # check styling
         expected_styled_info = expected_styled_cells[key]
-        assert value.cell.css == expected_styled_info.cell.css
+        assert value.cell.meta == expected_styled_info.cell.meta
 
 
-def _map_cells_by_unique_display_value(chunk_data: ChunkData, assert_if_empty: bool = False) -> dict[str, CellInfo]:
+def _map_cells_by_unique_display_value(chunk_data: ChunkDataResponse, assert_if_empty: bool = False) -> dict[str, CellInfo]:
     result = {}
     for ri, row in enumerate(chunk_data.cells):
         for ci, cell in enumerate(row):

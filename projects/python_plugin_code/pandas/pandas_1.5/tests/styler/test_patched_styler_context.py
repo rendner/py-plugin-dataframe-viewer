@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-from cms_rendner_sdfv.base.types import Region, NestedCompletionVariant, CompletionVariant
+from cms_rendner_sdfv.base.types import CompletionVariant, NestedCompletionVariant, Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, FilterCriteria
 
 df = DataFrame.from_dict({
@@ -25,7 +25,6 @@ np.random.seed(123456)
 midx_rows = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]], names=['rows-char', 'rows-color'])
 midx_cols = pd.MultiIndex.from_product([["x", "y"], ["a", "b", "c"]], names=['cols-char', 'cols-color'])
 multi_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx_rows, columns=midx_cols)
-
 
 
 def test_previous_sort_criteria_does_not_affect_later_sort_criteria():
@@ -56,14 +55,14 @@ def test_get_org_indices_of_visible_columns_with_filter():
     ctx = PatchedStylerContext(df.style, fc)
 
     actual = ctx.visible_frame.get_column_indices()
-    assert actual == [1, 4]
+    assert list(actual) == [1, 4]
 
 
 def test_styled_chunk_uses_formatting_from_org_styler():
     ctx = PatchedStylerContext(df.style.format('{:+.2f}', subset=pd.IndexSlice[0, ["col_2"]]))
-    styled_chunk = ctx.compute_styled_chunk(Region.with_frame_shape(df.shape))
-    assert styled_chunk.cell_value_at(0, 0) == '0'
-    assert styled_chunk.cell_value_at(0, 2) == '+2.00'
+    chunk_data = ctx.get_chunk_data_generator().generate()
+    assert chunk_data.cells[0][0] == Cell(value='0', meta=CellMeta.min().pack())
+    assert chunk_data.cells[0][2] == Cell(value='+2.00', meta=CellMeta.min().pack())
 
 
 def test_detects_supported_pandas_style_funcs():
@@ -88,6 +87,7 @@ def test_detects_not_supported_pandas_style_funcs():
     ctx = PatchedStylerContext(styler)
 
     assert len(ctx.get_todo_patcher_list()) == 0
+
 
 def test_column_name_completion_variants():
     ctx = PatchedStylerContext(df2.style)

@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
+from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
 df = pd.DataFrame.from_dict({
@@ -26,16 +27,34 @@ def test_expected_cell_styling():
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#fff7fb', 'color': '#000000'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb',text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#fff7fb',text_color='#000000').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#73a9cf', 'color': '#f1f1f1'}),
-            Cell(value='4', css={'background-color': '#73a9cf', 'color': '#f1f1f1'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='4',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#023858', 'color': '#f1f1f1'}),
-            Cell(value='5', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -102,11 +121,11 @@ def test_frame_can_handle_reducing_subset(subset):
 
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.background_gradient.html
 pandas_api_example_df = pd.DataFrame(
-        columns=["City", "Temp (c)", "Rain (mm)", "Wind (m/s)"],
-        data=[["Stockholm", 21.6, 5.0, 3.2],
-              ["Oslo", 22.4, 13.3, 3.1],
-              ["Copenhagen", 24.5, 0.0, 6.7]]
-    )
+    columns=["City", "Temp (c)", "Rain (mm)", "Wind (m/s)"],
+    data=[["Stockholm", 21.6, 5.0, 3.2],
+          ["Oslo", 22.4, 13.3, 3.1],
+          ["Copenhagen", 24.5, 0.0, 6.7]]
+)
 
 
 def test_pandas_api_example_1():
@@ -167,3 +186,10 @@ def test_pandas_test_example_background_gradient_gmap_array_raises(axis, gmap):
             2,
             2
         )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.background_gradient,
+        ['axis', 'subset', 'cmap', 'low', 'high', 'text_color_threshold', 'vmin', 'vmax', 'gmap']
+    )

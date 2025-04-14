@@ -1,6 +1,6 @@
 from pandas import DataFrame
 
-from cms_rendner_sdfv.base.types import ChunkData, Cell
+from cms_rendner_sdfv.base.types import ChunkDataResponse, Cell, CellMeta
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 
@@ -18,29 +18,29 @@ def test_combined_chunks_do_not_include_filtered_out_values():
     ctx = FrameContext(df, FilterCriteria.from_frame(filter_frame))
 
     actual_chunk_data = ctx.get_chunk_data_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
-    assert actual_chunk_data == ChunkData(
-        index_labels=[['1'], ['3'], ['4']],
+    assert actual_chunk_data == ChunkDataResponse(
+        row_headers=[['1'], ['3'], ['4']],
         cells=[
             [
-                Cell(value='1'),
-                Cell(value='6'),
-                Cell(value='11'),
-                Cell(value='16'),
-                Cell(value='21'),
+                Cell(value='1', meta=CellMeta(cmap_value=25000).pack()),
+                Cell(value='6', meta=CellMeta(cmap_value=25000).pack()),
+                Cell(value='11', meta=CellMeta(cmap_value=25000).pack()),
+                Cell(value='16', meta=CellMeta(cmap_value=25000).pack()),
+                Cell(value='21', meta=CellMeta(cmap_value=25000).pack()),
             ],
             [
-                Cell(value='3'),
-                Cell(value='8'),
-                Cell(value='13'),
-                Cell(value='18'),
-                Cell(value='23'),
+                Cell(value='3', meta=CellMeta(cmap_value=75000).pack()),
+                Cell(value='8', meta=CellMeta(cmap_value=75000).pack()),
+                Cell(value='13', meta=CellMeta(cmap_value=75000).pack()),
+                Cell(value='18', meta=CellMeta(cmap_value=75000).pack()),
+                Cell(value='23', meta=CellMeta(cmap_value=75000).pack()),
             ],
             [
-                Cell(value='4'),
-                Cell(value='9'),
-                Cell(value='14'),
-                Cell(value='19'),
-                Cell(value='24'),
+                Cell(value='4', meta=CellMeta.max().pack()),
+                Cell(value='9', meta=CellMeta.max().pack()),
+                Cell(value='14', meta=CellMeta.max().pack()),
+                Cell(value='19', meta=CellMeta.max().pack()),
+                Cell(value='24', meta=CellMeta.max().pack()),
             ]
         ],
     )

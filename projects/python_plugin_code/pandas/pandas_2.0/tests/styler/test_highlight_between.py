@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
@@ -26,16 +26,16 @@ def test_expected_cell_styling():
 
     assert actual.cells == [
         [
-            Cell(value='0'),
-            Cell(value='3', css={'background-color': 'yellow'}),
+            Cell(value='0', meta=CellMeta.min().pack()),
+            Cell(value='3', meta=CellMeta.min(background_color='yellow').pack()),
         ],
         [
-            Cell(value='1'),
-            Cell(value='4', css={'background-color': 'yellow'}),
+            Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
         ],
         [
-            Cell(value='2', css={'background-color': 'yellow'}),
-            Cell(value='5'),
+            Cell(value='2', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
         ],
     ]
 

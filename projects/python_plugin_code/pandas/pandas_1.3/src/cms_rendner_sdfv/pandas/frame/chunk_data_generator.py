@@ -11,35 +11,49 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import List
+from typing import Any, List
 
-from cms_rendner_sdfv.base.table_source import AbstractChunkDataGenerator
-from cms_rendner_sdfv.base.types import Region, ChunkData, Cell
-from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
+from cms_rendner_sdfv.base.table_source import ChunkDataGenerator as BaseChunkDataGenerator
+from cms_rendner_sdfv.base.types import Region, Cell, ChunkDataResponse
 from cms_rendner_sdfv.pandas.frame.frame_value_formatter import FrameValueFormatter
+from cms_rendner_sdfv.pandas.shared.meta_computer import MetaComputer
+from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame
 
 
-class ChunkDataGenerator(AbstractChunkDataGenerator):
-    def __init__(self, context: FrameContext):
-        super().__init__(context.visible_frame)
-        self.__context: FrameContext = context
+class ChunkDataGenerator(BaseChunkDataGenerator):
+    def __init__(self,
+                 visible_frame: VisibleFrame,
+                 formatter: FrameValueFormatter,
+                 meta_computer: MetaComputer,
+                 ):
+        super().__init__(visible_frame.region)
+        self.__visible_frame = visible_frame
+        self.__formatter = formatter
+        self.__meta_computer = meta_computer
 
-    def generate(self,
-                 region: Region = None,
-                 with_row_headers: bool = True,
-                 ) -> ChunkData:
-        chunk = self.__context.get_chunk(region)
-        formatter = FrameValueFormatter()
+    def _compute_cells(self, region: Region, response: ChunkDataResponse):
+        response.cells = []
+        col_range = range(region.cols)
+        for r in range(region.rows):
+            row_cells = []
+            response.cells.append(row_cells)
+            for c in col_range:
+                row_cells.append(self.__chunk_cell_value_at(region, r, c))
 
-        col_range = range(chunk.region.cols)
-        cells: List[List[Cell]] = []
-        index_labels: List[List[str]] = []
+    def _compute_row_headers(self, region: Region, response: ChunkDataResponse):
+        response.row_headers = []
+        for r in range(region.rows):
+            response.row_headers.append(self.__chunk_row_labels_at(region, r))
 
-        for r in range(chunk.region.rows):
-            if with_row_headers:
-                index_labels.append([formatter.format_index(lbl) for lbl in chunk.row_labels_at(r)])
-            cells.append(
-                [Cell(value=formatter.format_cell(chunk.cell_value_at(r, c))) for c in col_range]
-            )
+    def __chunk_cell_value_at(self, region: Region, row: int, col: int) -> Cell:
+        value = self.__visible_frame.cell_value_at(
+            region.first_row + row,
+            region.first_col + col,
+        )
+        _, org_col = self.__visible_frame.to_source_frame_cell_coordinates(region.first_row + row, region.first_col + col)
+        meta = self.__meta_computer.compute_cell_meta(org_col, value)
+        return Cell(value=self.__formatter.format_cell(value), meta=meta)
 
-        return ChunkData(index_labels=index_labels, cells=cells)
+    def __chunk_row_labels_at(self, region: Region, row: int) -> List[Any]:
+        labels = self.__visible_frame.row_labels_at(region.first_row + row)
+        return [self.__formatter.format_index(lbl) for lbl in labels]

@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -16,11 +16,20 @@ from typing import Any
 from pandas.errors import OptionError
 from pandas.io.formats.printing import pprint_thing, get_option
 
-from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
+from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN, COL_STATISTIC_ENTRY_MAX_STR_LEN, CELL_MAX_LIST_LEN
 from cms_rendner_sdfv.base.helpers import truncate_str
 
 
 class ValueFormatter:
+    def __init__(self):
+        self.__display_max_seq_items = min(CELL_MAX_LIST_LEN, self._option_or_default("display.max_seq_items", CELL_MAX_LIST_LEN))
+
+    @staticmethod
+    def _option_or_default(key: str, default: Any):
+        try:
+            return get_option(key, True)
+        except OptionError:
+            return default
 
     @staticmethod
     def format_column(value: Any) -> str:
@@ -31,13 +40,12 @@ class ValueFormatter:
         return value if isinstance(value, str) else pprint_thing(value)
 
     @staticmethod
-    def format_cell(value: Any) -> str:
+    def format_column_statistic_entry(value: Any) -> str:
+        v = value if isinstance(value, str) else pprint_thing(value, max_seq_items=10)
+        return truncate_str(v, COL_STATISTIC_ENTRY_MAX_STR_LEN)
+
+    def format_cell(self, value: Any) -> str:
         v = value
         if not isinstance(v, str):
-            max_seq_items = None
-            try:
-                max_seq_items = get_option("display.max_seq_items", True)
-            except OptionError:
-                pass
-            v = pprint_thing(v, max_seq_items=max_seq_items or 42)
+            v = pprint_thing(v, max_seq_items=self.__display_max_seq_items)
         return truncate_str(v, CELL_MAX_STR_LEN)

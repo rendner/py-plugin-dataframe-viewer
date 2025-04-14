@@ -11,16 +11,32 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from abc import ABC
-from typing import List, Optional, Union, Any
+import os
+from typing import List, Optional, Union, Any, Dict
 
 from polars import DataFrame
 
+from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN, CELL_MAX_LIST_LEN
 from cms_rendner_sdfv.base.helpers import fq_type
-from cms_rendner_sdfv.base.table_source import AbstractChunkDataGenerator, AbstractTableSourceContext
+from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext
 from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, TableStructureColumn, \
     CompletionVariant, NestedCompletionVariant
+from cms_rendner_sdfv.polars.chunk_data_generator import ChunkDataGenerator, FormatOptions
+from cms_rendner_sdfv.polars.meta_computer import MetaComputer
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame
+
+
+def _compute_format_options() -> FormatOptions:
+    def get_min_value(key: str, fallback: int) -> int:
+        try:
+            return min(fallback, int(os.environ.get(key, str(fallback))))
+        except:
+            return fallback
+
+    return FormatOptions(
+        str_len=get_min_value("POLARS_FMT_STR_LEN", CELL_MAX_STR_LEN),
+        cell_list_len=get_min_value("POLARS_FMT_TABLE_CELL_LIST_LEN", CELL_MAX_LIST_LEN)
+    )
 
 
 class FrameContext(AbstractTableSourceContext):
@@ -29,18 +45,26 @@ class FrameContext(AbstractTableSourceContext):
         self.__filtered_frame = filtered_frame
         self.__sort_criteria: SortCriteria = SortCriteria()
         self.__visible_frame: VisibleFrame = self._recompute_visible_frame()
+        self.__format_options = _compute_format_options()
+        self.__meta_computer = MetaComputer(source_frame)
 
     def unlink(self):
         self.__source_frame = None
         self.__filtered_frame = None
         self.__sort_criteria = None
         self.__visible_frame = None
+        self.__meta_computer.unlink()
+        self.__meta_computer = None
 
     @property
     def visible_frame(self) -> VisibleFrame:
         return self.__visible_frame
 
-    def get_column_name_completion_variants(self, source: Any, is_synthetic_df: bool) -> List[Union[CompletionVariant, NestedCompletionVariant]]:
+    def get_column_statistics(self, col_index: int) -> Dict[str, str]:
+        return self.__visible_frame.get_column_statistics(col_index)
+
+    def get_column_name_completion_variants(self, source: Any, is_synthetic_df: bool) -> List[
+        Union[CompletionVariant, NestedCompletionVariant]]:
         result = []
 
         if (source is None and is_synthetic_df) or source is self.__source_frame:
@@ -93,10 +117,8 @@ class FrameContext(AbstractTableSourceContext):
 
         return TableStructureColumnInfo(columns=ts_columns, legend=None)
 
-    def get_chunk_data_generator(self) -> AbstractChunkDataGenerator:
-        # local import to resolve cyclic import
-        from cms_rendner_sdfv.polars.chunk_data_generator import ChunkDataGenerator
-        return ChunkDataGenerator(self.__visible_frame)
+    def get_chunk_data_generator(self):
+        return ChunkDataGenerator(self.__visible_frame, self.__format_options, self.__meta_computer)
 
     def _recompute_visible_frame(self) -> VisibleFrame:
         col_idx = None
@@ -118,7 +140,7 @@ class FrameContext(AbstractTableSourceContext):
 
             data_frame = self.__filtered_frame
 
-        row_idx = None
+        sorted_row_idx = None
         if not self.__sort_criteria.is_empty():
             # get col names before we insert "with_row_count" col
             # otherwise we would have to translate all col idx by one
@@ -134,8 +156,8 @@ class FrameContext(AbstractTableSourceContext):
                 frame_with_index = data_frame.with_row_count(row_idx_col_name)
 
             by_names = [col_names[i] for i in self.__sort_criteria.by_column]
-            row_idx = frame_with_index \
+            sorted_row_idx = frame_with_index \
                 .sort(by_names, descending=[not asc for asc in self.__sort_criteria.ascending]) \
                 .get_column(row_idx_col_name)
 
-        return VisibleFrame(data_frame, row_idx, col_idx)
+        return VisibleFrame(unsorted_source_frame=data_frame, sorted_row_idx=sorted_row_idx, org_col_idx=col_idx)

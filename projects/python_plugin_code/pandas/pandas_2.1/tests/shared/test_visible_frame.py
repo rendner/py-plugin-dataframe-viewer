@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from cms_rendner_sdfv.base.constants import DESCRIBE_COL_MAX_STR_LEN
+from cms_rendner_sdfv.base.constants import COL_STATISTIC_ENTRY_MAX_STR_LEN
+from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
 from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame
 
 df_dict = {
@@ -67,8 +68,9 @@ def test_get_column_statistics():
             'numeric': [1, 2, 3],
         }))
 
-    actual_categorical = vf.get_column_statistics(0)
-    actual_numeric = vf.get_column_statistics(1)
+    formatter = ValueFormatter()
+    actual_categorical = vf.get_column_statistics(0, formatter)
+    actual_numeric = vf.get_column_statistics(1, formatter)
 
     assert actual_categorical == {
         'count': '3',
@@ -90,6 +92,6 @@ def test_get_column_statistics():
 
 
 def test_truncate_column_statistics():
-    vf = VisibleFrame(source_frame=pd.DataFrame.from_dict({'A': ['ab' * DESCRIBE_COL_MAX_STR_LEN]}))
-    actual = vf.get_column_statistics(0)
-    assert len(actual.get('top')) == DESCRIBE_COL_MAX_STR_LEN
+    vf = VisibleFrame(source_frame=pd.DataFrame.from_dict({'A': ['ab' * COL_STATISTIC_ENTRY_MAX_STR_LEN]}))
+    actual = vf.get_column_statistics(0, ValueFormatter())
+    assert len(actual.get('top')) == COL_STATISTIC_ENTRY_MAX_STR_LEN

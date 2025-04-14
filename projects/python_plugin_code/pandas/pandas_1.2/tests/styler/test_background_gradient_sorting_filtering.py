@@ -3,7 +3,7 @@ import pytest
 from pandas import Index
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 
@@ -14,7 +14,7 @@ from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerC
 
 
 def _debug(styler: Styler):
-    html = styler.render()
+    html = styler.to_html()
     return html, styler
 
 
@@ -34,19 +34,46 @@ def test_cells__axis_index(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#fff7fb', 'color': '#000000'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='4', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#73a9cf', 'color': '#000000'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='4',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#023858', 'color': '#f1f1f1'}),
-            Cell(value='5', css={'background-color': '#023858', 'color': '#f1f1f1'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -61,19 +88,46 @@ def test_cells__axis_index__sorted(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='2', css={'background-color': '#023858', 'color': '#f1f1f1'}),
-            Cell(value='5', css={'background-color': '#023858', 'color': '#f1f1f1'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='4', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#73a9cf', 'color': '#000000'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='4',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
         ],
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#fff7fb', 'color': '#000000'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
         ],
     ]
 
@@ -88,16 +142,34 @@ def test_cells__axis_index__column_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#fff7fb', 'color': '#000000'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#73a9cf', 'color': '#000000'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#023858', 'color': '#f1f1f1'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -112,14 +184,32 @@ def test_cells__axis_index__row_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#fff7fb', 'color': '#000000'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#023858', 'color': '#f1f1f1'}),
-            Cell(value='5', css={'background-color': '#023858', 'color': '#f1f1f1'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -133,19 +223,46 @@ def test_cells__axis_columns(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='4', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='4',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='5', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -160,19 +277,46 @@ def test_cells__axis_columns__sorted(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='2', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='5', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='4', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='4',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -187,16 +331,34 @@ def test_cells__axis_columns__column_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -211,14 +373,32 @@ def test_cells__axis_columns__row_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='5', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -232,19 +412,46 @@ def test_cells__axis_none(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#a5bddb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#056faf', 'color': '#f1f1f1'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#a5bddb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#056faf', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#ece7f2', 'color': '#000000'}),
-            Cell(value='4', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#04598c', 'color': '#f1f1f1'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#ece7f2', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='4',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#04598c', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#d0d1e6', 'color': '#000000'}),
-            Cell(value='5', css={'background-color': '#358fc0', 'color': '#000000'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#d0d1e6', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#358fc0', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -259,19 +466,46 @@ def test_cells__axis_none__sorted(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='2', css={'background-color': '#d0d1e6', 'color': '#000000'}),
-            Cell(value='5', css={'background-color': '#358fc0', 'color': '#000000'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#d0d1e6', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#358fc0', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#ece7f2', 'color': '#000000'}),
-            Cell(value='4', css={'background-color': '#73a9cf', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#04598c', 'color': '#f1f1f1'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#ece7f2', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='4',
+                meta=CellMeta(cmap_value=50000, background_color='#73a9cf', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#04598c', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#a5bddb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#056faf', 'color': '#f1f1f1'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#a5bddb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#056faf', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -286,16 +520,34 @@ def test_cells__axis_none__column_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#056faf', 'color': '#f1f1f1'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#056faf', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='1', css={'background-color': '#ece7f2', 'color': '#000000'}),
-            Cell(value='7', css={'background-color': '#04598c', 'color': '#f1f1f1'}),
+            Cell(
+                value='1',
+                meta=CellMeta(cmap_value=50000, background_color='#ece7f2', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='7',
+                meta=CellMeta(cmap_value=50000, background_color='#04598c', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#d0d1e6', 'color': '#000000'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#d0d1e6', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]
 
@@ -310,13 +562,31 @@ def test_cells__axis_none__row_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': '#fff7fb', 'color': '#000000'}),
-            Cell(value='3', css={'background-color': '#a5bddb', 'color': '#000000'}),
-            Cell(value='6', css={'background-color': '#056faf', 'color': '#f1f1f1'}),
+            Cell(
+                value='0',
+                meta=CellMeta.min(background_color='#fff7fb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='3',
+                meta=CellMeta.min(background_color='#a5bddb', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='6',
+                meta=CellMeta.min(background_color='#056faf', text_color='#f1f1f1').pack(),
+            ),
         ],
         [
-            Cell(value='2', css={'background-color': '#d0d1e6', 'color': '#000000'}),
-            Cell(value='5', css={'background-color': '#358fc0', 'color': '#000000'}),
-            Cell(value='8', css={'background-color': '#023858', 'color': '#f1f1f1'}),
+            Cell(
+                value='2',
+                meta=CellMeta.max(background_color='#d0d1e6', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='5',
+                meta=CellMeta.max(background_color='#358fc0', text_color='#000000').pack(),
+            ),
+            Cell(
+                value='8',
+                meta=CellMeta.max(background_color='#023858', text_color='#f1f1f1').pack(),
+            ),
         ],
     ]

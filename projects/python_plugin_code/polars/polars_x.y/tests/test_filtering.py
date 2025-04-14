@@ -2,7 +2,7 @@ from typing import List
 
 import polars as pl
 
-from cms_rendner_sdfv.base.types import ChunkData, Cell
+from cms_rendner_sdfv.base.types import ChunkDataResponse, Cell, CellMeta
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 
 df = pl.DataFrame({
@@ -15,8 +15,7 @@ df = pl.DataFrame({
 
 
 def extract_actual_column_names(ctx: FrameContext) -> List[str]:
-    chunk = ctx.visible_frame.get_chunk()
-    return [chunk.series_at(c).name for c in range(chunk.region.cols)]
+    return [ctx.visible_frame.series_at(c).name for c in range(ctx.visible_frame.region.cols)]
 
 
 def test_combined_chunks_do_not_include_filtered_out_values():
@@ -24,12 +23,11 @@ def test_combined_chunks_do_not_include_filtered_out_values():
     ctx = FrameContext(df, filter_frame)
 
     actual_chunk_data = ctx.get_chunk_data_generator().generate_by_combining_chunks(rows_per_chunk=1, cols_per_chunk=1)
-    assert actual_chunk_data == ChunkData(
-        index_labels=None,
+    assert actual_chunk_data == ChunkDataResponse(
         cells=[
-            [Cell(value='5')],
-            [Cell(value='6')],
-            [Cell(value='7')],
+            [Cell(value='5', meta=CellMeta.min().pack())],
+            [Cell(value='6', meta=CellMeta(cmap_value=25000).pack())],
+            [Cell(value='7', meta=CellMeta(cmap_value=50000).pack())],
         ],
     )
 

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import Region
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
@@ -16,9 +16,9 @@ df = pd.DataFrame.from_dict({
 
 def test_with_subset():
     ctx = PatchedStylerContext(df.style.format('{:+.2f}', subset=pd.IndexSlice[0, ["col_2"]]))
-    styled_chunk = ctx.compute_styled_chunk(Region.with_frame_shape(df.shape))
-    assert styled_chunk.cell_value_at(0, 0) == 0
-    assert styled_chunk.cell_value_at(0, 2) == '+10.00'
+    chunk_data = ctx.get_chunk_data_generator().generate()
+    assert chunk_data.cells[0][0] == Cell(value='0', meta=CellMeta.min().pack())
+    assert chunk_data.cells[0][2] == Cell(value='+10.00', meta=CellMeta.min().pack())
 
 
 @pytest.mark.parametrize("subset", [None, pd.IndexSlice[2:3, ["col_2", "col_3"]]])
@@ -31,7 +31,7 @@ def test_with_subset():
 def test_chunked(subset, formatter, rows_per_chunk, cols_per_chunk):
     assert_patched_styler(
         df,
-        lambda styler:  styler.format(formatter, subset=subset),
+        lambda styler: styler.format(formatter, subset=subset),
         rows_per_chunk,
         cols_per_chunk
     )
@@ -47,7 +47,7 @@ def test_chunked(subset, formatter, rows_per_chunk, cols_per_chunk):
 def test_parameters(na_rep, formatter, rows_per_chunk, cols_per_chunk):
     assert_patched_styler(
         df,
-        lambda styler:  styler.format(formatter, na_rep=na_rep),
+        lambda styler: styler.format(formatter='{:+.2f}', na_rep=na_rep),
         rows_per_chunk,
         cols_per_chunk
     )

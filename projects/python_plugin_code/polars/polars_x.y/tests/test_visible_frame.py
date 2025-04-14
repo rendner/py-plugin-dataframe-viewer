@@ -1,6 +1,6 @@
 import polars as pl
 
-from cms_rendner_sdfv.base.constants import DESCRIBE_COL_MAX_STR_LEN
+from cms_rendner_sdfv.base.constants import COL_STATISTIC_ENTRY_MAX_STR_LEN
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame
 
 df_dict = {
@@ -12,13 +12,13 @@ df = pl.from_dict(df_dict)
 
 
 def test_series_at():
-    vf = VisibleFrame(source_frame=df, row_idx=None, col_idx=None)
+    vf = VisibleFrame(unsorted_source_frame=df)
     assert vf.series_at(0).name == "col_0"
     assert vf.series_at(1).name == "col_1"
 
 
 def test_get_column_indices():
-    vf = VisibleFrame(source_frame=df, row_idx=None, col_idx=None)
+    vf = VisibleFrame(unsorted_source_frame=df)
 
     actual = vf.get_column_indices()
     assert actual == list(range(len(df.columns)))
@@ -26,12 +26,10 @@ def test_get_column_indices():
 
 def test_get_column_statistics():
     vf = VisibleFrame(
-        source_frame=pl.from_dict({
+        unsorted_source_frame=pl.from_dict({
             'str': ['d', 'e', 'f'],
             'numeric': [1, 2, 3],
-        }),
-        row_idx=None,
-        col_idx=None,
+        })
     )
 
     actual_str = vf.get_column_statistics(0)
@@ -58,11 +56,7 @@ def test_get_column_statistics():
 
 
 def test_truncate_column_statistics():
-    vf = VisibleFrame(
-        source_frame=pl.from_dict({'A': ['ab' * DESCRIBE_COL_MAX_STR_LEN]}),
-        row_idx=None,
-        col_idx=None,
-    )
+    vf = VisibleFrame(unsorted_source_frame=pl.from_dict({'A': ['ab' * COL_STATISTIC_ENTRY_MAX_STR_LEN]}))
     actual = vf.get_column_statistics(0)
-    assert len(actual.get('min')) == DESCRIBE_COL_MAX_STR_LEN
-    assert len(actual.get('max')) == DESCRIBE_COL_MAX_STR_LEN
+    assert len(actual.get('min')) == COL_STATISTIC_ENTRY_MAX_STR_LEN
+    assert len(actual.get('max')) == COL_STATISTIC_ENTRY_MAX_STR_LEN

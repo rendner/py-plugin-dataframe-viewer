@@ -17,9 +17,8 @@ from typing import Callable, Optional
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.types import Cell, ChunkData
+from cms_rendner_sdfv.base.types import Cell, ChunkDataResponse
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from cms_rendner_sdfv.pandas.styler.chunk_data_generator import ChunkDataGenerator
 
 """
 Q: How can we test that a styled chunk is correctly sorted?
@@ -52,14 +51,14 @@ def assert_patched_styler_sorting(
     # create: expected styled
     styler = df.style
     init_styler_func(styler)
-    styled_chunk_data = ChunkDataGenerator(PatchedStylerContext(styler)).generate()
+    styled_chunk_data = PatchedStylerContext(styler).get_chunk_data_generator().generate()
     expected_styled_cells = _map_cells_by_unique_display_value(styled_chunk_data)
 
     # create: expected sorted
     sorted_styler = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending).style
     if init_expected_sorted_styler_func is not None:
         init_expected_sorted_styler_func(sorted_styler)
-    sorted_chunk_data = ChunkDataGenerator(PatchedStylerContext(sorted_styler)).generate()
+    sorted_chunk_data = PatchedStylerContext(sorted_styler).get_chunk_data_generator().generate()
     expected_sorted_cells = _map_cells_by_unique_display_value(sorted_chunk_data)
 
     # create: actual styled and sorted
@@ -68,7 +67,10 @@ def assert_patched_styler_sorting(
     ps_ctx = PatchedStylerContext(chunk_styler)
     ps_ctx.set_sort_criteria(sort_by_column_index, sort_ascending)
     actual_cells = _map_cells_by_unique_display_value(
-        ChunkDataGenerator(ps_ctx).generate_by_combining_chunks(rows_per_chunk=rows_per_chunk, cols_per_chunk=cols_per_chunk)
+        ps_ctx.get_chunk_data_generator().generate_by_combining_chunks(
+            rows_per_chunk=rows_per_chunk,
+            cols_per_chunk=cols_per_chunk,
+        )
     )
 
     _compare_cells(
@@ -102,10 +104,10 @@ def _compare_cells(
 
         # check styling
         expected_styled_info = expected_styled_cells[key]
-        assert value.cell.css == expected_styled_info.cell.css
+        assert value.cell.meta == expected_styled_info.cell.meta
 
 
-def _map_cells_by_unique_display_value(chunk_data: ChunkData) -> dict[str, CellInfo]:
+def _map_cells_by_unique_display_value(chunk_data: ChunkDataResponse) -> dict[str, CellInfo]:
     result = {}
     for ri, row in enumerate(chunk_data.cells):
         for ci, cell in enumerate(row):

@@ -4,9 +4,9 @@ from typing import Any, Union
 import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkData, \
-    TableSourceKind, Cell, CreateTableSourceErrorKind, TableStructureColumn, TableInfo, TableStructure, \
-    TableStructureColumnInfo
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkDataResponse, \
+    TableSourceKind, Cell, CreateTableSourceErrorKind, TableStructureColumn, TableInfo, \
+    TableStructure, TableStructureColumnInfo, Region, CellMeta
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
 from cms_rendner_sdfv.pandas.frame.table_source_factory import TableSourceFactory
 
@@ -65,17 +65,23 @@ def test_create_for_dict_orient_columns():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        expected_row_count,
-        expected_col_count,
+        Region(0, 0, expected_row_count, expected_col_count)
     ) == table_source.serialize(
-        ChunkData(
-            index_labels=[["0"], ["1"], ["2"]],
+        ChunkDataResponse(
+            row_headers=[["0"], ["1"], ["2"]],
             cells=[
-                [Cell(value='1'), Cell(value='4')],
-                [Cell(value='2'), Cell(value='5')],
-                [Cell(value='3'), Cell(value='6')]
+                [
+                    Cell(value='1', meta=CellMeta.min().pack()),
+                    Cell(value='4', meta=CellMeta.min().pack()),
+                ],
+                [
+                    Cell(value='2', meta=CellMeta(cmap_value=50000).pack()),
+                    Cell(value='5', meta=CellMeta(cmap_value=50000).pack()),
+                ],
+                [
+                    Cell(value='3', meta=CellMeta.max().pack()),
+                    Cell(value='6', meta=CellMeta.max().pack()),
+                ]
             ],
         )
     )
@@ -113,16 +119,21 @@ def test_create_for_dict_orient_index():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        expected_row_count,
-        expected_col_count,
+        Region(0, 0, expected_row_count, expected_col_count)
     ) == table_source.serialize(
-        ChunkData(
-            index_labels=[['col_0'], ['col_1']],
+        ChunkDataResponse(
+            row_headers=[['col_0'], ['col_1']],
             cells=[
-                [Cell(value='1'), Cell(value='2'), Cell(value='3')],
-                [Cell(value='4'), Cell(value='5'), Cell(value='6')],
+                [
+                    Cell(value='1', meta=CellMeta.min().pack()),
+                    Cell(value='2', meta=CellMeta.min().pack()),
+                    Cell(value='3', meta=CellMeta.min().pack()),
+                ],
+                [
+                    Cell(value='4', meta=CellMeta.max().pack()),
+                    Cell(value='5', meta=CellMeta.max().pack()),
+                    Cell(value='6', meta=CellMeta.max().pack()),
+                ],
             ],
         )
     )
@@ -204,16 +215,19 @@ def test_create_with_filter():
     )
 
     assert table_source.compute_chunk_data(
-        0,
-        0,
-        2,
-        2,
+        Region(0, 0, 2, 2)
     ) == table_source.serialize(
-        ChunkData(
-            index_labels=[['1'], ['2']],
+        ChunkDataResponse(
+            row_headers=[['1'], ['2']],
             cells=[
-                [Cell(value='2'), Cell(value='5')],
-                [Cell(value='3'), Cell(value='6')],
+                [
+                    Cell(value='2', meta=CellMeta(cmap_value=50000).pack()),
+                    Cell(value='5', meta=CellMeta(cmap_value=50000).pack()),
+                ],
+                [
+                    Cell(value='3', meta=CellMeta.max().pack()),
+                    Cell(value='6', meta=CellMeta.max().pack()),
+                ],
             ],
         )
     )

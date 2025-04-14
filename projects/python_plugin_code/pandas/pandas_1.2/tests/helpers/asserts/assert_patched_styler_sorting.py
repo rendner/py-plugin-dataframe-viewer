@@ -17,25 +17,24 @@ from typing import Callable, Dict, List, Optional
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.types import Cell, ChunkData
+from cms_rendner_sdfv.base.types import Cell, ChunkDataResponse
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
-from cms_rendner_sdfv.pandas.styler.chunk_data_generator import ChunkDataGenerator
 
 """
-Q: How can we test that a styler chunk is correctly sorted?
+Q: How can we test that a styled chunk is correctly sorted?
     note:
-        -> the feature "style and sort afterwards" doesn't exist in pandas
-        -> "sort first and style afterward" doesn't work see test case "test_sort_values_before_styling_breaks_styling"
+        -> the feature "style and sort afterward" doesn't exist in pandas
+        -> "sort first and style afterwards" doesn't work see test case "test_sort_values_before_styling_breaks_styling"
 
     idea:
         - all cell values have to be unique
         - create a ChunkData for:
-            - the styler expected result 
+            - the styled expected result 
             - the sorted expected result
-            - the styler and sorted actual result (combined from chunks)
+            - the styled and sorted actual result (combined from chunks)
         - convert each ChunkData into a dict with the unique cell value as key
         - iterate over dicts and ensure:
-            - actual cell has the same styling as in the expected styler cells
+            - actual cell has the same styling as in the expected styled cells
             - actual cell has the same position as in the expected sorted cells
 """
 
@@ -49,26 +48,29 @@ def assert_patched_styler_sorting(
         sort_ascending: List[bool],
         init_expected_sorted_styler_func: Optional[Callable[[Styler], None]] = None,
 ):
-    # create: expected styler
+    # create: expected styled
     styler = df.style
     init_styler_func(styler)
-    styled_chunk_data = ChunkDataGenerator(PatchedStylerContext(styler)).generate()
+    styled_chunk_data = PatchedStylerContext(styler).get_chunk_data_generator().generate()
     expected_styled_cells = _map_cells_by_unique_display_value(styled_chunk_data)
 
     # create: expected sorted
     sorted_styler = df.sort_values(by=[df.columns[i] for i in sort_by_column_index], ascending=sort_ascending).style
     if init_expected_sorted_styler_func is not None:
         init_expected_sorted_styler_func(sorted_styler)
-    sorted_chunk_data = ChunkDataGenerator(PatchedStylerContext(sorted_styler)).generate()
+    sorted_chunk_data = PatchedStylerContext(sorted_styler).get_chunk_data_generator().generate()
     expected_sorted_cells = _map_cells_by_unique_display_value(sorted_chunk_data)
 
-    # create: actual styler and sorted
+    # create: actual styled and sorted
     chunk_styler = df.style
     init_styler_func(chunk_styler)
     ps_ctx = PatchedStylerContext(chunk_styler)
     ps_ctx.set_sort_criteria(sort_by_column_index, sort_ascending)
     actual_cells = _map_cells_by_unique_display_value(
-        ChunkDataGenerator(ps_ctx).generate_by_combining_chunks(rows_per_chunk=rows_per_chunk, cols_per_chunk=cols_per_chunk)
+        ps_ctx.get_chunk_data_generator().generate_by_combining_chunks(
+            rows_per_chunk=rows_per_chunk,
+            cols_per_chunk=cols_per_chunk,
+        )
     )
 
     _compare_cells(
@@ -102,10 +104,10 @@ def _compare_cells(
 
         # check styling
         expected_styled_info = expected_styled_cells[key]
-        assert value.cell.css == expected_styled_info.cell.css
+        assert value.cell.meta == expected_styled_info.cell.meta
 
 
-def _map_cells_by_unique_display_value(chunk_data: ChunkData) -> Dict[str, CellInfo]:
+def _map_cells_by_unique_display_value(chunk_data: ChunkDataResponse) -> Dict[str, CellInfo]:
     result = {}
     for ri, row in enumerate(chunk_data.cells):
         for ci, cell in enumerate(row):

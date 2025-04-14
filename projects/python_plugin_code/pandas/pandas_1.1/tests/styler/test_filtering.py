@@ -1,6 +1,7 @@
 import pytest
 from pandas import DataFrame, Index, IndexSlice
 
+from cms_rendner_sdfv.base.types import CellMeta
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_patched_styler_filtering import assert_patched_styler_filtering
@@ -38,7 +39,7 @@ def test_combined_chunks_do_not_include_a_highlighted_min_after_filtering_min_va
     chunk_data = ctx.get_chunk_data_generator().generate_by_combining_chunks(rows_per_chunk=2, cols_per_chunk=2)
     for row in chunk_data.cells:
         for entry in row:
-            assert entry.css is None
+            assert CellMeta.from_packed(entry.meta).background_color is None
 
 
 def test_combined_chunks_do_include_highlighted_min_values_after_filtering():
@@ -55,9 +56,8 @@ def test_combined_chunks_do_include_highlighted_min_values_after_filtering():
     highlighted_values_found = 0
     for row in chunk_data.cells:
         for entry in row:
-            if entry.css is not None:
-                # note: extra space in front of color name is removed by the "TableFrameGenerator"
-                if entry.css['background-color'] == 'yellow':
+            if entry.meta is not None:
+                if CellMeta.from_packed(entry.meta).background_color == 'yellow':
                     highlighted_values_found += 1
 
     assert highlighted_values_found == len(df.columns)

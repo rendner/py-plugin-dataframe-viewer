@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
+from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 from tests.helpers.custom_styler_functions import highlight_even_numbers
 
@@ -27,16 +28,16 @@ def test_expected_cell_styling():
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': 'red'}),
-            Cell(value='3'),
+            Cell(value='0', meta=CellMeta.min(background_color='red').pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='1'),
-            Cell(value='4', css={'background-color': 'red'}),
+            Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000, background_color='red').pack()),
         ],
         [
-            Cell(value='2', css={'background-color': 'red'}),
-            Cell(value='5'),
+            Cell(value='2', meta=CellMeta.max(background_color='red').pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
         ],
     ]
 
@@ -81,4 +82,11 @@ def test_forwards_kwargs():
         lambda styler: styler.applymap(my_styling_func, color="pink"),
         2,
         2
+    )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.applymap,
+        ['subset', 'func', 'kwargs']
     )

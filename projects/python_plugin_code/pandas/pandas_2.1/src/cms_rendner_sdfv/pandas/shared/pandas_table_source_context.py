@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -18,33 +18,43 @@ from pandas import DataFrame
 
 from cms_rendner_sdfv.base.helpers import fq_type
 from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext
-from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, NestedCompletionVariant, \
-    CompletionVariant
+from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, CompletionVariant, \
+    NestedCompletionVariant
+from cms_rendner_sdfv.pandas.shared.meta_computer import MetaComputer
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
+from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
 from cms_rendner_sdfv.pandas.shared.visible_frame import VisibleFrame, MappedVisibleFrame
 
 
 class PandasTableSourceContext(AbstractTableSourceContext, ABC):
-    def __init__(self, source_frame: DataFrame, filter_criteria: Optional[FilterCriteria] = None):
+    def __init__(self,
+                 source_frame: DataFrame,
+                 filter_criteria: Optional[FilterCriteria] = None,
+                 formatter: Optional[ValueFormatter] = None,
+                 ):
         self.__source_frame = source_frame
         self.__sort_criteria: SortCriteria = SortCriteria()
         self.__filter_criteria: FilterCriteria = filter_criteria if filter_criteria is not None else FilterCriteria()
-        self.__visible_frame: VisibleFrame = self.__recompute_visible_frame()
+        self._visible_frame: VisibleFrame = self.__recompute_visible_frame()
+        self._formatter = formatter if formatter is not None else ValueFormatter()
+        self._meta_computer = MetaComputer(source_frame)
 
     def unlink(self):
         self.__source_frame = None
         self.__sort_criteria = None
         self.__filter_criteria = None
-        self.__visible_frame.unlink()
-        self.__visible_frame = None
+        self._visible_frame.unlink()
+        self._visible_frame = None
+        self._meta_computer.unlink()
+        self._meta_computer = None
 
     @property
     def visible_frame(self) -> VisibleFrame:
-        return self.__visible_frame
+        return self._visible_frame
 
     def get_table_structure(self, fingerprint: str) -> TableStructure:
-        rows_count = self.__visible_frame.region.rows
-        columns_count = self.__visible_frame.region.cols
+        rows_count = self._visible_frame.region.rows
+        columns_count = self._visible_frame.region.cols
         if rows_count == 0 or columns_count == 0:
             rows_count = columns_count = 0
         return TableStructure(
@@ -56,6 +66,9 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
             column_info=self._get_frame_column_info() if columns_count != 0
             else TableStructureColumnInfo(columns=[], legend=None),
         )
+
+    def get_column_statistics(self, col_index: int):
+        return self._visible_frame.get_column_statistics(col_index, self._formatter)
 
     @abstractmethod
     def _get_frame_column_info(self) -> TableStructureColumnInfo:
@@ -88,7 +101,7 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
         new_sort_criteria = SortCriteria(sort_by_column_index, sort_ascending)
         if new_sort_criteria != self.__sort_criteria:
             self.__sort_criteria = new_sort_criteria
-            self.__visible_frame = self.__recompute_visible_frame()
+            self._visible_frame = self.__recompute_visible_frame()
 
     def _get_initial_visible_frame_indexes(self):
         return self.__source_frame.index, self.__source_frame.columns

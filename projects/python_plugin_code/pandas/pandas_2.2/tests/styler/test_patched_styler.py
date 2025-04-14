@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 import pytest
 
-from cms_rendner_sdfv.base.types import ChunkData, Cell, TableStructureColumn, \
-    TableStructureColumnInfo, TableStructureLegend, TableInfo, TableStructure, TableSourceKind
+from cms_rendner_sdfv.base.types import ChunkDataResponse, Cell, TableStructureColumn, \
+    TableStructureColumnInfo, TableStructureLegend, TableInfo, TableStructure, TableSourceKind, Region, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, FilterCriteria
 from cms_rendner_sdfv.pandas.styler.style_functions_validator import StyleFunctionsValidator
@@ -27,13 +27,19 @@ df = pd.DataFrame.from_dict({
 
 def test_compute_chunk_data():
     ps = PatchedStyler(PatchedStylerContext(df.style), "finger-1")
-    actual = ps.compute_chunk_data(0, 0, 2, 2)
+    actual = ps.compute_chunk_data(Region(0, 0, 2, 2))
 
-    assert actual == ps.serialize(ChunkData(
-        index_labels=[['0'], ['1']],
+    assert actual == ps.serialize(ChunkDataResponse(
+        row_headers=[['0'], ['1']],
         cells=[
-            [Cell(value='0'), Cell(value='5')],
-            [Cell(value='1'), Cell(value='6')],
+            [
+                Cell(value='0', meta=CellMeta.min().pack()),
+                Cell(value='5', meta=CellMeta.min().pack()),
+            ],
+            [
+                Cell(value='1', meta=CellMeta(cmap_value=25000).pack()),
+                Cell(value='6', meta=CellMeta(cmap_value=25000).pack()),
+            ],
         ],
     ))
 
@@ -42,31 +48,43 @@ def test_compute_chunk_data_with_multiindex():
     midx = pd.MultiIndex.from_product([[("A", "B"), "y"], ["a", "b", "c"]])
     my_df = pd.DataFrame(np.arange(0, 36).reshape(6, 6), index=midx, columns=midx)
     ps = PatchedStyler(PatchedStylerContext(my_df.style), "finger-1")
-    actual = ps.compute_chunk_data(0, 0, 2, 2)
+    actual = ps.compute_chunk_data(Region(0, 0, 2, 2))
 
-    assert actual == ps.serialize(ChunkData(
-        index_labels=[['(A, B)', 'a'], ['(A, B)', 'b']],
+    assert actual == ps.serialize(ChunkDataResponse(
+        row_headers=[['(A, B)', 'a'], ['(A, B)', 'b']],
         cells=[
-            [Cell(value='0'), Cell(value='1')],
-            [Cell(value='6'), Cell(value='7')],
+            [
+                Cell(value='0', meta=CellMeta.min().pack()),
+                Cell(value='1', meta=CellMeta.min().pack()),
+            ],
+            [
+                Cell(value='6', meta=CellMeta(cmap_value=20000).pack()),
+                Cell(value='7', meta=CellMeta(cmap_value=20000).pack()),
+            ],
         ],
     ))
 
 
 def test_validate_and_compute_chunk_data():
     ps = PatchedStyler(PatchedStylerContext(df.style), "finger-1")
-    actual = ps.validate_and_compute_chunk_data(0, 0, 2, 2)
+    actual = ps.validate_and_compute_chunk_data(Region(0, 0, 2, 2))
 
     assert actual == ps.serialize(
         ValidatedChunkData(
-            data=ChunkData(
-                index_labels=[["0"], ["1"]],
+            data=ChunkDataResponse(
+                row_headers=[["0"], ["1"]],
                 cells=[
-                    [Cell(value="0", css=None), Cell(value="5", css=None)],
-                    [Cell(value="1", css=None), Cell(value="6", css=None)],
+                    [
+                        Cell(value="0", meta=CellMeta.min().pack()),
+                        Cell(value="5", meta=CellMeta.min().pack()),
+                    ],
+                    [
+                        Cell(value="1", meta=CellMeta(cmap_value=25000).pack()),
+                        Cell(value="6", meta=CellMeta(cmap_value=25000).pack()),
+                    ],
                 ],
             ),
-            problems=[],
+            problems=None,
         )
     )
 
@@ -378,30 +396,42 @@ def test_should_not_revalidate_faulty_styling_functions():
     ctx = PatchedStylerContext(styler)
     ps = PatchedStyler(ctx, "")
 
-    result = ps.validate_and_compute_chunk_data(0, 0, 2, 2)
+    result = ps.validate_and_compute_chunk_data(Region(0, 0, 2, 2))
     assert result == ps.serialize(
         ValidatedChunkData(
-            data=ChunkData(
-                index_labels=[["0"], ["1"]],
+            data=ChunkDataResponse(
+                row_headers=[["0"], ["1"]],
                 cells=[
-                    [Cell(value="0", css=None), Cell(value="5", css=None)],
-                    [Cell(value="1", css=None), Cell(value="6", css=None)],
+                    [
+                        Cell(value="0", meta=CellMeta.min().pack()),
+                        Cell(value="5", meta=CellMeta.min().pack()),
+                    ],
+                    [
+                        Cell(value="1", meta=CellMeta(cmap_value=25000).pack()),
+                        Cell(value="6", meta=CellMeta(cmap_value=25000).pack()),
+                    ],
                 ],
             ),
-            problems=[],
+            problems=None,
         )
     )
 
     raise_in_validator = True
 
-    result = ps.validate_and_compute_chunk_data(0, 0, 2, 2)
+    result = ps.validate_and_compute_chunk_data(Region(0, 0, 2, 2))
     assert result == ps.serialize(
         ValidatedChunkData(
-            data=ChunkData(
-                index_labels=[["0"], ["1"]],
+            data=ChunkDataResponse(
+                row_headers=[["0"], ["1"]],
                 cells=[
-                    [Cell(value="0", css=None), Cell(value="5", css=None)],
-                    [Cell(value="1", css=None), Cell(value="6", css=None)],
+                    [
+                        Cell(value="0", meta=CellMeta.min().pack()),
+                        Cell(value="5", meta=CellMeta.min().pack()),
+                    ],
+                    [
+                        Cell(value="1", meta=CellMeta(cmap_value=25000).pack()),
+                        Cell(value="6", meta=CellMeta(cmap_value=25000).pack()),
+                    ],
                 ],
             ),
             problems=[
@@ -423,16 +453,22 @@ def test_should_not_revalidate_faulty_styling_functions():
         )
     )
 
-    result = ps.validate_and_compute_chunk_data(0, 0, 2, 2)
+    result = ps.validate_and_compute_chunk_data(Region(0, 0, 2, 2))
     assert result == ps.serialize(
         ValidatedChunkData(
-            data=ChunkData(
-                index_labels=[["0"], ["1"]],
+            data=ChunkDataResponse(
+                row_headers=[["0"], ["1"]],
                 cells=[
-                    [Cell(value="0", css=None), Cell(value="5", css=None)],
-                    [Cell(value="1", css=None), Cell(value="6", css=None)],
+                    [
+                        Cell(value="0", meta=CellMeta.min().pack()),
+                        Cell(value="5", meta=CellMeta.min().pack()),
+                    ],
+                    [
+                        Cell(value="1", meta=CellMeta(cmap_value=25000).pack()),
+                        Cell(value="6", meta=CellMeta(cmap_value=25000).pack()),
+                    ],
                 ],
             ),
-            problems=[],
+            problems=None,
         )
     )

@@ -53,16 +53,79 @@ class TableInfo:
     structure: TableStructure
 
 
+@dataclass
+class CellMeta:
+    is_nan: bool = False
+    is_min: bool = False
+    is_max: bool = False
+    cmap_value: Union[None, int] = None
+    background_color: Union[None, str] = None
+    text_color: Union[None, str] = None
+    text_align: Union[None, str] = None
+
+    @staticmethod
+    def min(background_color: Union[None, str] = None, text_color: Union[None, str] = None) -> 'CellMeta':
+        return CellMeta(is_min=True, cmap_value=0, background_color=background_color, text_color=text_color)
+
+    @staticmethod
+    def min_max(background_color: Union[None, str] = None, text_color: Union[None, str] = None) -> 'CellMeta':
+        return CellMeta(is_min=True, is_max=True, cmap_value=0, background_color=background_color,
+                        text_color=text_color)
+
+    @staticmethod
+    def max(background_color: Union[None, str] = None, text_color: Union[None, str] = None) -> 'CellMeta':
+        return CellMeta(is_max=True, cmap_value=100000, background_color=background_color, text_color=text_color)
+
+    @staticmethod
+    def nan(background_color: Union[None, str] = None, text_color: Union[None, str] = None) -> 'CellMeta':
+        return CellMeta(is_nan=True, cmap_value=-1, background_color=background_color, text_color=text_color)
+
+    def pack(self) -> str:
+        result: str = ''
+        result += self.__to_flag(self.is_nan)
+        result += self.__to_flag(self.is_min)
+        result += self.__to_flag(self.is_max)
+        result += self.__to_optional_part(self.cmap_value)
+        result += self.__to_optional_part(self.text_align, 40)
+        result += self.__to_optional_part(self.background_color, 120)
+        result += self.__to_optional_part(self.text_color, 120)
+        return result
+
+    @staticmethod
+    def from_packed(data: str) -> 'CellMeta':
+        is_nan = data[0] is 'T'
+        is_min = data[1] is 'T'
+        is_max = data[2] is 'T'
+        parts = data[3:].split('|')
+        return CellMeta(
+            is_nan=is_nan,
+            is_min=is_min,
+            is_max=is_max,
+            cmap_value=int(parts[0]) if parts[0] else None,
+            text_align=parts[1] if parts[1] else None,
+            background_color=parts[2] if parts[2] else None,
+            text_color=parts[3] if parts[3] else None,
+        )
+
+    @staticmethod
+    def __to_flag(v: bool) -> str:
+        return 'T' if v else 'F'
+
+    @staticmethod
+    def __to_optional_part(part: Any, max_length: int = 99999) -> str:
+        part_end_marker = '|'
+        if part is None:
+            return part_end_marker
+        s = str(part)
+        if len(s) > max_length or part_end_marker in s:
+            return part_end_marker
+        return s + part_end_marker
+
+
 @dataclass(frozen=True)
 class Cell:
     value: str
-    css: Union[None, Dict[str, str]] = None
-
-
-@dataclass(frozen=True)
-class ChunkData:
-    index_labels: Union[None, List[List[str]]]
-    cells: List[List[Cell]]
+    meta: Union[None, str] = None
 
 
 @dataclass(frozen=True)
@@ -128,6 +191,20 @@ class Region:
             first_row=unbound_region.first_row,
             first_col=unbound_region.first_col
         )
+
+
+@dataclass
+class ChunkDataResponse:
+    # None if not requested
+    cells: Union[None, List[List[Cell]]] = None
+    # None if not requested or not available in used data source
+    row_headers: Union[None, List[List[str]]] = None
+
+
+@dataclass(frozen=True)
+class ChunkDataRequest:
+    with_cells: bool = True
+    with_row_headers: bool = True
 
 
 @dataclass(frozen=True)

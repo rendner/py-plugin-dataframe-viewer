@@ -4,9 +4,9 @@ from typing import Any, Union
 import pandas as pd
 
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkData, \
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkDataResponse, \
     TableSourceKind, Cell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
-    TableStructureColumn
+    TableStructureColumn, Region, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.table_source_factory import TableSourceFactory
 
@@ -119,17 +119,18 @@ def test_create_with_filter():
         )
     )
 
-    assert table_source.compute_chunk_data(
-        0,
-        0,
-        2,
-        2,
-    ) == table_source.serialize(
-        ChunkData(
-            index_labels=[['1'], ['2']],
+    assert table_source.compute_chunk_data(Region(0, 0, 2, 2)) == table_source.serialize(
+        ChunkDataResponse(
+            row_headers=[['1'], ['2']],
             cells=[
-                [Cell(value='2'), Cell(value='5')],
-                [Cell(value='3'), Cell(value='6')],
+                [
+                    Cell(value='2', meta=CellMeta(cmap_value=50000).pack()),
+                    Cell(value='5', meta=CellMeta(cmap_value=50000).pack()),
+                ],
+                [
+                    Cell(value='3', meta=CellMeta.max().pack()),
+                    Cell(value='6', meta=CellMeta.max().pack()),
+                ],
             ],
         )
     )

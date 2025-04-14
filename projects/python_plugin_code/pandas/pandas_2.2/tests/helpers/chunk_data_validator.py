@@ -13,9 +13,10 @@
 #  limitations under the License.
 from dataclasses import dataclass
 
-from cms_rendner_sdfv.base.table_source import AbstractChunkDataGenerator, AbstractTableSourceContext
+from cms_rendner_sdfv.base.table_source import ChunkDataGenerator
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import Region
+from cms_rendner_sdfv.pandas.shared.pandas_table_source_context import PandasTableSourceContext
 
 
 @dataclass(frozen=True)
@@ -26,12 +27,12 @@ class ChunkDataValidationResult:
 
 
 class ChunkDataValidator:
-    def __init__(self, chunk_region: Region, generator: AbstractChunkDataGenerator):
+    def __init__(self, chunk_region: Region, generator: ChunkDataGenerator):
         self.__chunk_region = chunk_region
         self.__generator = generator
 
     @staticmethod
-    def with_context(ctx: AbstractTableSourceContext):
+    def with_context(ctx: PandasTableSourceContext):
         return ChunkDataValidator(ctx.visible_frame.region, ctx.get_chunk_data_generator())
 
     def validate(self,

@@ -1,8 +1,9 @@
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
+from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
 df = pd.DataFrame.from_dict({
@@ -25,16 +26,16 @@ def test_expected_cell_styling():
 
     assert actual.cells == [
         [
-            Cell(value='0'),
-            Cell(value='nan', css={'background-color': 'red'}),
+            Cell(value='0', meta=CellMeta.min().pack()),
+            Cell(value='nan', meta=CellMeta.nan(background_color='red').pack()),
         ],
         [
-            Cell(value='1'),
-            Cell(value='4.000000'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='4.000000', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='2'),
-            Cell(value='5.000000'),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='5.000000', meta=CellMeta.max().pack()),
         ],
     ]
 
@@ -66,4 +67,11 @@ def test_frame_can_handle_reducing_subset(subset):
         lambda styler: styler.highlight_null(subset=subset),
         2,
         2
+    )
+
+
+def test_for_new_parameters():
+    assert_style_func_parameters(
+        df.style.highlight_null,
+        ['subset', 'null_color', 'props']
     )

@@ -1,7 +1,7 @@
 import pandas as pd
 
 from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
-from cms_rendner_sdfv.base.types import ChunkData, Cell
+from cms_rendner_sdfv.base.types import ChunkDataResponse, Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 
 
@@ -19,12 +19,21 @@ def test_index_int():
     })
     ctx = PatchedStylerContext(df.style)
     actual = ctx.get_chunk_data_generator().generate_by_combining_chunks(2, 2)
-    assert actual == ChunkData(
-        index_labels=[['0'], ['1'], ['2']],
+    assert actual == ChunkDataResponse(
+        row_headers=[['0'], ['1'], ['2']],
         cells=[
-            [Cell(value='0'), Cell(value='3')],
-            [Cell(value='1'), Cell(value='4')],
-            [Cell(value='2'), Cell(value='5')],
+            [
+                Cell(value='0', meta=CellMeta.min().pack()),
+                Cell(value='3', meta=CellMeta.min().pack()),
+            ],
+            [
+                Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+                Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+            ],
+            [
+                Cell(value='2', meta=CellMeta.max().pack()),
+                Cell(value='5', meta=CellMeta.max().pack()),
+            ],
         ],
     )
 
@@ -36,12 +45,21 @@ def test_index_string():
     })
     ctx = PatchedStylerContext(df.style)
     actual = ctx.get_chunk_data_generator().generate_by_combining_chunks(2, 2)
-    assert actual == ChunkData(
-        index_labels=[['0'], ['1'], ['2']],
+    assert actual == ChunkDataResponse(
+        row_headers=[['0'], ['1'], ['2']],
         cells=[
-            [Cell(value='0'), Cell(value='3')],
-            [Cell(value='1'), Cell(value='4')],
-            [Cell(value='2'), Cell(value='5')],
+            [
+                Cell(value='0', meta=CellMeta.min().pack()),
+                Cell(value='3', meta=CellMeta.min().pack()),
+            ],
+            [
+                Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+                Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+            ],
+            [
+                Cell(value='2', meta=CellMeta.max().pack()),
+                Cell(value='5', meta=CellMeta.max().pack()),
+            ],
         ],
     )
 
@@ -57,13 +75,25 @@ def test_multi_index_index_with_named_index_levels():
 
     ctx = PatchedStylerContext(df.style)
     actual = ctx.get_chunk_data_generator().generate_by_combining_chunks(2, 2)
-    assert actual == ChunkData(
-        index_labels=[['X', 'green'], ['X', 'purple'], ['Y', 'green'], ['Y', 'purple']],
+    assert actual == ChunkDataResponse(
+        row_headers=[['X', 'green'], ['X', 'purple'], ['Y', 'green'], ['Y', 'purple']],
         cells=[
-            [Cell(value='0'), Cell(value='4')],
-            [Cell(value='1'), Cell(value='5')],
-            [Cell(value='2'), Cell(value='6')],
-            [Cell(value='3'), Cell(value='7')],
+            [
+                Cell(value='0', meta=CellMeta.min().pack()),
+                Cell(value='4', meta=CellMeta.min().pack()),
+            ],
+            [
+                Cell(value='1', meta=CellMeta(cmap_value=33333).pack()),
+                Cell(value='5', meta=CellMeta(cmap_value=33333).pack()),
+            ],
+            [
+                Cell(value='2', meta=CellMeta(cmap_value=66666).pack()),
+                Cell(value='6', meta=CellMeta(cmap_value=66666).pack()),
+            ],
+            [
+                Cell(value='3', meta=CellMeta.max().pack()),
+                Cell(value='7', meta=CellMeta.max().pack()),
+            ],
         ],
     )
 
@@ -73,9 +103,14 @@ def test_hide_index_headers():
 
     ctx = PatchedStylerContext(df.style.hide_index())
     actual = ctx.get_chunk_data_generator().generate_by_combining_chunks(2, 2)
-    assert actual == ChunkData(
-        index_labels=[],
-        cells=[[Cell(value=f'{i}')] * 4 for i in range(4)],
+    assert actual == ChunkDataResponse(
+        row_headers=None,
+        cells=[
+            [Cell(value='0', meta=CellMeta.min().pack())] * 4,
+            [Cell(value='1', meta=CellMeta(cmap_value=33333).pack())] * 4,
+            [Cell(value='2', meta=CellMeta(cmap_value=66666).pack())] * 4,
+            [Cell(value='3', meta=CellMeta.max().pack())] * 4,
+        ],
     )
 
 
@@ -87,14 +122,20 @@ def test_highlight_max():
     ctx = PatchedStylerContext(df.style.highlight_max(color="red"))
 
     actual = ctx.get_chunk_data_generator().generate_by_combining_chunks(2, 2)
-    assert actual == ChunkData(
-        index_labels=[['0'], ['1'], ['2']],
+    assert actual == ChunkDataResponse(
+        row_headers=[['0'], ['1'], ['2']],
         cells=[
-            [Cell(value='0'), Cell(value='3')],
-            [Cell(value='1'), Cell(value='4')],
             [
-                Cell(value='2', css={'background-color': 'red'}),
-                Cell(value='5', css={'background-color': 'red'}),
+                Cell(value='0', meta=CellMeta.min().pack()),
+                Cell(value='3', meta=CellMeta.min().pack()),
+            ],
+            [
+                Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+                Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+            ],
+            [
+                Cell(value='2', meta=CellMeta.max(background_color='red').pack()),
+                Cell(value='5', meta=CellMeta.max(background_color='red').pack()),
             ],
         ],
     )

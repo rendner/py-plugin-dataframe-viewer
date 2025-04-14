@@ -3,7 +3,7 @@ import pytest
 from pandas import Index
 from pandas.io.formats.style import Styler
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 
@@ -38,19 +38,19 @@ def test_cells__axis_index(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='1'),
-            Cell(value='4'),
-            Cell(value='7', css={'background-color': 'yellow'}),
+            Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
         ],
         [
-            Cell(value='2', css={'background-color': 'yellow'}),
-            Cell(value='5'),
-            Cell(value='8'),
+            Cell(value='2', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
+            Cell(value='8', meta=CellMeta.max().pack()),
         ],
     ]
 
@@ -69,19 +69,19 @@ def test_cells__axis_index__sorted(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='2', css={'background-color': 'yellow'}),
-            Cell(value='5'),
-            Cell(value='8'),
+            Cell(value='2', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
+            Cell(value='8', meta=CellMeta.max().pack()),
         ],
         [
-            Cell(value='1'),
-            Cell(value='4'),
-            Cell(value='7', css={'background-color': 'yellow'}),
+            Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
         ],
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
     ]
 
@@ -102,16 +102,16 @@ def test_cells__axis_index__column_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='1'),
-            Cell(value='7', css={'background-color': 'yellow'}),
+            Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
         ],
         [
-            Cell(value='2', css={'background-color': 'yellow'}),
-            Cell(value='8'),
+            Cell(value='2', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='8', meta=CellMeta.max().pack()),
         ],
     ]
 
@@ -132,14 +132,14 @@ def test_cells__axis_index__row_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='2', css={'background-color': 'yellow'}),
-            Cell(value='5'),
-            Cell(value='8'),
+            Cell(value='2', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
+            Cell(value='8', meta=CellMeta.max().pack()),
         ],
     ]
 
@@ -157,19 +157,19 @@ def test_cells__axis_columns(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='1', css={'background-color': 'yellow'}),
-            Cell(value='4', css={'background-color': 'yellow'}),
-            Cell(value='7'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000).pack()),
         ],
         [
-            Cell(value='2'),
-            Cell(value='5', css={'background-color': 'yellow'}),
-            Cell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='5', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='8', meta=CellMeta.max(background_color='yellow').pack()),
         ],
     ]
 
@@ -188,19 +188,19 @@ def test_cells__axis_columns__sorted(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='2'),
-            Cell(value='5', css={'background-color': 'yellow'}),
-            Cell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='5', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='8', meta=CellMeta.max(background_color='yellow').pack()),
         ],
         [
-            Cell(value='1', css={'background-color': 'yellow'}),
-            Cell(value='4', css={'background-color': 'yellow'}),
-            Cell(value='7'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000).pack()),
         ],
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
     ]
 
@@ -221,16 +221,16 @@ def test_cells__axis_columns__column_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='1', css={'background-color': 'yellow'}),
-            Cell(value='7'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000).pack()),
         ],
         [
-            Cell(value='2'),
-            Cell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='8', meta=CellMeta.max(background_color='yellow').pack()),
         ],
     ]
 
@@ -251,14 +251,14 @@ def test_cells__axis_columns__row_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0', css={'background-color': 'yellow'}),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min(background_color='yellow').pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='2'),
-            Cell(value='5', css={'background-color': 'yellow'}),
-            Cell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='5', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='8', meta=CellMeta.max(background_color='yellow').pack()),
         ],
     ]
 
@@ -278,19 +278,19 @@ def test_cells__axis_none(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0'),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min().pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='1', css={'background-color': 'yellow'}),
-            Cell(value='4', css={'background-color': 'yellow'}),
-            Cell(value='7'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000).pack()),
         ],
         [
-            Cell(value='2'),
-            Cell(value='5'),
-            Cell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
+            Cell(value='8', meta=CellMeta.max(background_color='yellow').pack()),
         ],
     ]
 
@@ -311,19 +311,19 @@ def test_cells__axis_none__sorted(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='2'),
-            Cell(value='5'),
-            Cell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
+            Cell(value='8', meta=CellMeta.max(background_color='yellow').pack()),
         ],
         [
-            Cell(value='1', css={'background-color': 'yellow'}),
-            Cell(value='4', css={'background-color': 'yellow'}),
-            Cell(value='7'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000).pack()),
         ],
         [
-            Cell(value='0'),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min().pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
     ]
 
@@ -344,16 +344,16 @@ def test_cells__axis_none__column_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='1', css={'background-color': 'yellow'}),
-            Cell(value='7'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000, background_color='yellow').pack()),
+            Cell(value='7', meta=CellMeta(cmap_value=50000).pack()),
         ],
         [
-            Cell(value='2'),
-            Cell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='8', meta=CellMeta.max(background_color='yellow').pack()),
         ],
     ]
 
@@ -374,13 +374,13 @@ def test_cells__axis_none__row_filtered_out(combine: bool):
 
     assert actual.cells == [
         [
-            Cell(value='0'),
-            Cell(value='3'),
-            Cell(value='6'),
+            Cell(value='0', meta=CellMeta.min().pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
+            Cell(value='6', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='2'),
-            Cell(value='5'),
-            Cell(value='8', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max().pack()),
+            Cell(value='5', meta=CellMeta.max().pack()),
+            Cell(value='8', meta=CellMeta.max(background_color='yellow').pack()),
         ],
     ]

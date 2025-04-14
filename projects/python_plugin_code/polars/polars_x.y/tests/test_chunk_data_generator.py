@@ -1,8 +1,7 @@
 import polars as pl
 
-from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN
-from cms_rendner_sdfv.base.types import ChunkData, Cell
-from cms_rendner_sdfv.polars.constants import CELL_MAX_LIST_LEN
+from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN, CELL_MAX_LIST_LEN
+from cms_rendner_sdfv.base.types import ChunkDataResponse, Cell, CellMeta
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 
 
@@ -57,12 +56,20 @@ def test_generate_by_combining_chunks():
     )
     ctx = FrameContext(df)
     actual = ctx.get_chunk_data_generator().generate_by_combining_chunks(2, 2)
-    assert actual == ChunkData(
-        index_labels=None,
+    assert actual == ChunkDataResponse(
         cells=[
-            [Cell(value='0'), Cell(value='3')],
-            [Cell(value='1'), Cell(value='4')],
-            [Cell(value='2'), Cell(value='5')],
+            [
+                Cell(value='0', meta=CellMeta.min().pack()),
+                Cell(value='3', meta=CellMeta.min().pack()),
+            ],
+            [
+                Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+                Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
+            ],
+            [
+                Cell(value='2', meta=CellMeta.max().pack()),
+                Cell(value='5', meta=CellMeta.max().pack()),
+            ],
         ],
     )
 

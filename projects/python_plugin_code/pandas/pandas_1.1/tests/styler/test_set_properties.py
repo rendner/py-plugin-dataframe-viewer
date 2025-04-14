@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 import pytest
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
 
@@ -24,7 +24,7 @@ def test_props_are_set():
     cells: List[Cell] = sum(actual.cells, [])
 
     assert len(cells) == df.size
-    assert any(c.css == {'background-color': 'pink'} for c in cells)
+    assert any(CellMeta.from_packed(c.meta).background_color == 'pink' for c in cells)
 
 
 @pytest.mark.parametrize("subset", [None, pd.IndexSlice[2:3, ["col_2", "col_3"]]])

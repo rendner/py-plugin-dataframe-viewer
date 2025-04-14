@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 #  limitations under the License.
 from typing import Any, Callable, Optional
 
-from pandas import get_option
 from pandas.core.dtypes.common import (
     is_complex,
     is_float,
@@ -25,8 +24,9 @@ from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
 
 class FrameValueFormatter(ValueFormatter):
     def __init__(self):
-        self.__precision = get_option("display.precision")
-        self.__float_format: Optional[Callable] = get_option("display.float_format")
+        super().__init__()
+        self.__precision = min(6, self._option_or_default("display.precision", 6))
+        self.__float_format: Optional[Callable] = self._option_or_default("display.float_format", None)
 
     def _default_format(self, x: Any, fallback_formatter) -> Any:
         if is_float(x) or is_complex(x):

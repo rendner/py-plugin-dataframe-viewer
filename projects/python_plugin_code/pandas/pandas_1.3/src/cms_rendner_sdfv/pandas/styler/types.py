@@ -14,7 +14,7 @@
 from dataclasses import dataclass
 from typing import Optional, List
 
-from cms_rendner_sdfv.base.types import ChunkData
+from cms_rendner_sdfv.base.types import ChunkDataResponse
 
 
 @dataclass(frozen=True)
@@ -38,5 +38,5 @@ class StyleFunctionValidationProblem:
 
 @dataclass(frozen=True)
 class ValidatedChunkData:
-    data: Optional[ChunkData] = None
+    data: Optional[ChunkDataResponse] = None
     problems: Optional[List[StyleFunctionValidationProblem]] = None

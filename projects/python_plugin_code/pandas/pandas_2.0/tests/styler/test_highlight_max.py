@@ -1,8 +1,8 @@
-import numpy as np
 import pandas as pd
+import numpy as np
 import pytest
 
-from cms_rendner_sdfv.base.types import Cell
+from cms_rendner_sdfv.base.types import Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext
 from tests.helpers.asserts.assert_style_func_parameters import assert_style_func_parameters
 from tests.helpers.asserts.assert_patched_styler import assert_patched_styler
@@ -27,16 +27,16 @@ def test_expected_cell_styling():
 
     assert actual.cells == [
         [
-            Cell(value='0'),
-            Cell(value='3'),
+            Cell(value='0', meta=CellMeta.min().pack()),
+            Cell(value='3', meta=CellMeta.min().pack()),
         ],
         [
-            Cell(value='1'),
-            Cell(value='4'),
+            Cell(value='1', meta=CellMeta(cmap_value=50000).pack()),
+            Cell(value='4', meta=CellMeta(cmap_value=50000).pack()),
         ],
         [
-            Cell(value='2', css={'background-color': 'yellow'}),
-            Cell(value='5', css={'background-color': 'yellow'}),
+            Cell(value='2', meta=CellMeta.max(background_color='yellow').pack()),
+            Cell(value='5', meta=CellMeta.max(background_color='yellow').pack()),
         ],
     ]
 
@@ -88,7 +88,7 @@ def test_highlight_max_nulls(axis):
     # GH 42750
     assert_patched_styler(
         pd.DataFrame({"a": [pd.NA, 1, None], "b": [np.nan, 1, -1]}),
-        # replace pd.NA values with '' otherwise the are rendered as <NA> and interpreted as html tag
+        # replace pd.NA values with '' otherwise they are rendered as <NA> and interpreted as html tag
         lambda styler: styler.format(na_rep='').highlight_max(axis=axis),
         2,
         2
@@ -99,7 +99,7 @@ def test_highlight_max_handles_na_values():
     # GH 45804
     assert_patched_styler(
         pd.DataFrame({"A": [0, np.nan, 10], "B": [1, pd.NA, 2]}, dtype="Int64"),
-        # replace pd.NA values with '' otherwise the are rendered as <NA> and interpreted as html tag
+        # replace pd.NA values with '' otherwise they are rendered as <NA> and interpreted as html tag
         lambda styler: styler.format(na_rep='').highlight_max(axis=1),
         2,
         2

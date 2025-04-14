@@ -1,4 +1,4 @@
-#  Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+CELL_MAX_LIST_LEN = 42
 CELL_MAX_STR_LEN = 200
-DESCRIBE_COL_MAX_STR_LEN = 120
+COL_STATISTIC_ENTRY_MAX_STR_LEN = 120
 

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-from cms_rendner_sdfv.base.types import Region, CompletionVariant, NestedCompletionVariant
+from cms_rendner_sdfv.base.types import CompletionVariant, NestedCompletionVariant, Cell, CellMeta
 from cms_rendner_sdfv.pandas.styler.patched_styler_context import PatchedStylerContext, FilterCriteria
 
 df = DataFrame.from_dict({
@@ -60,9 +60,9 @@ def test_get_org_indices_of_visible_columns_with_filter():
 
 def test_styled_chunk_uses_formatting_from_org_styler():
     ctx = PatchedStylerContext(df.style.format('{:+.2f}', subset=pd.IndexSlice[0, ["col_2"]]))
-    styled_chunk = ctx.compute_styled_chunk(Region.with_frame_shape(df.shape))
-    assert styled_chunk.cell_value_at(0, 0) == '0'
-    assert styled_chunk.cell_value_at(0, 2) == '+2.00'
+    chunk_data = ctx.get_chunk_data_generator().generate()
+    assert chunk_data.cells[0][0] == Cell(value='0', meta=CellMeta.min().pack())
+    assert chunk_data.cells[0][2] == Cell(value='+2.00', meta=CellMeta.min().pack())
 
 
 def test_detects_supported_pandas_style_funcs():
