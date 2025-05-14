@@ -18,7 +18,7 @@ package cms.rendner.intellij.dataframe.viewer.models.chunked.helper
 import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.AbstractModelDataLoader
-import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.LoadRequest
+import cms.rendner.intellij.dataframe.viewer.python.bridge.Cell
 
 class TableModelFactory(private val chunkSize: ChunkSize) {
 
@@ -55,7 +55,7 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
         private val loader: RecordingModelDataLoader,
     ) : IDataFrameModel by model {
 
-        val recordedLoadRequests: List<LoadRequest>
+        val recordedLoadRequests: List<RecodedRequest>
             get() {
                 return loader.recordedRequests
             }
@@ -70,14 +70,15 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
         }
     }
 
+    data class RecodedRequest(val chunkRegion: ChunkRegion, val request: ChunkDataRequest)
     class RecordingModelDataLoader : AbstractModelDataLoader() {
-        val recordedRequests: MutableList<LoadRequest> = mutableListOf()
+        val recordedRequests: MutableList<RecodedRequest> = mutableListOf()
         var recordedSorting: SortCriteria? = null
 
-        override fun loadChunk(chunk: ChunkRegion) {
-            createLoadRequestFor(chunk).let {
-                recordedRequests.add(it)
-                notifyChunkDataSuccess(chunk, createResponseFor(it))
+        override fun loadChunk(chunkRegion: ChunkRegion) {
+            createLoadRequestFor(chunkRegion).let {
+                recordedRequests.add(RecodedRequest(chunkRegion = chunkRegion, request = it))
+                notifyChunkDataSuccess(chunkRegion, createResponseFor(chunkRegion, it))
             }
         }
 
@@ -91,11 +92,10 @@ class TableModelFactory(private val chunkSize: ChunkSize) {
 
         override fun isAlive() = true
 
-        private fun createResponseFor(request: LoadRequest): ChunkData {
-            val chunkRegion = request.chunkRegion
+        private fun createResponseFor(chunkRegion: ChunkRegion, request: ChunkDataRequest): ChunkData {
             return ChunkData(
-                values = ChunkValuesPlaceholder(StringValue("col")),
-                rowHeaderLabels = createHeaderLabels(if (request.withRowHeaders) chunkRegion.numberOfRows else 0)
+                values = if (request.withCells) ChunkValuesPlaceholder(Cell("col")) else null,
+                rowHeaderLabels = if (request.withRowHeaders) createHeaderLabels( chunkRegion.numberOfRows) else null,
             )
         }
 

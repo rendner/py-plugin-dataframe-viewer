@@ -16,6 +16,7 @@
 package cms.rendner.integration.plugin.python.bridge
 
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkDataRequest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
@@ -38,14 +39,14 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
         runWithPatchedStyler {
             assertThat(
                 it.evaluateValidateAndComputeChunkData(
-                    chunk = ChunkRegion(0, 0, 2, 2),
-                    withRowHeaders = true,
+                    chunkRegion = ChunkRegion(0, 0, 2, 2),
+                    ChunkDataRequest(withCells = true, withRowHeaders = true),
                     newSorting = null,
                 )
             ).matches { result ->
                 result.data.let { data ->
-                    data.indexLabels!!.isNotEmpty() && data.cells.isNotEmpty()
-                } && result.problems.isEmpty()
+                    data.rowHeaders!!.isNotEmpty() && data.cells!!.isNotEmpty()
+                } && result.problems.isNullOrEmpty()
             }
         }
     }
@@ -55,12 +56,12 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
         runWithPatchedStyler {
             assertThat(
                 it.evaluateComputeChunkData(
-                    chunk = ChunkRegion(0, 0, 2, 2),
-                    withRowHeaders = true,
+                    chunkRegion = ChunkRegion(0, 0, 2, 2),
+                    ChunkDataRequest(withCells = true, withRowHeaders = true),
                     newSorting = SortCriteria(listOf(0), listOf(true)),
                 )
             ).matches { result ->
-                result.indexLabels!!.isNotEmpty() && result.cells.isNotEmpty()
+                result.rowHeaders!!.isNotEmpty() && result.cells!!.isNotEmpty()
             }
         }
     }

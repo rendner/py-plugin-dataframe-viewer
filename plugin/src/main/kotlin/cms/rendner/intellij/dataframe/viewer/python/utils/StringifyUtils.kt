@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,10 @@ fun stringifyBool(value: Boolean) = if (value) "True" else "False"
  * @param singleQuotes if true [value] is surrounded with single quotes otherwise with double quotes
  */
 fun stringifyString(value: String, singleQuotes: Boolean = true) = if (singleQuotes) "'$value'" else "\"$value\""
+
+fun stringifyDictionary(value: Map<String, String>):String {
+    return value.map { "'${it.key}':${it.value}" }.joinToString(prefix = "{", postfix = "}")
+}
 
 /**
  * Builder to build a Python method call.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,18 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.renderer
 
-import cms.rendner.intellij.dataframe.viewer.models.StyledValue
+import cms.rendner.intellij.dataframe.viewer.components.MyValuesTable
+import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.ICellStyleComputer
 import cms.rendner.intellij.dataframe.viewer.models.TextAlign
-import cms.rendner.intellij.dataframe.viewer.models.Value
 import java.awt.Color
 import java.awt.Component
 import javax.swing.JTable
 import javax.swing.SwingConstants
 import javax.swing.table.DefaultTableCellRenderer
 
-class ValueCellRenderer : DefaultTableCellRenderer() {
+class ValueCellRenderer(
+    private val cellStyleComputer: ICellStyleComputer? = null,
+): DefaultTableCellRenderer() {
 
     override fun getTableCellRendererComponent(
         table: JTable?,
@@ -34,7 +36,7 @@ class ValueCellRenderer : DefaultTableCellRenderer() {
         row: Int,
         column: Int
     ): Component {
-        val textValue: String? = if (value is Value) value.text() else null
+        val textValue: String? = value?.toString()
 
         border = null
         background = null
@@ -43,23 +45,26 @@ class ValueCellRenderer : DefaultTableCellRenderer() {
 
         super.getTableCellRendererComponent(table, textValue, isSelected, hasFocus, row, column)
 
-        when (value) {
-            is StyledValue -> {
-                value.styles.let {
-                    if (!isSelected) {
-                        if (it.backgroundColor != null) {
-                            background = it.backgroundColor
-                            foreground = it.textColor ?: if (background == Color.BLACK) Color.WHITE else Color.BLACK
-                        } else {
-                            foreground = it.textColor
-                        }
-                    }
+        if (table !is MyValuesTable || cellStyleComputer == null) return this
 
-                    horizontalAlignment = when (it.textAlign) {
-                        TextAlign.center -> SwingConstants.CENTER
-                        TextAlign.right -> SwingConstants.RIGHT
-                        else -> SwingConstants.LEFT
+        table.model?.getCellMetaAt(
+            table.convertRowIndexToModel(row),
+            table.convertColumnIndexToModel(column),
+        )?.let { meta ->
+            cellStyleComputer.computeStyling(meta)?.let { styling ->
+                if (!isSelected) {
+                    if (styling.backgroundColor != null) {
+                        background = styling.backgroundColor
+                        foreground = styling.textColor ?: if (background == Color.BLACK) Color.WHITE else Color.BLACK
+                    } else {
+                        foreground = styling.textColor
                     }
+                }
+
+                horizontalAlignment = when (styling.textAlign) {
+                    TextAlign.center -> SwingConstants.CENTER
+                    TextAlign.right -> SwingConstants.RIGHT
+                    else -> SwingConstants.LEFT
                 }
             }
         }

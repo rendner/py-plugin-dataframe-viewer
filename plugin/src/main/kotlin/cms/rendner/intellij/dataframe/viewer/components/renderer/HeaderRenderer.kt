@@ -16,10 +16,9 @@
 package cms.rendner.intellij.dataframe.viewer.components.renderer
 
 import cms.rendner.intellij.dataframe.viewer.components.MyValuesTable
-import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header.CommonHeaderLabelStyler
-import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header.ValueColumnHeaderLabelStyler
+import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.headers.CommonHeaderLabelStyler
+import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.headers.ValueColumnHeaderLabelStyler
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
-import cms.rendner.intellij.dataframe.viewer.models.Value
 import com.intellij.ui.ColorUtil
 import com.intellij.util.ui.JBUI
 import java.awt.*
@@ -31,7 +30,6 @@ abstract class AbstractHeaderRenderer: TableCellRenderer {
     {
         return when (value) {
             is IHeaderLabel -> value.text()
-            is Value -> value.text()
             is String -> value
             else -> null
         }.let {

@@ -27,7 +27,7 @@ interface IModelDataLoader : Disposable {
     /**
      * Requests to load a chunk of data from the underlying DataFrame.
      */
-    fun loadChunk(chunk: ChunkRegion)
+    fun loadChunk(chunkRegion: ChunkRegion)
 
     /**
      * Requests to load the column statistics for a column from the underlying DataFrame.
@@ -62,7 +62,7 @@ interface IModelDataLoader : Disposable {
     fun setLoadRequestCreator(reqCreator: ILoadRequestCreator)
 
     interface ILoadRequestCreator {
-        fun createLoadRequestFor(chunk: ChunkRegion): LoadRequest
+        fun createLoadRequestFor(chunkRegion: ChunkRegion): ChunkDataRequest
     }
 
     /**
@@ -113,21 +113,21 @@ abstract class AbstractModelDataLoader : IModelDataLoader {
         myResultHandlers.add(handler)
     }
 
-    protected fun createLoadRequestFor(chunk: ChunkRegion): LoadRequest {
+    protected fun createLoadRequestFor(chunkRegion: ChunkRegion): ChunkDataRequest {
         val creator = myLoadRequestCreator ?: throw IllegalStateException("Can't create a load request, LoadRequestCreator is missing.")
-        return creator.createLoadRequestFor(chunk)
+        return creator.createLoadRequestFor(chunkRegion)
     }
 
-    protected fun notifyChunkDataSuccess(chunk: ChunkRegion, data: ChunkData) {
-        notify(IModelDataLoader.IResultHandler.ChunkDataSuccess(chunk, data))
+    protected fun notifyChunkDataSuccess(chunkRegion: ChunkRegion, data: ChunkData) {
+        notify(IModelDataLoader.IResultHandler.ChunkDataSuccess(chunkRegion, data))
     }
 
-    protected fun notifyChunkDataRejected(chunk: ChunkRegion, reason: IModelDataLoader.IResultHandler.RejectReason) {
-        notify(IModelDataLoader.IResultHandler.ChunkDataRejected(chunk, reason))
+    protected fun notifyChunkDataRejected(chunkRegion: ChunkRegion, reason: IModelDataLoader.IResultHandler.RejectReason) {
+        notify(IModelDataLoader.IResultHandler.ChunkDataRejected(chunkRegion, reason))
     }
 
-    protected fun notifyChunkDataFailure(chunk: ChunkRegion, throwable: Throwable) {
-        notify(IModelDataLoader.IResultHandler.ChunkDataFailure(chunk, throwable))
+    protected fun notifyChunkDataFailure(chunkRegion: ChunkRegion, throwable: Throwable) {
+        notify(IModelDataLoader.IResultHandler.ChunkDataFailure(chunkRegion, throwable))
     }
 
     protected fun notifyColumnStatisticsSuccess(columnIndex: Int, statistics: Map<String, String>) {
@@ -142,13 +142,3 @@ abstract class AbstractModelDataLoader : IModelDataLoader {
         myResultHandlers.forEach { it.onResult(result) }
     }
 }
-
-/**
- * Load request to load a chunk.
- * @property chunkRegion the region in the DataFrame to load.
- * @property withRowHeaders if the row headers of the DataFrame should be included.
- */
-data class LoadRequest(
-    val chunkRegion: ChunkRegion,
-    val withRowHeaders: Boolean,
-)

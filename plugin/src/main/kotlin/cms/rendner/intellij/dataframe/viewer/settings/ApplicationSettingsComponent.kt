@@ -15,6 +15,8 @@
  */
 package cms.rendner.intellij.dataframe.viewer.settings
 
+import cms.rendner.intellij.dataframe.viewer.components.CellStylingComboBox
+import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.CellStylingMode
 import com.intellij.ui.border.IdeaTitledBorder
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -39,6 +41,7 @@ class SettingsComponent {
         JBCheckBox("Runtime code completion (Python Console)")
     private val myShowDTypeInColumnHeader =
         JBCheckBox("Show column dtype in header")
+    private val myDefaultCellStylingModeComboBox: CellStylingComboBox = CellStylingComboBox()
 
     private val myPanel: JPanel
 
@@ -72,6 +75,12 @@ class SettingsComponent {
             myShowDTypeInColumnHeader.isSelected = value
         }
 
+    var defaultCellStylingMode: CellStylingMode
+        get() = myDefaultCellStylingModeComboBox.selectedItem as CellStylingMode
+        set(value) {
+            myDefaultCellStylingModeComboBox.selectedItem = value
+        }
+
     init {
         val dataFetchingSettingsPanel = FormBuilder.createFormBuilder()
             .addComponent(myPandasStyledFuncValidationEnabledCheckBox)
@@ -92,6 +101,7 @@ class SettingsComponent {
             }
 
         val tableSettingsPanel = FormBuilder.createFormBuilder()
+            .addLabeledComponent(JBLabel("Default cell styling:"), myDefaultCellStylingModeComboBox)
             .addComponent(myShowDTypeInColumnHeader)
             .panel.apply {
                 border = createTitleBorder("Table")
@@ -105,7 +115,7 @@ class SettingsComponent {
         myPanel = FormBuilder.createFormBuilder()
             .addComponent(
                 JBLabel(
-                    "Changes are only applied to newly opened dialogs.",
+                    "Changes are not applied to already opened dialogs.",
                     UIUtil.ComponentStyle.SMALL,
                     UIUtil.FontColor.BRIGHTER,
                 )

@@ -16,6 +16,9 @@
 package cms.rendner.intellij.dataframe.viewer.components
 
 import cms.rendner.intellij.dataframe.viewer.components.filter.*
+import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueCellRenderer
+import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.CellStylingMode
+import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.cells.CellStyleComputer
 import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.evaluator.ChunkEvaluator
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.evaluator.IChunkValidationProblemHandler
@@ -35,6 +38,7 @@ import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.text.StringUtil
@@ -47,6 +51,7 @@ import com.intellij.xdebugger.XSourcePosition
 import java.awt.Dimension
 import java.text.NumberFormat
 import javax.swing.Action
+import javax.swing.DefaultComboBoxModel
 import javax.swing.JComponent
 
 class DataFrameViewerDialog(
@@ -65,6 +70,9 @@ class DataFrameViewerDialog(
     private val myFilterInput: AbstractFilterInput?
     private val myTable: DataFrameTable
     private val myTableFooterLabel = JBLabel("", UIUtil.ComponentStyle.SMALL, FontColor.BRIGHTER)
+
+    private val myCellStyleComputer = CellStyleComputer()
+    private val myCellStylingModeComboBox: CellStylingComboBox
 
     private var myLastDataModelDisposable: Disposable? = null
     private var myRunningCreatorProcess: RunningCreatorProcess? = null
@@ -96,6 +104,16 @@ class DataFrameViewerDialog(
 
         myTable = DataFrameTable(myFrozenSettings.showDTypeInColumnHeader)
         myTable.preferredSize = Dimension(635, 404)
+        myTable.getValuesTable().setDefaultRenderer(Object::class.java, ValueCellRenderer(myCellStyleComputer))
+
+        myCellStylingModeComboBox = CellStylingComboBox().apply {
+            myCellStyleComputer.setStylingMode(myFrozenSettings.defaultCellStylingMode)
+            selectedItem = myFrozenSettings.defaultCellStylingMode
+            addActionListener {
+                myCellStyleComputer.setStylingMode(selectedItem as CellStylingMode)
+                myTable.getValuesTable().model?.fireTableDataChanged()
+            }
+        }
 
         init()
     }
@@ -212,6 +230,7 @@ class DataFrameViewerDialog(
 
     override fun createCenterPanel(): JComponent {
         return FormBuilder.createFormBuilder()
+            .addLabeledComponent(JBLabel("Cell styling:"), myCellStylingModeComboBox)
             .addComponent(myTable)
             .addComponent(myTableFooterLabel)
             .addVerticalGap(10)

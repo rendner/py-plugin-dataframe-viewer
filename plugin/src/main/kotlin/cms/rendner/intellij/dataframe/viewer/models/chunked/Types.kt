@@ -16,7 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
-import cms.rendner.intellij.dataframe.viewer.models.Value
+import cms.rendner.intellij.dataframe.viewer.python.bridge.Cell
 import cms.rendner.intellij.dataframe.viewer.python.bridge.ChunkData
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import kotlinx.serialization.SerialName
@@ -30,7 +30,7 @@ interface IChunkEvaluator {
      * Evaluates chunk data of a table source.
      *
      * @param chunkRegion the region of the data to evaluate
-     * @param withRowHeaders if true, the row headers are included in the result.
+     * @param dataRequest the data which should be fetched.
      * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
      * @return returns the chunk data of the specified region.
      * @throws EvaluateException in case the evaluation fails.
@@ -38,7 +38,7 @@ interface IChunkEvaluator {
     @Throws(EvaluateException::class)
     fun evaluateChunkData(
         chunkRegion: ChunkRegion,
-        withRowHeaders: Boolean,
+        dataRequest: ChunkDataRequest,
         newSorting: SortCriteria?,
     ): ChunkData
 
@@ -47,26 +47,28 @@ interface IChunkEvaluator {
 }
 
 interface IChunkValues {
-    fun value(rowIndexInChunk: Int, columnIndexInChunk: Int): Value
+    fun getValue(rowIndexInChunk: Int, columnIndexInChunk: Int): Cell
 }
 
 /**
  * The values of a row, without header.
  */
-data class ChunkValuesRow(val values: List<Value>)
+data class ChunkValuesRow(private var values: List<Cell>) {
+    fun getValue(index: Int): Cell = values[index]
+}
 
 /**
- * Temporary values of a row, without header, until real data is fetched.
+ * A placeholder for a pending chunk, until data is fetched.
  */
-data class ChunkValuesPlaceholder(private val placeholder: Value) : IChunkValues {
-    override fun value(rowIndexInChunk: Int, columnIndexInChunk: Int) = placeholder
+data class ChunkValuesPlaceholder(private val placeholder: Cell) : IChunkValues {
+    override fun getValue(rowIndexInChunk: Int, columnIndexInChunk: Int) = placeholder
 }
 
 /**
  * The values of a chunk.
  */
-data class ChunkValues(val rows: List<ChunkValuesRow>) : IChunkValues {
-    override fun value(rowIndexInChunk: Int, columnIndexInChunk: Int) = rows[rowIndexInChunk].values[columnIndexInChunk]
+data class ChunkValues(private val rows: List<ChunkValuesRow>) : IChunkValues {
+    override fun getValue(rowIndexInChunk: Int, columnIndexInChunk: Int) = rows[rowIndexInChunk].getValue(columnIndexInChunk)
 }
 
 /**
@@ -86,12 +88,22 @@ data class ChunkRegion(
 
 /**
  * The data of a chunk.
- * @property values the cell values of the chunk.
+ * @property values (optional), the cell values of the chunk.
  * @property rowHeaderLabels (optional), the row labels of the chunk.
 */
 data class ChunkData(
-    val values: IChunkValues,
+    val values: IChunkValues? = null,
     val rowHeaderLabels: List<IHeaderLabel>? = null,
+)
+
+/**
+ * Describes which data of a specific chunk has to be fetched.
+ * @property withCells if the cell values should be loaded.
+ * @property withRowHeaders if the row headers of the DataFrame should be included.
+ */
+data class ChunkDataRequest(
+    val withCells: Boolean,
+    val withRowHeaders: Boolean,
 )
 
 /**

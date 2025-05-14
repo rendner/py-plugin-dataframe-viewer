@@ -30,10 +30,10 @@ open class ChunkEvaluator(
 
     override fun evaluateChunkData(
         chunkRegion: ChunkRegion,
-        withRowHeaders: Boolean,
+        dataRequest: ChunkDataRequest,
         newSorting: SortCriteria?,
     ): ChunkData {
-        return tableSourceRef.evaluateComputeChunkData(chunkRegion, withRowHeaders, newSorting)
+        return tableSourceRef.evaluateComputeChunkData(chunkRegion, dataRequest, newSorting)
     }
 
     override fun evaluateColumnStatistics(columnIndex: Int): Map<String, String> {
@@ -68,11 +68,11 @@ class ValidatedChunkEvaluator(
 
     override fun evaluateChunkData(
         chunkRegion: ChunkRegion,
-        withRowHeaders: Boolean,
+        dataRequest: ChunkDataRequest,
         newSorting: SortCriteria?,
     ): ChunkData {
-        val result = tableSourceRef.evaluateValidateAndComputeChunkData(chunkRegion, withRowHeaders, newSorting)
-        result.problems.filter { !reportedStyleFuncIndices.contains(it.funcInfo.index) }.let { newProblems ->
+        val result = tableSourceRef.evaluateValidateAndComputeChunkData(chunkRegion, dataRequest, newSorting)
+        result.problems?.filter { !reportedStyleFuncIndices.contains(it.funcInfo.index) }?.let { newProblems ->
             if (newProblems.isNotEmpty()) {
                 problemHandler.handleValidationProblems(newProblems)
                 newProblems.forEach { reportedStyleFuncIndices.add(it.funcInfo.index) }

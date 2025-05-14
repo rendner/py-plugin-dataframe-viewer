@@ -92,6 +92,7 @@ class TableSourceFactory {
         protected val refExpr: String = if (tempVarSlotId != null) "$tempVarsDictRef['${tempVarSlotId}']" else pythonValue.refExpr
         protected val evaluator: IPluginPyValueEvaluator = pythonValue.evaluator
         protected val idsToClean: MutableList<String> = mutableListOf()
+        protected val typeConverter = PyPluginBaseTypesConverter()
 
         @Volatile
         private var myCompletionVariants: List<ICompletionVariant>? = null
@@ -118,8 +119,8 @@ class TableSourceFactory {
         }
 
         override fun evaluateComputeChunkData(
-            chunk: ChunkRegion,
-            withRowHeaders: Boolean,
+            chunkRegion: ChunkRegion,
+            dataRequest: ChunkDataRequest,
             newSorting: SortCriteria?,
         ): ChunkData {
             return callOnPythonSide(
@@ -127,15 +128,23 @@ class TableSourceFactory {
                     if (newSorting != null) {
                         withSetSortCriteria(this, newSorting)
                     }
-                    this.withCall("compute_chunk_data") {
-                        numberParam(chunk.firstRow)
-                        numberParam(chunk.firstColumn)
-                        numberParam(chunk.numberOfRows)
-                        numberParam(chunk.numberOfColumns)
-                        boolParam(withRowHeaders)
-                    }
+                    invokeWithTypedKwargs(
+                        this,
+                        "compute_chunk_data",
+                        mapOf(
+                            "region" to typeConverter.toRegion(chunkRegion),
+                            "request" to typeConverter.toChunkDataRequest(dataRequest),
+                        )
+                    )
                 }
             )
+        }
+
+        protected fun invokeWithTypedKwargs(callBuilder: PythonChainedCallsBuilder, methodName: String, kwargsMap: Map<String, String>) {
+            callBuilder.withCall("invoke_with_typed_kwargs") {
+                stringParam(methodName)
+                refParam("lambda t: ${stringifyDictionary(kwargsMap.mapValues { "t.${it.value}" })}")
+            }
         }
 
         override fun evaluateGetColumnNameCompletionVariants(
@@ -214,8 +223,8 @@ class TableSourceFactory {
     ) : PyTableSourceRef(pythonValue, tableStructure, tempVarSlotId), IPyPatchedStylerRef {
 
         override fun evaluateValidateAndComputeChunkData(
-            chunk: ChunkRegion,
-            withRowHeaders: Boolean,
+            chunkRegion: ChunkRegion,
+            dataRequest: ChunkDataRequest,
             newSorting: SortCriteria?,
         ): ValidatedChunkData {
             return callOnPythonSide(
@@ -223,15 +232,29 @@ class TableSourceFactory {
                     if (newSorting != null) {
                         withSetSortCriteria(this, newSorting)
                     }
-                    this.withCall("validate_and_compute_chunk_data") {
-                        numberParam(chunk.firstRow)
-                        numberParam(chunk.firstColumn)
-                        numberParam(chunk.numberOfRows)
-                        numberParam(chunk.numberOfColumns)
-                        boolParam(withRowHeaders)
-                    }
+
+                    invokeWithTypedKwargs(
+                        this,
+                        "validate_and_compute_chunk_data",
+                        mapOf(
+                            "region" to typeConverter.toRegion(chunkRegion),
+                            "request" to typeConverter.toChunkDataRequest(dataRequest),
+                        )
+                    )
                 }
             )
         }
+    }
+}
+
+private class PyPluginBaseTypesConverter {
+    fun toChunkDataRequest(request: ChunkDataRequest): String {
+        val paramWithRowHeaders = "with_row_headers=${stringifyBool(request.withRowHeaders)}"
+        val paramWithCells= "with_cells=${stringifyBool(request.withCells)}"
+       return "ChunkDataRequest($paramWithCells, $paramWithRowHeaders)"
+    }
+
+    fun toRegion(region: ChunkRegion): String {
+        return "Region(${region.firstRow}, ${region.firstColumn}, ${region.numberOfRows}, ${region.numberOfColumns})"
     }
 }

@@ -23,12 +23,10 @@ import com.intellij.util.SmartList
 
 class ChunkDataConverter {
     companion object {
-        private val valueConverter = CSSValueConverter()
-
-        fun convert(bridgeChunkData: BridgeChunkData, withRowHeaders: Boolean): ChunkData {
+        fun convert(bridgeChunkData: BridgeChunkData): ChunkData {
             return ChunkData(
-                toChunkValues(bridgeChunkData.cells),
-                if (withRowHeaders) bridgeChunkData.indexLabels.let { if (it == null) null else convertRowHeaderLabels(it) } else null,
+                values = if (bridgeChunkData.cells != null) toChunkValues(bridgeChunkData.cells) else null,
+                rowHeaderLabels = bridgeChunkData.rowHeaders?.let { convertRowHeaderLabels(it) },
             )
         }
 
@@ -41,35 +39,7 @@ class ChunkDataConverter {
         }
 
         private fun toChunkValues(cells: List<List<BridgeCell>>): IChunkValues {
-            val values = SmartList<ChunkValuesRow>()
-            for (row in cells) {
-                val rowValues = SmartList<Value>()
-                for (element in row) {
-                    val styleProps = element.css?.let{ getStyleProperties(it) }
-                    if (styleProps == null) {
-                        rowValues.add(StringValue(element.value))
-                    } else {
-                        rowValues.add(StyledValue(element.value, styleProps))
-                    }
-                }
-                rowValues.trimToSize()
-                values.add(ChunkValuesRow(rowValues))
-            }
-            values.trimToSize()
-
-            return ChunkValues(values)
-        }
-
-        private fun getStyleProperties(cssProps: Map<String, String>): StyleProperties? {
-            val color = cssProps["color"]
-            val backgroundColor = cssProps["background-color"]
-            val textAlign = cssProps["text-align"]
-            if (color == null && backgroundColor == null && textAlign == null) return null
-            return StyleProperties(
-                valueConverter.convertColorValue(color),
-                valueConverter.convertColorValue(backgroundColor),
-                valueConverter.convertTextAlign(textAlign)
-            )
+            return ChunkValues(SmartList(cells.map { rowOfCells ->  ChunkValuesRow(SmartList(rowOfCells))}))
         }
 
         private fun convertRowHeaderLabels(labels: List<List<String>>): List<IHeaderLabel> {

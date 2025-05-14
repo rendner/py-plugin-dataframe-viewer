@@ -16,6 +16,7 @@
 package cms.rendner.integration.plugin.python.bridge
 
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkDataRequest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
@@ -39,12 +40,12 @@ internal class PolarsTableSourceRefTest : AbstractPluginCodeTest() {
         runWithTableSource { tableSource ->
             assertThat(
                 tableSource.evaluateComputeChunkData(
-                    chunk = ChunkRegion(0, 0, 2, 2),
-                    withRowHeaders = true,
+                    chunkRegion = ChunkRegion(0, 0, 2, 2),
+                    ChunkDataRequest(withCells = true, withRowHeaders = true),
                     newSorting = SortCriteria(listOf(0), listOf(true)),
                 )
             ).matches { result ->
-                result.indexLabels == null && result.cells.isNotEmpty()
+                result.rowHeaders == null && result.cells!!.isNotEmpty()
             }
         }
     }

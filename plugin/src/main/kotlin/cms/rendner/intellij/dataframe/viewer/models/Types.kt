@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,8 @@
 package cms.rendner.intellij.dataframe.viewer.models
 
 import com.intellij.openapi.Disposable
-import java.awt.Color
 import javax.swing.RowSorter.SortKey
 import javax.swing.table.TableModel
-
-sealed class Value {
-    open fun text(): String {
-        return ""
-    }
-}
-
-data class StringValue(val value: String) : Value() {
-    override fun text() = value
-}
-
-data class StyledValue(val value: String, val styles: StyleProperties) : Value() {
-    override fun text() = value
-}
 
 interface IHeaderLabel {
     fun text(): String
@@ -64,18 +49,8 @@ enum class TextAlign {
     center
 }
 
-data class StyleProperties(
-    val textColor: Color? = null,
-    val backgroundColor: Color? = null,
-    val textAlign: TextAlign? = null,
-) {
-    fun isEmpty(): Boolean {
-        return textColor == null && backgroundColor == null && textAlign == null
-    }
-}
-
 interface IDataFrameIndexDataModel : TableModel {
-
+    fun fireTableDataChanged()
     /**
      * Return the index (label) of the row.
      * @param rowIndex the index of the row in the model.
@@ -97,7 +72,9 @@ interface IDataFrameIndexDataModel : TableModel {
 }
 
 interface IDataFrameValuesDataModel : TableModel {
-    override fun getValueAt(rowIndex: Int, columnIndex: Int): Value
+    fun fireTableDataChanged()
+    override fun getValueAt(rowIndex: Int, columnIndex: Int): String
+    fun getCellMetaAt(rowIndex: Int, columnIndex: Int): String?
 
     fun getColumnLabelAt(columnIndex: Int): IHeaderLabel
     fun getColumnDtypeAt(columnIndex: Int): String

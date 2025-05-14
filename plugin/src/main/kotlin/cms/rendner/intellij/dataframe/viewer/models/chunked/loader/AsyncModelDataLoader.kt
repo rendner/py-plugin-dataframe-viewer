@@ -44,10 +44,10 @@ class AsyncModelDataLoader(
     }
 
     private var myIsAliveFlag = true
-    private var myPendingChunk: ChunkRegion? = null
-    private val myRequestedChunks: Deque<ChunkRegion> = ArrayDeque()
+    private var myPendingChunkRegion: ChunkRegion? = null
+    private val myRequestedChunkRegions: Deque<ChunkRegion> = ArrayDeque()
     private val myExecutorService = Executors.newSingleThreadExecutor()
-    private var myMaxWaitingRequests: Int = 4
+    private var myMaxQueuedRequests: Int = 4
 
     private var mySorting: SortCriteria = SortCriteria()
     private var mySortingIsDirty: Boolean = false
@@ -57,8 +57,8 @@ class AsyncModelDataLoader(
     override fun dispose() {
         super.dispose()
         myIsAliveFlag = false
-        myRequestedChunks.clear()
-        myPendingChunk = null
+        myRequestedChunkRegions.clear()
+        myPendingChunkRegion = null
         shutdownExecutorSilently(myExecutorService, 0, TimeUnit.SECONDS)
     }
 
@@ -82,22 +82,22 @@ class AsyncModelDataLoader(
      * Entries of the waiting queue are processed as soon as the next chunk can be fetched.
      *
      * Since the internal waiting queue has a limited capacity, the oldest waiting request
-     * is rejected as this limit exceeds to free space for the new one.
+     * is rejected as this limit is exceeded when adding the new one.
      */
-    override fun loadChunk(chunk: ChunkRegion) {
+    override fun loadChunk(chunkRegion: ChunkRegion) {
         if (!myIsAliveFlag) return
         when {
-            !mySortingIsDirty && chunk == myPendingChunk -> return
-            myRequestedChunks.isEmpty() -> myRequestedChunks.add(chunk)
-            myRequestedChunks.firstOrNull() == chunk -> return
+            !mySortingIsDirty && chunkRegion == myPendingChunkRegion -> return
+            myRequestedChunkRegions.isEmpty() -> myRequestedChunkRegions.add(chunkRegion)
+            myRequestedChunkRegions.firstOrNull() == chunkRegion -> return
             else -> {
-                myRequestedChunks.remove(chunk)
-                myRequestedChunks.addFirst(chunk)
+                myRequestedChunkRegions.remove(chunkRegion)
+                myRequestedChunkRegions.addFirst(chunkRegion)
             }
         }
-        if (myRequestedChunks.size > myMaxWaitingRequests) {
+        if (myRequestedChunkRegions.size > myMaxQueuedRequests) {
             notifyChunkDataRejected(
-                myRequestedChunks.pollLast(),
+                myRequestedChunkRegions.pollLast(),
                 IModelDataLoader.IResultHandler.RejectReason.TOO_MANY_PENDING_REQUESTS,
             )
         }
@@ -106,9 +106,9 @@ class AsyncModelDataLoader(
     }
 
     private fun fetchNextChunk() {
-        if (myPendingChunk == null) {
-            val chunk = myRequestedChunks.pollFirst() ?: return
-            myExecutorService.execute(createFetchChunkTask(chunk, if (mySortingIsDirty) mySorting else null))
+        if (myPendingChunkRegion == null) {
+            val chunkRegion = myRequestedChunkRegions.pollFirst() ?: return
+            myExecutorService.execute(createFetchChunkTask(chunkRegion, if (mySortingIsDirty) mySorting else null))
         }
     }
 
@@ -121,23 +121,22 @@ class AsyncModelDataLoader(
         }
     }
 
-    private fun createFetchChunkTask(chunk: ChunkRegion, newSorting: SortCriteria?): Runnable {
-        val request = createLoadRequestFor(chunk)
-        myPendingChunk = chunk
+    private fun createFetchChunkTask(chunkRegion: ChunkRegion, newSorting: SortCriteria?): Runnable {
+        val request = createLoadRequestFor(chunkRegion)
+        myPendingChunkRegion = chunkRegion
         return Runnable {
             try {
                 if (Thread.currentThread().isInterrupted) return@Runnable
-                val bridgeChunkData = chunkEvaluator.evaluateChunkData(
-                    request.chunkRegion,
-                    request.withRowHeaders,
-                    newSorting,
-                )
+                val bridgeChunkData = chunkEvaluator.evaluateChunkData(chunkRegion, request, newSorting)
+
+                if (request.withCells && bridgeChunkData.cells == null) {
+                    throw IllegalStateException("Cell values requested but not received.")
+                } else if (!request.withCells && bridgeChunkData.cells != null) {
+                    throw IllegalStateException("No cell values requested but received.")
+                }
 
                 if (Thread.currentThread().isInterrupted) return@Runnable
-                val chunkData = ChunkDataConverter.convert(
-                    bridgeChunkData,
-                    request.withRowHeaders,
-                )
+                val chunkData = ChunkDataConverter.convert(bridgeChunkData)
 
                 if (Thread.currentThread().isInterrupted) return@Runnable
                 runInEdt {
@@ -148,26 +147,26 @@ class AsyncModelDataLoader(
 
                     if (mySortingIsDirty) {
                         notifyChunkDataRejected(
-                            request.chunkRegion,
+                            chunkRegion,
                             IModelDataLoader.IResultHandler.RejectReason.SORT_CRITERIA_CHANGED,
                         )
                     } else {
-                        notifyChunkDataSuccess(request.chunkRegion, chunkData)
+                        notifyChunkDataSuccess(chunkRegion, chunkData)
                     }
 
                     // start next queued request
-                    myPendingChunk = null
+                    myPendingChunkRegion = null
                     if (myIsAliveFlag) {
                         fetchNextChunk()
                     }
                 }
             } catch (throwable: Throwable) {
-                logger.info("Failed to fetch chunk data ${request.chunkRegion}", throwable)
+                logger.info("Failed to fetch chunk data $chunkRegion", throwable)
                 if (throwable is InterruptedException) Thread.currentThread().interrupt()
 
                 runInEdt {
                     updateAliveFlag(throwable)
-                    notifyChunkDataFailure(request.chunkRegion, throwable)
+                    notifyChunkDataFailure(chunkRegion, throwable)
                 }
             }
         }

@@ -79,7 +79,7 @@ internal class LazyDataFrameModelTest {
         model.getValuesDataModel().getValueAt(0, 0)
 
         val loadRequest = model.recordedLoadRequests.first()
-        assertThat(loadRequest.withRowHeaders).isTrue
+        assertThat(loadRequest.request.withRowHeaders).isTrue
     }
 
     @Test
@@ -124,9 +124,9 @@ internal class LazyDataFrameModelTest {
 
             requests.forEach {
                 if (it.chunkRegion.firstColumn == 0) {
-                    assertThat(it.withRowHeaders).isTrue
+                    assertThat(it.request.withRowHeaders).isTrue
                 } else {
-                    assertThat(it.withRowHeaders).isFalse
+                    assertThat(it.request.withRowHeaders).isFalse
                 }
             }
         }
@@ -145,7 +145,7 @@ internal class LazyDataFrameModelTest {
 
         assertThat(model.recordedLoadRequests).hasSize(1)
         model.recordedLoadRequests.first().let {
-            assertThat(it.withRowHeaders).isTrue
+            assertThat(it.request.withRowHeaders).isTrue
         }
     }
 }

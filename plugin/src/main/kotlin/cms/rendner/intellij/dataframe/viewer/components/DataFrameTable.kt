@@ -17,7 +17,6 @@ package cms.rendner.intellij.dataframe.viewer.components
 
 import cms.rendner.intellij.dataframe.viewer.components.renderer.IndexRowHeaderRenderer
 import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueColumnHeaderRendererWithDtype
-import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueCellRenderer
 import cms.rendner.intellij.dataframe.viewer.components.renderer.ValueColumnHeaderRenderer
 import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.events.DataFrameTableModelEvent
@@ -230,7 +229,6 @@ class MyValuesTable(
                 )
             }
         }
-        setDefaultRenderer(Object::class.java, ValueCellRenderer())
 
         getColumnModel().selectionModel.addListSelectionListener {
             if (!it.valueIsAdjusting) {
@@ -459,7 +457,7 @@ class MyValuesTable(
                         // todo: use CopyPasteManager.getInstance().copyTextToClipboard
                         //  when setting min version for plugin >= 2024.1
                         try {
-                            CopyPasteManager.getInstance().setContents(StringSelection(cellValue.text()))
+                            CopyPasteManager.getInstance().setContents(StringSelection(cellValue))
                         } catch (ignore: Exception) { }
                     }
                 }

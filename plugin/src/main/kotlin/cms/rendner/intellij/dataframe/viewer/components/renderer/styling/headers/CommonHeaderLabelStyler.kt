@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cms.rendner.intellij.dataframe.viewer.components.renderer.styling.header
+package cms.rendner.intellij.dataframe.viewer.components.renderer.styling.headers
 
 import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.IRendererComponentStyler
 import com.intellij.ui.ExpandableItemsHandler

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.renderer.styling
 
+import cms.rendner.intellij.dataframe.viewer.models.TextAlign
+import java.awt.Color
 import java.awt.Component
 import javax.swing.JTable
 
@@ -25,6 +27,31 @@ interface IRendererComponentStyler {
         value: Any?,
         isSelected: Boolean,
         hasFocus: Boolean,
-        row: Int, column: Int
+        row: Int,
+        column: Int
     )
+}
+
+data class StyleProperties(
+    val textColor: Color? = null,
+    val backgroundColor: Color? = null,
+    val textAlign: TextAlign? = null,
+) {
+    fun isEmpty(): Boolean {
+        return textColor == null && backgroundColor == null && textAlign == null
+    }
+}
+
+enum class CellStylingMode {
+    Off,
+    ColorMap,
+    DivergingColorMap,
+    HighlightMin,
+    HighlightMax,
+    HighlightNull,
+
+}
+
+interface ICellStyleComputer {
+    fun computeStyling(packedMeta: String): StyleProperties?
 }

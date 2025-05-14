@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.settings
 
+import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.CellStylingMode
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
@@ -44,6 +45,7 @@ class ApplicationSettingsService : PersistentStateComponent<ApplicationSettingsS
         var filterInputWithAdditionCodeCompletion: Boolean = true,
         var filterInputWithRuntimeCodeCompletionInPythonConsole: Boolean = true,
         var showDTypeInColumnHeader: Boolean = true,
+        var defaultCellStylingMode: CellStylingMode = CellStylingMode.Off,
     )
 
     override fun getState(): MyState {

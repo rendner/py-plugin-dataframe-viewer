@@ -51,6 +51,7 @@ class ApplicationSettings : Configurable {
             it.filterInputWithAdditionCodeCompletion = settings.filterInputWithAdditionCodeCompletion
             it.filterInputWithRuntimeCodeCompletionInPythonConsole = settings.filterInputWithRuntimeCodeCompletionInPythonConsole
             it.showDTypeInColumnHeader = settings.showDTypeInColumnHeader
+            it.defaultCellStylingMode = settings.defaultCellStylingMode
         }
     }
 
@@ -61,7 +62,8 @@ class ApplicationSettings : Configurable {
                     it.filterInputFromInternalApi != settings.filterInputFromInternalApi ||
                     it.filterInputWithAdditionCodeCompletion != settings.filterInputWithAdditionCodeCompletion ||
                     it.filterInputWithRuntimeCodeCompletionInPythonConsole != settings.filterInputWithRuntimeCodeCompletionInPythonConsole ||
-                    it.showDTypeInColumnHeader != settings.showDTypeInColumnHeader
+                    it.showDTypeInColumnHeader != settings.showDTypeInColumnHeader ||
+                    it.defaultCellStylingMode != settings.defaultCellStylingMode
         } ?: false
     }
 
@@ -73,6 +75,7 @@ class ApplicationSettings : Configurable {
             settings.filterInputWithAdditionCodeCompletion = it.filterInputWithAdditionCodeCompletion
             settings.filterInputWithRuntimeCodeCompletionInPythonConsole = it.filterInputWithRuntimeCodeCompletionInPythonConsole
             settings.showDTypeInColumnHeader = it.showDTypeInColumnHeader
+            settings.defaultCellStylingMode = it.defaultCellStylingMode
         }
     }
 

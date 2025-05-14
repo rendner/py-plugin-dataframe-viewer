@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge
 
+import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkDataRequest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
 import cms.rendner.intellij.dataframe.viewer.models.chunked.TableStructure
@@ -90,16 +91,16 @@ interface IPyTableSourceRef: Disposable {
     /**
      * Calls the "compute_chunk_data" method of the Python class.
      *
-     * @param chunk the region of the data to evaluate
-     * @param withRowHeaders if true, row headers are included in the result.
+     * @param chunkRegion the region of the data to evaluate
+     * @param dataRequest the data which should be fetched.
      * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
      * @return returns a table representation of the chunk.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
     fun evaluateComputeChunkData(
-        chunk: ChunkRegion,
-        withRowHeaders: Boolean,
+        chunkRegion: ChunkRegion,
+        dataRequest: ChunkDataRequest,
         newSorting: SortCriteria?,
     ): ChunkData
 
@@ -179,33 +180,33 @@ interface IPyPatchedStylerRef: IPyTableSourceRef {
     /**
      * Calls the "validate_and_compute_chunk_data" method of the Python class.
      *
-     * @param chunk the region of the data to evaluate and validate
-     * @param withRowHeaders if true, row headers are included in the result.
+     * @param chunkRegion the region of the data to evaluate and validate
+     * @param dataRequest the data which should be fetched.
      * @param newSorting if not null, sorting is applied and data is taken from the updated DataFrame.
      * @return returns a table representation of the chunk and the validation problems found.
      * @throws EvaluateException in case the evaluation fails.
      */
     @Throws(EvaluateException::class)
     fun evaluateValidateAndComputeChunkData(
-        chunk: ChunkRegion,
-        withRowHeaders: Boolean,
+        chunkRegion: ChunkRegion,
+        dataRequest: ChunkDataRequest,
         newSorting: SortCriteria?,
     ): ValidatedChunkData
 }
 
 @Serializable
-data class Cell(val value: String, val css: Map<String, String>?)
+data class Cell(val value: String, val meta: String? = null)
 
 @Serializable
 data class ChunkData(
-    @SerialName("index_labels") val indexLabels: List<List<String>>?,
-    val cells: List<List<Cell>>,
+    @SerialName("row_headers") val rowHeaders: List<List<String>>?,
+    val cells: List<List<Cell>>?,
 )
 
 @Serializable
 data class ValidatedChunkData(
     val data: ChunkData,
-    val problems: List<StyleFunctionValidationProblem>,
+    val problems: List<StyleFunctionValidationProblem>? = null,
 )
 
 enum class DataSourceTransformHint {
@@ -264,7 +265,7 @@ data class CreateTableSourceFailure(
 
 class PythonBooleanSerializer : KSerializer<Boolean> {
     override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("PythonBooleanDescriptor", PrimitiveKind.BOOLEAN)
+        PrimitiveSerialDescriptor("cms.rendner.PythonBoolean", PrimitiveKind.BOOLEAN)
 
     override fun deserialize(decoder: Decoder): Boolean {
         return when (decoder.decodeString()) {

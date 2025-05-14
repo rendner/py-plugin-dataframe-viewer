@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,8 +37,12 @@ private class MyEmptyValuesModel : AbstractTableModel(), IDataFrameValuesDataMod
     override fun getColumnCount() = 0
     override fun enableDataFetching(enabled: Boolean) {}
 
-    override fun getValueAt(rowIndex: Int, columnIndex: Int): Value {
+    override fun getValueAt(rowIndex: Int, columnIndex: Int): String {
         throw UnsupportedOperationException("Operation 'getValueAt' isn't supported.")
+    }
+
+    override fun getCellMetaAt(rowIndex: Int, columnIndex: Int): String? {
+        throw UnsupportedOperationException("Operation 'getCellMetaAt' isn't supported.")
     }
 
     override fun getColumnLabelAt(columnIndex: Int): IHeaderLabel {

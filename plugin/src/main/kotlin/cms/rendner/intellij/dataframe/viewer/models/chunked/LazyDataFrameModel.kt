@@ -19,6 +19,7 @@ import cms.rendner.intellij.dataframe.viewer.models.*
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.converter.ChunkDataConverter.Companion.convertHeaderLabel
 import cms.rendner.intellij.dataframe.viewer.models.events.DataFrameTableModelEvent
 import cms.rendner.intellij.dataframe.viewer.models.chunked.loader.*
+import cms.rendner.intellij.dataframe.viewer.python.bridge.Cell
 import java.awt.Rectangle
 import java.lang.Integer.min
 import javax.swing.RowSorter.SortKey
@@ -88,12 +89,12 @@ class LazyDataFrameModel(
     /**
      * Dummy label for the not yet loaded cell values.
      */
-    private val myNotYetLoadedValue = StringValue("")
+    private val myNotYetLoadedValue = ""
 
     /**
      * Dummy values for the not yet loaded cell values of a chunk region.
      */
-    private val myNotYetLoadedChunkValues = ChunkValuesPlaceholder(myNotYetLoadedValue)
+    private val myNotYetLoadedChunkValues = ChunkValuesPlaceholder(Cell(myNotYetLoadedValue))
 
     /**
      * Tracks the region of rejected load requests, to re-request the loading at a later time.
@@ -167,15 +168,21 @@ class LazyDataFrameModel(
         myDataFetchingEnabled = enabled
     }
 
-    private fun getValueAt(rowIndex: Int, columnIndex: Int): Value {
-        checkIndex("RowIndex", rowIndex, tableStructure.rowsCount)
-        checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
+    private fun getCellAt(rowIndex: Int, columnIndex: Int): Cell {
         val chunkRegion = createChunkRegion(rowIndex, columnIndex)
         return getOrFetchChunk(chunkRegion)
-            .value(
+            .getValue(
                 rowIndex - chunkRegion.firstRow,
                 columnIndex - chunkRegion.firstColumn,
             )
+    }
+
+    private fun getValueAt(rowIndex: Int, columnIndex: Int): String {
+        return getCellAt(rowIndex, columnIndex).value
+    }
+
+    private fun getCellMetaAt(rowIndex: Int, columnIndex: Int): String? {
+        return getCellAt(rowIndex, columnIndex).meta
     }
 
     private fun getRowHeaderLabelAt(rowIndex: Int): IHeaderLabel {
@@ -213,6 +220,8 @@ class LazyDataFrameModel(
     }
 
     private fun createChunkRegion(rowIndex: Int, columnIndex: Int): ChunkRegion {
+        checkIndex("RowIndex", rowIndex, tableStructure.rowsCount)
+        checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
         val firstRow = getIndexOfFirstRowInChunk(rowIndex)
         val firstColumn = getIndexOfFirstColumnInChunk(columnIndex)
         return ChunkRegion(
@@ -250,10 +259,10 @@ class LazyDataFrameModel(
         return myNotYetLoadedChunkValues
     }
 
-    override fun createLoadRequestFor(chunk: ChunkRegion): LoadRequest {
-        return LoadRequest(
-            chunk,
-            myFetchedChunkRowHeaderLabels[chunk.firstRow] == null,
+    override fun createLoadRequestFor(chunkRegion: ChunkRegion): ChunkDataRequest {
+        return ChunkDataRequest(
+            withCells = true,
+            withRowHeaders = myFetchedChunkRowHeaderLabels[chunkRegion.firstRow] == null,
         )
     }
 
@@ -296,17 +305,23 @@ class LazyDataFrameModel(
                 if (disposed) return
 
                 myPendingChunks.remove(result.chunk)
+                var cellsNeedRepaint = false
 
                 result.data.rowHeaderLabels?.let {
-                    if (!myFetchedChunkRowHeaderLabels.containsKey(result.chunk.firstRow)) {
-                        myFetchedChunkRowHeaderLabels[result.chunk.firstRow] = it
-                        if (it.isNotEmpty()) {
-                            fireIndexModelValuesUpdated(result.chunk)
-                        }
+                    myFetchedChunkRowHeaderLabels[result.chunk.firstRow] = it
+                    if (it.isNotEmpty()) {
+                        fireIndexModelValuesUpdated(result.chunk)
                     }
                 }
-                myFetchedChunkValues[result.chunk] = result.data.values
-                fireValuesModelValuesUpdated(result.chunk)
+
+                result.data.values?.let {
+                    cellsNeedRepaint = true
+                    myFetchedChunkValues[result.chunk] = it
+                }
+
+                if (cellsNeedRepaint) {
+                    fireValuesModelValuesUpdated(result.chunk)
+                }
             }
             is IModelDataLoader.IResultHandler.ChunkDataFailure -> {
                 if (disposed) return
@@ -365,6 +380,7 @@ class LazyDataFrameModel(
         override fun getColumnCount() = source.tableStructure.columnsCount
         override fun enableDataFetching(enabled: Boolean) = source.enableDataFetching(enabled)
         override fun getValueAt(rowIndex: Int, columnIndex: Int) = source.getValueAt(rowIndex, columnIndex)
+        override fun getCellMetaAt(rowIndex: Int, columnIndex: Int) = source.getCellMetaAt(rowIndex, columnIndex)
         override fun getColumnLabelAt(columnIndex: Int) = source.getColumnLabelAt(columnIndex)
         override fun getColumnDtypeAt(columnIndex: Int) = source.getColumnDtypeAt(columnIndex)
         override fun setSortKeys(sortKeys: List<SortKey>) = source.setValueSortKeys(sortKeys)
