@@ -1,7 +1,7 @@
 import polars as pl
 
 from cms_rendner_sdfv.base.types import TableStructureColumnInfo, TableStructureColumn, \
-    TableStructure, CompletionVariant
+    TableStructure, CompletionVariant, TextAlign
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 
 df = pl.from_dict({
@@ -82,11 +82,11 @@ def test_table_structure():
         column_info=TableStructureColumnInfo(
             legend=None,
             columns=[
-                TableStructureColumn(dtype='Int64', labels=['col_0'], id=0),
-                TableStructureColumn(dtype='Int64', labels=['col_1'], id=1),
-                TableStructureColumn(dtype='Int64', labels=['col_2'], id=2),
-                TableStructureColumn(dtype='Int64', labels=['col_3'], id=3),
-                TableStructureColumn(dtype='Int64', labels=['col_4'], id=4),
+                TableStructureColumn(dtype='Int64', labels=['col_0'], id=0, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='Int64', labels=['col_1'], id=1, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='Int64', labels=['col_2'], id=2, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='Int64', labels=['col_3'], id=3, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='Int64', labels=['col_4'], id=4, text_align=TextAlign.RIGHT),
             ]
         )
     )

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from cms_rendner_sdfv.base.types import ChunkDataResponse, Cell, TableStructure, TableStructureColumnInfo, \
-    TableStructureColumn, TableInfo, TableStructureLegend, TableSourceKind, Region, CellMeta
+    TableStructureColumn, TableInfo, TableSourceKind, Region, CellMeta, TextAlign
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.frame.table_source import TableSource
 
@@ -53,27 +53,35 @@ def test_compute_chunk_data_with_multiindex():
     ))
 
 
-def test_table_info():
-    ts = TableSource(FrameContext(multi_df), "finger-1")
+def test_table_info_with_different_column_types():
+    my_df = pd.DataFrame.from_dict({
+        'a': [1],
+        'b': [1.0],
+        'c': [1j],
+        'd': ['a'],
+        'e': [True],
+        'f': [np.datetime64('2025-12-01')],
+    })
+    ts = TableSource(FrameContext(my_df), "finger-1")
 
     assert ts.get_info() == ts.serialize(
         TableInfo(
             kind=TableSourceKind.TABLE_SOURCE.name,
             structure=TableStructure(
-                org_rows_count=6,
-                org_columns_count=6,
-                rows_count=6,
-                columns_count=6,
+                org_rows_count=len(my_df.index),
+                org_columns_count=len(my_df.columns),
+                rows_count=len(my_df.index),
+                columns_count=len(my_df.columns),
                 fingerprint="finger-1",
                 column_info=TableStructureColumnInfo(
-                    legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
+                    legend=None,
                     columns=[
-                        TableStructureColumn(dtype='int64', labels=['x', 'a'], id=0),
-                        TableStructureColumn(dtype='int64', labels=['x', 'b'], id=1),
-                        TableStructureColumn(dtype='int64', labels=['x', 'c'], id=2),
-                        TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3),
-                        TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4),
-                        TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5)
+                        TableStructureColumn(dtype='int64', labels=['a'], id=0, text_align=TextAlign.RIGHT),
+                        TableStructureColumn(dtype='float64', labels=['b'], id=1, text_align=TextAlign.RIGHT),
+                        TableStructureColumn(dtype='complex128', labels=['c'], id=2, text_align=TextAlign.RIGHT),
+                        TableStructureColumn(dtype='object', labels=['d'], id=3),
+                        TableStructureColumn(dtype='bool', labels=['e'], id=4),
+                        TableStructureColumn(dtype='datetime64[ns]', labels=['f'], id=5),
                     ],
                 )
             ),
@@ -102,11 +110,11 @@ def test_table_info_with_none_leveled_column_names():
             column_info=TableStructureColumnInfo(
                 legend=None,
                 columns=[
-                    TableStructureColumn(dtype='int64', labels=['(A, B)'], id=0),
-                    TableStructureColumn(dtype='int64', labels=['B'], id=1),
-                    TableStructureColumn(dtype='int64', labels=['A'], id=2),
-                    TableStructureColumn(dtype='int64', labels=['101'], id=3),
-                    TableStructureColumn(dtype='int64', labels=['0'], id=4),
+                    TableStructureColumn(dtype='int64', labels=['(A, B)'], id=0, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['B'], id=1, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['A'], id=2, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['101'], id=3, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['0'], id=4, text_align=TextAlign.RIGHT),
                 ],
             )
         ),
@@ -128,12 +136,12 @@ def test_table_info_with_leveled_column_names():
             column_info=TableStructureColumnInfo(
                 legend=None,
                 columns=[
-                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'a'], id=0),
-                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'b'], id=1),
-                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'c'], id=2),
-                    TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3),
-                    TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4),
-                    TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5),
+                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'a'], id=0, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'b'], id=1, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['(A, B)', 'c'], id=2, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4, text_align=TextAlign.RIGHT),
+                    TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5, text_align=TextAlign.RIGHT),
                 ],
             )
         ),

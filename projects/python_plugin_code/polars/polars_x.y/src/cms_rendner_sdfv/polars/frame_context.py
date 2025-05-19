@@ -14,13 +14,13 @@
 import os
 from typing import List, Optional, Union, Any, Dict
 
-from polars import DataFrame
+from polars import DataFrame, DataType, datatypes
 
 from cms_rendner_sdfv.base.constants import CELL_MAX_STR_LEN, CELL_MAX_LIST_LEN
 from cms_rendner_sdfv.base.helpers import fq_type
 from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext
 from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, TableStructureColumn, \
-    CompletionVariant, NestedCompletionVariant
+    CompletionVariant, NestedCompletionVariant, TextAlign
 from cms_rendner_sdfv.polars.chunk_data_generator import ChunkDataGenerator, FormatOptions
 from cms_rendner_sdfv.polars.meta_computer import MetaComputer
 from cms_rendner_sdfv.polars.visible_frame import VisibleFrame
@@ -107,15 +107,23 @@ class FrameContext(AbstractTableSourceContext):
         col_names = self.__source_frame.columns
         col_dtypes = self.__source_frame.dtypes
         for col in self.visible_frame.get_column_indices():
+            col_dtype = col_dtypes[col]
             ts_columns.append(
                 TableStructureColumn(
-                    dtype=str(col_dtypes[col]),
+                    dtype=str(col_dtype),
                     labels=[col_names[col]],
                     id=col,
+                    text_align=self._get_column_text_align(col_dtype),
                 )
             )
 
         return TableStructureColumnInfo(columns=ts_columns, legend=None)
+
+    @staticmethod
+    def _get_column_text_align(col_dtype: DataType) -> Union[None, TextAlign]:
+        if col_dtype.is_numeric() and col_dtype is not datatypes.Boolean:
+            return TextAlign.RIGHT
+        return None
 
     def get_chunk_data_generator(self):
         return ChunkDataGenerator(self.__visible_frame, self.__format_options, self.__meta_computer)

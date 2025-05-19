@@ -6,7 +6,7 @@ import pandas as pd
 from cms_rendner_sdfv.base.table_source import AbstractTableSource
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, ChunkDataResponse, \
     TableSourceKind, Cell, CreateTableSourceErrorKind, TableInfo, TableStructure, TableStructureColumnInfo, \
-    TableStructureColumn, Region, CellMeta
+    TableStructureColumn, Region, CellMeta, TextAlign
 from cms_rendner_sdfv.pandas.styler.patched_styler import PatchedStyler
 from cms_rendner_sdfv.pandas.styler.table_source_factory import TableSourceFactory
 
@@ -45,8 +45,8 @@ def test_create_for_styler():
                 column_info=TableStructureColumnInfo(
                     legend=None,
                     columns=[
-                        TableStructureColumn(dtype="int64", labels=["col_0"], id=0),
-                        TableStructureColumn(dtype="int64", labels=["col_1"], id=1),
+                        TableStructureColumn(dtype="int64", labels=["col_0"], id=0, text_align=TextAlign.RIGHT),
+                        TableStructureColumn(dtype="int64", labels=["col_1"], id=1, text_align=TextAlign.RIGHT),
                     ],
                 ),
             )
@@ -111,8 +111,8 @@ def test_create_with_filter():
                 column_info=TableStructureColumnInfo(
                     legend=None,
                     columns=[
-                        TableStructureColumn(id=0, dtype='int64', labels=['col_0']),
-                        TableStructureColumn(id=1, dtype='int64', labels=['col_1']),
+                        TableStructureColumn(id=0, dtype='int64', labels=['col_0'], text_align=TextAlign.RIGHT),
+                        TableStructureColumn(id=1, dtype='int64', labels=['col_1'], text_align=TextAlign.RIGHT),
                     ],
                 )
             ),
@@ -164,8 +164,8 @@ def test_filter_expr_can_resolve_local_variable():
             column_info=TableStructureColumnInfo(
                 legend=None,
                 columns=[
-                    TableStructureColumn(id=0, dtype='int64', labels=['col_0']),
-                    TableStructureColumn(id=1, dtype='int64', labels=['col_1']),
+                    TableStructureColumn(id=0, dtype='int64', labels=['col_0'], text_align=TextAlign.RIGHT),
+                    TableStructureColumn(id=1, dtype='int64', labels=['col_1'], text_align=TextAlign.RIGHT),
                 ],
             )
         )
@@ -200,10 +200,9 @@ def test_filter_expr_can_resolve_synthetic_identifier():
             column_info=TableStructureColumnInfo(
                 legend=None,
                 columns=[
-                    TableStructureColumn(id=0, dtype='int64', labels=['col_0']),
-                    TableStructureColumn(id=1, dtype='int64', labels=['col_1']),
+                    TableStructureColumn(id=0, dtype='int64', labels=['col_0'], text_align=TextAlign.RIGHT),
+                    TableStructureColumn(id=1, dtype='int64', labels=['col_1'], text_align=TextAlign.RIGHT),
                 ],
             )
         )
     ))
-

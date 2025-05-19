@@ -21,7 +21,7 @@ from cms_rendner_sdfv.base.temp import TEMP_VARS, EvaluatedVarsCleaner
 from cms_rendner_sdfv.base.transforms import to_json
 from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, ChunkDataResponse, \
     TableSourceKind, TableStructure, CreateTableSourceErrorKind, TableInfo, \
-    CompletionVariant, NestedCompletionVariant, ChunkDataRequest, CellMeta
+    CompletionVariant, NestedCompletionVariant, ChunkDataRequest, CellMeta, TextAlign
 import cms_rendner_sdfv.base.types as _types
 
 
@@ -97,7 +97,7 @@ class AbstractMetaComputer:
         if css is not None:
             meta.background_color = css.get('background-color')
             meta.text_color = css.get('color')
-            meta.text_align = css.get('text-align')
+            meta.text_align = TextAlign.from_css(css.get('text-align'))
 
         return meta.pack()
 

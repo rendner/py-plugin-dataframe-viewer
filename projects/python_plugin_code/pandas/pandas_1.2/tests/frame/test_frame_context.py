@@ -3,7 +3,7 @@ import pandas as pd
 from pandas import DataFrame
 
 from cms_rendner_sdfv.base.types import TableStructureColumnInfo, TableStructureLegend, TableStructureColumn, \
-    TableStructure, NestedCompletionVariant, CompletionVariant
+    TableStructure, CompletionVariant, NestedCompletionVariant, TextAlign
 from cms_rendner_sdfv.pandas.frame.frame_context import FrameContext
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 
@@ -21,7 +21,6 @@ df2 = DataFrame.from_dict({
     "ABC": [2, 3, 4, 5, 6],
     "B": [3, 4, 5, 6, 7],
 })
-
 
 np.random.seed(123456)
 
@@ -141,12 +140,12 @@ def test_table_structure():
         column_info=TableStructureColumnInfo(
             legend=TableStructureLegend(index=['rows-char', 'rows-color'], column=['cols-char', 'cols-color']),
             columns=[
-                TableStructureColumn(dtype='int64', labels=['x', 'a'], id=0),
-                TableStructureColumn(dtype='int64', labels=['x', 'b'], id=1),
-                TableStructureColumn(dtype='int64', labels=['x', 'c'], id=2),
-                TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3),
-                TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4),
-                TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5)
+                TableStructureColumn(dtype='int64', labels=['x', 'a'], id=0, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='int64', labels=['x', 'b'], id=1, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='int64', labels=['x', 'c'], id=2, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='int64', labels=['y', 'a'], id=3, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='int64', labels=['y', 'b'], id=4, text_align=TextAlign.RIGHT),
+                TableStructureColumn(dtype='int64', labels=['y', 'c'], id=5, text_align=TextAlign.RIGHT)
             ]
         )
     )
@@ -158,8 +157,8 @@ def test_table_structure_column_info_with_str_and_int_column_names():
     assert ts.column_info == TableStructureColumnInfo(
         legend=None,
         columns=[
-            TableStructureColumn(dtype='int64', labels=['B'], id=0),
-            TableStructureColumn(dtype='int64', labels=['A'], id=1),
-            TableStructureColumn(dtype='int64', labels=['101'], id=2),
-            TableStructureColumn(dtype='int64', labels=['0'], id=3)
+            TableStructureColumn(dtype='int64', labels=['B'], id=0, text_align=TextAlign.RIGHT),
+            TableStructureColumn(dtype='int64', labels=['A'], id=1, text_align=TextAlign.RIGHT),
+            TableStructureColumn(dtype='int64', labels=['101'], id=2, text_align=TextAlign.RIGHT),
+            TableStructureColumn(dtype='int64', labels=['0'], id=3, text_align=TextAlign.RIGHT)
         ])

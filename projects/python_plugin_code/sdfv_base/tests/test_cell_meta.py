@@ -1,4 +1,4 @@
-from cms_rendner_sdfv.base.types import CellMeta
+from cms_rendner_sdfv.base.types import CellMeta, TextAlign
 
 
 def test_flags_only():
@@ -28,16 +28,16 @@ def test_optional_values():
     meta = CellMeta(text_color='red')
     assert meta.pack() == 'FFF|||red|'
 
-    meta = CellMeta(text_align='center')
-    assert meta.pack() == 'FFF|center|||'
+    meta = CellMeta(text_align=TextAlign.CENTER)
+    assert meta.pack() == 'FFF|C|||'
 
-    meta = CellMeta(cmap_value=123, text_align='center')
-    assert meta.pack() == 'FFF123|center|||'
+    meta = CellMeta(cmap_value=123, text_align=TextAlign.CENTER)
+    assert meta.pack() == 'FFF123|C|||'
 
 
 def test_from_packed():
     assert CellMeta.from_packed('FFF123||||') == CellMeta(cmap_value=123)
     assert CellMeta.from_packed('FFF||red||') == CellMeta(background_color='red')
     assert CellMeta.from_packed('FFF|||red|') == CellMeta(text_color='red')
-    assert CellMeta.from_packed('FFF|center|||') == CellMeta(text_align='center')
-    assert CellMeta.from_packed('FFF123|center|||') == CellMeta(cmap_value=123, text_align='center')
+    assert CellMeta.from_packed('FFF|C|||') == CellMeta(text_align=TextAlign.CENTER)
+    assert CellMeta.from_packed('FFF123|C|||') == CellMeta(cmap_value=123, text_align=TextAlign.CENTER)

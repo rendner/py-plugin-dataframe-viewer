@@ -14,7 +14,33 @@
 import dataclasses
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, List, Tuple, Union
+
+
+class TextAlign(Enum):
+    LEFT = 'L'
+    CENTER = 'C'
+    RIGHT = 'R'
+
+    @staticmethod
+    def from_css(text_align: Union[None, str]) -> Union[None, 'TextAlign']:
+        if text_align == 'left' or text_align == 'start':
+            return TextAlign.LEFT
+        if text_align == 'right' or text_align == 'end':
+            return TextAlign.RIGHT
+        if text_align == 'center':
+            return TextAlign.CENTER
+        return None
+
+    @staticmethod
+    def from_value(value: Union[None, str]) -> Union[None, 'TextAlign']:
+        if value == 'L':
+            return TextAlign.LEFT
+        if value == 'R':
+            return TextAlign.RIGHT
+        if value == 'C':
+            return TextAlign.CENTER
+        return None
 
 
 @dataclass(frozen=True)
@@ -23,6 +49,7 @@ class TableStructureColumn:
     labels: List[str]
     # -1: if no unique column id can be provided
     id: int
+    text_align: Union[None, TextAlign] = None
 
 
 @dataclass(frozen=True)
@@ -61,7 +88,7 @@ class CellMeta:
     cmap_value: Union[None, int] = None
     background_color: Union[None, str] = None
     text_color: Union[None, str] = None
-    text_align: Union[None, str] = None
+    text_align: Union[None, TextAlign] = None
 
     @staticmethod
     def min(background_color: Union[None, str] = None, text_color: Union[None, str] = None) -> 'CellMeta':
@@ -86,23 +113,23 @@ class CellMeta:
         result += self.__to_flag(self.is_min)
         result += self.__to_flag(self.is_max)
         result += self.__to_optional_part(self.cmap_value)
-        result += self.__to_optional_part(self.text_align, 40)
+        result += self.__to_optional_part(None if self.text_align is None else self.text_align.value)
         result += self.__to_optional_part(self.background_color, 120)
         result += self.__to_optional_part(self.text_color, 120)
         return result
 
     @staticmethod
     def from_packed(data: str) -> 'CellMeta':
-        is_nan = data[0] is 'T'
-        is_min = data[1] is 'T'
-        is_max = data[2] is 'T'
+        is_nan = data[0] == 'T'
+        is_min = data[1] == 'T'
+        is_max = data[2] == 'T'
         parts = data[3:].split('|')
         return CellMeta(
             is_nan=is_nan,
             is_min=is_min,
             is_max=is_max,
             cmap_value=int(parts[0]) if parts[0] else None,
-            text_align=parts[1] if parts[1] else None,
+            text_align=TextAlign.from_value(parts[1]),
             background_color=parts[2] if parts[2] else None,
             text_color=parts[3] if parts[3] else None,
         )
@@ -235,11 +262,11 @@ class CreateTableSourceConfig:
 
 
 class CreateTableSourceErrorKind(Enum):
-    EVAL_EXCEPTION = 0,
-    RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE = 1,
-    UNSUPPORTED_DATA_SOURCE_TYPE = 2,
-    INVALID_FINGERPRINT = 3,
-    FILTER_FRAME_EVAL_FAILED = 4,
+    EVAL_EXCEPTION = 0
+    RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE = 1
+    UNSUPPORTED_DATA_SOURCE_TYPE = 2
+    INVALID_FINGERPRINT = 3
+    FILTER_FRAME_EVAL_FAILED = 4
     FILTER_FRAME_OF_WRONG_TYPE = 5
 
 

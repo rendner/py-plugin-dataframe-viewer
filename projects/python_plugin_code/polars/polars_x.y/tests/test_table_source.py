@@ -1,7 +1,7 @@
 import polars as pl
 
 from cms_rendner_sdfv.base.types import TableStructureColumnInfo, TableStructureColumn, \
-    TableStructure, TableSourceKind, TableInfo, ChunkDataResponse, Cell, Region, CellMeta
+    TableStructure, TableSourceKind, TableInfo, ChunkDataResponse, Cell, Region, CellMeta, TextAlign
 from cms_rendner_sdfv.polars.frame_context import FrameContext
 from cms_rendner_sdfv.polars.table_source import TableSource
 
@@ -31,23 +31,33 @@ def test_compute_chunk_data():
     ))
 
 
-def test_table_info():
-    ts = TableSource(FrameContext(df), "finger-1")
+def test_table_info_with_different_column_types():
+    my_df = pl.DataFrame({
+        'a': [1],
+        'b': [1.0],
+        'c': [1j],
+        'd': ['a'],
+        'e': [True],
+    })
+    ts = TableSource(FrameContext(my_df), "finger-1")
 
     assert ts.get_info() == ts.serialize(
         TableInfo(
             kind=TableSourceKind.TABLE_SOURCE.name,
             structure=TableStructure(
-                org_rows_count=df.height,
-                org_columns_count=df.width,
-                rows_count=df.height,
-                columns_count=df.width,
+                org_rows_count=my_df.height,
+                org_columns_count=my_df.width,
+                rows_count=my_df.height,
+                columns_count=my_df.width,
                 fingerprint="finger-1",
                 column_info=TableStructureColumnInfo(
                     legend=None,
                     columns=[
-                        TableStructureColumn(dtype='Int64', labels=['0'], id=0),
-                        TableStructureColumn(dtype='Int64', labels=['1'], id=1)
+                        TableStructureColumn(dtype='Int64', labels=['a'], id=0, text_align=TextAlign.RIGHT),
+                        TableStructureColumn(dtype='Float64', labels=['b'], id=1, text_align=TextAlign.RIGHT),
+                        TableStructureColumn(dtype='Object', labels=['c'], id=2),
+                        TableStructureColumn(dtype='String', labels=['d'], id=3),
+                        TableStructureColumn(dtype='Boolean', labels=['e'], id=4),
                     ],
                 )
             ),

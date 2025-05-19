@@ -88,7 +88,15 @@ class PatchedStylerContext(PandasTableSourceContext):
             col_label = frame.columns[col]
             labels = [col_label] if nlevels == 1 else col_label
             labels = [self._formatter.format_column(lbl) for lbl in labels]
-            ts_columns.append(TableStructureColumn(dtype=str(dtypes[col_label]), labels=labels, id=col))
+            col_dtype = dtypes[col_label]
+            ts_columns.append(
+                TableStructureColumn(
+                    dtype=str(col_dtype),
+                    labels=labels,
+                    id=col,
+                    text_align=self._get_column_text_align(col_dtype),
+                )
+            )
 
         index_legend = [
             self._formatter.format_index(lbl)

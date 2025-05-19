@@ -97,7 +97,15 @@ class PatchedStylerContext(PandasTableSourceContext):
                 # hide_columns_ := list of booleans, True means lbl should be excluded
                 if not self.__styler.hide_columns_[lvl]
             ]
-            ts_columns.append(TableStructureColumn(dtype=str(dtypes[col_label]), labels=labels, id=col))
+            col_dtype = dtypes[col_label]
+            ts_columns.append(
+                TableStructureColumn(
+                    dtype=str(col_dtype),
+                    labels=labels,
+                    id=col,
+                    text_align=self._get_column_text_align(col_dtype),
+                )
+            )
 
         index_legend = [
             self._formatter.format_index(lbl)

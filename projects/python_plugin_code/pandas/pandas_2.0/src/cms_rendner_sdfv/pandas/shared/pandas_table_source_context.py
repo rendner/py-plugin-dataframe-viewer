@@ -15,11 +15,13 @@ from abc import ABC, abstractmethod
 from typing import Optional, Any, List, Union
 
 from pandas import DataFrame
+from pandas.api.types import is_numeric_dtype
+from pandas.core.dtypes.common import is_bool_dtype
 
 from cms_rendner_sdfv.base.helpers import fq_type
 from cms_rendner_sdfv.base.table_source import AbstractTableSourceContext
 from cms_rendner_sdfv.base.types import SortCriteria, TableStructure, TableStructureColumnInfo, CompletionVariant, \
-    NestedCompletionVariant
+    NestedCompletionVariant, TextAlign
 from cms_rendner_sdfv.pandas.shared.meta_computer import MetaComputer
 from cms_rendner_sdfv.pandas.shared.types import FilterCriteria
 from cms_rendner_sdfv.pandas.shared.value_formatter import ValueFormatter
@@ -102,6 +104,12 @@ class PandasTableSourceContext(AbstractTableSourceContext, ABC):
         if new_sort_criteria != self.__sort_criteria:
             self.__sort_criteria = new_sort_criteria
             self._visible_frame = self.__recompute_visible_frame()
+
+    @staticmethod
+    def _get_column_text_align(col_dtype: Any) -> Union[None, TextAlign]:
+        if is_numeric_dtype(col_dtype) and not is_bool_dtype(col_dtype):
+            return TextAlign.RIGHT
+        return None
 
     def _get_initial_visible_frame_indexes(self):
         return self.__source_frame.index, self.__source_frame.columns
