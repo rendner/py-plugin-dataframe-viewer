@@ -16,8 +16,10 @@
 package cms.rendner.intellij.dataframe.viewer.models.chunked
 
 import cms.rendner.intellij.dataframe.viewer.models.IHeaderLabel
+import cms.rendner.intellij.dataframe.viewer.models.TextAlign
 import cms.rendner.intellij.dataframe.viewer.python.bridge.Cell
 import cms.rendner.intellij.dataframe.viewer.python.bridge.ChunkData
+import cms.rendner.intellij.dataframe.viewer.python.bridge.TextAlignSerializer
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -125,6 +127,9 @@ data class TableStructureColumn(
     val id: Int,
     val dtype: String,
     val labels: List<String>,
+    @SerialName("text_align")
+    @Serializable(TextAlignSerializer::class)
+    val textAlign: TextAlign? = null,
 )
 
 @Serializable

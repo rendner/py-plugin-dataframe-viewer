@@ -49,7 +49,7 @@ class CellStyleComputer: ICellStyleComputer {
         // -1 => invalid value like inf or nan
         // 0 to 100_000 => valid values
         val cmapValue = parts[0]
-        val textAlign = parts[1]
+        val textAlign = TextAlign.unpackOrConvert(parts[1])
         val backgroundColor = parts[2]
         val textColor = parts[3]
 
@@ -58,7 +58,7 @@ class CellStyleComputer: ICellStyleComputer {
             return if (isNaN) StyleProperties(
                 backgroundColor = Color.RED,
                 textColor = Color.BLACK,
-                textAlign = convertTextAlign(textAlign)
+                textAlign = textAlign
                 ) else null
         }
         if (myStylingMode == CellStylingMode.HighlightMin) {
@@ -66,7 +66,7 @@ class CellStyleComputer: ICellStyleComputer {
             return if (isMin) StyleProperties(
                 backgroundColor = Color.YELLOW,
                 textColor = Color.BLACK,
-                textAlign = convertTextAlign(textAlign)
+                textAlign = textAlign
                 ) else null
         }
         if (myStylingMode == CellStylingMode.HighlightMax) {
@@ -74,7 +74,7 @@ class CellStyleComputer: ICellStyleComputer {
             return if (isMax) StyleProperties(
                 backgroundColor = Color.YELLOW,
                 textColor = Color.BLACK,
-                textAlign = convertTextAlign(textAlign)
+                textAlign = textAlign
                 ) else null
         }
 
@@ -84,7 +84,7 @@ class CellStyleComputer: ICellStyleComputer {
                     return StyleProperties(
                         textColor = Color.WHITE,
                         backgroundColor = Color.BLACK,
-                        textAlign = convertTextAlign(textAlign)
+                        textAlign = textAlign
                     )
                 }
                 val colorMapper = if (myStylingMode == CellStylingMode.ColorMap) myColorMapper else myDivergingColorMapper
@@ -92,7 +92,7 @@ class CellStyleComputer: ICellStyleComputer {
                 return StyleProperties(
                     textColor = colors.foreground,
                     backgroundColor = colors.background,
-                    textAlign = convertTextAlign(textAlign)
+                    textAlign = textAlign
                 )
             }
             return null
@@ -101,7 +101,7 @@ class CellStyleComputer: ICellStyleComputer {
             return StyleProperties(
                 textColor = convertColorValue(textColor),
                 backgroundColor = convertColorValue(backgroundColor),
-                textAlign = convertTextAlign(textAlign)
+                textAlign = textAlign
             )
         }
     }
@@ -144,15 +144,6 @@ class CellStyleComputer: ICellStyleComputer {
             } catch (ignore: IllegalArgumentException) {
                 null
             }
-        }
-    }
-
-    private fun convertTextAlign(value: String?): TextAlign? {
-        return if (value.isNullOrEmpty()) null else when (value) {
-            "left", "start" -> TextAlign.left
-            "right", "end" -> TextAlign.right
-            "center" -> TextAlign.center
-            else -> null
         }
     }
 }

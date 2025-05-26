@@ -42,11 +42,31 @@ data class LeveledHeaderLabel(val lastLevel: String = "", val leadingLevels: Lis
 
 data class LegendHeaders(val row: IHeaderLabel, val column: IHeaderLabel)
 
-@Suppress("EnumEntryName")
 enum class TextAlign {
-    left,
-    right,
-    center
+    LEFT,
+    RIGHT,
+    CENTER;
+
+    fun pack(): String {
+        return when(this) {
+            LEFT -> "L"
+            RIGHT -> "R"
+            CENTER -> "C"
+        }
+    }
+
+    companion object {
+        fun unpackOrConvert(value: String?): TextAlign? {
+            return when (value) {
+                null -> null
+                "L", "LEFT" -> LEFT
+                "R", "RIGHT" -> RIGHT
+                "C", "CENTER" -> CENTER
+                else -> null
+            }
+        }
+    }
+
 }
 
 interface IDataFrameIndexDataModel : TableModel {
@@ -78,6 +98,7 @@ interface IDataFrameValuesDataModel : TableModel {
 
     fun getColumnLabelAt(columnIndex: Int): IHeaderLabel
     fun getColumnDtypeAt(columnIndex: Int): String
+    fun getColumnTextAlignAt(columnIndex: Int): TextAlign?
 
     fun isSortable(): Boolean = false
 

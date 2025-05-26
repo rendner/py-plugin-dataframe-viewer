@@ -47,25 +47,32 @@ class ValueCellRenderer(
 
         if (table !is MyValuesTable || cellStyleComputer == null) return this
 
-        table.model?.getCellMetaAt(
-            table.convertRowIndexToModel(row),
-            table.convertColumnIndexToModel(column),
-        )?.let { meta ->
-            cellStyleComputer.computeStyling(meta)?.let { styling ->
-                if (!isSelected) {
-                    if (styling.backgroundColor != null) {
-                        background = styling.backgroundColor
-                        foreground = styling.textColor ?: if (background == Color.BLACK) Color.WHITE else Color.BLACK
-                    } else {
-                        foreground = styling.textColor
+        table.model?.let { model ->
+            val modelRowIndex = table.convertRowIndexToModel(row)
+            val modelColumnIndex = table.convertColumnIndexToModel(column)
+
+            var textAlign = model.getColumnTextAlignAt(modelColumnIndex)
+
+            model.getCellMetaAt(modelRowIndex, modelColumnIndex)?.let { meta ->
+                cellStyleComputer.computeStyling(meta)?.let { styling ->
+                    if (styling.textAlign != null) {
+                        textAlign = styling.textAlign
+                    }
+                    if (!isSelected) {
+                        if (styling.backgroundColor != null) {
+                            background = styling.backgroundColor
+                            foreground = styling.textColor ?: if (background == Color.BLACK) Color.WHITE else Color.BLACK
+                        } else {
+                            foreground = styling.textColor
+                        }
                     }
                 }
+            }
 
-                horizontalAlignment = when (styling.textAlign) {
-                    TextAlign.center -> SwingConstants.CENTER
-                    TextAlign.right -> SwingConstants.RIGHT
-                    else -> SwingConstants.LEFT
-                }
+            horizontalAlignment = when (textAlign) {
+                TextAlign.CENTER -> SwingConstants.CENTER
+                TextAlign.RIGHT -> SwingConstants.RIGHT
+                else -> SwingConstants.LEFT
             }
         }
 

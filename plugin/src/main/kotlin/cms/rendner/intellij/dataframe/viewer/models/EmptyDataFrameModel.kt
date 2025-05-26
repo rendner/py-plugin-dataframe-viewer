@@ -53,6 +53,10 @@ private class MyEmptyValuesModel : AbstractTableModel(), IDataFrameValuesDataMod
         throw UnsupportedOperationException("Operation 'getColumnDtypeAt' isn't supported.")
     }
 
+    override fun getColumnTextAlignAt(columnIndex: Int): TextAlign? {
+        throw UnsupportedOperationException("Operation 'getColumnTextAlignAt' isn't supported.")
+    }
+
     override fun getColumnStatisticsAt(columnIndex: Int): Map<String, String>? {
         throw UnsupportedOperationException("Operation 'getColumnStatisticsAt' isn't supported.")
     }

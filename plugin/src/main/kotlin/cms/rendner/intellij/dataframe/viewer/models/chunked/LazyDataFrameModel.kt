@@ -213,6 +213,11 @@ class LazyDataFrameModel(
         return tableStructure.columnInfo.columns[columnIndex].dtype
     }
 
+    private fun getColumnTextAlignAt(columnIndex: Int): TextAlign? {
+        checkIndex("ColumnIndex", columnIndex, tableStructure.columnsCount)
+        return tableStructure.columnInfo.columns[columnIndex].textAlign
+    }
+
     private fun checkIndex(type: String, index: Int, maxBounds: Int) {
         if (index < 0 || index >= maxBounds) {
             throw IndexOutOfBoundsException("$type $index is out of bounds.")
@@ -382,6 +387,7 @@ class LazyDataFrameModel(
         override fun getValueAt(rowIndex: Int, columnIndex: Int) = source.getValueAt(rowIndex, columnIndex)
         override fun getCellMetaAt(rowIndex: Int, columnIndex: Int) = source.getCellMetaAt(rowIndex, columnIndex)
         override fun getColumnLabelAt(columnIndex: Int) = source.getColumnLabelAt(columnIndex)
+        override fun getColumnTextAlignAt(columnIndex: Int) = source.getColumnTextAlignAt(columnIndex)
         override fun getColumnDtypeAt(columnIndex: Int) = source.getColumnDtypeAt(columnIndex)
         override fun setSortKeys(sortKeys: List<SortKey>) = source.setValueSortKeys(sortKeys)
         override fun isSortable() = source.sortable

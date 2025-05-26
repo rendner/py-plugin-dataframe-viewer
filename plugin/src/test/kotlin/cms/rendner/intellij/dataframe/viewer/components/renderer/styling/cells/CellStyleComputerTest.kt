@@ -28,7 +28,7 @@ private data class CellMeta(
     val isMax: Boolean = false,
     val cmapValue: Int? = null,
     val textColor: String? = null,
-    val textAlign: String? = null,
+    val textAlign: TextAlign? = null,
     val backgroundColor: String? = null,
 ) {
     fun pack(): String {
@@ -38,7 +38,7 @@ private data class CellMeta(
             appendFlag(it, isMin)
             appendFlag(it, isMax)
             appendOptionalPart(it, cmapValue?.toString())
-            appendOptionalPart(it, textAlign)
+            appendOptionalPart(it, textAlign?.pack())
             appendOptionalPart(it, backgroundColor)
             appendOptionalPart(it, textColor)
         }.toString()
@@ -61,13 +61,13 @@ internal class CellStyleComputerTest {
         val meta = CellMeta(
             backgroundColor = "pink",
             textColor = "white",
-            textAlign = "left",
+            textAlign = TextAlign.CENTER,
         )
 
         val expectedStyling = StyleProperties(
             backgroundColor = Color(255, 192, 203),
             textColor = Color.WHITE,
-            textAlign = TextAlign.left,
+            textAlign = TextAlign.CENTER,
         )
 
         assertThat(computer.computeStyling(meta.pack()))
@@ -103,9 +103,9 @@ internal class CellStyleComputerTest {
         assertThat(computer.computeStyling(meta.copy(
             backgroundColor = "pink",
             textColor = "white",
-            textAlign = "left",
+            textAlign = TextAlign.LEFT,
         ).pack()))
-            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.left))
+            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.LEFT))
 
         assertThat(computer.computeStyling(meta.copy(isMin = true).pack()))
             .isEqualTo(expectedStyling)
@@ -134,9 +134,9 @@ internal class CellStyleComputerTest {
         assertThat(computer.computeStyling(meta.copy(
             backgroundColor = "pink",
             textColor = "white",
-            textAlign = "left",
+            textAlign = TextAlign.LEFT,
         ).pack()))
-            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.left))
+            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.LEFT))
 
         assertThat(computer.computeStyling(meta.copy(isMin = true).pack()))
             .isEqualTo(expectedStyling)
@@ -165,9 +165,9 @@ internal class CellStyleComputerTest {
         assertThat(computer.computeStyling(meta.copy(
             backgroundColor = "pink",
             textColor = "white",
-            textAlign = "left",
+            textAlign = TextAlign.LEFT,
         ).pack()))
-            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.left))
+            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.LEFT))
 
         assertThat(computer.computeStyling(meta.copy(isMin = true).pack()))
             .isEqualTo(expectedStyling)
@@ -196,9 +196,9 @@ internal class CellStyleComputerTest {
         assertThat(computer.computeStyling(meta.copy(
             backgroundColor = "pink",
             textColor = "white",
-            textAlign = "left",
+            textAlign = TextAlign.LEFT,
         ).pack()))
-            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.left))
+            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.LEFT))
 
         assertThat(computer.computeStyling(meta.copy(isMin = true).pack()))
             .isEqualTo(expectedStyling)
@@ -227,9 +227,9 @@ internal class CellStyleComputerTest {
         assertThat(computer.computeStyling(meta.copy(
             backgroundColor = "pink",
             textColor = "white",
-            textAlign = "left",
+            textAlign = TextAlign.LEFT,
         ).pack()))
-            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.left))
+            .isEqualTo(expectedStyling.copy(textAlign = TextAlign.LEFT))
 
         assertThat(computer.computeStyling(meta.copy(isMin = true).pack()))
             .isEqualTo(expectedStyling)

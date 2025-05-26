@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge
 
+import cms.rendner.intellij.dataframe.viewer.models.TextAlign
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkDataRequest
 import cms.rendner.intellij.dataframe.viewer.models.chunked.ChunkRegion
 import cms.rendner.intellij.dataframe.viewer.models.chunked.SortCriteria
@@ -26,7 +27,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonContentPolymorphicSerializer
@@ -264,8 +264,7 @@ data class CreateTableSourceFailure(
 )
 
 class PythonBooleanSerializer : KSerializer<Boolean> {
-    override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("cms.rendner.PythonBoolean", PrimitiveKind.BOOLEAN)
+    override val descriptor = PrimitiveSerialDescriptor("cms.rendner.PythonBoolean", PrimitiveKind.BOOLEAN)
 
     override fun deserialize(decoder: Decoder): Boolean {
         return when (decoder.decodeString()) {
@@ -277,6 +276,19 @@ class PythonBooleanSerializer : KSerializer<Boolean> {
 
     override fun serialize(encoder: Encoder, value: Boolean) {
         encoder.encodeString(if (value) "True" else "False")
+    }
+}
+
+class TextAlignSerializer : KSerializer<TextAlign?> {
+    override val descriptor = PrimitiveSerialDescriptor("cms.rendner.PythonTextAlign", PrimitiveKind.STRING)
+
+    override fun deserialize(decoder: Decoder): TextAlign? {
+        return TextAlign.unpackOrConvert(decoder.decodeString())
+    }
+
+    override fun serialize(encoder: Encoder, value: TextAlign?) {
+        // safe because @Serializable skips null fields
+        encoder.encodeString(value!!.name)
     }
 }
 
