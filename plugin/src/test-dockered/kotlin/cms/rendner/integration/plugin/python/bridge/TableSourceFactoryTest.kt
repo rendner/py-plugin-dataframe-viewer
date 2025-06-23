@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,8 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
 
     @Test
     fun shouldFailIfJinja2IsNotInstalled() {
+        // TODO: adapt expectation after "pipenv.vendor.tomlkit.exceptions.NonExistentKey: 'Key "jinja2" does not exist.'"
+        // in pandas_2_3 pipenv is fixed
         runWithDefaultSnippet { debuggerApi ->
             Assertions.assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style")
