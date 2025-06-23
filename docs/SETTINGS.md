@@ -11,6 +11,13 @@ In the settings dialog select **Tools > Styled DataFrame Viewer**
 
 ![settings](images/settings/settings.png)
 ## Table
+### Default Cell Styling
+Default: `off`
+
+Highlights the rendered cell values according to the selected cell styling.
+> [!NOTE]
+> For more information read: [Cell Styling](CELL_STYLING.md)
+
 ### Show Column DType In Header
 Default: `on`
 
@@ -43,4 +50,5 @@ Runtime code completion may lead to certain side effects, such as unintentional 
 Default: `off`
 
 Allows to automatically validate used style functions whenever data is fetched from the running Python process.
+> [!NOTE]
 > For more information read: [Validating Style Functions](PANDAS_VALIDATING_STYLE_FUNCTIONS.md)
