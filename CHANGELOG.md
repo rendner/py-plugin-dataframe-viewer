@@ -1,4 +1,29 @@
 # Changelog
+## v0.19.0
+- `Released`: 2025-06-23
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x
+- `Min Required IntelliJ Version`: 2023.3
+
+### Added
+#### Support For pandas 2.3
+All already supported `Styler` methods as well as sorting and filtering are now also usable with pandas 2.3.
+
+#### Cell Styling Modes
+The plugin now offers a new dropdown to highlight numeric column values.
+
+Available styling are:
+- highlight minimum
+- highlight maximum
+- highlight null
+- color map
+- color map (diverging)
+
+A detailed description can be found [here](./docs/CELL_STYLING.md)
+
+### Changed
+#### Text Alignment For Numeric Columns
+The values of numerical columns are now right-aligned to improve readability.
+
 ## v0.18.0
 - `Released`: 2025-01-27
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x

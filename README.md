@@ -1,10 +1,5 @@
 # Python: Styled DataFrame Viewer
 
-> [!NOTE]
-> The plugin is broken in PyCharm 2024.2.1, but works again in PyCharm >= 2024.2.3.
->
-> In case of problems, you can use the following workaround: [plugin fix](./docs/FIX_PLUGIN_PY_CHARM_2024.2.1.md)
-
 ## Installation
 
 - Using the IDE built-in plugin system:
@@ -35,6 +30,7 @@ Note: The plugin requires one of the supported Python DataFrame libraries:
 ## Features
 - filtering
 - sorting
+- [highlighting of numeric cell values](./docs/CELL_STYLING.md)
 - [keyboard shortcuts to work efficiently](./docs/KEYBOARD_SHORTCUTS.md)
 - [settings to configure plugin behavior](./docs/SETTINGS.md)
 
