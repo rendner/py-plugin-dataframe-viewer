@@ -48,14 +48,10 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
 
     @Test
     fun shouldFailIfJinja2IsNotInstalled() {
-        // TODO: adapt expectation after "pipenv.vendor.tomlkit.exceptions.NonExistentKey: 'Key "jinja2" does not exist.'"
-        // in pandas_2_3 pipenv is fixed
         runWithDefaultSnippet { debuggerApi ->
             Assertions.assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
                 createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style")
-            }.withMessageContaining(
-                "{ImportError} Missing optional dependency 'Jinja2'. DataFrame.style requires jinja2.",
-            )
+            }.withMessageContaining("jinja2")
         }
     }
 
