@@ -3,7 +3,7 @@ FROM python:3.12.2-slim-bullseye
 
 ARG pipenv_environment
 
-RUN pip install pipenv
+RUN pip install pipenv==2024.1.0
 
 WORKDIR /usr/src/app
 

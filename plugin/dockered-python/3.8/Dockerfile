@@ -1,7 +1,7 @@
 # https://hub.docker.com/_/python
 FROM python:3.8.12-slim-buster
 
-RUN pip install pipenv
+RUN pip install pipenv==2024.1.0
 
 WORKDIR /usr/src/app
 

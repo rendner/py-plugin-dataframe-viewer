@@ -3,7 +3,7 @@ FROM python:3.11.4-slim-buster
 
 ARG pipenv_environment
 
-RUN pip install pipenv
+RUN pip install pipenv==2024.1.0
 
 WORKDIR /usr/src/app
 
