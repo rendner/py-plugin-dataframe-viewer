@@ -35,7 +35,7 @@ df = pl.from_dict({'A': [1, 2], 'B': [3, float("nan")]})
 breakpoint()
 ```
 
-![highlight null](./images/cell styling/highlight_null.png)
+![highlight null](./images/cell_styling/highlight_null.png)
 
 ## highlight min
 
@@ -59,7 +59,7 @@ df = pl.from_dict({'A': [1, 2], 'B': [3, 4]})
 breakpoint()
 ```
 
-![highlight min](./images/cell styling/highlight_min.png)
+![highlight min](./images/cell_styling/highlight_min.png)
 
 ## highlight max
 
@@ -83,7 +83,7 @@ df = pl.from_dict({'A': [1, 2], 'B': [3, 4]})
 breakpoint()
 ```
 
-![highlight max](./images/cell styling/highlight_max.png)
+![highlight max](./images/cell_styling/highlight_max.png)
 
 ## color map
 
@@ -115,7 +115,7 @@ df = pl.from_dict({'A': [-50, 0, 50], 'B': [-100, 50, 100]})
 breakpoint()
 ```
 
-![color map](./images/cell styling/color_map.png)
+![color map](./images/cell_styling/color_map.png)
 
 ## color map (diverging)
 
@@ -148,4 +148,4 @@ df = pl.from_dict({'A': [-50, 0, 50], 'B': [-100, 50, 100]})
 breakpoint()
 ```
 
-![color map div](./images/cell styling/color_map_div.png)
+![color map div](./images/cell_styling/color_map_div.png)
