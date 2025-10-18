@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,17 @@
 package cms.rendner.intellij.dataframe.viewer.actions
 
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
-import cms.rendner.intellij.dataframe.viewer.python.IEvalAvailableDataFrameLibraries
+import cms.rendner.intellij.dataframe.viewer.python.InstalledDataFrameLibrariesExpr
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourceCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
-import cms.rendner.intellij.dataframe.viewer.python.pycharm.debugProcessIsTerminated
-import cms.rendner.intellij.dataframe.viewer.services.AvailableDataFrameLibrariesProvider
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
+import cms.rendner.intellij.dataframe.viewer.services.InstalledDataFrameLibrariesProvider
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
-import com.jetbrains.python.debugger.PyDebugValue
-import com.jetbrains.python.debugger.PyFrameAccessor
+import com.intellij.openapi.project.Project
 
 open class ShowViewerForDictAction : BaseShowViewerAction() {
     // Has to be EDT. Otherwise, triggering this action via the mapped key binding,
@@ -39,13 +38,13 @@ open class ShowViewerForDictAction : BaseShowViewerAction() {
         event.presentation.isEnabledAndVisible = couldCreateFrameFromSelectedValue(event)
     }
 
-    override fun getApplicableCodeProviders(event: AnActionEvent, dataSource: PyDebugValue): List<ITableSourceCodeProvider> {
-        dataSource.qualifiedType?.let { qType ->
+    override fun getApplicableCodeProviders(debugValue: SelectedDebugValue): List<ITableSourceCodeProvider> {
+        debugValue.value.qualifiedType.let { qType ->
             if (qType == PythonQualifiedTypes.DICT) {
                 val codeProviders = TableSourceCodeProviderRegistry.getApplicableProviders(qType)
                 if (codeProviders.isNotEmpty()) {
-                    val project = event.project ?: return emptyList()
-                    project.service<AvailableDataFrameLibrariesProvider>().getLibraries(dataSource.frameAccessor)?.let { libs ->
+                    val project = debugValue.project ?: return emptyList()
+                    project.service<InstalledDataFrameLibrariesProvider>().getDetectedLibraries(debugValue.frameAccessor)?.let { libs ->
                         return codeProviders.filter { libs.contains(it.getDataFrameLibrary()) }
                     }
                 }
@@ -56,44 +55,32 @@ open class ShowViewerForDictAction : BaseShowViewerAction() {
 
     private fun couldCreateFrameFromSelectedValue(event: AnActionEvent): Boolean {
         val debugValue = getSelectedDebugValue(event) ?: return false
-        if (debugValue.frameAccessor.debugProcessIsTerminated()) return false
-        return debugValue.qualifiedType.let { qType ->
+        return debugValue.value.qualifiedType.let { qType ->
             if (qType == PythonQualifiedTypes.DICT) {
-                val project = event.project ?: return false
-                if (!project.service<AvailableDataFrameLibrariesProvider>().hasResult(debugValue.frameAccessor)) {
-                    MyDataFrameLibrariesEvaluator().evaluate(debugValue.frameAccessor)
-                }
-                getApplicableCodeProviders(event, debugValue).isNotEmpty()
+                val project = debugValue.project ?: return false
+                checkInstalledDataFrameLibraries(project, debugValue.frameAccessor)
+                getApplicableCodeProviders(debugValue).isNotEmpty()
             } else false
         }
     }
 
-    private class MyDataFrameLibrariesEvaluator : IEvalAvailableDataFrameLibraries {
-        fun evaluate(frameAccessor: PyFrameAccessor) {
-            frameAccessor.project?.let { project ->
-                try {
-                    val result = frameAccessor.evaluate(getEvalExpression(), false, false)
-                    project.service<AvailableDataFrameLibrariesProvider>().setLibraries(
-                        frameAccessor,
-                        if (result is PyDebugValue) convertResult(result.value!!) else emptyList()
-                    )
-                } catch (ignore: Throwable) {
-                    project.service<AvailableDataFrameLibrariesProvider>().setLibraries(
-                        frameAccessor,
-                        emptyList()
-                    )
-                }
-            }
+    private fun checkInstalledDataFrameLibraries(project: Project, frameAccessor: IPluginPyFrameAccessor): List<DataFrameLibrary> {
+        val libraries = try {
+            val result = frameAccessor.evaluate(InstalledDataFrameLibrariesExpr.getExpression())
+            InstalledDataFrameLibrariesExpr.convertResult(result.value!!)
+        } catch (_: Throwable) {
+            emptyList()
+        }
+
+        return libraries.also {
+            project.service<InstalledDataFrameLibrariesProvider>().setDetectedLibraries(frameAccessor, it)
         }
     }
 }
 
 class ShowViewerForDictWithKeysAsRowsAction : ShowViewerForDictAction() {
-    override fun getApplicableCodeProviders(
-        event: AnActionEvent,
-        dataSource: PyDebugValue
-    ): List<ITableSourceCodeProvider> {
-        return super.getApplicableCodeProviders(event, dataSource).filter {
+    override fun getApplicableCodeProviders(debugValue: SelectedDebugValue): List<ITableSourceCodeProvider> {
+        return super.getApplicableCodeProviders(debugValue).filter {
             it.getDataFrameLibrary() == DataFrameLibrary.PANDAS
         }
     }

@@ -1,0 +1,62 @@
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+import sys
+from importlib.abc import MetaPathFinder
+from pathlib import Path
+from typing import List
+
+import pytest
+
+
+def pytest_addoption(parser):
+    # "simulates" a non-installed jinja2 (even it is installed)
+    parser.addoption("--no-jinja", action="store_true", help="disable import of the optional dependency jinja2")
+
+
+# https://docs.pytest.org/en/7.2.x/writing_plugins.html
+# activate pytest asserts introspection for our asserts helpers
+pytest.register_assert_rewrite('tests.helpers.asserts')
+
+
+def pytest_make_parametrize_id(config, val, argname):
+    return f'{argname}: {str(val)}'
+
+
+class RaiseOnImport(MetaPathFinder):
+    def __init__(self, packages: List[str]):
+        self._packages = packages
+
+    def find_spec(self, fullname, path, target=None):
+        if fullname in self._packages:
+            raise ImportError()
+
+
+def pytest_ignore_collect(collection_path, path, config):
+    if not config.getoption("--no-jinja") or not collection_path.is_dir():
+        return False
+
+    test_dir = Path(config.rootdir, "tests")
+    styler_dir = test_dir / "styler"
+
+    collection_path_resolved = collection_path.resolve()
+    styler_dir_resolved = styler_dir.resolve()
+
+    return (collection_path_resolved == styler_dir_resolved or
+            styler_dir_resolved in collection_path_resolved.parents)
+
+
+def pytest_sessionstart(session):
+    if session.config.getoption("--no-jinja"):
+        # disable the import
+        sys.meta_path.insert(0, RaiseOnImport(['jinja2', 'Jinja2']))

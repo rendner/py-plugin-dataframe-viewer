@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package cms.rendner.debugger.impl
 
 import com.intellij.openapi.diagnostic.Logger
+import java.util.Base64
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -48,7 +49,9 @@ class DockeredPipEnvEnvironment(
      * Creates a docker container of the specified [dockerImage].
      */
     fun runContainer() {
-
+        // The docker image is built with the host's UID/GID passed as build arguments.
+        // This ensures that the appuser in the container has the same UID/GID as the host user,
+        // avoiding permission issues with mounted volumes.
         val processArgs = mutableListOf<String>().apply{
             add("docker")
             add("run")
@@ -74,29 +77,17 @@ class DockeredPipEnvEnvironment(
                         if (lines.size > 1) {
                             logger.error("container '$containerId' will be terminated because it is in an unexpected state: $lines.last()")
                             destroyContainer()
-                            throw IllegalStateException("Container creation for image '$dockerImage' failed with: ${lines.last()}")
+                            throw ProcessRunException("Container creation for image '$dockerImage' failed with: ${lines.last()}")
                         }
                     } else {
-                        throw IllegalStateException("Container creation for image '$dockerImage' failed with: $firstLine")
+                        throw ProcessRunException("Container creation for image '$dockerImage' failed with: $firstLine")
                     }
                 }
                 if (!it.waitFor(5, TimeUnit.SECONDS)) {
                     it.destroy()
                 }
-                if (it.exitValue() != 0) {
-                    throw IllegalStateException("docker run failed, exitValue: ${it.exitValue()}")
-                }
+                ProcessRunException.throwIfExitedUnexpected(it, "docker run failed")
             }
-    }
-
-    /**
-     * Creates a Python debugger which is started in the pipenv environment ([pipEnvDir]) when its start method is called.
-     * The file referred by [sourceFilePath] has to contain a line with "breakpoint()", usually the last line,
-     * to switch the Python interpreter into debug mode (Pdb).
-     * The interpreter will stop at this line and process all submitted evaluation requests.
-     */
-    fun createPythonDebuggerWithSourceFile(sourceFilePath: String): PythonDebugger {
-        return createPythonDebugger(listOf(sourceFilePath))
     }
 
     /**
@@ -106,45 +97,6 @@ class DockeredPipEnvEnvironment(
      * The interpreter will stop at this line and process all submitted evaluation requests.
      */
     fun createPythonDebuggerWithCodeSnippet(codeSnippet: String): PythonDebugger {
-        return createPythonDebugger(listOf("-c", codeSnippet))
-    }
-
-    /**
-     * Uninstalls Python modules.
-     * The modules are removed from the pipenv environment ([pipEnvDir]).
-     *
-     * This action may take some time, as pipenv recreates the lock-file.
-     *
-     * @param modules modules to remove from a running container.
-     */
-    fun uninstallPythonModules(vararg modules: String) {
-        if (modules.isEmpty()) return
-
-        if (containerId == null) {
-            throw IllegalStateException("No container available.")
-        }
-
-        val processArgs = mutableListOf<String>().apply {
-            add("docker")
-            add("exec")
-            add(containerId!!)
-            addAll("pipenv uninstall".split(" "))
-            addAll(modules)
-        }
-
-        ProcessBuilder(processArgs)
-        .inheritIO() // to see uninstall info in console output
-        .start().let {
-            if (!it.waitFor(6, TimeUnit.MINUTES)) {
-                it.destroy()
-            }
-            if (it.exitValue() != 0) {
-                throw IllegalStateException("pipenv uninstall failed, exitValue: ${it.exitValue()}")
-            }
-        }
-    }
-
-    private fun createPythonDebugger(additionalPythonArgs: List<String>): PythonDebugger {
         if (containerId == null) {
             throw IllegalStateException("No container available.")
         }
@@ -154,8 +106,8 @@ class DockeredPipEnvEnvironment(
             add("exec")
             add("-i")
             add(containerId!!)
-            addAll("pipenv run python".split(" "))
-            addAll(additionalPythonArgs)
+            addAll("pipenv run python -c".split(" "))
+            add(codeSnippet)
         }
 
         return MyPythonDebugger(processArgs)
@@ -170,10 +122,9 @@ class DockeredPipEnvEnvironment(
                 if (!it.waitFor(5, TimeUnit.SECONDS)) {
                     it.destroy()
                 }
+                val id = containerId
                 containerId = null
-                if (it.exitValue() != 0) {
-                    throw IllegalStateException("docker rm failed for container $containerId, exitValue: ${it.exitValue()}")
-                }
+                ProcessRunException.throwIfExitedUnexpected(it, "docker rm failed for container $id")
             }
     }
 

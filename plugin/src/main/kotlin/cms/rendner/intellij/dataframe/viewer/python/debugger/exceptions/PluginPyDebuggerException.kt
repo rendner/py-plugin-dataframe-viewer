@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,40 @@ package cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions
 
 import com.jetbrains.python.PyBundle
 
-class PluginPyDebuggerException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    fun isDisconnectException(): Boolean {
-        // In PyCharm a "PyDebuggerException" with the message "Disconnected"
-        // is thrown in case the debugger was disconnected.
-        return message == "Disconnected"
+private val ANSI_ESCAPE_CODE_REGEX = Regex("\u001B\\[[0-9;]+m")
+
+class PluginPyDebuggerException(
+    message: String,
+    cause: Throwable? = null,
+    val isDisconnected: Boolean = false,
+    ) : Exception(message, cause) {
+
+    companion object {
+        fun fromPyCharmDebuggerException(exception: Exception, isDisconnected: Boolean = false): PluginPyDebuggerException {
+            // https://docs.python.org/3/library/traceback.html#traceback-examples
+            val truncatedMessage = exception.message?.let {
+                val lastTracebackIndex = it.lastIndexOf("Traceback (most recent call last):")
+                val extracted = if (lastTracebackIndex != -1) {
+                    it.substring(lastTracebackIndex)
+                } else {
+                    it
+                }
+                // Strip ANSI escape codes for better readability
+                extracted.replace(ANSI_ESCAPE_CODE_REGEX, "")
+            } ?: "Unknown debugger exception occurred."
+
+            return PluginPyDebuggerException(
+                truncatedMessage,
+                if (exception === exception.cause) null else exception.cause,
+                isDisconnected,
+            )
+        }
     }
 
     fun isProcessIsRunningException(): Boolean {
         // In PyCharm a "PyDebuggerException" with the message "Process is running"
         // is thrown when XDebugSession::getCurrentStackFrame returns null in PyDebugProcess::currentFrame.
-        // This can happen when jumping very fast between breakpoints while in the background data is evaluated.
-        // In such a scenario the frame of the previous breakpoint is cleared and the new one is set after
-        // the position of the new breakpoint is reached. Between these two breakpoints the frame is always
-        // null and therefore no expression can be evaluated.
+        // This happens when the session is resumed (not paused).
         return message == "Process is running" || message == PyBundle.message("debugger.debug.process.running")
     }
 }

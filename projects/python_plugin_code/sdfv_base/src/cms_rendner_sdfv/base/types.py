@@ -70,7 +70,6 @@ class TableStructure:
     org_columns_count: int
     rows_count: int
     columns_count: int
-    fingerprint: str
     column_info: TableStructureColumnInfo
 
 
@@ -235,45 +234,34 @@ class ChunkDataRequest:
 
 
 @dataclass(frozen=True)
-class SortCriteria:
-    by_column: Union[None, List[int]] = None
-    ascending: Union[None, List[bool]] = None
+class SortConfig:
+    # index of the column in the DataFrame
+    column_idx: List[int] = dataclasses.field(default_factory=list)
+    ascending: List[bool] = dataclasses.field(default_factory=list)
+
+    def __post_init__(self):
+        msg = "Size of 'column_idx' and 'ascending' does not match."
+        assert len(self.column_idx or '') == len(self.ascending or ''), msg
 
     def is_empty(self) -> bool:
-        return not self.by_column
-
-    def __eq__(self, other):
-        if isinstance(other, SortCriteria):
-            def _equals(s: Union[None, List[Any]], o: Union[None, List[Any]]) -> bool:
-                # None and [] are interpreted as "no sorting"
-                return (not s and not o) or s == o
-
-            return _equals(self.by_column, other.by_column) and _equals(self.ascending, other.ascending)
-        return False
+        return not self.column_idx
 
 
 @dataclass(frozen=True)
 class CreateTableSourceConfig:
-    temp_var_slot_id: Union[None, str] = None
     data_source_transform_hint: Union[None, str] = None
-    previous_fingerprint: Union[None, str] = None
-    filter_eval_expr: Union[None, str] = None
-    filter_eval_expr_provide_frame: Union[None, bool] = None
-
-
-class CreateTableSourceErrorKind(Enum):
-    EVAL_EXCEPTION = 0
-    RE_EVAL_DATA_SOURCE_OF_WRONG_TYPE = 1
-    UNSUPPORTED_DATA_SOURCE_TYPE = 2
-    INVALID_FINGERPRINT = 3
-    FILTER_FRAME_EVAL_FAILED = 4
-    FILTER_FRAME_OF_WRONG_TYPE = 5
 
 
 @dataclass(frozen=True)
-class CreateTableSourceFailure:
-    error_kind: CreateTableSourceErrorKind
-    info: str
+class FilterConfig:
+    expr: Union[None, str] = None
+    synthetic_identifier_used: Union[None, bool] = None
+
+
+@dataclass(frozen=True)
+class FilterResult:
+    sort: SortConfig
+    table_structure: TableStructure
 
 
 class TableSourceKind(Enum):

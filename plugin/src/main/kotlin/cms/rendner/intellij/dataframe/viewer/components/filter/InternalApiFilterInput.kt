@@ -15,10 +15,12 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.ErrorStripeEditorCustomization
 import com.intellij.ui.PopupMenuListenerAdapter
 import com.intellij.xdebugger.XDebuggerUtil
@@ -30,14 +32,13 @@ import javax.swing.event.PopupMenuEvent
 @Suppress("unused")
 class InternalApiFilterInput(
     project: Project,
-    completionContributor: IFilterInputCompletionContributor,
-    sourcePosition: XSourcePosition?,
-) : AbstractFilterInput(completionContributor) {
+    editorsProvider: FilterInputEditorsProvider,
+    ) : AbstractFilterInput(editorsProvider) {
 
     private val myEditor: XDebuggerExpressionComboBox
 
     init {
-        myEditor = createEditor(project, sourcePosition)
+        myEditor = createEditor(project, this)
         myEditorContainer.addToTop(myEditor.component)
     }
 
@@ -54,20 +55,22 @@ class InternalApiFilterInput(
     }
 
     override fun saveInputInHistory() {
-        myEditor.saveTextInHistory()
+        if (getText().isNotEmpty()) {
+            myEditor.saveTextInHistory()
+        }
     }
 
     override fun setSourcePosition(sourcePosition: XSourcePosition?) {
         myEditor.setSourcePosition(sourcePosition)
     }
 
-    private fun createEditor(project: Project, sourcePosition: XSourcePosition?): XDebuggerExpressionComboBox {
+    private fun createEditor(project: Project, parentDisposable: Disposable): XDebuggerExpressionComboBox {
         val that = this
         return object : XDebuggerExpressionComboBox(
             project,
             myEditorsProvider,
             "cms.rendner.StyledDataFrameViewer",
-            sourcePosition,
+            null,
             false,
             false,
         ) {
@@ -75,7 +78,7 @@ class InternalApiFilterInput(
             private var shouldRequestFocus = false
 
             init {
-                comboBox.addPopupMenuListener(object : PopupMenuListenerAdapter() {
+                val popupMenuListener = object : PopupMenuListenerAdapter() {
                     override fun popupMenuWillBecomeVisible(e: PopupMenuEvent?) {
                         myComboBoxPopUpIsOpen = true
                     }
@@ -84,7 +87,11 @@ class InternalApiFilterInput(
                         myComboBoxPopUpIsOpen = false
                         shouldRequestFocus = true
                     }
-                })
+                }
+                comboBox.addPopupMenuListener(popupMenuListener)
+                Disposer.register(parentDisposable) {
+                    comboBox.removePopupMenuListener(popupMenuListener)
+                }
             }
 
             override fun prepareEditor(editor: EditorEx) {
@@ -96,6 +103,9 @@ class InternalApiFilterInput(
                 editor.colorsScheme.editorFontSize = comboBox.font.size
 
                 editor.contentComponent.addKeyListener(that)
+                Disposer.register(parentDisposable) {
+                    editor.contentComponent.removeKeyListener(that)
+                }
 
                 XDebuggerUtil.getInstance().disableValueLookup(editor)
             }

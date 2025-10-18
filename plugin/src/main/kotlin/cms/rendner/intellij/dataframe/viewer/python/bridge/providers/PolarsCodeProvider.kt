@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,27 +17,28 @@ package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 
 class PolarsCodeProvider: ITableSourceCodeProvider {
     override fun getDataFrameLibrary() = DataFrameLibrary.POLARS
 
-    override fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo {
+    override fun createSourceInfo(source: PyDebugValueEvalExpr): DataSourceInfo {
         return DataSourceInfo(
             source,
             TableSourceFactoryImport(
                 "cms_rendner_sdfv.polars.table_source_factory",
                 "TableSourceFactory",
             ),
+            getDataFrameLibrary(),
             hasIndexLabels = false,
             sortable = true,
             filterable = true,
         )
     }
 
-    override fun getModulesDump(evaluator: IPluginPyValueEvaluator): String {
-        val resourcePath = "/polars_x.y/plugin_modules_dump.json"
+    override fun getModulesDump(frameAccessor: IPluginPyFrameAccessor): String {
+        val resourcePath = "/generated_dumps/polars_x.y/plugin_modules_dump.json"
         return PolarsCodeProvider::class.java.getResource(resourcePath)!!.readText()
     }
 

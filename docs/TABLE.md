@@ -33,22 +33,3 @@ The info label will also include the number of visible rows and columns in case 
 ### Data Loading
 The data is loaded only when needed.
 Each time you scroll through the table, the data for the currently visible area is loaded, if it does not already exist.
-
-## Debugger
-The data of the `DataFrame` can only be loaded when the debugger is suspended for example when reaching a breakpoint.
-Breakpoints are special markers that suspend program execution at a specific point.
-Between two breakpoints no data can be fetched from the `DataFrame`.
-
-After the debugger reached again a breakpoint or suspended after an IntelliJ IDEA stepping action, the plugin
-has to re-check if the viewed `DataFrame` is available to be able to fetch data from it.
-Because in the meantime the variable might have disappeared or the variable might have been assigned another
-instance of a `DataFrame`.
-This is the same behavior as the IntelliJ debugger does to display the current state of the variables.
-
-After the detection of the `DataFrame` the plugin does the following steps:
-- If it is the same `DataFrame`, it applies the sorting and the filter expression. 
-- If it is **not** the same `DataFrame`, it closes the dialog.
-- In case of an error during the re-evaluation, the error will be displayed in the dialog.
-
-The dialog will be automatically closed if the debug session is terminated or the `DataFrame` is not accessible
-in the current debugger state.

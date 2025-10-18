@@ -15,10 +15,12 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.ErrorStripeEditorCustomization
 import com.intellij.xdebugger.XDebuggerUtil
@@ -27,14 +29,13 @@ import com.jetbrains.python.PythonFileType
 
 class DefaultFilterInput(
     project: Project,
-    completionContributor: IFilterInputCompletionContributor,
-    sourcePosition: XSourcePosition?,
-) : AbstractFilterInput(completionContributor) {
+    editorsProvider: FilterInputEditorsProvider,
+    ): AbstractFilterInput(editorsProvider) {
 
     private val myEditor: EditorTextField
 
     init {
-        myEditor = createEditor(project, sourcePosition)
+        myEditor = createEditor(project, this)
         myEditorContainer.addToTop(myEditor)
     }
 
@@ -51,17 +52,17 @@ class DefaultFilterInput(
 
     override fun setSourcePosition(sourcePosition: XSourcePosition?) {
         myEditor.document =
-            myEditorsProvider.createDocument(myEditor.project, myEditor.text, sourcePosition)
+            myEditorsProvider.createDocument(myEditor.text, sourcePosition)
     }
 
     override fun getEditor(): Editor? {
         return myEditor.editor
     }
 
-    private fun createEditor(project: Project, sourcePosition: XSourcePosition?): EditorTextField {
+    private fun createEditor(project: Project, parentDisposable: Disposable): EditorTextField {
         val that = this
         return EditorTextField(
-            myEditorsProvider.createDocument(project, "", sourcePosition),
+            myEditorsProvider.createDocument(""),
             project,
             PythonFileType.INSTANCE,
             false,
@@ -80,6 +81,9 @@ class DefaultFilterInput(
                 XDebuggerUtil.getInstance().disableValueLookup(editor)
 
                 editor.contentComponent.addKeyListener(that)
+                Disposer.register(parentDisposable) {
+                    editor.contentComponent.removeKeyListener(that)
+                }
             }
         }
     }

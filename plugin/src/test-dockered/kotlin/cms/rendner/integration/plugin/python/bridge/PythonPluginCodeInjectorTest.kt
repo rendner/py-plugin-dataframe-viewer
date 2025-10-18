@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import cms.rendner.debugger.impl.IDebuggerInterceptor
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectException
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
 import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -34,32 +34,79 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
     @Test
     fun shouldInjectCodeWithoutAnError() {
         runPythonDebuggerWithoutPluginCode { debuggerApi ->
-            registerCodeProviders(debuggerApi.evaluator)
+            registerCodeProviders(debuggerApi.frameAccessor)
         }
     }
 
     @Test
     @RequiresPandas
-    fun shouldThrowExceptionForUnsupportedPandasVersion() {
+    fun shouldThrowExceptionForUnsupportedPandasMajorVersion() {
         runPythonDebuggerWithoutPluginCode { debuggerApi ->
 
-            val pandasVersion = getPandasVersion(debuggerApi.evaluator)
+            val pandasVersion = getPandasVersion(debuggerApi.frameAccessor)
 
-            val nonExistingPandasVersion = "99.99.0"
+            val unsupportedMajorPandasVersion = "99.0.0"
             debuggerApi.addInterceptor(object: IDebuggerInterceptor {
                 override fun onResponse(response: EvalOrExecResponse): EvalOrExecResponse {
                     if (response.value == pandasVersion) {
-                        return response.copy(value = nonExistingPandasVersion)
+                        return response.copy(value = unsupportedMajorPandasVersion)
                     }
                     return response
                 }
             })
 
             Assertions.assertThatExceptionOfType(InjectException::class.java).isThrownBy {
-                registerCodeProviders(debuggerApi.evaluator)
+                registerCodeProviders(debuggerApi.frameAccessor)
             }.withMessageContaining(
-                "Unsupported ${PandasVersion.fromString(nonExistingPandasVersion)}",
+                "Unsupported ${PandasVersion.fromString(unsupportedMajorPandasVersion)}",
             )
+        }
+    }
+
+    @Test
+    @RequiresPandas
+    fun shouldThrowExceptionForTooEarlyUnsupportedPandasMinorVersion() {
+        runPythonDebuggerWithoutPluginCode { debuggerApi ->
+
+            val pandasVersion = getPandasVersion(debuggerApi.frameAccessor)
+
+            // support starts for pandas 1.1
+            val tooEarlyMinorVersion = "1.0.0"
+            debuggerApi.addInterceptor(object: IDebuggerInterceptor {
+                override fun onResponse(response: EvalOrExecResponse): EvalOrExecResponse {
+                    if (response.value == pandasVersion) {
+                        return response.copy(value = tooEarlyMinorVersion)
+                    }
+                    return response
+                }
+            })
+
+            Assertions.assertThatExceptionOfType(InjectException::class.java).isThrownBy {
+                registerCodeProviders(debuggerApi.frameAccessor)
+            }.withMessageContaining(
+                "Unsupported ${PandasVersion.fromString(tooEarlyMinorVersion)}",
+            )
+        }
+    }
+
+    @Test
+    @RequiresPandas
+    fun shouldUseLatestAvailablePandasMinorVersionForUnsupportedLaterMinorVersion() {
+        runPythonDebuggerWithoutPluginCode { debuggerApi ->
+
+            val pandasVersion = getPandasVersion(debuggerApi.frameAccessor)
+
+            val unsupportedMinorPandasVersion = "2.99.0"
+            debuggerApi.addInterceptor(object: IDebuggerInterceptor {
+                override fun onResponse(response: EvalOrExecResponse): EvalOrExecResponse {
+                    if (response.value == pandasVersion) {
+                        return response.copy(value = unsupportedMinorPandasVersion)
+                    }
+                    return response
+                }
+            })
+
+            registerCodeProviders(debuggerApi.frameAccessor)
         }
     }
 
@@ -76,14 +123,14 @@ internal class PythonPluginCodeInjectorTest: AbstractPluginCodeTest() {
             })
 
             repeat(3) {
-                registerCodeProviders(debuggerApi.evaluator)
+                registerCodeProviders(debuggerApi.frameAccessor)
             }
 
             assertThat(codeInjectDetected).isOne()
         }
     }
 
-    private fun getPandasVersion(evaluator: IPluginPyValueEvaluator): String {
-        return evaluator.evaluate("__import__('pandas').__version__").forcedValue
+    private fun getPandasVersion(frameAccessor: IPluginPyFrameAccessor): String {
+        return frameAccessor.evaluate("__import__('pandas').__version__").forcedValue
     }
 }

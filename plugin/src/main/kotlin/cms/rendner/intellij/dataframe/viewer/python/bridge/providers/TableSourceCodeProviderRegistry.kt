@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,6 @@ class TableSourceCodeProviderRegistry {
             PandasCodeProvider(),
             PolarsCodeProvider(),
         ).associateBy({ it.getDataFrameLibrary() }, { it })
-
-        fun getApplicableProvider(qName: String): ITableSourceCodeProvider? {
-            if (qName.isEmpty()) return null
-            return myProviders.values.firstOrNull { it.isApplicable(qName) }
-        }
 
         fun getApplicableProviders(qName: String): List<ITableSourceCodeProvider> {
             if (qName.isEmpty()) return emptyList()

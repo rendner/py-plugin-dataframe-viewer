@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
+import cms.rendner.intellij.dataframe.viewer.IGNORE_ALL_INTENTIONS_ACTION_FILTER_KEY
 import com.intellij.codeInsight.daemon.impl.IntentionActionFilter
 import com.intellij.codeInsight.intention.IntentionAction
-import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiFile
 import com.jetbrains.python.psi.PyExpressionCodeFragment
 
@@ -25,15 +25,7 @@ import com.jetbrains.python.psi.PyExpressionCodeFragment
  * This helper is used to disable all intentions.
  */
 class IgnoreAllIntentionsActionFilter: IntentionActionFilter {
-    companion object {
-        private val KEY = Key.create<Boolean>("cms.rendner.IgnoreAllIntentionsActionFilter")
-
-        fun register(file: PsiFile) {
-            KEY.set(file, true)
-        }
-    }
-
     override fun accept(action: IntentionAction, file: PsiFile?): Boolean {
-        return !(file is PyExpressionCodeFragment && KEY.get(file, false))
+        return !(file is PyExpressionCodeFragment && IGNORE_ALL_INTENTIONS_ACTION_FILTER_KEY.get(file, false))
     }
 }

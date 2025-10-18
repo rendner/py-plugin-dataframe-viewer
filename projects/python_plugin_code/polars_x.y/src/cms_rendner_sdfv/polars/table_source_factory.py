@@ -1,0 +1,42 @@
+#  Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+from typing import Any
+
+import polars as pl
+
+from cms_rendner_sdfv.base.exceptions import TableSourceException, TableSourceErrorKind
+from cms_rendner_sdfv.base.table_source import AbstractTableSource, AbstractTableSourceFactory
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig
+from cms_rendner_sdfv.polars.frame_context import FrameContext
+from cms_rendner_sdfv.polars.table_source import TableSource
+
+
+class TableSourceFactory(AbstractTableSourceFactory):
+
+    def _create_internal(self,
+                         data_source: Any,
+                         config: CreateTableSourceConfig,
+                         ) -> AbstractTableSource:
+        ds_frame = None
+        if isinstance(data_source, dict):
+            ds_frame = pl.from_dict(data_source)
+        elif isinstance(data_source, pl.DataFrame):
+            ds_frame = data_source
+        else:
+            raise TableSourceException(
+                error_kind=TableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE,
+                info=str(type(data_source)),
+            )
+
+        return TableSource(FrameContext(ds_frame))

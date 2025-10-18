@@ -18,7 +18,6 @@ package cms.rendner.intellij.dataframe.viewer.components.filter
 import cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.xdebugger.XSourcePosition
 
 class FilterInputFactory {
 
@@ -27,26 +26,20 @@ class FilterInputFactory {
 
         fun createComponent(
             project: Project,
-            completionContributor: IFilterInputCompletionContributor,
-            sourcePosition: XSourcePosition?,
+            editorsProvider: FilterInputEditorsProvider,
             ): AbstractFilterInput {
             return if (!ApplicationSettingsService.instance.state.filterInputFromInternalApi) {
-                DefaultFilterInput(project, completionContributor, sourcePosition)
+                DefaultFilterInput(project, editorsProvider)
             } else try {
                 Class.forName("cms.rendner.intellij.dataframe.viewer.components.filter.InternalApiFilterInput")
                     .getConstructor(
                         Project::class.java,
-                        IFilterInputCompletionContributor::class.java,
-                        XSourcePosition::class.java,
-                    )
-                    .newInstance(
-                        project,
-                        completionContributor,
-                        sourcePosition,
-                    ) as AbstractFilterInput
+                        FilterInputEditorsProvider::class.java,
+                        )
+                    .newInstance(project, editorsProvider) as AbstractFilterInput
             } catch (e: Exception) {
                 logger.warn("Creating InternalApiFilterInput failed, using default component", e)
-                DefaultFilterInput(project, completionContributor, sourcePosition)
+                DefaultFilterInput(project, editorsProvider)
             }
         }
     }

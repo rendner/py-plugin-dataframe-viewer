@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
+import cms.rendner.intellij.dataframe.viewer.TABLE_SOURCE_CONTEXT_KEY
 import cms.rendner.intellij.dataframe.viewer.services.SyntheticDataFramePsiRefProvider
 import com.intellij.openapi.components.service
 import com.jetbrains.python.psi.PyQualifiedExpression
@@ -29,10 +30,10 @@ import com.jetbrains.python.psi.types.TypeEvalContext
 class SyntheticIdentifierReferenceResolveProvider : PyReferenceResolveProvider {
 
     override fun resolveName(element: PyQualifiedExpression, context: TypeEvalContext): List<RatedResolveResult> {
-        IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR.get(element.containingFile)?.let { contributor ->
-            if (contributor.isSyntheticIdentifierEnabled()) {
+        TABLE_SOURCE_CONTEXT_KEY.get(element.containingFile)?.let { ctx ->
+            if (ctx.frameAccessor.syntheticIdentifierCanBeUsed()) {
                 if (SyntheticDataFrameIdentifier.isIdentifier(element)) {
-                    element.project.service<SyntheticDataFramePsiRefProvider>().getPointer(contributor.getSyntheticIdentifierType())?.let {
+                    element.project.service<SyntheticDataFramePsiRefProvider>().getPointer(ctx.syntheticIdentifierType)?.let {
                         return listOf(RatedResolveResult(RatedResolveResult.RATE_NORMAL, it.element))
                     }
                 }

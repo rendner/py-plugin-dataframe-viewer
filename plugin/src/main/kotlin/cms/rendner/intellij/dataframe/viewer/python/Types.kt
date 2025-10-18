@@ -30,6 +30,7 @@ object PythonQualifiedTypes {
     const val MODULE = "builtins.module"
     const val NameError = "builtins.NameError"
     const val SyntaxError = "builtins.SyntaxError"
+    const val ModuleNotFoundError = "builtins.ModuleNotFoundError"
 }
 
 object PandasTypes {
@@ -42,17 +43,19 @@ enum class DataFrameLibrary(val moduleName: String) {
     POLARS("polars")
 }
 
-interface IEvalAvailableDataFrameLibraries {
-    fun getEvalExpression(): String {
-        val libsToCheck = DataFrameLibrary.values().map { stringifyString(it.moduleName) }
-        // the check is not guarded with a try/catch therefore an exception aborts the whole check
-        return "(lambda i, s: {p: p in s.modules or i.util.find_spec(p) is not None for p in $libsToCheck})(__import__('importlib.util'), __import__('sys'))"
-    }
+class InstalledDataFrameLibrariesExpr {
+    companion object {
+        fun getExpression(): String {
+            val libsToCheck = DataFrameLibrary.values().map { stringifyString(it.moduleName) }
+            // the check is not guarded with a try/catch therefore an exception aborts the whole check
+            return "(lambda i, s: {p: p in s.modules or i.util.find_spec(p) is not None for p in $libsToCheck})(__import__('importlib.util'), __import__('sys'))"
+        }
 
-    fun convertResult(result: String): List<DataFrameLibrary> {
-        val checkedLibs = DataFrameLibrary.values()
-        return parsePythonDictionary(result).entries.mapNotNull { dictEntry ->
-            if (dictEntry.value == "True") checkedLibs.first { it.moduleName == dictEntry.key } else null
+        fun convertResult(result: String): List<DataFrameLibrary> {
+            val checkedLibs = DataFrameLibrary.values()
+            return parsePythonDictionary(result).entries.mapNotNull { dictEntry ->
+                if (dictEntry.value == "True") checkedLibs.first { it.moduleName == dictEntry.key } else null
+            }
         }
     }
 }

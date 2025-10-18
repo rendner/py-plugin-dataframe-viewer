@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package cms.rendner.debugger.impl
 
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
 
 /**
  * A evaluation request.
@@ -61,7 +61,8 @@ interface IDebuggerInterceptor {
 }
 
 interface IPythonDebuggerApi {
-    val evaluator: IPluginPyValueEvaluator
+    val frameAccessor: IPluginPyFrameAccessor
+    fun updateSyntheticIdentifierSupportedFlag()
     fun continueFromBreakpoint()
     fun addInterceptor(interceptor: IDebuggerInterceptor)
     fun removeInterceptor(interceptor: IDebuggerInterceptor)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.ITableSourc
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceCodeProviderRegistry
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PandasCodeProvider
 import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.PolarsCodeProvider
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
+import cms.rendner.intellij.dataframe.viewer.services.PluginCodeInjector
 
 /**
  * Abstract class to run tests with a Python interpreter.
@@ -31,22 +32,14 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvalu
  */
 internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest() {
 
-    override fun createPythonDebuggerWithSourceFile(
-        sourceFile: String,
-        block: (debuggerApi: IPythonDebuggerApi) -> Unit,
-    ) {
-        super.createPythonDebuggerWithSourceFile(sourceFile) { debuggerApi ->
-            registerCodeProviders(debuggerApi.evaluator)
-            block(debuggerApi)
-        }
-    }
+    private val myPluginCodeInjector = PluginCodeInjector()
 
     override fun createPythonDebuggerWithCodeSnippet(
         codeSnippet: String,
         block: (debuggerApi: IPythonDebuggerApi) -> Unit,
     ) {
         super.createPythonDebuggerWithCodeSnippet(codeSnippet) { debuggerApi ->
-            registerCodeProviders(debuggerApi.evaluator)
+            registerCodeProviders(debuggerApi.frameAccessor)
             block(debuggerApi)
         }
     }
@@ -59,45 +52,44 @@ internal abstract class AbstractPluginCodeTest : AbstractPipEnvEnvironmentTest()
         }
     }
 
-    protected fun registerCodeProviders(evaluator: IPluginPyValueEvaluator) {
+    protected fun registerCodeProviders(frameAccessor: IPluginPyFrameAccessor) {
         val availableFrameLibs = TestProperty.getDataFrameLibraries()
         TableSourceCodeProviderRegistry.getProviders().values
             .filter { availableFrameLibs.contains(it.getDataFrameLibrary()) }
-            .forEach { PythonPluginCodeInjector.injectIfRequired(evaluator, it) }
+            .forEach { myPluginCodeInjector.injectIfRequired(frameAccessor, it) }
     }
 
     protected inline fun <reified T: IPyTableSourceRef>createPandasTableSource(
-        evaluator: IPluginPyValueEvaluator,
+        frameAccessor: IPluginPyFrameAccessor,
         dataSourceExpr: String,
         config: CreateTableSourceConfig? = null,
     ): T {
-        val tableSource = createTableSource(evaluator, dataSourceExpr, PandasCodeProvider(), config)
+        val tableSource = createTableSource(frameAccessor, dataSourceExpr, PandasCodeProvider(), config)
         check(tableSource is T)
         return tableSource
     }
 
     protected inline fun <reified T: IPyTableSourceRef>createPolarsTableSource(
-        evaluator: IPluginPyValueEvaluator,
+        frameAccessor: IPluginPyFrameAccessor,
         dataSourceExpr: String,
         config: CreateTableSourceConfig? = null,
     ): T {
-        val tableSource = createTableSource(evaluator, dataSourceExpr, PolarsCodeProvider(), config)
+        val tableSource = createTableSource(frameAccessor, dataSourceExpr, PolarsCodeProvider(), config)
         check(tableSource is T)
         return tableSource
     }
 
     protected fun createTableSource(
-        evaluator: IPluginPyValueEvaluator,
+        frameAccessor: IPluginPyFrameAccessor,
         dataSourceExpr: String,
         codeProvider: ITableSourceCodeProvider,
         config: CreateTableSourceConfig? = null,
     ): IPyTableSourceRef {
-        val evalExpr = evaluator.evaluate(dataSourceExpr).toValueEvalExpr()
-        val dataSourceInfo = codeProvider.createSourceInfo(evalExpr, evaluator)
+        val evalExpr = frameAccessor.evaluate(dataSourceExpr).toValueEvalExpr()
+        val dataSourceInfo = codeProvider.createSourceInfo(evalExpr)
         val tableSource = TableSourceFactory.create(
-            evaluator,
-            dataSourceInfo.tableSourceFactoryImport,
-            dataSourceInfo.source.currentStackFrameRefExpr,
+            frameAccessor,
+            dataSourceInfo,
             config,
         )
         return tableSource

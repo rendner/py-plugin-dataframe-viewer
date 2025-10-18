@@ -20,7 +20,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.psi.SmartPsiElementPointer
 import com.jetbrains.python.psi.PyTargetExpression
-import com.jetbrains.rd.util.ConcurrentHashMap
+import java.util.concurrent.ConcurrentHashMap
 
 @Service(Service.Level.PROJECT)
 class SyntheticDataFramePsiRefProvider: Disposable {

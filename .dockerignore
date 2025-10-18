@@ -1,0 +1,29 @@
+# Include only what's needed for the Docker build
+# Everything is ignored by default, then we whitelist what we need
+
+# Ignore everything
+*
+
+# Allow these directories and files
+!docker/
+# Docker requires parent directories to be whitelisted when using the '*' ignore-all approach.
+# We cannot use just '!projects/python_plugin_code/*/Pipfile*' because Docker needs to traverse
+# the directory structure (projects/ -> python_plugin_code/ -> subdirs/) to access the files.
+!projects/python_plugin_code/*/
+!projects/python_plugin_code/*/Pipfile*
+
+# But ignore these patterns within allowed directories
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.so
+**/.Python
+**/.venv/
+**/venv/
+**/ENV/
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+**/*.cover
+**/*.log
+**/.DS_Store

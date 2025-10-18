@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,12 @@ import java.util.concurrent.TimeUnit
 
 fun shutdownExecutorSilently(executor: ExecutorService, terminationTimeout: Long, timeUnit: TimeUnit) {
     try {
-        executor.shutdown() // don't accept new tasks
-    } catch (ignore: SecurityException) {
-    }
-    try {
         executor.shutdownNow() // interrupts running tasks
-    } catch (ignore: SecurityException) {
+    } catch (_: SecurityException) {
     }
     try {
         executor.awaitTermination(terminationTimeout, timeUnit)
-    } catch (e: InterruptedException) {
+    } catch (_: InterruptedException) {
         Thread.currentThread().interrupt()
     }
 }

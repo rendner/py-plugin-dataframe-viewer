@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package cms.rendner.debugger
 
 import cms.rendner.TestProperty
 import cms.rendner.debugger.impl.*
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.debugger.AbstractPluginFrameAccessor
 import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
@@ -69,7 +69,10 @@ internal abstract class AbstractPipEnvEnvironmentTest {
 
     @AfterEach
     protected fun afterEach() {
-        debugger?.quit()
+        try {
+            debugger?.quit()
+        } catch (_: Exception) {}
+
         debugger = null
 
         executorService?.shutdownNow()
@@ -77,19 +80,10 @@ internal abstract class AbstractPipEnvEnvironmentTest {
         executorService = null
     }
 
-    protected fun uninstallPythonModules(vararg modules: String) {
-        pipEnvEnvironment.uninstallPythonModules(*modules)
-    }
-
     protected open fun createPythonDebuggerWithCodeSnippet(
         codeSnippet: String,
         block: (debuggerApi: IPythonDebuggerApi) -> Unit,
     ) = runWithDebugger(block) { pipEnvEnvironment.createPythonDebuggerWithCodeSnippet(codeSnippet) }
-
-    protected open fun createPythonDebuggerWithSourceFile(
-        sourceFile: String,
-        block: (debuggerApi: IPythonDebuggerApi) -> Unit,
-    ) = runWithDebugger(block) { pipEnvEnvironment.createPythonDebuggerWithSourceFile(sourceFile) }
 
     protected fun createPythonDebugger(block: (debuggerApi: IPythonDebuggerApi) -> Unit) {
         createPythonDebuggerWithCodeSnippet("breakpoint()", block)
@@ -126,7 +120,11 @@ internal abstract class AbstractPipEnvEnvironmentTest {
     private class MyDebuggerApi(private val pythonDebugger: PythonDebugger): IPythonDebuggerApi, IDebuggerInterceptor {
         private val myInterceptors = mutableListOf<IDebuggerInterceptor>()
 
-        override val evaluator = MyValueEvaluator(pythonDebugger, this)
+        override val frameAccessor = MyFrameAccessor(pythonDebugger, this)
+
+        override fun updateSyntheticIdentifierSupportedFlag() {
+            frameAccessor.updateSyntheticIdentifierSupportedFlag()
+        }
 
         override fun continueFromBreakpoint() {
             pythonDebugger.continueFromBreakpoint()
@@ -154,7 +152,16 @@ internal abstract class AbstractPipEnvEnvironmentTest {
     }
 
 
-    private class MyValueEvaluator(private val pythonDebugger: PythonDebugger, private val interceptor: IDebuggerInterceptor) : IPluginPyValueEvaluator {
+    private class MyFrameAccessor(private val pythonDebugger: PythonDebugger, private val interceptor: IDebuggerInterceptor) : AbstractPluginFrameAccessor() {
+        override fun isAlive(): Boolean {
+            // not implemented always return true
+            return true
+        }
+
+        override fun getUniqueId(): String {
+            return toString()
+        }
+
         override fun evaluate(expression: String, trimResult: Boolean): PluginPyValue {
             return try {
                 evalOrExec(expression, execute = false, doTrunc = trimResult, EvaluateException.EVAL_FALLBACK_ERROR_MSG)
@@ -163,9 +170,9 @@ internal abstract class AbstractPipEnvEnvironmentTest {
             }
         }
 
-        override fun execute(statements: String) {
+        override fun execute(statement: String) {
             try {
-                evalOrExec(statements, execute = true, doTrunc = false, EvaluateException.EXEC_FALLBACK_ERROR_MSG)
+                evalOrExec(statement, execute = true, doTrunc = false, EvaluateException.EXEC_FALLBACK_ERROR_MSG)
             } catch (ex: PluginPyDebuggerException) {
                 throw EvaluateException(EvaluateException.EXEC_FALLBACK_ERROR_MSG, null, ex)
             }
@@ -191,7 +198,6 @@ internal abstract class AbstractPipEnvEnvironmentTest {
                 response.type ?: "",
                 response.typeQualifier ?: "",
                 response.refId ?: "",
-                this,
             )
         }
     }

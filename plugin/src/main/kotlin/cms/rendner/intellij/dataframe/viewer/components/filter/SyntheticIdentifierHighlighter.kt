@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
+import cms.rendner.intellij.dataframe.viewer.TABLE_SOURCE_CONTEXT_KEY
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
@@ -26,7 +27,7 @@ import com.intellij.psi.PsiElement
  */
 class SyntheticIdentifierHighlighter : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
-        if (IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR.get(element.containingFile)?.isSyntheticIdentifierEnabled() != true) return
+        if (TABLE_SOURCE_CONTEXT_KEY.get(element.containingFile)?.frameAccessor?.syntheticIdentifierCanBeUsed() != true) return
         if (SyntheticDataFrameIdentifier.isIdentifier(element)) {
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(element)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,13 +102,7 @@ class PythonProcess(
      * Closes the input and output stream of the process and destroys the underlying process.
      */
     fun cleanup() {
-        process.errorStream.bufferedReader().use { errReader ->
-            // If pdb quit command was sent, a traceback like that occurs because there is nothing
-            // to catch the BdbQuit exception raised when the debugger quits.
-            errReader.readText().replace(BDP_QUIT_REGEX, "").let {
-                if (it.isNotEmpty()) print(it)
-            }
-        }
+        ProcessRunException.throwIfExitedUnexpected(process, "PythonProcess terminated with error")
         closeSilently(reader)
         closeSilently(writer)
         process.destroy()
@@ -126,7 +120,7 @@ class PythonProcess(
     private fun closeSilently(c: Closeable) {
         try {
             c.close()
-        } catch (ignore: Exception) {
+        } catch (_: Exception) {
 
         }
     }

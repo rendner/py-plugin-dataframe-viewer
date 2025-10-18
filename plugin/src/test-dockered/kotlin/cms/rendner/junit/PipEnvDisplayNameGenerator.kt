@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ class PipEnvDisplayNameGenerator : DisplayNameGenerator.Standard() {
 
     override fun generateDisplayNameForClass(testClass: Class<*>?): String {
         if (testClass != null && pipEnvTestSuperClass.isAssignableFrom(testClass)) {
-            return "[pipenv env: ${pipEnvEnvironmentName}] ${super.generateDisplayNameForClass(testClass)}".replace(".", "_")
+            return "[pipenv project: ${pipEnvEnvironmentName}] ${super.generateDisplayNameForClass(testClass)}".replace(".", "_")
         }
         return super.generateDisplayNameForClass(testClass)
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyTableSourceRef
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
 
 
@@ -37,6 +37,7 @@ data class TableSourceFactoryImport(
  *
  * @param source the potential data source for a [IPyTableSourceRef]
  * @param tableSourceFactoryImport the factory to create a [IPyTableSourceRef] on Python side
+ * @param library the Python DataFrame library to use.
  * @param hasIndexLabels true if table has index labels
  * @param sortable true if table source can be sorted
  * @param filterable true if table source can be filtered
@@ -44,6 +45,7 @@ data class TableSourceFactoryImport(
 data class DataSourceInfo(
     val source: PyDebugValueEvalExpr,
     val tableSourceFactoryImport: TableSourceFactoryImport,
+    val library: DataFrameLibrary,
     val hasIndexLabels: Boolean,
     val sortable: Boolean,
     val filterable: Boolean,
@@ -62,26 +64,22 @@ interface ITableSourceCodeProvider {
     /**
      * Creates a source info for the [PyDebugValueEvalExpr].
      *
-     * The [evaluator] can be used to check for the shape (dimension) of the table source to create
-     * to decide if it is sortable/filterable or not.
-     *
      * @param source the source.
-     * @param evaluator an evaluator to retrieve information from Python.
      */
-    fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo
+    fun createSourceInfo(source: PyDebugValueEvalExpr): DataSourceInfo
 
     /**
      * Returns the modules dump. The dump contains Python code required to fetch the table frame like data
      * from an underlying Python data source.
      *
-     * The [evaluator] can be used to check for versions of installed Python modules.
-     * The [evaluator] shouldn't be used to check:
+     * The [frameAccessor] can be used to check for versions of installed Python modules.
+     * The [frameAccessor] shouldn't be used to check:
      * - if the module dump was already injected
      * - to inject any additional code OR the plugin code itself
      *
-     * @param evaluator an evaluator to retrieve information from Python.
+     * @param frameAccessor to retrieve information from Python.
      */
-    fun getModulesDump(evaluator: IPluginPyValueEvaluator): String
+    fun getModulesDump(frameAccessor: IPluginPyFrameAccessor): String
 
     /**
      * Called to check if the provider could create a Python TableSource for a data source.

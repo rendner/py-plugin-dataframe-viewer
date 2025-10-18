@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components
 
-import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.CellStylingMode
+import cms.rendner.intellij.dataframe.viewer.components.table.renderer.styling.CellStylingMode
 import com.intellij.openapi.ui.ComboBox
 import java.awt.Component
 import javax.swing.DefaultComboBoxModel

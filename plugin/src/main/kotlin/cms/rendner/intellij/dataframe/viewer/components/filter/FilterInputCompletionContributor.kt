@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package cms.rendner.intellij.dataframe.viewer.components.filter
 
+import cms.rendner.intellij.dataframe.viewer.COMPLETION_PROVIDER_KEY
+import cms.rendner.intellij.dataframe.viewer.TABLE_SOURCE_CONTEXT_KEY
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
 import com.intellij.codeInsight.completion.*
 import com.intellij.psi.util.PsiTreeUtil
@@ -23,7 +25,7 @@ import com.jetbrains.python.psi.PySubscriptionExpression
 
 
 /**
- * Adds additional contributions for a [AbstractFilterInput] if a [IFilterInputCompletionContributor] was installed.
+ * Adds additional contributions for a [AbstractFilterInput] if a [IFilterInputCompletionProvider] was installed.
  */
 class FilterInputCompletionContributor : CompletionContributor() {
 
@@ -38,8 +40,9 @@ class FilterInputCompletionContributor : CompletionContributor() {
         // The "dummyIdentifier" is changed for all registered contributors.
         // So we have to be as specific as possible to not break other contributors.
         if (context.completionType != CompletionType.BASIC) return
-        val completionContributor = IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR.get(context.file, null) ?: return
-        if (completionContributor.getSyntheticIdentifierType() != DataFrameLibrary.PANDAS) return
+
+        val tableSourceCtx = TABLE_SOURCE_CONTEXT_KEY.get(context.file) ?: return
+        if (tableSourceCtx.syntheticIdentifierType != DataFrameLibrary.PANDAS) return
 
         val element = context.file.findElementAt(context.caret.offset) ?: return
         val subscription = PsiTreeUtil.getParentOfType(element, PySubscriptionExpression::class.java) ?: return
@@ -52,7 +55,6 @@ class FilterInputCompletionContributor : CompletionContributor() {
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
         if (parameters.completionType != CompletionType.BASIC) return
 
-        IFilterInputCompletionContributor.COMPLETION_CONTRIBUTOR
-            .get(parameters.originalFile, null)?.fillCompletionVariants(parameters, result)
+        COMPLETION_PROVIDER_KEY.get(parameters.originalFile)?.fillCompletionVariants(parameters, result)
     }
 }

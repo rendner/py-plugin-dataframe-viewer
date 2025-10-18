@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+pytest = "==7.2.1"
+
+[requires]
+python_version = "3.8"
+
+[packages]
+numpy = "==1.21.0"
+jinja2 = "==3.0.1"
+matplotlib = "==3.5.3"
+pytz = "==2020.1"
+pandas = "==1.5.3"

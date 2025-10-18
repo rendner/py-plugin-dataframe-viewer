@@ -17,11 +17,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, List, Union, TypeVar, Dict, Callable
 
-from cms_rendner_sdfv.base.temp import TEMP_VARS, EvaluatedVarsCleaner
-from cms_rendner_sdfv.base.transforms import to_json
-from cms_rendner_sdfv.base.types import CreateTableSourceConfig, CreateTableSourceFailure, Region, ChunkDataResponse, \
-    TableSourceKind, TableStructure, CreateTableSourceErrorKind, TableInfo, \
-    CompletionVariant, NestedCompletionVariant, ChunkDataRequest, CellMeta, TextAlign
+from cms_rendner_sdfv.base.exceptions import TableSourceException, TableSourceErrorKind
+from cms_rendner_sdfv.base.temp import TEMP_VARS
+from cms_rendner_sdfv.base.serialization import serialize_result_or_exception_to_json
+from cms_rendner_sdfv.base.types import CreateTableSourceConfig, Region, ChunkDataResponse, \
+    TableSourceKind, TableStructure, TableInfo, SortConfig, TableStructureColumn, \
+    CompletionVariant, NestedCompletionVariant, ChunkDataRequest, CellMeta, TextAlign, \
+    FilterConfig, FilterResult
 import cms_rendner_sdfv.base.types as _types
 
 
@@ -204,7 +206,7 @@ class AbstractTableSourceContext(ABC):
     def unlink(self):
         pass
 
-    def set_sort_criteria(self, sort_by_column_index: Union[None, List[int]], sort_ascending: Union[None, List[bool]]):
+    def apply_sort(self, config: SortConfig):
         pass
 
     def get_column_name_completion_variants(self, source: Any, is_synthetic_df: bool) -> List[
@@ -216,12 +218,79 @@ class AbstractTableSourceContext(ABC):
         pass
 
     @abstractmethod
-    def get_table_structure(self, fingerprint: str) -> TableStructure:
+    def get_table_structure(self) -> TableStructure:
         pass
 
     @abstractmethod
     def get_chunk_data_generator(self) -> ChunkDataGenerator:
         pass
+
+    @abstractmethod
+    def apply_filter(self, config: FilterConfig) -> FilterResult:
+        pass
+
+    @staticmethod
+    def _evaluate_filter_frame(source_frame: Any, config: FilterConfig) -> Any:
+        filter_frame = None
+
+        if config.expr is not None and config.expr != "":
+            # find first caller outside of plugin code to get the right globals and locals
+            caller_globals = {}
+            my_module_prefix = "cms_rendner_sdfv"
+            frame = inspect.currentframe()
+            try:
+                while frame is not None:
+                    module_name = frame.f_globals.get("__name__", "")
+                    if not module_name.startswith(my_module_prefix):
+                        caller_globals.update(frame.f_globals)
+                        caller_globals.update(frame.f_locals)
+                        break
+                    frame = frame.f_back
+            finally:
+                del frame
+
+            if config.synthetic_identifier_used:
+                # add required data-frame to make it accessible for eval
+                # "_df" is the synthetic identifier which should resolve to the data-frame
+                caller_globals["_df"] = source_frame
+
+            try:
+                filter_frame = eval(config.expr, caller_globals)
+            except Exception as e:
+                raise TableSourceException(
+                    error_kind=TableSourceErrorKind.EVAL_FAILED,
+                    cause=e,
+                )
+
+        return filter_frame
+
+    @staticmethod
+    def _compute_sort_config_after_filtering(
+            sort_before: SortConfig,
+            columns_before: List[TableStructureColumn],
+            columns_after: List[TableStructureColumn]
+    ) -> SortConfig:
+        # Computes a new SortCriteria by keeping only columns that exist in column_info_after.
+        # Maps column indices from before to after based on matching column IDs.
+
+        if sort_before.is_empty():
+            return sort_before
+
+        col_id_to_new_index = {col.id: idx for idx, col in enumerate(columns_after)}
+
+        new_column_idx = []
+        new_ascending = []
+
+        for old_idx, asc in zip(sort_before.column_idx, sort_before.ascending):
+            col_id = columns_before[old_idx].id
+            if col_id in col_id_to_new_index:
+                new_column_idx.append(col_id_to_new_index[col_id])
+                new_ascending.append(asc)
+
+        if not new_column_idx:
+            return SortConfig()
+
+        return SortConfig(column_idx=new_column_idx, ascending=new_ascending)
 
 
 TSC = TypeVar('TSC', bound=AbstractTableSourceContext)
@@ -231,111 +300,90 @@ TSC = TypeVar('TSC', bound=AbstractTableSourceContext)
 # and are part of the public API must return a serialized value.
 # Use the method 'serialize' to serialize a value.
 class AbstractTableSource(ABC):
-    def __init__(self, kind: TableSourceKind, context: TSC, fingerprint: str):
+    def __init__(self, kind: TableSourceKind, context: TSC):
         self.__kind = kind
         self._context = context
-        self._fingerprint = fingerprint
 
     def unlink(self):
         self._context.unlink()
         self._context = None
 
-    @staticmethod
-    def serialize(data: Any) -> str:
-        return to_json(data)
-
+    # DO NOT USE JSON DECORATOR
     def invoke_with_typed_kwargs(self, method_name: str, kwargs_factory: Callable[[Any], Dict[str, Any]]):
         kwargs = kwargs_factory(_types)
         method = getattr(self, method_name)
         return method(**kwargs)
 
-    def get_column_name_completion_variants(self, source: Any, is_synthetic_df: bool) -> str:
-        return self.serialize(
-            self._context.get_column_name_completion_variants(
-                source=source,
-                is_synthetic_df=is_synthetic_df,
-            )
+    @serialize_result_or_exception_to_json
+    def get_column_name_completion_variants(self, source: Any, is_synthetic_df: bool) -> List[
+        Union[CompletionVariant, NestedCompletionVariant]]:
+        return self._context.get_column_name_completion_variants(
+            source=source,
+            is_synthetic_df=is_synthetic_df,
         )
 
-    def get_info(self) -> str:
-        return self.serialize(
-            TableInfo(
-                kind=TableSourceKind(self.__kind).name,
-                structure=self._context.get_table_structure(self._fingerprint),
-            )
+    # DO NOT USE JSON DECORATOR
+    def get_info(self) -> TableInfo:
+        return TableInfo(
+            kind=TableSourceKind(self.__kind).name,
+            structure=self._context.get_table_structure(),
         )
 
-    def get_column_statistics(self, col_index: int) -> str:
-        return self.serialize(self._context.get_column_statistics(col_index))
+    @serialize_result_or_exception_to_json
+    def get_column_statistics(self, col_index: int) -> Dict[str, str]:
+        return self._context.get_column_statistics(col_index)
 
-    def set_sort_criteria(self,
-                          by_column_index: Union[None, List[int]] = None,
-                          ascending: Union[None, List[bool]] = None,
-                          ) -> 'AbstractTableSource':
-        self._context.set_sort_criteria(by_column_index, ascending)
-        # allow to chain the calls
-        return self
+    @serialize_result_or_exception_to_json
+    def apply_sort(self, config: SortConfig):
+        self._context.apply_sort(config)
 
+    @serialize_result_or_exception_to_json
+    def apply_filter(self, config: FilterConfig) -> FilterResult:
+        return self._context.apply_filter(config)
+
+    @serialize_result_or_exception_to_json
     def compute_chunk_data(self,
                            region: Region,
                            request: Union[None, ChunkDataRequest] = None,
-                           ) -> str:
-        return self.serialize(
-            self._context.get_chunk_data_generator().generate(region=region, request=request)
+                           ) -> ChunkDataResponse:
+        return self._context.get_chunk_data_generator().generate(
+            region=region,
+            request=request,
         )
-
-    def clear(self, id_names: List[str]) -> 'AbstractTableSource':
-        EvaluatedVarsCleaner.clear(id_names, 1)
-        # allow to chain the calls
-        return self
 
 
 class AbstractTableSourceFactory(ABC):
+
+    @serialize_result_or_exception_to_json
     def create(self,
+               temp_var_slot_id: str,
                data_source: Any,
                create_config: Union[CreateTableSourceConfig, dict] = None,
-               ) -> Union[AbstractTableSource, str]:
-        try:
-            config = create_config
+               ) -> TableInfo:
+        config = create_config
 
-            if isinstance(config, dict):
-                config = CreateTableSourceConfig(**config)
-            elif config is None:
-                config = CreateTableSourceConfig()
+        if isinstance(config, dict):
+            config = CreateTableSourceConfig(**config)
+        elif config is None:
+            config = CreateTableSourceConfig()
 
-            # use globals and locals of previous frame (caller frame)
-            caller_globals = {}
-            caller_frame = inspect.currentframe().f_back
-            if caller_frame:
-                caller_globals.update(caller_frame.f_globals)
-                caller_globals.update(caller_frame.f_locals)
+        table_source = self._create_internal(data_source, config)
 
-            table_source = self._create_internal(data_source, config, caller_globals)
-            if not isinstance(table_source, AbstractTableSource):
-                if isinstance(table_source, CreateTableSourceFailure):
-                    return to_json(table_source)
-                expected_type = type(AbstractTableSource)
-                actual_type = type(table_source)
-                raise ValueError(
-                    f"Created table_source is of type: {actual_type}, expected: ${expected_type}."
-                )
-
-            if config.temp_var_slot_id is not None:
-                TEMP_VARS[config.temp_var_slot_id] = table_source
-
-            return table_source
-        except Exception as e:
-            return to_json(
-                CreateTableSourceFailure(
-                    error_kind=CreateTableSourceErrorKind.EVAL_EXCEPTION,
-                    info=repr(e),
-                ),
+        if not isinstance(table_source, AbstractTableSource):
+            expected_type = type(AbstractTableSource)
+            actual_type = type(table_source)
+            raise TableSourceException(
+                error_kind=TableSourceErrorKind.UNSUPPORTED_TABLE_SOURCE_TYPE,
+                info=f"Created table_source is of type: {actual_type}, expected: ${expected_type}."
             )
+
+        TEMP_VARS[temp_var_slot_id] = table_source
+
+        return table_source.get_info()
 
     @abstractmethod
     def _create_internal(self,
                          data_source: Any,
                          config: CreateTableSourceConfig,
-                         caller_globals: dict,
-                         ) -> Union[AbstractTableSource, CreateTableSourceFailure]:
+                         ) -> AbstractTableSource:
         pass

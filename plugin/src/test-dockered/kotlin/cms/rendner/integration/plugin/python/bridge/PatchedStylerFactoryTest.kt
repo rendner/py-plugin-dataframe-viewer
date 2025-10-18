@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package cms.rendner.integration.plugin.python.bridge
 
 import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
-import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceConfig
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.TableSourceFactory
 import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
@@ -31,18 +31,30 @@ internal class PatchedStylerFactoryTest : AbstractPluginCodeTest() {
     @Test
     fun shouldWorkWithPandasStylerAsDataSource() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style")).isNotNull
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.frameAccessor, "df_style")).isNotNull
         }
     }
 
     @Test
-    fun shouldBeCallableWithAFilterFrame() {
+    fun shouldStorePatchedStylerAsTempVar() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createPandasTableSource<IPyPatchedStylerRef>(
-                debuggerApi.evaluator,
-                "df.style",
-                CreateTableSourceConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
-            )).isNotNull
+
+            val tempVarsDict = TableSourceFactory.getTempVarsDictRef()
+
+            val sizeBeforeCreation = debuggerApi.frameAccessor.evaluate("len($tempVarsDict)").forcedValue.toInt()
+
+            val patchedStyler = createPandasTableSource<IPyPatchedStylerRef>(
+                debuggerApi.frameAccessor,
+                "df_style",
+            )
+
+            val sizeAfterCreation = debuggerApi.frameAccessor.evaluate("len($tempVarsDict)").forcedValue.toInt()
+            assertThat(sizeAfterCreation).isEqualTo(sizeBeforeCreation + 1)
+
+            patchedStyler.disposeTableSource()
+            val sizeAfterDispose = debuggerApi.frameAccessor.evaluate("len($tempVarsDict)").forcedValue.toInt()
+
+            assertThat(sizeAfterDispose).isEqualTo(sizeBeforeCreation)
         }
     }
 
@@ -71,39 +83,40 @@ internal class PatchedStylerFactoryTest : AbstractPluginCodeTest() {
             """.trimIndent()
         ) { debuggerApi ->
 
-            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator,"df1.style")).isNotNull
+            assertThat(debuggerApi.frameAccessor.evaluate("x").forcedValue).isEqualTo("1")
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.frameAccessor,"df1.style")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
-            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("2")
-            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator,"df2.style")).isNotNull
+            assertThat(debuggerApi.frameAccessor.evaluate("x").forcedValue).isEqualTo("2")
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.frameAccessor,"df2.style")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
-            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("3")
-            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df3.style")).isNotNull
+            assertThat(debuggerApi.frameAccessor.evaluate("x").forcedValue).isEqualTo("3")
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.frameAccessor, "df3.style")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
-            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator,"df1.style")).isNotNull
+            assertThat(debuggerApi.frameAccessor.evaluate("x").forcedValue).isEqualTo("1")
+            assertThat(createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.frameAccessor,"df1.style")).isNotNull
         }
     }
 
     private fun runWithDefaultSnippet(block: (debuggerApi: IPythonDebuggerApi) -> Unit) {
-        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet(), block)
+        createPythonDebuggerWithCodeSnippet(defaultCodeSnippet(), block)
     }
 
-    private fun createDataFrameSnippet() = """
-                from pandas import DataFrame
-                
-                d = {'a': [1]}
-                df = DataFrame.from_dict({
-                    "col_0": [0, 1],
-                    "col_1": [2, 3],
-                })
-                
-                breakpoint()
-            """.trimIndent()
+    private fun defaultCodeSnippet() = """
+        from pandas import DataFrame
+
+        df = DataFrame.from_dict({
+            "col_0": [0, 1],
+            "col_1": [2, 3],
+        })
+        
+        df_style = df.style
+        
+        breakpoint()
+    """.trimIndent()
 }

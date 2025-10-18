@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,10 @@
  */
 package cms.rendner.intellij.dataframe.viewer.python.bridge
 
-import cms.rendner.intellij.dataframe.viewer.models.chunked.*
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
-import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.CreateTableSourceException
-import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.TableSourceFactoryImport
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
-import cms.rendner.intellij.dataframe.viewer.python.debugger.PluginPyValue
+import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.TableSourceException
+import cms.rendner.intellij.dataframe.viewer.python.bridge.providers.DataSourceInfo
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.utils.*
 import kotlinx.serialization.encodeToString
@@ -34,9 +32,36 @@ private val json: Json by lazy {
 }
 
 private val tempVarsDictRef = stringifyImportWithObjectRef("cms_rendner_sdfv.base.temp", "TEMP_VARS")
+private val cleanerRef = "$tempVarsDictRef['_cleaner_']"
+
+private var tempVarIdCounter: Int = 0
+
+private inline fun <reified T> callAndDeserializeResult(
+    frameAccessor: IPluginPyFrameAccessor,
+    expr: String,
+    ): T {
+    frameAccessor.evaluate(expr).let { value ->
+        // Python table source and factory return values serialized as JSON string.
+        if (value.type == "ResultJsonString") {
+            return json.decodeFromString<T>(value.forcedValue)
+        } else if (value.type == "ExceptionJsonString") {
+            throw TableSourceException(
+                json.decodeFromString<TableSourceExceptionData>(value.forcedValue),
+            )
+        } else if (T::class == Unit::class && value.qualifiedType == PythonQualifiedTypes.NONE) {
+            return Unit as T
+        }
+        throw TableSourceException(
+            TableSourceExceptionData(
+                TableSourceErrorKind.UNKNOWN_ERROR,
+                "Unexpected value type '${value.typeQualifier}.${value.type}' when deserializing JSON string.",
+            ),
+        )
+    }
+}
 
 /**
- * Creates [IPyTableSourceRef] instances to enable "communication" with pandas objects.
+ * Creates [IPyTableSourceRef] instances to enable "communication" with DataFrame objects.
  */
 class TableSourceFactory {
 
@@ -44,40 +69,34 @@ class TableSourceFactory {
         fun getTempVarsDictRef() = tempVarsDictRef
 
         fun create(
-            evaluator: IPluginPyValueEvaluator,
-            tableSourceFactoryImport: TableSourceFactoryImport,
-            dataSourceRefExpr: String,
+            frameAccessor: IPluginPyFrameAccessor,
+            dataSourceInfo: DataSourceInfo,
             config: CreateTableSourceConfig? = null,
         ): IPyTableSourceRef {
-            val constructorRef =
-                stringifyImportWithObjectRef(tableSourceFactoryImport.packageName, tableSourceFactoryImport.className)
+            val slotId = "_temp_slot_id_${tempVarIdCounter++}"
 
-            val tableSource = evaluator.evaluate(
+            val constructorRef = dataSourceInfo.tableSourceFactoryImport.let { import ->
+                stringifyImportWithObjectRef(import.packageName, import.className)
+            }
+
+            val tableInfo = callAndDeserializeResult<TableInfo>(
+                frameAccessor,
                 stringifyMethodCall("$constructorRef()", "create") {
-                    refParam(dataSourceRefExpr)
+                    stringParam(slotId)
+                    refParam(dataSourceInfo.source.refExpr)
                     if (config == null) noneParam() else refParam(json.encodeToString(config))
                 }
             )
 
-            if (tableSource.qualifiedType == "builtins.str") {
-                val info: CreateTableSourceFailure =
-                    json.decodeFromString(tableSource.forcedValue)
-                throw CreateTableSourceException(info)
-            }
+            val ctx = TableSourceContext(frameAccessor, dataSourceInfo)
 
-            val info = json.decodeFromString<TableInfo>(
-                evaluator
-                    .evaluate("${tableSource.refExpr}.get_info()")
-                    .forcedValue
-            )
-
-            return when (info.kind) {
-                "TABLE_SOURCE" -> PyTableSourceRef(tableSource, info.structure, config?.tempVarSlotId)
-                "PATCHED_STYLER" -> PyPatchedStylerRef(tableSource, info.structure, config?.tempVarSlotId)
-                else -> throw CreateTableSourceException(
-                    CreateTableSourceFailure(
-                        CreateTableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE,
-                        "Unsupported table source type '${tableSource.qualifiedType}' (kind:${info.kind})",
+            return when (tableInfo.kind) {
+                "TABLE_SOURCE" -> PyTableSourceRef(ctx, tableInfo.structure, slotId)
+                "PATCHED_STYLER" -> PyPatchedStylerRef(ctx, tableInfo.structure, slotId)
+                else -> throw TableSourceException(
+                    TableSourceExceptionData(
+                        TableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE,
+                        "Unsupported table source kind: ${tableInfo.kind}",
                     )
                 )
             }
@@ -85,49 +104,52 @@ class TableSourceFactory {
     }
 
     private open class PyTableSourceRef(
-        pythonValue: PluginPyValue,
-        override val tableStructure: TableStructure,
-        protected val tempVarSlotId: String?,
+        override val context: TableSourceContext,
+        override val initialTableStructure: TableStructure,
+        private val slotId: String,
         ) : IPyTableSourceRef, TestOnlyIPyTableSourceRefApi {
-        protected val refExpr: String = if (tempVarSlotId != null) "$tempVarsDictRef['${tempVarSlotId}']" else pythonValue.refExpr
-        protected val evaluator: IPluginPyValueEvaluator = pythonValue.evaluator
-        protected val idsToClean: MutableList<String> = mutableListOf()
         protected val typeConverter = PyPluginBaseTypesConverter()
 
+        override fun testOnly_getRefExpr(): String = "$tempVarsDictRef['$slotId']"
+
         @Volatile
-        private var myCompletionVariants: List<ICompletionVariant>? = null
+        private var disposed: Boolean = false
 
-        override fun testOnly_getRefExpr() = refExpr
+        override fun disposeTableSource() {
+            if (disposed) return
 
-        override fun dispose() {
+            disposed = true
             try {
-                // A cleaner is used to ensure the cleanup.
-                // The underlying tableSource could be gone (stack frame already dropped) and the cleanup would fail.
-                idsToClean.add(tempVarSlotId ?: refExpr)
-                val ids = convertCurrentCleanableIdsToPythonListString()
-                val methodRef = stringifyImportWithObjectRef("cms_rendner_sdfv.base.temp", "EvaluatedVarsCleaner.clear")
-                evaluator.execute("$methodRef(${ids})")
-            } catch (ignore: Throwable) {}
+                context.frameAccessor.execute("${cleanerRef}.free_slots(['${slotId}'])")
+            } catch (_: Exception) {
+                // When debug session is not paused, disposing fails and the resource is not freed.
+                // I expect this case will not happen often. Solution could be to collect these slotIds
+                // and try to free them again as soon as the session is paused again.
+            }
         }
 
-        override fun evaluateColumnStatistics(colIndex: Int): Map<String, String> {
-            return callOnPythonSide(
-                createCallBuilder().withCall("get_column_statistics") {
-                    numberParam(colIndex)
+        override fun isAlive(): Boolean {
+            return !disposed && context.frameAccessor.isAlive()
+        }
+
+        override fun getColumnStatistics(colIndex: Int): Map<String, String> {
+            return callAndDeserializeResult(
+                context.frameAccessor,
+                tableSourceCallBuilder {
+                    withCall("get_column_statistics") {
+                        numberParam(colIndex)
+                    }
                 }
             )
         }
 
-        override fun evaluateComputeChunkData(
+        override fun computeChunkData(
             chunkRegion: ChunkRegion,
             dataRequest: ChunkDataRequest,
-            newSorting: SortCriteria?,
         ): ChunkData {
-            return callOnPythonSide(
-                createCallBuilder().apply {
-                    if (newSorting != null) {
-                        withSetSortCriteria(this, newSorting)
-                    }
+            return callAndDeserializeResult(
+                context.frameAccessor,
+                tableSourceCallBuilder {
                     invokeWithTypedKwargs(
                         this,
                         "compute_chunk_data",
@@ -140,27 +162,25 @@ class TableSourceFactory {
             )
         }
 
-        protected fun invokeWithTypedKwargs(callBuilder: PythonChainedCallsBuilder, methodName: String, kwargsMap: Map<String, String>) {
-            callBuilder.withCall("invoke_with_typed_kwargs") {
+        protected fun invokeWithTypedKwargs(tableSourceCallBuilder: PythonChainedCallsBuilder, methodName: String, kwargsMap: Map<String, String>) {
+            tableSourceCallBuilder.withCall("invoke_with_typed_kwargs") {
                 stringParam(methodName)
                 refParam("lambda t: ${stringifyDictionary(kwargsMap.mapValues { "t.${it.value}" })}")
             }
         }
 
-        override fun evaluateGetColumnNameCompletionVariants(
+        override fun getColumnNameCompletionVariants(
             identifier: String,
             isSyntheticIdentifier: Boolean
         ): List<ICompletionVariant> {
-            val itsMe = isSyntheticIdentifier || identifier == refExpr
-            if (itsMe) {
-                myCompletionVariants?.let { return it }
-            }
-
             val variants: List<ICompletionVariant> = try {
-                callOnPythonSide(
-                    createCallBuilder().withCall("get_column_name_completion_variants") {
-                        if (isSyntheticIdentifier) noneParam() else refParam(identifier)
-                        boolParam(isSyntheticIdentifier)
+                callAndDeserializeResult(
+                    context.frameAccessor,
+                    tableSourceCallBuilder {
+                        withCall("get_column_name_completion_variants") {
+                            if (isSyntheticIdentifier) noneParam() else refParam(identifier)
+                            boolParam(isSyntheticIdentifier)
+                        }
                     }
                 )
             } catch (e: EvaluateException) {
@@ -171,68 +191,57 @@ class TableSourceFactory {
                 } else throw e
             }
 
-            if (itsMe) {
-                myCompletionVariants = variants
-            }
-
             return variants
         }
 
-        protected inline fun <reified T> callOnPythonSide(builder: PythonChainedCallsBuilder): T {
-            val expr = builder.toString()
-            return evaluator.evaluate(expr).let {
-                // PyCharms "Python Console" doesn't assign temp-var identifier to refer to an evaluated result.
-                // The "refExpr" is in that case equals the evaluated expression.
-                if (it.refExpr != expr) {
-                    idsToClean.add(it.refExpr)
+        override fun applyFilter(config: FilterConfig): FilterResult {
+            return callAndDeserializeResult(
+                context.frameAccessor,
+                tableSourceCallBuilder {
+                    invokeWithTypedKwargs(
+                        this,
+                        "apply_filter",
+                        mapOf(
+                            "config" to typeConverter.toFilterConfig(config),
+                        )
+                    )
                 }
-                // A Python table source returns its values serialized as a JSON string.
-                // Therefore, the data has to be deserialized into the expected type.
-                json.decodeFromString(it.forcedValue)
-            }
+            )
         }
 
-        protected fun createCallBuilder(): PythonChainedCallsBuilder {
-            return PythonChainedCallsBuilder(refExpr).apply {
-                this.withCall("clear") { refParam(convertCurrentCleanableIdsToPythonListString()) }
-            }
+        override fun applySort(config: SortConfig) {
+            callAndDeserializeResult<Unit>(
+                context.frameAccessor,
+                tableSourceCallBuilder {
+                    invokeWithTypedKwargs(
+                        this,
+                        "apply_sort",
+                        mapOf(
+                            "config" to typeConverter.toSortConfig(config),
+                        )
+                    )
+                }
+            )
         }
 
-        protected fun convertCurrentCleanableIdsToPythonListString(): String {
-            val ids = idsToClean.joinToString(prefix = "[", postfix = "]") { stringifyString(it) }
-            idsToClean.clear()
-            return ids
-        }
-
-        protected fun withSetSortCriteria(builder: PythonChainedCallsBuilder, sortCriteria: SortCriteria) {
-            builder.withCall("set_sort_criteria") {
-                sortCriteria.byIndex.let {
-                    if (it.isEmpty()) noneParam() else refParam(it.toString())
-                }
-                sortCriteria.ascending.let {
-                    if (it.isEmpty()) noneParam() else refParam(it.map { e -> stringifyBool(e) }.toString())
-                }
-            }
+        protected fun tableSourceCallBuilder(init: PythonChainedCallsBuilder.() -> Unit): String {
+            return PythonChainedCallsBuilder("$tempVarsDictRef['$slotId']").apply { init() }.toString()
         }
     }
 
     private class PyPatchedStylerRef(
-        pythonValue: PluginPyValue,
-        tableStructure: TableStructure,
-        tempVarSlotId: String?
-    ) : PyTableSourceRef(pythonValue, tableStructure, tempVarSlotId), IPyPatchedStylerRef {
+        context: TableSourceContext,
+        initialTableStructure: TableStructure,
+        slotId: String,
+    ) : PyTableSourceRef(context, initialTableStructure, slotId), IPyPatchedStylerRef {
 
-        override fun evaluateValidateAndComputeChunkData(
+        override fun validateAndComputeChunkData(
             chunkRegion: ChunkRegion,
             dataRequest: ChunkDataRequest,
-            newSorting: SortCriteria?,
         ): ValidatedChunkData {
-            return callOnPythonSide(
-                createCallBuilder().apply {
-                    if (newSorting != null) {
-                        withSetSortCriteria(this, newSorting)
-                    }
-
+            return callAndDeserializeResult(
+                context.frameAccessor,
+                tableSourceCallBuilder {
                     invokeWithTypedKwargs(
                         this,
                         "validate_and_compute_chunk_data",
@@ -256,5 +265,18 @@ private class PyPluginBaseTypesConverter {
 
     fun toRegion(region: ChunkRegion): String {
         return "Region(${region.firstRow}, ${region.firstColumn}, ${region.numberOfRows}, ${region.numberOfColumns})"
+    }
+
+    fun toFilterConfig(config: FilterConfig): String {
+        // filter-expr can contain strings therefore " and ' have correctly escaped
+        val expr = if (config.expr == null) "None" else json.encodeToString(config.expr)
+        val syntheticIdentifierUsed = stringifyBool(config.syntheticIdentifierUsed)
+        return "FilterConfig(expr=${expr}, synthetic_identifier_used=${syntheticIdentifierUsed})"
+    }
+
+    fun toSortConfig(config: SortConfig): String {
+        val columns = if (config.byIndex.isEmpty()) "None" else config.byIndex.toString()
+        val ascending = if (config.ascending.isEmpty()) "None" else config.ascending.map { e -> stringifyBool(e) }.toString()
+        return "SortConfig(column_idx=${columns}, ascending=${ascending})"
     }
 }

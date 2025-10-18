@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ class EvaluateException(
     }
 
     fun isCausedByDisconnectException(): Boolean {
-        return cause?.isDisconnectException() == true
+        return cause?.isDisconnected == true
     }
 
     fun isCausedByProcessIsRunningException(): Boolean {

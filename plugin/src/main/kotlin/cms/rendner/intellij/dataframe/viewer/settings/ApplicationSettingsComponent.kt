@@ -16,7 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.settings
 
 import cms.rendner.intellij.dataframe.viewer.components.CellStylingComboBox
-import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.CellStylingMode
+import cms.rendner.intellij.dataframe.viewer.components.table.renderer.styling.CellStylingMode
 import com.intellij.ui.border.IdeaTitledBorder
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel

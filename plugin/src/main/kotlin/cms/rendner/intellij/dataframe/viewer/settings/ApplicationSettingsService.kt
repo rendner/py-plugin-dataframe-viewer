@@ -15,7 +15,7 @@
  */
 package cms.rendner.intellij.dataframe.viewer.settings
 
-import cms.rendner.intellij.dataframe.viewer.components.renderer.styling.CellStylingMode
+import cms.rendner.intellij.dataframe.viewer.components.table.renderer.styling.CellStylingMode
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State

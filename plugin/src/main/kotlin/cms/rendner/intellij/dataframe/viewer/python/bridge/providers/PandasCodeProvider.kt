@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +20,33 @@ import cms.rendner.intellij.dataframe.viewer.python.PandasTypes
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.PandasVersion
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.InjectException
-import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyValueEvaluator
+import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
+
+private data class MinorRange(val earliest: Int, val latest: Int) {
+    fun getMatchingOrLatestMinor(minor: Int): Int? {
+        return when {
+            minor >= latest -> latest
+            minor >= earliest -> minor
+            else -> null
+        }
+    }
+}
+
+private val SUPPORTED_VERSIONS = mapOf(
+    1 to MinorRange(1, 5),
+    2 to MinorRange(0, 3),
+)
 
 class PandasCodeProvider : ITableSourceCodeProvider {
     override fun getDataFrameLibrary() = DataFrameLibrary.PANDAS
 
-    override fun createSourceInfo(source: PyDebugValueEvalExpr, evaluator: IPluginPyValueEvaluator): DataSourceInfo {
+    override fun createSourceInfo(source: PyDebugValueEvalExpr): DataSourceInfo {
         return DataSourceInfo(
             source,
             if (PandasTypes.isStyler(source.qualifiedType)) getPatchedStylerFactoryImport() else getTableSourceFactoryImport(),
+            getDataFrameLibrary(),
             hasIndexLabels = true,
             sortable = true,
             filterable = true,
@@ -43,9 +59,9 @@ class PandasCodeProvider : ITableSourceCodeProvider {
                 fqClassName == PythonQualifiedTypes.DICT
     }
 
-    override fun getModulesDump(evaluator: IPluginPyValueEvaluator): String {
+    override fun getModulesDump(frameAccessor: IPluginPyFrameAccessor): String {
         val pandasVersion = try {
-            PandasVersion.fromString(evaluator.evaluate("__import__('pandas').__version__").forcedValue)
+            PandasVersion.fromString(frameAccessor.evaluate("__import__('pandas').__version__").forcedValue)
         } catch (ex: EvaluateException) {
             throw InjectException("Failed to identify version of pandas.", ex)
         }
@@ -63,21 +79,17 @@ class PandasCodeProvider : ITableSourceCodeProvider {
 
     private fun getPatchedStylerFactoryImport(): TableSourceFactoryImport {
         return TableSourceFactoryImport(
-            "cms_rendner_sdfv.pandas.styler.table_source_factory",
-            "TableSourceFactory",
+            "cms_rendner_sdfv.pandas.styler.patched_styler_factory",
+            "PatchedStylerFactory",
         )
     }
 
     private fun getPluginCodeResourcePath(version: PandasVersion): String {
-        if (version.major == 1) {
-            if (version.minor in 1..5) {
-                return "/pandas_1.${version.minor}/plugin_modules_dump.json"
-            }
-        } else if (version.major == 2) {
-            if (version.minor in 0..3) {
-                return "/pandas_2.${version.minor}/plugin_modules_dump.json"
-            }
-        }
-        throw InjectException("Unsupported $version.")
+        // Allowing to use latest supported minor versions for newer versions
+        // can result in compatibility problems. In the future, viewer could
+        // visualize that it uses an outdated minor version (maybe include info also in errors)
+        val minor = SUPPORTED_VERSIONS[version.major]?.getMatchingOrLatestMinor(version.minor)
+            ?: throw InjectException("Unsupported $version.")
+        return "/generated_dumps/pandas_${version.major}.${minor}/plugin_modules_dump.json"
     }
 }

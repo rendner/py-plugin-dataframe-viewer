@@ -18,65 +18,66 @@ package cms.rendner.integration.plugin.python.bridge
 import cms.rendner.debugger.impl.IPythonDebuggerApi
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.python.bridge.CreateTableSourceConfig
-import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyPatchedStylerRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.DataSourceTransformHint
 import cms.rendner.intellij.dataframe.viewer.python.bridge.IPyTableSourceRef
+import cms.rendner.intellij.dataframe.viewer.python.bridge.TableSourceErrorKind
 import cms.rendner.intellij.dataframe.viewer.python.bridge.TableSourceFactory
-import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
+import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.TableSourceException
 import cms.rendner.junit.RequiresPandas
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 @Order(2)
 @RequiresPandas
 internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
-
-    override fun afterContainerStart() {
-        /*
-        The TableSource doesn't use jinja2.
-        To proof that a normal TableSource also works without jinja2, the module has to be removed.
-
-        Normally this test should be done in the Python project. But this would require a Python project
-        without jinja2 for the TableSource code and one with jinja for the PatchedStyler.
-        Having two separate Python projects for each supported version of pandas doesn't scale well.
-         */
-
-        // long-running process
-        uninstallPythonModules("jinja2")
-    }
-
-    @Test
-    fun shouldFailIfJinja2IsNotInstalled() {
-        runWithDefaultSnippet { debuggerApi ->
-            Assertions.assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                createPandasTableSource<IPyPatchedStylerRef>(debuggerApi.evaluator, "df.style")
-            }.withMessageContaining("jinja2")
-        }
-    }
-
     @Test
     fun shouldWorkWithPandasDataFrameAsDataSource() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df")).isNotNull
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.frameAccessor, "df")).isNotNull
         }
     }
 
     @Test
     fun shouldWorkWithPythonDictAsDataSource() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "d")).isNotNull
+            createPandasTableSource<IPyTableSourceRef>(debuggerApi.frameAccessor, "d").let {
+                assertThat(it).isNotNull
+                assertThat(it.initialTableStructure.rowsCount).isEqualTo(3)
+                assertThat(it.initialTableStructure.columnsCount).isEqualTo(2)
+            }
         }
     }
 
     @Test
-    fun shouldBeCallableWithAFilterFrame() {
+    fun shouldWorkWithPythonDictAsDataSourceWithDictKeysAsRows() {
         runWithDefaultSnippet { debuggerApi ->
-            assertThat(createPandasTableSource<IPyTableSourceRef>(
-                debuggerApi.evaluator,
-                "df",
-                CreateTableSourceConfig(filterEvalExpr = "df.filter(items=[1, 2], axis='index')"),
-            )).isNotNull
+            createPandasTableSource<IPyTableSourceRef>(
+                debuggerApi.frameAccessor,
+                "d",
+                CreateTableSourceConfig(
+                    dataSourceTransformHint = DataSourceTransformHint.DictKeysAsRows,
+                ),
+                ).let {
+                assertThat(it).isNotNull
+                assertThat(it.initialTableStructure.rowsCount).isEqualTo(2)
+                assertThat(it.initialTableStructure.columnsCount).isEqualTo(3)
+            }
+        }
+    }
+
+    @Test
+    fun shouldThrowIfDataSourceIsUnsupported() {
+        runWithDefaultSnippet { debuggerApi ->
+
+            val exception = assertThrows<TableSourceException> {
+                createPandasTableSource<IPyTableSourceRef>(debuggerApi.frameAccessor, "x")
+            }
+
+            assertThat(exception.data.errorKind).isEqualTo(TableSourceErrorKind.UNSUPPORTED_DATA_SOURCE_TYPE)
+            assertThat(exception.data.info).isEqualTo("<class 'int'>")
+            assertThat(exception.data.cause).isNull()
         }
     }
 
@@ -84,24 +85,22 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
     fun shouldStoreTableSourceAsTempVar() {
         runWithDefaultSnippet { debuggerApi ->
 
+            val tempVarsDict = TableSourceFactory.getTempVarsDictRef()
+
+            val sizeBeforeCreation = debuggerApi.frameAccessor.evaluate("len($tempVarsDict)").forcedValue.toInt()
+
             val tableSource = createPandasTableSource<IPyTableSourceRef>(
-                debuggerApi.evaluator,
+                debuggerApi.frameAccessor,
                 "df",
-                CreateTableSourceConfig(tempVarSlotId = "abc"),
             )
 
-            assertThat(tableSource).isNotNull
-            // methods should be callable
-            assertThat(tableSource.evaluateColumnStatistics(0)).isNotNull
+            val sizeAfterCreation = debuggerApi.frameAccessor.evaluate("len($tempVarsDict)").forcedValue.toInt()
+            assertThat(sizeAfterCreation).isEqualTo(sizeBeforeCreation + 1)
 
-            val tempVarsDict = TableSourceFactory.getTempVarsDictRef()
-            assertThat(debuggerApi.evaluator.evaluate("len($tempVarsDict)").forcedValue).isEqualTo("1")
-            assertThat(debuggerApi.evaluator.evaluate("$tempVarsDict['abc']").qualifiedType)
-                .isEqualTo("cms_rendner_sdfv.pandas.frame.table_source.TableSource")
+            tableSource.disposeTableSource()
+            val sizeAfterDispose = debuggerApi.frameAccessor.evaluate("len($tempVarsDict)").forcedValue.toInt()
 
-            tableSource.dispose()
-            // after dispose the dict should not contain the tableSource anymore
-            assertThat(debuggerApi.evaluator.evaluate("len($tempVarsDict)").forcedValue).isEqualTo("0")
+            assertThat(sizeAfterDispose).isEqualTo(sizeBeforeCreation)
         }
     }
 
@@ -130,39 +129,42 @@ internal class TableSourceFactoryTest : AbstractPluginCodeTest() {
             """.trimIndent()
         ) { debuggerApi ->
 
-            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator,"df1")).isNotNull
+            assertThat(debuggerApi.frameAccessor.evaluate("x").forcedValue).isEqualTo("1")
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.frameAccessor,"df1")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
-            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("2")
-            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator,"df2")).isNotNull
+            assertThat(debuggerApi.frameAccessor.evaluate("x").forcedValue).isEqualTo("2")
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.frameAccessor,"df2")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
-            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("3")
-            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator, "df3")).isNotNull
+            assertThat(debuggerApi.frameAccessor.evaluate("x").forcedValue).isEqualTo("3")
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.frameAccessor, "df3")).isNotNull
 
             debuggerApi.continueFromBreakpoint()
 
-            assertThat(debuggerApi.evaluator.evaluate("x").forcedValue).isEqualTo("1")
-            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.evaluator,"df1")).isNotNull
+            assertThat(debuggerApi.frameAccessor.evaluate("x").forcedValue).isEqualTo("1")
+            assertThat(createPandasTableSource<IPyTableSourceRef>(debuggerApi.frameAccessor,"df1")).isNotNull
         }
     }
 
     private fun runWithDefaultSnippet(block: (debuggerApi: IPythonDebuggerApi) -> Unit) {
-        createPythonDebuggerWithCodeSnippet(createDataFrameSnippet(), block)
+        createPythonDebuggerWithCodeSnippet(defaultCodeSnippet(), block)
     }
 
-    private fun createDataFrameSnippet() = """
-                from pandas import DataFrame
-                
-                d = {'a': [1]}
-                df = DataFrame.from_dict({
-                    "col_0": [0, 1],
-                    "col_1": [2, 3],
-                })
-                
-                breakpoint()
-            """.trimIndent()
+    private fun defaultCodeSnippet() = """
+        from pandas import DataFrame
+        
+        x = 123
+
+        d = {
+            "col_0": [0, 1, 2],
+            "col_1": [2, 1, 0],
+        }
+        
+        df = DataFrame.from_dict(d)
+        
+        breakpoint()
+    """.trimIndent()
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import kotlinx.serialization.json.Json
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
 
+private const val DEBUGGER_HELPERS_FILE_NAME = "debugger_helpers"
 private const val RESULT_MARKER = "@_@RESULT@_@"
 private const val EXC_MARKER = "@_@EXC@_@"
 private const val DEBUGGER_PROMPT = "(Pdb) "
@@ -262,7 +263,7 @@ abstract class PythonDebugger {
 
             activeTask?.completeWithError(PluginPyDebuggerException("Task was canceled."))
         } catch (e: Throwable) {
-            if (e is PluginPyDebuggerException && e.isDisconnectException() && activeTask is QuitTask) {
+            if (e is PluginPyDebuggerException && e.isDisconnected && activeTask is QuitTask) {
                 activeTask.completeWithResult(null)
                 return
             }
@@ -280,7 +281,7 @@ abstract class PythonDebugger {
         if (!pythonProcess.isAlive()) {
             // In PyCharm a "PyDebuggerException" with the message "Disconnected"
             // is thrown in case the debugger is disconnected.
-            throw PluginPyDebuggerException("Disconnected")
+            throw PluginPyDebuggerException("Disconnected", null, true)
         }
     }
 
@@ -293,8 +294,13 @@ abstract class PythonDebugger {
 
         // The marked result may consist of multiple columns. For example a pandas DataFrame prints the first n rows.
         var marker: String? = null
+        var debugHelperIsMentioned = false
         val markedLines = StringBuilder()
         for (line in lines) {
+            if (line.contains(DEBUGGER_HELPERS_FILE_NAME)) {
+                debugHelperIsMentioned = true
+            }
+
             if (marker != null) {
                 markedLines.appendLine(line)
                 if (line.contains(marker)) break
@@ -309,7 +315,13 @@ abstract class PythonDebugger {
                 }
             }
         }
-        return marker?.let{
+
+        return if (marker == null && debugHelperIsMentioned) {
+            MarkedResult(
+                lines.joinToString(separator = "\n"),
+                DEBUGGER_HELPERS_FILE_NAME,
+            )
+        } else marker?.let{
             MarkedResult(
                 markedLines.toString().trim().removeSurrounding(marker),
                 it,
@@ -323,7 +335,14 @@ abstract class PythonDebugger {
 
     private class EvaluateTask(val request: EvalOrExecRequest) : Task<EvalOrExecResponse>() {
         override fun transformResult(result: MarkedResult?): EvalOrExecResponse {
-            return if (result?.marker == EXC_MARKER) {
+            return if (result?.marker == DEBUGGER_HELPERS_FILE_NAME) {
+                EvalOrExecResponse(
+                    value = result.value,
+                    type = null,
+                    typeQualifier = null,
+                    isError = true,
+                )
+            } else if (result?.marker == EXC_MARKER) {
                 MarkedResult.parseToError(result).let {
                     EvalOrExecResponse(
                         value = it.cause,

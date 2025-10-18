@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package cms.rendner.integration.debugger
 import cms.rendner.debugger.AbstractPipEnvEnvironmentTest
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.EvaluateException
-import cms.rendner.junit.RequiresPandas
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -39,11 +38,11 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
         createPythonDebugger { debuggerApi ->
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                debuggerApi.evaluator.execute("multi = 'line_1\nline_2'")
+                debuggerApi.frameAccessor.execute("multi = 'line_1\nline_2'")
             }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.SyntaxError)
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                debuggerApi.evaluator.evaluate("'line_1\nline_2'")
+                debuggerApi.frameAccessor.evaluate("'line_1\nline_2'")
             }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.SyntaxError)
         }
     }
@@ -52,11 +51,11 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldNotFailIfLinebreakIsInTripleQuotes() {
         createPythonDebugger { debuggerApi ->
 
-            debuggerApi.evaluator.execute("multi = '''line_1\nline_2'''")
-            val multi = debuggerApi.evaluator.evaluate("multi")
+            debuggerApi.frameAccessor.execute("multi = '''line_1\nline_2'''")
+            val multi = debuggerApi.frameAccessor.evaluate("multi")
             assertThat(multi.value).isEqualTo("line_1\nline_2")
 
-            val multi2 = debuggerApi.evaluator.evaluate("'''line_1\nline_2'''")
+            val multi2 = debuggerApi.frameAccessor.evaluate("'''line_1\nline_2'''")
             assertThat(multi2.value).isEqualTo("line_1\nline_2")
         }
     }
@@ -65,7 +64,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldEvaluateExpression() {
         createPythonDebugger { debuggerApi ->
 
-            val result = debuggerApi.evaluator.evaluate("1 + 2")
+            val result = debuggerApi.frameAccessor.evaluate("1 + 2")
 
             assertThat(result.value).isEqualTo("3")
         }
@@ -76,7 +75,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
         createPythonDebugger { debuggerApi ->
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                debuggerApi.evaluator.evaluate("abc(42)")
+                debuggerApi.frameAccessor.evaluate("abc(42)")
             }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.NameError)
         }
     }
@@ -85,7 +84,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldHaveCorrectTypeInformation() {
         createPythonDebugger { debuggerApi ->
 
-            val result = debuggerApi.evaluator.evaluate("{}")
+            val result = debuggerApi.frameAccessor.evaluate("{}")
 
             assertThat(result.type).isEqualTo("dict")
             assertThat(result.typeQualifier).isEqualTo("builtins")
@@ -93,29 +92,27 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     }
 
     @Test
-    @RequiresPandas
     fun shouldHaveCorrectTypeInformationWhenValueIsMultilineString() {
         createPythonDebugger { debuggerApi ->
 
-            debuggerApi.evaluator.execute(
+            debuggerApi.frameAccessor.execute(
                 """
-                from pandas import DataFrame
-                df = DataFrame.from_dict({
-                    "col_0": [0, 1],
-                    "col_1": [2, 3],
-                })
+                multiline_str = '''
+                First line
+                Second line
+                '''
                 """.trimIndent()
             )
-            val result = debuggerApi.evaluator.evaluate("df")
+            val result = debuggerApi.frameAccessor.evaluate("multiline_str")
 
-            assertThat(result.value).isEqualTo(
-                """
-               col_0  col_1
-            0      0      2
-            1      1      3
-            """.trimIndent())
-            assertThat(result.type).isEqualTo("DataFrame")
-            assertThat(result.typeQualifier).isEqualTo("pandas.core.frame")
+            assertThat(result.value).isEqualTo("""
+                
+                First line
+                Second line
+                
+                """.trimIndent())
+            assertThat(result.type).isEqualTo("str")
+            assertThat(result.typeQualifier).isEqualTo("builtins")
         }
     }
 
@@ -123,7 +120,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldAllowToExecuteCode() {
         createPythonDebugger { debuggerApi ->
             assertThatNoException().isThrownBy {
-                debuggerApi.evaluator.execute(
+                debuggerApi.frameAccessor.execute(
                     """
                     from urllib.parse import urlparse
             
@@ -139,7 +136,7 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
         createPythonDebugger { debuggerApi ->
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                debuggerApi.evaluator.execute("import")
+                debuggerApi.frameAccessor.execute("import")
             }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.SyntaxError)
         }
     }
@@ -148,9 +145,9 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldBeAbleToAccessPreviousEvaluatedValues() {
         createPythonDebugger { debuggerApi ->
 
-            debuggerApi.evaluator.execute("d = {'a': 10}")
+            debuggerApi.frameAccessor.execute("d = {'a': 10}")
 
-            assertThat(debuggerApi.evaluator.evaluate("d['a']").value).isEqualTo("10")
+            assertThat(debuggerApi.frameAccessor.evaluate("d['a']").value).isEqualTo("10")
         }
     }
 
@@ -158,9 +155,9 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldBeAbleToReferToPreviousEvaluatedValues() {
         createPythonDebugger { debuggerApi ->
 
-            val dict = debuggerApi.evaluator.evaluate("{'a': 10}")
+            val dict = debuggerApi.frameAccessor.evaluate("{'a': 10}")
 
-            assertThat(debuggerApi.evaluator.evaluate("${dict.refExpr}['a']").value).isEqualTo("10")
+            assertThat(debuggerApi.frameAccessor.evaluate("${dict.refExpr}['a']").value).isEqualTo("10")
         }
     }
 
@@ -168,14 +165,14 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldEvaluateValuesFromExecutedCode() {
         createPythonDebugger { debuggerApi ->
 
-            debuggerApi.evaluator.execute(
+            debuggerApi.frameAccessor.execute(
                 """
                 from urllib.parse import urlparse
             
                 o = urlparse('http://test.123')
                 """.trimIndent()
             )
-            val result = debuggerApi.evaluator.evaluate("o.scheme")
+            val result = debuggerApi.frameAccessor.evaluate("o.scheme")
 
             assertThat(result.value).isEqualTo("http")
             assertThat(result.type).isEqualTo("str")
@@ -187,12 +184,12 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldDeleteEvaluatedResult() {
         createPythonDebugger { debuggerApi ->
 
-            val dict = debuggerApi.evaluator.evaluate("{'a': 12}")
+            val dict = debuggerApi.frameAccessor.evaluate("{'a': 12}")
 
-            debuggerApi.evaluator.execute("del ${dict.refExpr}")
+            debuggerApi.frameAccessor.execute("del ${dict.refExpr}")
 
             assertThatExceptionOfType(EvaluateException::class.java).isThrownBy {
-                debuggerApi.evaluator.evaluate("${dict.refExpr}['a']")
+                debuggerApi.frameAccessor.evaluate("${dict.refExpr}['a']")
             }.extracting("pythonErrorQName").isEqualTo(PythonQualifiedTypes.NameError)
         }
     }
@@ -201,11 +198,11 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldAllowToReferenceEvalExecObjects() {
         createPythonDebugger { debuggerApi ->
 
-            val evalDict = debuggerApi.evaluator.evaluate("{'a': 12}")
+            val evalDict = debuggerApi.frameAccessor.evaluate("{'a': 12}")
 
-            debuggerApi.evaluator.execute("exec_dict = {'a': ${evalDict.refExpr}['a'] + 1}")
+            debuggerApi.frameAccessor.execute("exec_dict = {'a': ${evalDict.refExpr}['a'] + 1}")
 
-            val execDict = debuggerApi.evaluator.evaluate("exec_dict['a']")
+            val execDict = debuggerApi.frameAccessor.evaluate("exec_dict['a']")
 
             assertThat(execDict.value).isEqualTo("13")
         }
@@ -215,9 +212,9 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
     fun shouldReturnIdentifierAsRefExprWhenEvaluatingAnIdentifier() {
         createPythonDebugger { debuggerApi ->
 
-            debuggerApi.evaluator.execute("a = []")
+            debuggerApi.frameAccessor.execute("a = []")
 
-            val result = debuggerApi.evaluator.evaluate("a")
+            val result = debuggerApi.frameAccessor.evaluate("a")
 
             assertThat(result.refExpr).isEqualTo("a")
         }
@@ -234,12 +231,12 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
             """.trimIndent()
         ) { debuggerApi ->
 
-            val result = debuggerApi.evaluator.evaluate("a")
+            val result = debuggerApi.frameAccessor.evaluate("a")
             assertThat(result.value).isEqualTo("2")
 
             debuggerApi.continueFromBreakpoint()
 
-            val result2 = debuggerApi.evaluator.evaluate("a")
+            val result2 = debuggerApi.frameAccessor.evaluate("a")
             assertThat(result2.value).isEqualTo("5")
         }
     }
@@ -258,12 +255,12 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
             """.trimIndent()
         ) { debuggerApi ->
 
-            val result = debuggerApi.evaluator.evaluate("a")
+            val result = debuggerApi.frameAccessor.evaluate("a")
             assertThat(result.value).isEqualTo("2")
 
             debuggerApi.continueFromBreakpoint()
 
-            val result2 = debuggerApi.evaluator.evaluate("a")
+            val result2 = debuggerApi.frameAccessor.evaluate("a")
             assertThat(result2.value).isEqualTo("5")
         }
     }
@@ -288,6 +285,27 @@ internal class PythonDebuggerTest : AbstractPipEnvEnvironmentTest() {
             // Python 3.10:     "<class '__main__.B'>, <class 'dict'>, <class 'dict'>, <class 'list'>"
             // Python >= 3.11:  "<class '__main__.B'>, <class 'dict'>, <class 'list'>"
             assertThat(result).filteredOn { it.contains("<class '__main__.B'>") && it.endsWith("<class 'list'>") }.isNotEmpty()
+        }
+    }
+
+    @Test
+    fun shouldEvaluateSimulatedExec() {
+        createPythonDebugger { debuggerApi ->
+
+            val statement = """
+                from urllib.parse import urlparse
+            
+                o = urlparse('http://test.123')
+                """.trimIndent()
+            val escaped = debuggerApi.frameAccessor.toEscapedSingleLineExec(statement)
+            // some frameAccessor do evaluate when calling execute, to simulate this evaluate is called on purpose
+            debuggerApi.frameAccessor.evaluate(escaped)
+
+            val result = debuggerApi.frameAccessor.evaluate("o.scheme")
+
+            assertThat(result.value).isEqualTo("http")
+            assertThat(result.type).isEqualTo("str")
+            assertThat(result.typeQualifier).isEqualTo("builtins")
         }
     }
 }
