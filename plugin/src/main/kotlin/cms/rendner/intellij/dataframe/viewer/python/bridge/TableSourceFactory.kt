@@ -23,6 +23,7 @@ import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.Evaluate
 import cms.rendner.intellij.dataframe.viewer.python.utils.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.concurrent.atomic.AtomicInteger
 
 private val json: Json by lazy {
     Json {
@@ -34,7 +35,7 @@ private val json: Json by lazy {
 private val tempVarsDictRef = stringifyImportWithObjectRef("cms_rendner_sdfv.base.temp", "TEMP_VARS")
 private val cleanerRef = "$tempVarsDictRef['_cleaner_']"
 
-private var tempVarIdCounter: Int = 0
+private var tempVarIdCounter = AtomicInteger(0)
 
 private inline fun <reified T> callAndDeserializeResult(
     frameAccessor: IPluginPyFrameAccessor,
@@ -73,7 +74,7 @@ class TableSourceFactory {
             dataSourceInfo: DataSourceInfo,
             config: CreateTableSourceConfig? = null,
         ): IPyTableSourceRef {
-            val slotId = "_temp_slot_id_${tempVarIdCounter++}"
+            val slotId = "_temp_slot_id_${tempVarIdCounter.getAndIncrement()}"
 
             val constructorRef = dataSourceInfo.tableSourceFactoryImport.let { import ->
                 stringifyImportWithObjectRef(import.packageName, import.className)
