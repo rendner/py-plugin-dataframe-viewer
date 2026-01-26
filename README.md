@@ -28,8 +28,8 @@ Note: The plugin requires one of the supported Python DataFrame libraries:
 - [polars DataFrame](./docs/POLARS_DATAFRAME.md)
 
 ## Features
-- filtering
-- sorting
+- filtering ([pandas](./docs/PANDAS_FILTERING.md), [polars](./docs/POLARS_FILTERING.md))
+- [sorting](./docs/SORTING.md)
 - [highlighting of numeric cell values](./docs/CELL_STYLING.md)
 - [keyboard shortcuts to work efficiently](./docs/KEYBOARD_SHORTCUTS.md)
 - [settings to configure plugin behavior](./docs/SETTINGS.md)
@@ -37,7 +37,11 @@ Note: The plugin requires one of the supported Python DataFrame libraries:
 ## How Does It Work
 The plugin can be used to view DataFrames from a `Debug Session` or a `Python Console`.
 
-### Quick Example: Debug Session
+Examples:
+- [Debug Session](#example-debug-session)
+- [Python Console](#example-python-console)
+
+### Example: Debug Session
 Generate a `DataFrame`:
 ```python
 # code for pandas
@@ -68,7 +72,7 @@ This opens a new window which shows the `DataFrame` `df`:
 
 ![DataFrame df](./docs/images/quick_example-dialog.png)
 
-### Quick Example: Python Console
+### Example: Python Console
 Enter the code to generate a `DataFrame`:
 ```python
 # code for pandas

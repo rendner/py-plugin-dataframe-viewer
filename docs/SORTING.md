@@ -1,5 +1,5 @@
 # Sorting
-*Since Version: 0.8.0*
+*Since Plugin Version: 0.8.0*
 
 The values of a `DataFrame` can be sorted by clicking on the table headers of the columns or by using keyboard shortcuts.
 

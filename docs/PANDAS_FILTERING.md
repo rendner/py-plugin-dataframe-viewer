@@ -1,5 +1,5 @@
 # Filtering
-*Since Version: 0.9.0*
+*Since Plugin Version: 0.9.0*
 
 A common operation in data analysis is to filter values based on a condition or multiple conditions. 
 Pandas provides a variety of ways to filter a `DataFrame`.
@@ -10,7 +10,7 @@ Instead, you can provide a Python expression which returns a `DataFrame`.
 The returned `DataFrame` defines which values should be displayed, others are filtered out.
 
 > [!Note]  
-> The filtering of the styled `DataFrame` is done after applying the styling but by using the original and unformatted values of the `DataFrame`.
+> The filtering of the styled `DataFrame` is done after applying the styling by using the original and unformatted values of the `DataFrame`.
 > Technically it is implemented in another way, but it behaves like this.
 > 
 > In case you use [Styler.highlight_max](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.highlight_max.html) and filter out

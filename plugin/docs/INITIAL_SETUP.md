@@ -15,6 +15,6 @@ Configure Gradle to use the `Project SDK`, configured in the previous step.
 see: [Gradle JVM settings](https://www.jetbrains.com/help/idea/gradle-jvm-selection.html#jvm_settings)
 
 ## Running The Plugin
-To start a PyCharm instance with the latest state of the plugin use the gradle tool window and run the gradle-task `runIde`.
+To start a PyCharm instance with the latest state of the plugin use the Gradle tool window and run the Gradle-task `runIde`.
 
 Open a Python project which uses pandas to try the plugin.

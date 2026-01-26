@@ -1,5 +1,5 @@
 # Cell Styling
-*Since Version: 0.19.0*
+*Since Plugin Version: 0.19.0*
 
 
 The plugin provides the following common cell styling to highlight numeric values of a column:

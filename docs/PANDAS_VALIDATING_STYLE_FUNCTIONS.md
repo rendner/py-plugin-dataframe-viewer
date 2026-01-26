@@ -1,5 +1,5 @@
 # Validating Style Functions
-*Since Version: 0.7.0*
+*Since Plugin Version: 0.7.0*
 
 As mentioned in [PANDAS_DATAFRAME.md](./PANDAS_DATAFRAME.md#styling-a-dataframe) you have to take some extra care to
 ensure that custom styling functions behave correctly when applied via `Styler.apply`. 

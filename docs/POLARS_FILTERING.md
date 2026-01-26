@@ -1,5 +1,5 @@
 # Filtering
-*Since Version: 0.17.0*
+*Since Plugin Version: 0.17.0*
 
 A common operation in data analysis is to filter values based on a condition or multiple conditions. 
 Polars provides a variety of ways to filter a `DataFrame`.

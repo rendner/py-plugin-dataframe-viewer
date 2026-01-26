@@ -7,7 +7,7 @@ Since it takes more than one line of code to do what it does, it uses the PyChar
 
 ## Used Programming Languages
 ### Kotlin
-The interaction with the PyCharm debugger and visualisation of the data is written in Kotlin.
+The interaction with the PyCharm debugger and visualization of the data is written in Kotlin.
 
 ### Python 
 Code to extract the data from a Python `DataFrame` is written in Python to have:

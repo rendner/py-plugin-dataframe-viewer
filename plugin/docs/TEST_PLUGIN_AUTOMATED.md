@@ -13,16 +13,16 @@ See: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-
 ## Tests After Code Modification
 
 ### 1) Run Unit-Tests
-Run the gradle-task `test` (group `verification`).
+Run the Gradle-task `test` (group `verification`).
 
 ### 2) Run Integration-Tests
 #### Plugin Code Is UpToDate
-Please double-check that, for every modified project under `<PROJECTS_DIR>/python_plugin_code` the `main.py` was executed to generate an updated `generated/plugin_modules_dump.json` file for these projects.
+Please double-check that, for every modified project under `<PROJECTS_DIR>/python_plugin_code/` the `generate_dump.py` was executed to generate an updated `plugin_modules_dump.json` file in `<PROJECTS_DIR>/generated_dumps/` for these projects.
 
 #### Rebuild Docker Image
 Required if the `pipfiles` of these projects have been modified.
 
-Run the gradle-task `buildPythonDockerImages` (group `docker`).
+Run the Gradle-task `buildImage_pluginCode` (group `docker`).
 
 #### Run Tests
-Run gradle-task `integrationTest_all` (group `verification`).
+Run the Gradle-task `integrationTest_all` (group `integration`).

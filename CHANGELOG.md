@@ -2,7 +2,7 @@
 ## v0.20.0
 - `Released`: 2026-01-26
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x, 3.0.x
-- `Supported polars Versions`: 0.20.23 - latest
+- `Supported polars Versions`: 0.19.15 - latest
 - `Min Required IntelliJ Version`: 2023.3
 
 ### Added
@@ -29,7 +29,7 @@ The plugin now retains the evaluated DataFrame reference across stack frame chan
 ## v0.19.0
 - `Released`: 2025-06-23
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x
-- `Supported polars Versions`: 0.20.23 - latest
+- `Supported polars Versions`: 0.19.15 - latest
 - `Min Required IntelliJ Version`: 2023.3
 
 ### Added
@@ -55,7 +55,7 @@ The values of numerical columns are now right-aligned to improve readability.
 ## v0.18.0
 - `Released`: 2025-01-27
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
-- `Supported polars Versions`: 0.20.23 - latest
+- `Supported polars Versions`: 0.19.15 - latest
 - `Min Required IntelliJ Version`: 2023.3
 
 ### Added
@@ -75,7 +75,7 @@ Multilevel column names are now also listed in the code completion popup when ca
 ## v0.17.0
 - `Released`: 2024-10-30
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
-- `Supported polars Versions`: 0.20.23 - latest
+- `Supported polars Versions`: 0.19.15 - latest
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Added
@@ -104,7 +104,7 @@ A detailed description can be found [here](./docs/PANDAS_FILTERING.md).
 ## v0.16.0
 - `Released`: 2024-05-06
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
-- `Supported polars Versions`: 0.20.23 - latest
+- `Supported polars Versions`: 0.19.15 - latest
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Changed
@@ -134,7 +134,7 @@ Lists, for example, always have a closing `]`, even if the shortened value excee
 ## v0.15.1
 - `Released`: 2024-03-17
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
-- `Supported polars Versions`: 0.20.23 - latest
+- `Supported polars Versions`: 0.19.15 - latest
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Fixed
@@ -143,7 +143,7 @@ Lists, for example, always have a closing `]`, even if the shortened value excee
 ## v0.15.0
 - `Released`: 2024-03-07
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
-- `Supported polars Versions`: 0.20.23 - latest
+- `Supported polars Versions`: 0.19.15 - latest
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Added
