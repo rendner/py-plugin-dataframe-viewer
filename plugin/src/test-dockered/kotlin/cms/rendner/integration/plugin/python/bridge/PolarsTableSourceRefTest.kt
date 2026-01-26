@@ -16,6 +16,7 @@
 package cms.rendner.integration.plugin.python.bridge
 
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
+import cms.rendner.intellij.dataframe.viewer.python.PolarsTypes
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
 import cms.rendner.intellij.dataframe.viewer.python.bridge.exceptions.TableSourceException
@@ -180,7 +181,7 @@ internal class PolarsTableSourceRefTest : AbstractPluginCodeTest() {
 
             // but original df is still accessible
             val result = debuggerApi.frameAccessor.evaluate("df")
-            assertThat(result.qualifiedType).isEqualTo("polars.dataframe.frame.DataFrame")
+            assertThat(PolarsTypes.isDataFrame(result.qualifiedType)).isTrue
         }
     }
 

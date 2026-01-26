@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,15 @@ object PythonQualifiedTypes {
 }
 
 object PandasTypes {
-    fun isDataFrame(qualifiedType: String?): Boolean = qualifiedType == "pandas.core.frame.DataFrame"
+    fun isDataFrame(qualifiedType: String?): Boolean {
+        // pandas < 3.0: "pandas.core.frame.DataFrame"
+        return qualifiedType == "pandas.core.frame.DataFrame" || qualifiedType == "pandas.DataFrame"
+    }
     fun isStyler(qualifiedType: String?): Boolean = qualifiedType == "pandas.io.formats.style.Styler"
+}
+
+object PolarsTypes {
+    fun isDataFrame(qualifiedType: String?): Boolean  = qualifiedType == "polars.dataframe.frame.DataFrame"
 }
 
 enum class DataFrameLibrary(val moduleName: String) {
@@ -47,7 +54,9 @@ class InstalledDataFrameLibrariesExpr {
     companion object {
         fun getExpression(): String {
             val libsToCheck = DataFrameLibrary.values().map { stringifyString(it.moduleName) }
-            // the check is not guarded with a try/catch therefore an exception aborts the whole check
+            // The check should never import the libraries to not slow down the evaluation
+            //
+            // Check is not guarded with a try/catch therefore an exception aborts the whole check
             return "(lambda i, s: {p: p in s.modules or i.util.find_spec(p) is not None for p in $libsToCheck})(__import__('importlib.util'), __import__('sys'))"
         }
 

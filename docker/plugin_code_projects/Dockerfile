@@ -46,16 +46,18 @@ RUN git clone --depth 1 https://github.com/pyenv/pyenv.git $PYENV_ROOT \
 RUN \
     pyenv install 3.7 && \
     pyenv install 3.8 && \
-    pyenv install 3.9
+    pyenv install 3.9 && \
+    pyenv install 3.11
 
 # Set global Python versions
-RUN pyenv global 3.9 3.8 3.7
+RUN pyenv global 3.7 3.8 3.9 3.11
 
 # Install pipenv for all Python versions
 RUN \
     PYENV_VERSION=3.7 python -m pip install --root-user-action=ignore "pipenv<2023.10.20" && \
     PYENV_VERSION=3.8 python -m pip install --root-user-action=ignore "pipenv==2024.1.0" && \
-    PYENV_VERSION=3.9 python -m pip install --root-user-action=ignore "pipenv==2024.1.0"
+    PYENV_VERSION=3.9 python -m pip install --root-user-action=ignore "pipenv==2024.1.0" && \
+    PYENV_VERSION=3.11 python -m pip install --root-user-action=ignore "pipenv==2024.1.0"
 
 # Stage 2: Base runtime with pyenv (minimal dependencies)
 FROM debian:bullseye-20241202-slim AS base
@@ -201,6 +203,15 @@ RUN cd projects/pandas_2.3 \
     && PYENV_VERSION=3.9 pipenv sync --dev \
     && echo "/usr/src/app/projects/sdfv_base" > "$(pipenv run python -c 'import site; print(site.getsitepackages()[0])')/sdfv_base.pth"
 
+# Build stage for pandas_3.0
+FROM builder AS pandas_3_0
+
+# Copy Pipfile and install dependencies
+COPY projects/python_plugin_code/pandas_3.0/Pipfile* projects/pandas_3.0/
+RUN cd projects/pandas_3.0 \
+    && PYENV_VERSION=3.11 pipenv sync --dev \
+    && echo "/usr/src/app/projects/sdfv_base" > "$(pipenv run python -c 'import site; print(site.getsitepackages()[0])')/sdfv_base.pth"
+
 # Build stage for polars_x.y
 FROM builder AS polars_x_y
 
@@ -239,6 +250,7 @@ COPY --chown=$USER_UID:$USER_GID --from=pandas_2_0 /usr/src/app/venvs/ venvs/
 COPY --chown=$USER_UID:$USER_GID --from=pandas_2_1 /usr/src/app/venvs/ venvs/
 COPY --chown=$USER_UID:$USER_GID --from=pandas_2_2 /usr/src/app/venvs/ venvs/
 COPY --chown=$USER_UID:$USER_GID --from=pandas_2_3 /usr/src/app/venvs/ venvs/
+COPY --chown=$USER_UID:$USER_GID --from=pandas_3_0 /usr/src/app/venvs/ venvs/
 COPY --chown=$USER_UID:$USER_GID --from=polars_x_y /usr/src/app/venvs/ venvs/
 
 # Copy container scripts with numeric UID:GID ownership

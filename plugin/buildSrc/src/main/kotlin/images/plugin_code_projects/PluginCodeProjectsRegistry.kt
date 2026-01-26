@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,14 @@ class PluginCodeProjectsImage(
     "sdfv-plugin-code-projects",
     implementingProjects
 ) {
+    val pythonVersions: List<String> by lazy {
+        (projects.map { it.pythonVersion } + baseProject.pythonVersion)
+            .toSortedSet(compareBy { version ->
+                val (major, minor) = version.split('.').map { it.toInt() }
+                major * 100 + minor
+            })
+            .toList()
+    }
 
     class PythonPluginCodeDockerPaths(projectDir: File) : CommonDockerPaths(projectDir) {
         val pluginCodeProjects = VolumeMapping(
@@ -106,6 +114,11 @@ private val pluginCodeProjectsImage = PluginCodeProjectsImage(
         DataFrameProject(
             "pandas_2.3",
             "3.9",
+            listOf(DataFrameModule.PANDAS)
+        ),
+        DataFrameProject(
+            "pandas_3.0",
+            "3.11",
             listOf(DataFrameModule.PANDAS)
         ),
         DataFrameProject(

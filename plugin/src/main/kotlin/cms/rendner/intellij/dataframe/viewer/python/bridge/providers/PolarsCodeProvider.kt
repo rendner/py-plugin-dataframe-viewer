@@ -16,6 +16,7 @@
 package cms.rendner.intellij.dataframe.viewer.python.bridge.providers
 
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
+import cms.rendner.intellij.dataframe.viewer.python.PolarsTypes
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.debugger.IPluginPyFrameAccessor
 import cms.rendner.intellij.dataframe.viewer.python.pycharm.PyDebugValueEvalExpr
@@ -43,6 +44,6 @@ class PolarsCodeProvider: ITableSourceCodeProvider {
     }
 
     override fun isApplicable(fqClassName: String): Boolean {
-        return fqClassName == "polars.dataframe.frame.DataFrame" || fqClassName == PythonQualifiedTypes.DICT
+        return PolarsTypes.isDataFrame(fqClassName) || fqClassName == PythonQualifiedTypes.DICT
     }
 }

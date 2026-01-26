@@ -31,7 +31,6 @@ import com.jetbrains.python.debugger.IPyDebugProcess
 import com.jetbrains.python.debugger.PyDebugValue
 import com.jetbrains.python.debugger.PyFrameAccessor
 import com.jetbrains.rd.util.AtomicReference
-import java.util.Base64
 import java.util.concurrent.atomic.AtomicBoolean
 
 class SharedStuff {

@@ -17,6 +17,7 @@ package cms.rendner.integration.plugin.python.bridge
 
 import cms.rendner.integration.plugin.AbstractPluginCodeTest
 import cms.rendner.intellij.dataframe.viewer.components.table.models.HeaderLabel
+import cms.rendner.intellij.dataframe.viewer.python.PandasTypes
 import cms.rendner.intellij.dataframe.viewer.python.PythonQualifiedTypes
 import cms.rendner.intellij.dataframe.viewer.python.bridge.Cell
 import cms.rendner.intellij.dataframe.viewer.python.bridge.ChunkData
@@ -253,9 +254,9 @@ internal class PatchedStylerRefTest : AbstractPluginCodeTest() {
 
             // but original is still accessible
             val stylerResult = debuggerApi.frameAccessor.evaluate("df_style")
-            assertThat(stylerResult.qualifiedType).isEqualTo("pandas.io.formats.style.Styler")
+            assertThat(PandasTypes.isStyler(stylerResult.qualifiedType)).isTrue
             val dfResult = debuggerApi.frameAccessor.evaluate("df")
-            assertThat(dfResult.qualifiedType).isEqualTo("pandas.core.frame.DataFrame")
+            assertThat(PandasTypes.isDataFrame(dfResult.qualifiedType)).isTrue
         }
     }
 

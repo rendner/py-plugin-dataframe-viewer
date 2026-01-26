@@ -37,6 +37,7 @@ private data class MinorRange(val earliest: Int, val latest: Int) {
 private val SUPPORTED_VERSIONS = mapOf(
     1 to MinorRange(1, 5),
     2 to MinorRange(0, 3),
+    3 to MinorRange(0, 0),
 )
 
 class PandasCodeProvider : ITableSourceCodeProvider {

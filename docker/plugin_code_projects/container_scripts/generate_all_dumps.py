@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# script has to be compatible with Python 3.7
 import os
 import sys
 import subprocess

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,12 +124,8 @@ object DockerfileGenerator {
      * Generate the pyenv builder stage that compiles pyenv and installs Python versions.
      */
     private fun generatePyenvBuilderStage(image: PluginCodeProjectsImage): String {
-        val pythonVersions = mutableSetOf<String>().apply {
-            add(image.baseProject.pythonVersion)
-            image.projects.forEach { add(it.pythonVersion) }
-        }.sorted()
-        val pyenvInstalls = pythonVersions.map { "pyenv install $it" }
-        val pipenvInstalls = pythonVersions.map { version ->
+        val pyenvInstalls = image.pythonVersions.map { "pyenv install $it" }
+        val pipenvInstalls = image.pythonVersions.map { version ->
             val pipEnvVersion = if (version == "3.7") "pipenv<2023.10.20" else "pipenv==2024.1.0"
             """PYENV_VERSION=$version python -m pip install --root-user-action=ignore "$pipEnvVersion""""
         }
@@ -178,7 +174,7 @@ RUN \
 ${pyenvInstalls.joinWithIndentedContinuation()}
 
 # Set global Python versions
-RUN pyenv global ${pythonVersions.sortedDescending().joinToString(" ")}
+RUN pyenv global ${image.pythonVersions.joinToString(" ")}
 
 # Install pipenv for all Python versions
 RUN \

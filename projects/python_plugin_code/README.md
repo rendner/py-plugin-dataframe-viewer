@@ -98,6 +98,7 @@ Using the correct Python version guarantees that the plugin code works with the 
 | pandas_2.1     |           3.9           | pipenv_2022  |
 | pandas_2.2     |           3.9           | pipenv_2022  |
 | pandas_2.3     |           3.9           | pipenv_2022  |
+| pandas_3.0     |          3.11           | pipenv_2022  |
 
 All projects use `pipenv_2022`, a specific older version of pipenv that is compatible with Python 3.7-3.9.
 This ensures consistent dependency management across all projects.
@@ -112,7 +113,7 @@ Follow these steps to set up your development environment for working on the Pyt
 
 ### Prerequisites
 
-You need Python versions 3.7, 3.8, and 3.9 available on your system. I recommend using **pyenv** to manage multiple Python versions:
+You need Python versions 3.7, 3.8, 3.9 and 3.11 available on your system. I recommend using **pyenv** to manage multiple Python versions:
 
 ```sh
 # Install pyenv (example uses brew)
@@ -122,6 +123,7 @@ brew install pyenv
 pyenv install 3.7
 pyenv install 3.8
 pyenv install 3.9
+pyenv install 3.11
 
 # Verify installations
 pyenv versions
@@ -138,6 +140,7 @@ PyCharm doesn't automatically detect pyenv installations because they're in non-
 pyenv prefix 3.7
 pyenv prefix 3.8
 pyenv prefix 3.9
+pyenv prefix 3.11
 ```
 
 Then add these interpreters to PyCharm: [Configure a system interpreter](https://www.jetbrains.com/help/pycharm/2023.3/configuring-python-interpreter.html#-roqa5o_152)
@@ -172,13 +175,13 @@ which pipenv_2022
 ### Step 3: Open Projects in PyCharm
 
 > [!IMPORTANT]
-> Open these projects from a PyCharm instance launched by the plugin's `runIde` gradle task.
+> Open these projects from a PyCharm instance launched by the plugin's `runIde` Gradle task.
 > This gives you:
 >   - The latest version of the plugin automatically installed
 >   - Ability to test your changes immediately using the manual testing scripts
 
 To launch the development PyCharm instance:
-1. Run the `runIde` gradle task
+1. Run the `runIde` Gradle task
 2. A new PyCharm window will open with the plugin pre-installed
 
 ### Step 4: Configure a Project
@@ -221,7 +224,7 @@ After you've modified code in a project:
 
 1. **Run tests:** Use `run_tests.py` or run tests directly from PyCharm
 2. **Regenerate the dump:** Run `generate_dump.py` to update the JSON file
-3. **Restart PyCharm:** Close PyCharm and re-run gradle task `runIde`
+3. **Restart PyCharm:** Close PyCharm and re-run Gradle task `runIde`
 4. **Test in the plugin:** Use scripts in the `manual_testing/` folder to verify your changes work correctly in the plugin
 
 If you change the `sdfv_base` interfaces:

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+# script has to be compatible with Python 3.7
 import os
 import sys
 import subprocess
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple
 
 # ANSI color codes
 RED = '\033[0;31m'
@@ -13,7 +14,7 @@ BLUE = '\033[0;34m'
 BOLD = '\033[1m'
 NC = '\033[0m'  # No Color
 
-def run_tests_of_subdirectory(project_path: Path) -> tuple[bool, Union[None, str]]:
+def run_tests_of_subdirectory(project_path: Path) -> Tuple[bool, Union[None, str]]:
     test_script = project_path / "run_tests.py"
     pytest_ini = project_path / "pytest.ini"
 
