@@ -280,8 +280,8 @@ tasks {
 
     listProductsReleases {
         sinceVersion.set("2023.3")
-        // untilVersion.set("2025.1")
-        untilVersion.set("251.17181.23")
+        // untilVersion.set("2025.3.2")
+        untilVersion.set("253.30387.25")
     }
 }
 
