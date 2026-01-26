@@ -1,7 +1,35 @@
 # Changelog
+## v0.20.0
+- `Released`: 2026-01-26
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x, 3.0.x
+- `Supported polars Versions`: 0.20.23 - latest
+- `Min Required IntelliJ Version`: 2023.3
+
+### Added
+#### Support For pandas 3.0
+All previously supported `Styler` methods, as well as sorting and filtering functionality, are now fully compatible with pandas 3.0.
+
+#### Debug Session Name In Window Title
+The debug session name is now displayed in the window title, making it easier to distinguish between DataFrames from different active debug sessions that may share the same variable name.
+
+#### Debug Session Status Indicator
+A visual indicator (colored dot) above the table shows the current debug session state:
+- 🟢 Green: Debug session is paused - DataFrame data can be loaded
+- 🟠 Orange: Debug session is running - DataFrame data cannot be loaded
+
+### Changed
+#### DataFrame Re-evaluation Behavior
+The plugin no longer automatically re-evaluates the viewed DataFrame on every stack frame change.
+
+Previously, the plugin re-evaluated DataFrames and used a fingerprint mechanism to determine if the re-evaluated DataFrame matched the previously viewed one.
+This fingerprint approach was unreliable and could fail to detect certain cases correctly.
+
+The plugin now retains the evaluated DataFrame reference across stack frame changes, ensuring consistent viewing of the same DataFrame instance throughout the debug session.
+
 ## v0.19.0
 - `Released`: 2025-06-23
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x
+- `Supported polars Versions`: 0.20.23 - latest
 - `Min Required IntelliJ Version`: 2023.3
 
 ### Added
@@ -27,6 +55,7 @@ The values of numerical columns are now right-aligned to improve readability.
 ## v0.18.0
 - `Released`: 2025-01-27
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Supported polars Versions`: 0.20.23 - latest
 - `Min Required IntelliJ Version`: 2023.3
 
 ### Added
@@ -46,6 +75,7 @@ Multilevel column names are now also listed in the code completion popup when ca
 ## v0.17.0
 - `Released`: 2024-10-30
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Supported polars Versions`: 0.20.23 - latest
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Added
@@ -74,6 +104,7 @@ A detailed description can be found [here](./docs/PANDAS_FILTERING.md).
 ## v0.16.0
 - `Released`: 2024-05-06
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Supported polars Versions`: 0.20.23 - latest
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Changed
@@ -103,6 +134,7 @@ Lists, for example, always have a closing `]`, even if the shortened value excee
 ## v0.15.1
 - `Released`: 2024-03-17
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Supported polars Versions`: 0.20.23 - latest
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Fixed
@@ -111,6 +143,7 @@ Lists, for example, always have a closing `]`, even if the shortened value excee
 ## v0.15.0
 - `Released`: 2024-03-07
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.2.x
+- `Supported polars Versions`: 0.20.23 - latest
 - `Min Required IntelliJ Version`: 2022.3
 
 ### Added
