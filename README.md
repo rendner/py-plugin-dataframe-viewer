@@ -1,5 +1,8 @@
 # Python: Styled DataFrame Viewer
 
+> [!NOTE]
+> **PyCharm 2024.2.1 - 2024.3.x Users:** If you're using PyCharm versions >= 2024.2.1 and < 2025.1, the Python debugger has string truncation bugs that prevent fetching DataFrame data. Please see the workaround documentation: [WORKAROUND_PYCHARM_2024.2.1_TO_2025.1.md](./docs/WORKAROUND_PYCHARM_2024.2.1_TO_2025.1.md)
+
 ## Installation
 
 - Using the IDE built-in plugin system:
