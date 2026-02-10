@@ -1,4 +1,13 @@
 # Changelog
+## v0.20.1
+- `Released`: 2026-04-14
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x, 3.0.x
+- `Supported polars Versions`: 0.19.15 - latest
+- `Min Required IntelliJ Version`: 2025.1
+
+### Other
+- configure plugin compatibility "until 2026.3" (min required version is now 2025.1)
+
 ## v0.20.0
 - `Released`: 2026-01-26
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x, 3.0.x

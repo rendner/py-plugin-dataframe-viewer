@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalStdlibApi::class)
+
 import images.plugin_code_projects.DockerfileGenerator
 import images.plugin_code_projects.PluginCodeProjectsRegistry
 import images.python_versions.PythonImageRegistry
+import utils.ExecHelper
 import java.io.ByteArrayOutputStream
 
 /**
@@ -26,6 +29,7 @@ tasks {
         group = "docker"
 
         doLast {
+            val exec = project.objects.newInstance<ExecHelper>()
             val repoRoot = projectDir.parentFile
             val dockerfilePath = repoRoot.resolve("docker/plugin_code_projects/Dockerfile")
 
@@ -35,19 +39,19 @@ tasks {
 
             val hostUid: String
             val hostGid: String
-            if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                hostUid = "1000"  // Use Docker defaults
+            if (System.getProperty("os.name").lowercase().contains("win")) {
+                hostUid = "1000"
                 hostGid = "1000"
             } else {
                 hostUid = ByteArrayOutputStream().use { output ->
-                    exec {
+                    exec.exec {
                         commandLine("id", "-u")
                         standardOutput = output
                     }
                     output.toString().trim()
                 }
                 hostGid = ByteArrayOutputStream().use { output ->
-                    exec {
+                    exec.exec {
                         commandLine("id", "-g")
                         standardOutput = output
                     }
@@ -56,17 +60,15 @@ tasks {
             }
             logger.lifecycle("Building Docker image with USER_UID=$hostUid and USER_GID=$hostGid")
 
-            exec {
-                workingDir = repoRoot
-                executable = "docker"
-                args(
-                    "build",
-                    ".",
-                    "-f", dockerfilePath,
-                    "--build-arg", "USER_UID=$hostUid",
-                    "--build-arg", "USER_GID=$hostGid",
-                    "-t", PluginCodeProjectsRegistry.image.dockerImageName
-                )
+            exec.dockerExec(
+                "build",
+                ".",
+                "-f", dockerfilePath,
+                "--build-arg", "USER_UID=$hostUid",
+                "--build-arg", "USER_GID=$hostGid",
+                "-t", PluginCodeProjectsRegistry.image.dockerImageName
+            ) {
+                workingDir(repoRoot)
                 environment("DOCKER_BUILDKIT", "1")
             }
         }
@@ -83,21 +85,21 @@ tasks {
             }
 
             doLast {
+                val exec = project.objects.newInstance<ExecHelper>()
                 val repoRoot = projectDir.parentFile
-                exec {
-                    workingDir = repoRoot.resolve("docker/python_versions/${entry.project.pythonVersion}")
-                    executable = "docker"
-                    args(
-                        "build",
-                        ".",
-                        "--build-arg", "PROJECT=${entry.project.name}",
-                        "-t", entry.dockerImageName
-                    )
+                exec.dockerExec(
+                    "build",
+                    ".",
+                    "--build-arg", "PROJECT=${entry.project.name}",
+                    "-t", entry.dockerImageName
+                ) {
+                    workingDir(repoRoot.resolve("docker/python_versions/${entry.project.pythonVersion}"))
                 }
             }
         }
         buildPythonDockerImagesTasks.add(task.get())
     }
+
     register<DefaultTask>("buildImages_allPythonVersions") {
         description = "Builds all Python version Docker images."
         group = "docker"
@@ -110,28 +112,29 @@ tasks {
         group = "docker"
 
         doLast {
+            val exec = project.objects.newInstance<ExecHelper>()
             val dockerImageNames = mutableListOf<String>().apply {
                 add(PluginCodeProjectsRegistry.image.dockerImageName)
                 PythonImageRegistry.images.forEach { entry -> add(entry.dockerImageName) }
             }
             dockerImageNames.forEach { dockerImageName ->
                 val containerIdsResult = ByteArrayOutputStream().use { outputStream ->
-                    exec {
-                        executable = "docker"
-                        args("ps", "-aq", "--filter", "ancestor=${dockerImageName}")
+                    exec.dockerExec("ps", "-aq", "--filter", "ancestor=${dockerImageName}") {
                         standardOutput = outputStream
                         isIgnoreExitValue = true
                     }
                     outputStream.toString().trim()
                 }
 
-                if (containerIdsResult.isNotEmpty()) {
-                    containerIdsResult.split(System.lineSeparator()).let { ids ->
-                        logger.lifecycle("killing containers $ids for image $dockerImageName")
-                        exec {
-                            executable = "docker"
-                            args(mutableListOf("rm", "-f").apply { addAll(ids) })
-                        }
+                val ids = containerIdsResult
+                    .lines()
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+
+                if (ids.isNotEmpty()) {
+                    logger.lifecycle("killing containers $ids for image $dockerImageName")
+                    exec.dockerExec(*listOf("rm", "-f").plus(ids).toTypedArray()) {
+                        isIgnoreExitValue = true
                     }
                 } else {
                     logger.lifecycle("no running containers found for image $dockerImageName")
@@ -145,22 +148,20 @@ tasks {
         group = "docker"
 
         doLast {
+            val exec = project.objects.newInstance<ExecHelper>()
             logger.lifecycle("Running tests for all Python plugin code projects...")
 
             val volumeMappingsBuilder = PluginCodeProjectsRegistry.image
                 .createConfiguredVolumeMappingBuilder(project.projectDir)
 
-            exec {
-                executable = "docker"
-                args(
-                    "run",
-                    "--rm",
-                    *volumeMappingsBuilder.buildAsCliArguments(),
-                    PluginCodeProjectsRegistry.image.dockerImageName,
-                    "python",
-                    volumeMappingsBuilder.paths.getContainerScriptPath("run_all_tests.py")
-                )
-            }
+            exec.dockerExec(
+                "run",
+                "--rm",
+                *volumeMappingsBuilder.buildAsCliArguments(),
+                PluginCodeProjectsRegistry.image.dockerImageName,
+                "python",
+                volumeMappingsBuilder.paths.getContainerScriptPath("run_all_tests.py")
+            )
         }
     }
 
@@ -171,6 +172,7 @@ tasks {
         finalizedBy(rootProject.tasks.named("copyDumps"))
 
         doLast {
+            val exec = project.objects.newInstance<ExecHelper>()
             logger.lifecycle("Generating dumps for all Python plugin code projects...")
 
             val volumeMappingsBuilder = PluginCodeProjectsRegistry.image
@@ -179,17 +181,14 @@ tasks {
                     addMapping(paths.pluginCodeProjectsGeneratedDumps)
                 }
 
-            exec {
-                executable = "docker"
-                args(
-                    "run",
-                    "--rm",
-                    *volumeMappingsBuilder.buildAsCliArguments(),
-                    PluginCodeProjectsRegistry.image.dockerImageName,
-                    "python",
-                    volumeMappingsBuilder.paths.getContainerScriptPath("generate_all_dumps.py"),
-                )
-            }
+            exec.dockerExec(
+                "run",
+                "--rm",
+                *volumeMappingsBuilder.buildAsCliArguments(),
+                PluginCodeProjectsRegistry.image.dockerImageName,
+                "python",
+                volumeMappingsBuilder.paths.getContainerScriptPath("generate_all_dumps.py")
+            )
         }
     }
 }

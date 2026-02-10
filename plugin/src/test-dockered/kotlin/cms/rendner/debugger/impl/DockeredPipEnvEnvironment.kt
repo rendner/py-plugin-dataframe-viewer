@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package cms.rendner.debugger.impl
 
-import com.intellij.openapi.diagnostic.Logger
-import java.util.Base64
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -37,11 +35,6 @@ class DockeredPipEnvEnvironment(
     private val pipEnvDir: String,
     private val volumes: List<String>?,
 ) {
-
-    companion object {
-        private val logger = Logger.getInstance(DockeredPipEnvEnvironment::class.java)
-    }
-
     private var containerId: String? = null
     private val containerIdRegex = "\\p{XDigit}+".toRegex()
 
@@ -72,10 +65,10 @@ class DockeredPipEnvEnvironment(
 
                     if (containerIdRegex.matches(firstLine)) {
                         containerId = firstLine
-                        logger.info("container from image '$dockerImage' started with id: $containerId")
+                        println("container from image '$dockerImage' started with id: $containerId")
 
                         if (lines.size > 1) {
-                            logger.error("container '$containerId' will be terminated because it is in an unexpected state: $lines.last()")
+                            println("container '$containerId' will be terminated because it is in an unexpected state: $lines.last()")
                             destroyContainer()
                             throw ProcessRunException("Container creation for image '$dockerImage' failed with: ${lines.last()}")
                         }

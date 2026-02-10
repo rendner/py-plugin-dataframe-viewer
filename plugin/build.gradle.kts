@@ -1,51 +1,68 @@
 import images.plugin_code_projects.PluginCodeProjectsRegistry
 import images.python_versions.PythonImageRegistry
+import utils.ExecHelper
 import org.gradle.api.tasks.testing.Test
-import java.io.ByteArrayOutputStream
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 
 plugins {
     id("idea")
     // Gradle IntelliJ Plugin
     // https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.13.0"
+    id("org.jetbrains.intellij.platform")
     // Kotlin JVM plugin to add support for Kotlin
     // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#kotlin-standard-library
-    kotlin("jvm") version "1.9.21"
+    kotlin("jvm")
     // https://kotlinlang.org/docs/serialization.html#example-json-serialization
-    kotlin("plugin.serialization") version "1.9.21"
+    kotlin("plugin.serialization")
     id("plugin-docker-images")
 }
 
 group = "cms.rendner.intellij"
-version = "0.20.0"
+version = "0.20.1"
 
 repositories {
     mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
 dependencies {
     // https://github.com/beryx/awt-color-factory
     implementation("org.beryx:awt-color-factory:1.0.2")
     // https://github.com/Kotlin/kotlinx.serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
 
     // https://github.com/junit-team/junit5-samples/blob/r5.11.4/junit5-jupiter-starter-gradle-kotlin/build.gradle.kts
     testImplementation(platform("org.junit:junit-bom:5.11.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // https://github.com/assertj/assertj
     testImplementation("org.assertj:assertj-core:3.27.3")
     // https://github.com/mockk/mockk
     testImplementation("io.mockk:mockk:1.14.2")
+
+    // https://plugins.jetbrains.com/docs/intellij/pycharm.html#pycharm-plugin-setup
+    intellijPlatform {
+        pycharmCommunity("2025.1")
+        bundledPlugin("PythonCore")
+    }
 }
 
-// See https://github.com/JetBrains/gradle-intellij-plugin/
-// https://intellij-support.jetbrains.com/hc/en-us/community/posts/206590865-Creating-PyCharm-plugins
-intellij {
-    plugins.add("python-ce") // is required even if we specify a PyCharm IDE
-    version.set("2023.3")
-    type.set("PC") // PC = PyCharm Community Edition, PY = PyCharm
-    downloadSources.set(true)
-    updateSinceUntilBuild.set(false)
+intellijPlatform {
+    pluginConfiguration {
+        version = project.version.toString()
+    }
+    buildSearchableOptions = false
+    pluginVerification {
+        freeArgs = listOf(
+            "-mute",
+            "TemplateWordInPluginId"
+        )
+        ides {
+            recommended()
+        }
+    }
 }
 
 // Configure the test-dockered source set and IDEA integration
@@ -53,27 +70,27 @@ val mainSourceSet = sourceSets.main.get()
 val testDockeredSourceSet = sourceSets.create("test-dockered") {
     // Integration tests need access to main source output for testing
     compileClasspath += mainSourceSet.output
-    runtimeClasspath += mainSourceSet.output + output
+    runtimeClasspath += mainSourceSet.output + output + configurations["intellijPlatformTestClasspath"]
 }
 
 // Configure test-dockered configurations to extend from test configurations
 configurations {
     named(testDockeredSourceSet.implementationConfigurationName) {
-        extendsFrom(testImplementation.get())
+        extendsFrom(configurations.testImplementation.get())
     }
     named(testDockeredSourceSet.runtimeOnlyConfigurationName) {
-        extendsFrom(testRuntimeOnly.get())
+        extendsFrom(configurations.testRuntimeOnly.get())
     }
     named(testDockeredSourceSet.compileOnlyConfigurationName) {
-        extendsFrom(testCompileOnly.get())
+        extendsFrom(configurations.testCompileOnly.get())
     }
 }
 
 // Configure IDEA to recognize test-dockered as test sources
 idea {
     module {
-        testSourceDirs = testSourceDirs.plus(testDockeredSourceSet.allJava.srcDirs)
-        testResourceDirs = testResourceDirs.plus(testDockeredSourceSet.resources.srcDirs)
+        testSources.from(testDockeredSourceSet.allJava.srcDirs)
+        testResources.from(testDockeredSourceSet.resources.srcDirs)
     }
 }
 
@@ -83,14 +100,6 @@ tasks {
     test {
         useJUnitPlatform()
         jvmArgs("-Djava.awt.headless=true")
-    }
-
-    buildSearchableOptions {
-        enabled = false
-    }
-
-    patchPluginXml {
-        version.set(project.version.toString())
     }
 
     register<Delete>("rebuildBuildSrc") {
@@ -132,21 +141,10 @@ tasks {
             dependsOn(testDockeredClassesTask)
 
             doFirst {
-                // Check if the required Docker image exists
-                val imageCheckResult = ByteArrayOutputStream().use { outputStream ->
-                    exec {
-                        executable = "docker"
-                        args("images", "-q", dockerImage.dockerImageName)
-                        standardOutput = outputStream
-                        isIgnoreExitValue = true
-                    }
-                    outputStream.toString().trim()
-                }
-
-                if (imageCheckResult.isEmpty()) {
+                if (!project.objects.newInstance<ExecHelper>().dockerImageExists(dockerImage.dockerImageName)) {
                     throw GradleException(
                         "Required Docker image '${dockerImage.dockerImageName}' not found. " +
-                        "Please build the image first using the appropriate build task."
+                                "Please build the image first using the appropriate build task."
                     )
                 }
 
@@ -242,13 +240,13 @@ tasks {
             // environment["PYDEV_DEBUG"] = "True"
             environment["PYDEVD_USE_CYTHON"] = "NO"
             environment["idea.is.internal"] = true
-            // ideDir.set(File("/snap/intellij-idea-community/current"))
         }
     }
 
     register<DefaultTask>("copyDumps") {
         description = "Copies generated dump files to resources directory."
         group = "build"
+        outputs.upToDateWhen { false }
 
         doLast {
             logger.lifecycle("copy generated Python 'plugin_code' files")
@@ -264,29 +262,20 @@ tasks {
                 throw GradleException("Missing file 'plugin_modules_dump.json' for: ${projectDir.name}")
             }
         }
-
-        outputs.upToDateWhen { false }
     }
 
     prepareSandbox {
         dependsOn("copyDumps")
     }
 
-    runPluginVerifier {
-        // See https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html#tasks-runpluginverifier
-        // See https://data.services.jetbrains.com/products?fields=code,name,releases.version,releases.build,releases.type&code=PC
-        //ideVersions.addAll(listOf("PC-2023.3", "PC-2025.1"))
-    }
-
-    listProductsReleases {
-        sinceVersion.set("2023.3")
-        // untilVersion.set("2025.3.2")
-        untilVersion.set("253.30387.25")
+    printProductsReleases {
+        channels.set(listOf(ProductRelease.Channel.RELEASE))
+        sinceBuild.set("251")
     }
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 tasks.jar {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package cms.rendner.junit
 
 import cms.rendner.TestProperty
 import cms.rendner.intellij.dataframe.viewer.python.DataFrameLibrary
-import com.intellij.util.containers.orNull
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExecutionCondition
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -32,8 +31,8 @@ abstract class RequiresDataFrameLibraryCondition(
     private val disabled: ConditionEvaluationResult = ConditionEvaluationResult.disabled("@${annotationType.simpleName} is present but ${library.moduleName} is not available")
 
     override fun evaluateExecutionCondition(context: ExtensionContext): ConditionEvaluationResult {
-        AnnotationSupport.findAnnotation(context.element, annotationType).orNull()
-            ?: AnnotationSupport.findAnnotation(context.testClass, annotationType).orNull()
+        AnnotationSupport.findAnnotation(context.element, annotationType).orElse(null)
+            ?: AnnotationSupport.findAnnotation(context.testClass, annotationType).orElse(null)
             ?: return enabled
         return if (TestProperty.getDataFrameLibraries().contains(library)) enabled else disabled
     }
