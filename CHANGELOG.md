@@ -26,6 +26,10 @@ This fingerprint approach was unreliable and could fail to detect certain cases 
 
 The plugin now retains the evaluated DataFrame reference across stack frame changes, ensuring consistent viewing of the same DataFrame instance throughout the debug session.
 
+#### Internal Data Serialization Format
+The plugin now uses a new JSON-based serialization format to transfer DataFrame data from Python to the IDE.
+In case you use a PyCharm version >= 2024.2.1 and < 2025.1, please read the workaround documentation for string truncation bugs in these PyCharm versions: [WORKAROUND_PYCHARM_2024.2.1_TO_2025.1.md](docs/WORKAROUND_PYCHARM_2024.2.1_TO_2025.1.md)
+
 ## v0.19.0
 - `Released`: 2025-06-23
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x
