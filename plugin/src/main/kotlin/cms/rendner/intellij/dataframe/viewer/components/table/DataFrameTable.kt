@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import org.intellij.lang.annotations.MagicConstant
 import java.awt.*
-import java.awt.datatransfer.StringSelection
 import java.awt.event.*
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
@@ -405,10 +404,8 @@ class MyValuesTable(
                     val col = table.selectedColumn
                     if (row != -1 && col != -1) {
                         val cellValue = tableModel.getValueAt(row, col)
-                        // todo: use CopyPasteManager.getInstance().copyTextToClipboard
-                        //  when setting min version for plugin >= 2024.1
                         try {
-                            CopyPasteManager.getInstance().setContents(StringSelection(cellValue))
+                            CopyPasteManager.copyTextToClipboard(cellValue)
                         } catch (_: Exception) { }
                     }
                 }
