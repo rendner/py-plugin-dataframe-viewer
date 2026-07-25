@@ -1,4 +1,14 @@
 # Changelog
+## v0.20.2
+- `Released`: ?
+- `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x, 3.0.x
+- `Supported polars Versions`: 0.19.15 - latest
+- `Min Required IntelliJ Version`: 2025.1
+
+### Changed
+#### Updated Row Hover Effect For Cell Styling Modes
+- The row hover background color is now blended with individual cell backgrounds, allowing original cell colors to remain visible.
+
 ## v0.20.1
 - `Released`: 2026-04-14
 - `Supported pandas Versions`: 1.1.x - 1.5.x, 2.0.x - 2.3.x, 3.0.x

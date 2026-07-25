@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,11 @@ import javax.swing.JTable
 import javax.swing.SwingConstants
 import javax.swing.table.DefaultTableCellRenderer
 
-class ValueCellRenderer(
-    private val cellStyleComputer: ICellStyleComputer? = null,
-): DefaultTableCellRenderer() {
+class ValueCellRenderer: DefaultTableCellRenderer() {
+
+    var cellStyleComputer: ICellStyleComputer? = null
+
+    private var myIsOwnModification: Boolean = false
 
     override fun getTableCellRendererComponent(
         table: JTable?,
@@ -36,38 +38,45 @@ class ValueCellRenderer(
         row: Int,
         column: Int
     ): Component {
-        val textValue: String? = value?.toString()
+        myIsOwnModification = true
 
-        border = null
-        background = null
-        foreground = null
-        horizontalAlignment = SwingConstants.LEFT
+        try {
+            val textValue: String? = value?.toString()
 
-        super.getTableCellRendererComponent(table, textValue, isSelected, hasFocus, row, column)
+            border = null
+            background = null
+            foreground = null
+            horizontalAlignment = SwingConstants.LEFT
 
-        if (table !is MyValuesTable || cellStyleComputer == null) return this
+            super.getTableCellRendererComponent(table, textValue, isSelected, hasFocus, row, column)
 
-        table.model?.let { model ->
-            val modelRowIndex = table.convertRowIndexToModel(row)
-            val modelColumnIndex = table.convertColumnIndexToModel(column)
+            if (table !is MyValuesTable || cellStyleComputer == null) {
+                return this
+            }
 
-            var textAlign = model.getColumnTextAlignAt(modelColumnIndex)
+            table.model?.let { model ->
+                val modelRowIndex = table.convertRowIndexToModel(row)
+                val modelColumnIndex = table.convertColumnIndexToModel(column)
 
-            model.getCellMetaAt(modelRowIndex, modelColumnIndex)?.let { meta ->
-                cellStyleComputer.computeStyling(meta)?.let { styling ->
-                    if (styling.textAlign != null) {
-                        textAlign = styling.textAlign
-                    }
-                    if (!isSelected) {
-                        if (styling.backgroundColor != null) {
-                            background = styling.backgroundColor
-                            foreground = styling.textColor ?: if (background == Color.BLACK) Color.WHITE else Color.BLACK
-                        } else {
-                            foreground = styling.textColor
+                var textAlign = model.getColumnTextAlignAt(modelColumnIndex)
+
+                model.getCellMetaAt(modelRowIndex, modelColumnIndex)?.let { meta ->
+                    cellStyleComputer?.computeStyling(meta)?.let { styling ->
+                        if (styling.textAlign != null) {
+                            textAlign = styling.textAlign
+                        }
+
+                        if (!isSelected) {
+                            if (styling.backgroundColor != null) {
+                                background = styling.backgroundColor
+                                foreground =
+                                    styling.textColor ?: if (background == Color.BLACK) Color.WHITE else Color.BLACK
+                            } else {
+                                foreground = styling.textColor
+                            }
                         }
                     }
                 }
-            }
 
             horizontalAlignment = when (textAlign) {
                 TextAlign.CENTER -> SwingConstants.CENTER
@@ -76,6 +85,50 @@ class ValueCellRenderer(
             }
         }
 
-        return this
+            return this
+        } finally {
+            myIsOwnModification = false
+        }
+    }
+
+    override fun setBackground(c: Color?) {
+        if (myIsOwnModification) {
+            super.setBackground(c)
+        } else {
+            if (c != null) {
+                // We expect that this is the hover overlay.
+                //
+                // The renderer supports custom background and foreground colors.
+                // Overlays are blend into the defined background color, otherwise the custom colors
+                // would be completely replaced by the new color.
+                //
+                // This approach does not solve all cases. For example when having a white overlay
+                // and a white background.
+                if (background != null) {
+                    super.setBackground(blendColors(background, c))
+                } else {
+                    super.setBackground(c)
+                }
+
+                super.setForeground(if (isDark(background)) Color.WHITE else Color.BLACK)
+            }
+        }
+    }
+
+    private fun blendColors(base: Color, overlay: Color): Color {
+        val alpha = overlay.alpha / 255f
+        val r = (base.red * (1 - alpha) + overlay.red * alpha).toInt()
+        val g = (base.green * (1 - alpha) + overlay.green * alpha).toInt()
+        val b = (base.blue * (1 - alpha) + overlay.blue * alpha).toInt()
+        return Color(r, g, b)
+    }
+
+    /**
+     * Calculates the perceived brightness of a color using standard ITU-R BT.601 formula.
+     * Returns true if the color is considered "dark".
+     */
+    private fun isDark(color: Color): Boolean {
+        val brightness = (color.red * 299 + color.green * 587 + color.blue * 114) / 1000.0
+        return brightness < 128
     }
 }

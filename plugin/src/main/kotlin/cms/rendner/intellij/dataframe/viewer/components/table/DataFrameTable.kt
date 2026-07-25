@@ -19,8 +19,10 @@ import cms.rendner.intellij.dataframe.viewer.components.colorFromUI
 import cms.rendner.intellij.dataframe.viewer.components.table.models.*
 import cms.rendner.intellij.dataframe.viewer.components.table.models.events.DataFrameTableModelEvent
 import cms.rendner.intellij.dataframe.viewer.components.table.renderer.IndexRowHeaderRenderer
+import cms.rendner.intellij.dataframe.viewer.components.table.renderer.ValueCellRenderer
 import cms.rendner.intellij.dataframe.viewer.components.table.renderer.ValueColumnHeaderRenderer
 import cms.rendner.intellij.dataframe.viewer.components.table.renderer.ValueColumnHeaderRendererWithDtype
+import cms.rendner.intellij.dataframe.viewer.components.table.renderer.styling.ICellStyleComputer
 import com.intellij.ide.IdeTooltip
 import com.intellij.ide.IdeTooltipManager
 import com.intellij.openapi.application.ApplicationManager
@@ -215,6 +217,8 @@ class MyValuesTable(
 
     private var myColumnResizeBehavior = MyColumnResizeBehavior()
 
+    private val myDefaultCellRenderer = ValueCellRenderer()
+
     init {
         autoResizeMode = JTable.AUTO_RESIZE_OFF
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
@@ -247,6 +251,19 @@ class MyValuesTable(
                 disableProblematicKeyBindings()
             }
         }
+
+        setDefaultRenderer(Object::class.java, myDefaultCellRenderer)
+    }
+
+    fun setCellStyleComputer(cellStyleComputer: ICellStyleComputer) {
+        if (myDefaultCellRenderer.cellStyleComputer != cellStyleComputer) {
+            myDefaultCellRenderer.cellStyleComputer = cellStyleComputer
+            repaint()
+        }
+    }
+
+    override fun getHoveredRowBackground(): Color? {
+        return myDefaultCellRenderer.cellStyleComputer?.getPreferredHoverOverlayColor()?: super.getHoveredRowBackground()
     }
 
     fun getColumnResizeBehavior(): IColumnResizeBehavior {

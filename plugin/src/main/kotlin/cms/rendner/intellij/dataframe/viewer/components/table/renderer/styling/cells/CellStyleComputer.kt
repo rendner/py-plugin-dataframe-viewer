@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,12 @@ import cms.rendner.intellij.dataframe.viewer.components.table.models.TextAlign
 import org.beryx.awt.color.ColorFactory
 import java.awt.Color
 
-private val Black = RGB(0, 0, 0)
 private val White = RGB(255, 255, 255)
 
 private val Cold = RGB(59, 76, 192)
 private val Warm = RGB(180, 4, 38)
+
+private val PreferredHoverOverlayColor = Color(0, 0, 0, 125)
 
 private const val PartEndMarker = '|'
 
@@ -39,6 +40,13 @@ class CellStyleComputer: ICellStyleComputer {
 
     fun setStylingMode(mode: CellStylingMode) {
         myStylingMode = mode
+    }
+
+    override fun getPreferredHoverOverlayColor(): Color? {
+        return when (myStylingMode) {
+            CellStylingMode.Off -> null
+            else -> PreferredHoverOverlayColor
+        }
     }
 
     override fun computeStyling(packedMeta: String): StyleProperties? {

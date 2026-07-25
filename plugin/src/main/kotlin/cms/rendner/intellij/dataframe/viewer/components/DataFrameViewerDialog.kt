@@ -23,7 +23,6 @@ import cms.rendner.intellij.dataframe.viewer.components.table.models.EmptyDataFr
 import cms.rendner.intellij.dataframe.viewer.components.table.models.chunked.AsyncDataFrameModel
 import cms.rendner.intellij.dataframe.viewer.components.table.models.chunked.AutoFetchingTableSource
 import cms.rendner.intellij.dataframe.viewer.components.table.models.chunked.AutoFetchingTableSourceListener
-import cms.rendner.intellij.dataframe.viewer.components.table.renderer.ValueCellRenderer
 import cms.rendner.intellij.dataframe.viewer.components.table.renderer.styling.CellStylingMode
 import cms.rendner.intellij.dataframe.viewer.components.table.renderer.styling.cells.CellStyleComputer
 import cms.rendner.intellij.dataframe.viewer.python.bridge.*
@@ -92,7 +91,7 @@ class DataFrameViewerDialog(
 
         myTable = DataFrameTable(pluginSettings.showDTypeInColumnHeader)
         myTable.preferredSize = Dimension(635, 404)
-        myTable.getValuesTable().setDefaultRenderer(Object::class.java, ValueCellRenderer(cellStyleComputer))
+        myTable.getValuesTable().setCellStyleComputer(cellStyleComputer)
 
         myCellStylingModeComboBox = CellStylingComboBox().apply {
             cellStyleComputer.setStylingMode(pluginSettings.defaultCellStylingMode)
