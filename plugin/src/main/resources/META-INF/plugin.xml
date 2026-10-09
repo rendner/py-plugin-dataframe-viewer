@@ -61,6 +61,7 @@
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
+        <errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
         <applicationService serviceImplementation="cms.rendner.intellij.dataframe.viewer.settings.ApplicationSettingsService"/>
         <notificationGroup id="cms.rendner.StyledDataFrameViewer" displayType="BALLOON" isLogByDefault="true"/>
         <applicationConfigurable
