@@ -37,6 +37,7 @@ class DockeredPipEnvEnvironment(
 ) {
     private var containerId: String? = null
     private val containerIdRegex = "\\p{XDigit}+".toRegex()
+    private var isFileSharingVerified = false
 
     /**
      * Creates a docker container of the specified [dockerImage].
@@ -71,6 +72,19 @@ class DockeredPipEnvEnvironment(
                             println("container '$containerId' will be terminated because it is in an unexpected state: $lines.last()")
                             destroyContainer()
                             throw ProcessRunException("Container creation for image '$dockerImage' failed with: ${lines.last()}")
+                        }
+
+                        val failedPath = getFailedFileSharingPath(containerId!!)
+                        if (failedPath != null) {
+                            println("CRITICAL: Volume mount configuration mismatch. Triggering cleanup for container '$containerId'...")
+                            destroyContainer()
+
+                            throw ProcessRunException("""
+                                Docker Desktop file sharing misconfiguration detected.
+                                The container is running but cannot access the host file system. 
+                                Please add the following path to Docker Desktop -> Settings -> Resources -> File Sharing:
+                                 - $failedPath
+                            """.trimIndent())
                         }
                     } else {
                         throw ProcessRunException("Container creation for image '$dockerImage' failed with: $firstLine")
@@ -119,6 +133,55 @@ class DockeredPipEnvEnvironment(
                 containerId = null
                 ProcessRunException.throwIfExitedUnexpected(it, "docker rm failed for container $id")
             }
+    }
+
+
+    /**
+     * Platform-agnostic file-sharing validator.
+     * Catches BOTH permissions blocks (Operation not permitted) and silent Docker sharing failures
+     * without writing any temporary files to the host system.
+     */
+    private fun getFailedFileSharingPath(containerId: String): String? {
+        if (isFileSharingVerified || volumes.isNullOrEmpty()) return null
+
+        val mounts = volumes.mapNotNull { volume ->
+            val parts = volume.split(":")
+            if (parts.size < 2) null else Pair(parts[0], parts[1])
+        }
+
+        if (mounts.isEmpty()) return null
+
+        // Shell script that handles both failure modes:
+        // 1. If 'ls' fails, the directory is blocked by the OS (Operation not permitted).
+        // 2. If 'ls' succeeds, check if the directory was created "just now" by Docker's silent fallback.
+        val shellScript = mounts.joinToString("; ") { (hostPath, containerPath) ->
+            "if ! ls \"$containerPath\" >/dev/null 2>&1; then " +
+                    "echo \"$hostPath\"; exit 0; " +
+                    "else " +
+                    "CURRENT_TIME=\$(date +%s); " +
+                    "DIR_TIME=\$(stat -c %Y \"$containerPath\" 2>/dev/null || echo 0); " +
+                    "DIFF=\$((CURRENT_TIME - DIR_TIME)); " +
+                    "if [ \$DIFF -ge 0 ] && [ \$DIFF -le 15 ]; then echo \"$hostPath\"; exit 0; fi; " +
+                    "fi"
+        }
+
+        val failedPath = try {
+            val checkArgs = listOf("docker", "exec", containerId, "sh", "-c", shellScript)
+            val process = ProcessBuilder(checkArgs).start()
+
+            val output = process.inputStream.bufferedReader().use { it.readLine() }
+            process.waitFor(3, TimeUnit.SECONDS)
+
+            if (output != null && output.trim().isNotEmpty()) output.trim() else null
+        } catch (e: Exception) {
+            null
+        }
+
+        if (failedPath == null) {
+            isFileSharingVerified = true
+        }
+
+        return failedPath
     }
 
     private class MyPythonDebugger(private val processArgs: List<String>): PythonDebugger() {

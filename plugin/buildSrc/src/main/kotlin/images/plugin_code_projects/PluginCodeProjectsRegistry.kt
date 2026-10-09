@@ -58,9 +58,6 @@ class PluginCodeProjectsImage(
     }
 
     override fun createConfiguredVolumeMappingBuilder(projectDir: File): VolumeMappingBuilder<PythonPluginCodeDockerPaths> {
-        // todo: document that the folder has to be configured when using Docker Desktop
-        // otherwise a permission error is returned when interacting with
-        // -> These directories (and their subdirectories) can be bind mounted into Docker
         return VolumeMappingBuilder(PythonPluginCodeDockerPaths(projectDir)).apply {
             addMapping(paths.pluginCodeProjects)
         }
