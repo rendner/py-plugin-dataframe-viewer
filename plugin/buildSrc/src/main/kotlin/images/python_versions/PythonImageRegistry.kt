@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,11 @@ private fun toPythonDockerImage(version: String): PythonDockerImage {
 class PythonImageRegistry {
     companion object {
         val images = listOf(
+            // no compatible or missing pre-compiled binary wheel for numpy, and dockerfile contains no build tools
+            // toPythonDockerImage("3.15"),
+
             // order: latest to oldest
+            toPythonDockerImage("3.14"),
             toPythonDockerImage("3.13"),
             toPythonDockerImage("3.12"),
             toPythonDockerImage("3.11"),
