@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package cms.rendner.debugger.impl
 
 import cms.rendner.intellij.dataframe.viewer.python.debugger.exceptions.PluginPyDebuggerException
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
@@ -248,7 +247,7 @@ abstract class PythonDebugger {
                             is DumpTracesOnExitTask -> {
                                 "!__import__('debugger_helpers').DebuggerInternals.dump_traces_on_exit('${task.filePath}')"
                             }
-                            is QuitTask -> "quit"
+                            is QuitTask -> "!__import__('sys').exit()"
                             is ContinueTask -> "continue"
                             is FindReferrerChainsTask -> {
                                 "!__import__('debugger_helpers').DebuggerInternals.find_referrer_chains('${task.objName}')"

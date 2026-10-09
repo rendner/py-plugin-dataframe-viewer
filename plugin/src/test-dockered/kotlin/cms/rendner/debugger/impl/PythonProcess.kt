@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 cms.rendner (Daniel Schmidt)
+ * Copyright 2021-2026 cms.rendner (Daniel Schmidt)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,21 +28,6 @@ class PythonProcess(
 
     private var singleCharArray = CharArray(1)
     private val stringBuilder = StringBuilder()
-
-    /*
-    To detect BdbQuit error message:
-
-    Traceback (most recent call last):
-      File "/usr/local/lib/python3.11/bdb.py", line 94, in trace_dispatch
-        return self.dispatch_return(frame, arg)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      File "/usr/local/lib/python3.11/bdb.py", line 156, in dispatch_return
-        if self.quitting: raise BdbQuit
-                          ^^^^^^^^^^^^^
-    bdb.BdbQuit
-
-     */
-    private val BDP_QUIT_REGEX = Regex("Traceback \\(most recent call last\\):([\\S,\\s])+bdb\\.BdbQuit\n")
 
     /**
      * @param processArgs the arguments containing the program to start and its arguments.
