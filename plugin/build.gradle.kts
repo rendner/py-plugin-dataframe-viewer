@@ -18,7 +18,7 @@ plugins {
 }
 
 group = "cms.rendner.intellij"
-version = "0.20.1"
+version = "0.20.2"
 
 repositories {
     mavenCentral()
